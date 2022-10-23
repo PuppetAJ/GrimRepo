@@ -1,5 +1,6 @@
 INSERT INTO characters (tier, name, attack, defense, sacrifice)
 VALUES
+    e= 6, d=8, c=10, b=12 a =14
     ('E', 'offCenterDiv', 5, 1, 0),
     ('E', 'Jester', 4, 2, 0),
     ('E', 'CTRLALTDELETE', 3, 3, 0),
