@@ -14,10 +14,12 @@ boardState.set('p1', "");
 boardState.set('p2', "");
 boardState.set('p3', "");
 boardState.set('p4', "");
+
 boardState.set('AIF1', "");
 boardState.set('AIF2', "");
 boardState.set('AIF3', "");
 boardState.set('AIF4', "");
+
 boardState.set('AIB1', "");
 boardState.set('AIB2', "");
 boardState.set('AIB3', "");

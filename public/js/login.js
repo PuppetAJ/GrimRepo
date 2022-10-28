@@ -4,7 +4,7 @@
 
 // For some reason the gsap module it's not working on  the server, I have to figure out how send it to the model, but this
 // is just animations, at the end are the animation code in comments to avoid any error.
-// import { gsap }  from "GSAP";
+import { gsap }  from "GSAP";
 
 
 //=========================
@@ -195,28 +195,28 @@ function enableBtn() {
 //     GSAP ANIMATION    
 //=========================   
 
-// // ----- Model viewer animation ------
-// function mvAnimation() {
+// ----- Model viewer animation ------
+function mvAnimation() {
 
-//     const modelViewer = document.querySelector(`.model-viewer`);
+    const modelViewer = document.querySelector(`.model-viewer`);
 
-//     setTimeout(() => {
-//         modelViewer.style.display = `block`;
-//     }, 2000);
-//     }
-//     mvAnimation();
+    setTimeout(() => {
+        modelViewer.style.display = `block`;
+    }, 2000);
+    }
+    mvAnimation();
 
 
-// // ----- Duration Template -----
-// const tl = gsap.timeline({defaults:{duration: 1.5}});
+// ----- Duration Template -----
+const tl = gsap.timeline({defaults:{duration: 1.5}});
 
-// // Elements Animation when the page is loading
-// tl.from(`.title-section`, {y: -50, opacity:0});
-// tl.from(`.login-section`, {y: 50, opacity: 0}, `-=1.1`);
+// Elements Animation when the page is loading
+tl.from(`.title-section`, {y: -50, opacity:0});
+tl.from(`.login-section`, {y: 50, opacity: 0}, `-=1.1`);
 
-// function formAnimation(form) {
-//     tl.to(form, {y: 50, opacity: 0, duration: 0.5}.reversed(true));
-// };
+function formAnimation(form) {
+    tl.to(form, {y: 50, opacity: 0, duration: 0.5}.reversed(true));
+};
 
 
 
