@@ -12,19 +12,6 @@ const sequelize = require("./config/connection")
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
-//Connect to db
-const db = mysql.createConnection(
-    {
-        host: 'localhost',
-        user: 'root',
-        password: 'root',
-        database: 'cards'
-    },
-    console.log('Connected to cards db')
-)
-
-
-
 //'Not found' 'Catch all'
 app.use((req, res) => {
     res.status(404).end();
