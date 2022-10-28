@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magic Cards</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css" integrity="sha512-xh6O/CkQoPOWDdYTDqeRdPCVd1SpvCA9XXcUnZS2FmJNp1coAFzvtCN9BmamE+4aHK8yyUHUSCcJHgXloTyT2A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="./stylesheet/login.css">
+</head>
+<body>
+    <main>
+        <!-- Title section -->
+        <section class="title-section">
+            <h1>
+                Sign In to <br> The <span>Magic Cards</span>
+            </h1>
+            <p>
+                Your deck <br> of magic cards is waiting for you
+            </p>
+        </section>
+
+
+        <!-- Card section -->
+        <section class="card-section">
+            <div class="shape-1 shape"></div>
+            <div class="shape-2 shape"></div>
+            <model-viewer class="model-viewer" src="./assets/3d/scene.gltf" shadow-intensity="1" camera-controls touch-action="pan-y" disable-zoom></model-viewer>
+        </section>
+
+
+        <!-- login section -->
+        <section class="login-section">
+
+            <div class="login-register">
+                <p class="sign-in">Sign In</p>
+                <p class="register">Register</p>
+            </div>
+
+            <form action="" class="sign-in-form form">
+
+                <div class="input-group login-input_div">
+                    <input required="" type="text" name="text" autocomplete="off" class="login-input input-email" id="email">
+                    <label id="email" class="user-label email-label">Enter Email</label>
+                    <!-- <div class="login-input_icon">
+                        <i class="fa-regular fa-circle-xmark"></i>
+                    </div> -->
+                  </div>
+
+                  <div class="input-group login-input_div">
+                    <input required="" type="password" name="password" autocomplete="off" class="login-input input-pswd input-pswd_login" id="pswd">
+                    <label id="pswd" class="user-label pswd-label">Password</label>
+                    <div class="login-input_icon">
+                        <i id="eye-pswd_login" class="fa-regular fa-eye"></i>
+                    </div>
+                  </div>
+
+                <button class="sign-in_btn" type="submit">Sign In</button>
+            </form>
+
+            <!--- Form for register  -->
+
+            <form action="" class="register-form form">
+
+                <div class="input-group login-input_div">
+                    <input required="" type="text" name="username-label" autocomplete="off" class="login-input" id="input-username_register">
+                    <label id="username-label_register" class="user-label">Enter Username</label>
+                    <div class="login-input_icon">
+                        <i class="fa-regular fa-circle-check"></i>
+                    </div>
+                  </div>
+
+                <div class="input-group login-input_div">
+                    <input required="" type="text" name="email-label" autocomplete="off" class="login-input input-email" id="input-email_register">
+                    <label id="email-label_register" class="user-label">Enter Email</label>
+                    <div class="login-input_icon">
+                        <i class="fa-regular fa-circle-xmark"></i>
+                    </div>
+                  </div>
+
+                  <div class="input-group login-input_div">
+                    <input required="" type="password" name="input-pswd_register" autocomplete="off" class="login-input" id="input-pswd_register">
+                    <label id="pswd-label_register" class="user-label">Password</label>
+                    <div class="login-input_icon">
+                        <i id="eye-pswd_register" class="fa-regular fa-eye"></i>
+                    </div>
+                  </div>
+
+                <button class="register_btn" type="submit">Register</button>
+            </form>
+        </section>
+    </main>
+
+    <script type="module" src="./js/login.js"></script>
+    <!-- This is the Google Model Viewer -->
+    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+</body>
+</html>
