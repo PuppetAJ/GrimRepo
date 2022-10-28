@@ -1,6 +1,3 @@
-const Sequelize = require('sequelize');
-require('dontenv').config();
-
 //connection to cards db
 const Sequelize = require('sequelize');
 

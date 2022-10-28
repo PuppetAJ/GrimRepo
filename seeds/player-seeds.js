@@ -5,7 +5,7 @@ const playerdata = [
   {
     username: 'kwm0304',
     password: '',
-    health: 20,
+
     wins: 5,
     losses: 1
   }
@@ -14,3 +14,7 @@ const playerdata = [
 const seedPlayers = () => Player.bulkCreate(playerdata) //{individualHooks: true});
 
 module.exports = seedPlayers;
+
+//create user db in schema
+//split player table into login info and record table  w/ player username 
+// join these on primaryKey
