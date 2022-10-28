@@ -1,36 +1,44 @@
 //**Need to look up es6 syntax for 3js */
 const express = require('express');
 const session = require('express-session');
-const exphbs = require('express-handlebars')
+const exphbs = require('express-handlebars');
+const path = require('path');
+const sequelize = require("./config/connection");
+const SequelizeStore = require('connect-session-sequelize')(session.Store);
+
+// Declare session, with unique secret
+const sess = {
+  secret: '065b15a8-e7bc-4676-8e76-33f18f2df80d',
+  cookie: {},
+  resave: false,
+  saveUnitialized: true,
+  // store session using connect-session-sequelize package with our database
+  store: new SequelizeStore({
+      db: sequelize
+  }),
+  expires: new Date(Date.now() + 3600000)
+};
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-const sequelize = require("./config/connection")
-
 //Express middleware
-app.use(express.urlencoded({ extended: false }));
+app.use(session(sess));
+app.set('view engine', 'handlebars');
 app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+app.use(express.static(path.join(__dirname, 'public')));
 
-//Connect to db
-const db = mysql.createConnection(
-    {
-        host: 'localhost',
-        user: 'root',
-        password: 'root',
-        database: 'cards'
-    },
-    console.log('Connected to cards db')
-)
+// database: 'cards'
 
 
 
 //'Not found' 'Catch all'
-app.use((req, res) => {
-    res.status(404).end();
-})
+// app.use((req, res) => {
+//     res.status(404).end();
+// })
 
-//Starts server
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-  });
+// sync with database and then start the server
+sequelize.sync({ force: false }).then(() => {
+  app.listen(PORT, () => console.log(`Now listening on url: http://localhost:${PORT}`));
+});
