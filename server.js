@@ -1,7 +1,7 @@
-//**Need to look up es6 syntax for 3js */
 const express = require('express');
 const session = require('express-session');
 const exphbs = require('express-handlebars');
+const hbs = exphbs.create();
 const path = require('path');
 const sequelize = require("./config/connection");
 const SequelizeStore = require('connect-session-sequelize')(session.Store);
@@ -25,19 +25,13 @@ const PORT = process.env.PORT || 3001;
 
 //Express middleware
 app.use(session(sess));
+app.engine('handlebars', hbs.engine);
 app.set('view engine', 'handlebars');
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// database: 'cards'
-
 app.use(routes);
-
-//'Not found' 'Catch all'
-// app.use((req, res) => {
-//     res.status(404).end();
-// })
 
 // sync with database and then start the server
 sequelize.sync({ force: false }).then(() => {

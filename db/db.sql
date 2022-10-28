@@ -1,5 +1,0 @@
-DROP DATABASE IF EXISTS cards;
-
-CREATE DATABASE cards;
-
-USE cards;
