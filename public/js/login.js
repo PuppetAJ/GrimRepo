@@ -4,9 +4,7 @@
 
 // For some reason the gsap module it's not working on  the server, I have to figure out how send it to the model, but this
 // is just animations, at the end are the animation code in comments to avoid any error.
-import { gsap }  from "GSAP";
-
-
+// import { gsap }  from "../../node_modules/gsap/all.js";
 //=========================
 //   VARIABLES & CONST     
 //=========================    
@@ -27,11 +25,12 @@ const primaryColor = `rgb(86, 124, 228)`;
 
     const emailRegister = document.querySelector(`#input-email_register`);
     const emailLabel = document.querySelector(`#email-label_register`);
-    const emailIcon = document.querySelector(`.fa-circle-xmark`)
+    const emailIcon = document.querySelector(`.fa-at`)
 
     const pswdRegister = document.querySelector(`#input-pswd_register`);
     const pswdLabel = document.querySelector(`#pswd-label_register`);
     const eyeIconRegister = document.getElementById(`eye-pswd_register`);
+    
 
     // Sign In & Register Btns & Form
     const signIn = document.querySelector(`.sign-in`);
@@ -41,8 +40,9 @@ const primaryColor = `rgb(86, 124, 228)`;
     const registerForm = document.querySelector(`.register-form`);
 
     // Inputs Const for login form
+    const emailLogin = document.querySelector(`.login-input`);
+    const pswdLogin = document.querySelector(`.input-pswd_login`);
     const eyeIconLogin = document.getElementById(`eye-pswd_login`);
-    const pswdLogin = document.querySelector(`.input-pswd_login`)
 
 
     // Btns Const for login 
@@ -134,7 +134,7 @@ function disableBtn() {
 
 // ----- Form Validation for register -----
 function formValidationUsername(e){
-    if(e.target.value.length > 0) {
+    if(e.target.value.length > 5) {
 
         e.target.style.borderColor = `#4461F2`;
         usernameLabel.style.color = `#4461F2`;
@@ -142,7 +142,6 @@ function formValidationUsername(e){
 
         enableBtn();
     } else {
-
         e.target.style.borderColor = `#F23501`;
         usernameLabel.style.color = `#F23501`;
         checkIcon.style.color = `#F23501`;
@@ -164,7 +163,6 @@ function formValidationEmail(e){
     };
 };
 
-
 function formValidationPswd(e) {
     if(e.target.value.length > 8) {
 
@@ -181,6 +179,23 @@ function formValidationPswd(e) {
     };
 };
 
+function showError(appendContainer, errMessage) {
+    const errorDiv = document.createElement(`div`);
+    const errorMessage = document.createElement(`p`);
+
+    errorDiv.classList.add(`error-message-container`);
+    errorMessage.classList.add(`error-message`);
+
+    appendContainer.appendChild(errorDiv);
+    errorDiv.appendChild(errorMessage);
+
+    errorMessage.innerText = errMessage;
+
+    setTimeout(() => {
+        appendContainer.removeChild(errorDiv);
+    }, 5000);
+}
+
 // ----- Enable Btn for register -----
 function enableBtn() {
     if(er.test(emailRegister.value) && pswdRegister.value !== ``) {
@@ -190,33 +205,131 @@ function enableBtn() {
     }
 };
 
+// ----- Register Function -----
+function handleRegisterFormSubmit(e) {
+    e.preventDefault();
+
+    // Get data inputs
+    const username = usernameRegister.value;
+    const email = emailRegister.value;
+    const password = pswdRegister.value;
+
+    const userDataObj = {username, email, password};
+
+    fetch(`api/player`, {
+        method: `POST`,
+        headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(userDataObj)
+    })
+        .then(response => {
+            if(response.ok) return response.json();
+
+            alert(`Error: ` + response.statusText);
+    })
+        .then(postResponse => {
+            console.log(postResponse);
+            registerForm.style.display = `none`;
+            register.style.color = `white`;
+    
+            signInForm.style.display = `block`;
+            signIn.style.color = primaryColor;
+            alert(`You create an account`);
+    })
+}
+
+// ----- Login Function -----
+function handleLoginFormSubmit(e) {
+    e.preventDefault()
+
+    const email = emailLogin.value;
+    const password = pswdLogin.value;
+
+    const loginData = {email, password};
+
+    fetch(`api/player/login`, {
+        method: `POST`,
+        headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json'
+    },
+        body: JSON.stringify(loginData)
+    })
+        .then(response => {
+            if(response.ok) return response.json();
+
+            // showError(signInForm, `Email or password is incorrect`);
+
+            // alert(`Error: ` + response.statusText);
+        })
+        .then(postResponse => {
+            console.log(postResponse);
+            if(postResponse === undefined) {
+                showError(signInForm, `Email or password is incorrect`);
+                
+                emailLogin.value = ``;
+                pswdLogin.value = ``;
+            } else {
+                alert(`You logged in!`);
+
+                emailLogin.value = ``;
+                pswdLogin.value = ``;
+            }
+
+            // location.replace(`http://localhost:3001/api/player`);
+        })
+}
+
+registerForm.addEventListener(`submit`, handleRegisterFormSubmit);
+
+signInForm.addEventListener(`submit`, handleLoginFormSubmit);
+
 
 //=========================
 //     GSAP ANIMATION    
 //=========================   
 
 // ----- Model viewer animation ------
-function mvAnimation() {
+// function mvAnimation() {
 
-    const modelViewer = document.querySelector(`.model-viewer`);
+//     const modelViewer = document.querySelector(`.model-viewer`);
 
-    setTimeout(() => {
-        modelViewer.style.display = `block`;
-    }, 2000);
-    }
-    mvAnimation();
-
-
-// ----- Duration Template -----
-const tl = gsap.timeline({defaults:{duration: 1.5}});
-
-// Elements Animation when the page is loading
-tl.from(`.title-section`, {y: -50, opacity:0});
-tl.from(`.login-section`, {y: 50, opacity: 0}, `-=1.1`);
-
-function formAnimation(form) {
-    tl.to(form, {y: 50, opacity: 0, duration: 0.5}.reversed(true));
-};
+//     setTimeout(() => {
+//         modelViewer.style.display = `block`;
+//     }, 2000);
+//     }
+//     mvAnimation();
 
 
+// // ----- Duration Template -----
+// const tl = gsap.timeline({defaults:{duration: 1.5}});
 
+// // Elements Animation when the page is loading
+// tl.from(`.title-section`, {y: -50, opacity:0});
+// tl.from(`.login-section`, {y: 50, opacity: 0}, `-=1.1`);
+
+// function formAnimation(form) {
+//     tl.to(form, {y: 50, opacity: 0, duration: 0.5}.reversed(true));
+// };
+
+//=========================
+//     TIPPY TOOLTIP    
+//=========================  
+
+tippy(`#eye-pswd_login`, {
+    content: `Show Password`
+});
+
+tippy(`#eye-pswd_register`, {
+    content: `More than 8 characters`
+});
+
+tippy(`#icon-username`, {
+    content: `More than 5 characters`
+});
+
+tippy(`#icon-email`, {
+    content: `Put a valid email`
+});

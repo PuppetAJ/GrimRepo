@@ -1,8 +1,13 @@
 const { Model, DataTypes } = require('sequelize');
 const sequelize = require('../config/connection');
+const bcrypt = require('bcrypt');
 
 //Player Model
-class Player extends Model {}
+class Player extends Model {
+    checkPassword(loginPw) {
+        return bcrypt.compareSync(loginPw, this.password);
+    }
+}
 
 Player.init (
     {
@@ -16,8 +21,16 @@ Player.init (
             type: DataTypes.STRING,
             allowNull: false,
             unique: true,
+            // validate: {
+            //     isUsername: true
+            // }
+        },
+        email: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            unique: true,
             validate: {
-                isUsername: true
+                isEmail: true
             }
         },
         password: {
@@ -41,6 +54,18 @@ Player.init (
         
     },
     {
+        hooks: {
+            async beforeCreate(newPlayerData) {
+                newPlayerData.password = await bcrypt.hash(newPlayerData.password, 10);
+                return newPlayerData;
+            },
+            
+            async beforeUpdate(updatePlayerData) {
+                updatePlayerData.password = await bcrypt.hash(updatePlayerData.password, 10);
+                return updatePlayerData;
+            }
+        },
+
         sequelize,
         timestamps: false,
         freezeTableName: true,
