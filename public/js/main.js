@@ -8,6 +8,7 @@ import {FontLoader} from 'FontLoader';
 
 // create card models for all 25 cards
 // get random card to hand
+
 let boardState = new Map();
 
 boardState.set('p1', "");
@@ -64,7 +65,7 @@ const loader = new GLTFLoader();
 //const controls = new OrbitControls(camera, renderer.domElement);
 
 loader.load(
-  './assets/models/test_house_no_assets.glb', 
+  './assets/models/house.glb', 
   function ( gltf ) {
     //console.log(gltf);
     obj = gltf.scene;
@@ -78,7 +79,7 @@ loader.load(
 )
 
 loader.load(
-  './assets/models/p03_quadless.glb', 
+  './assets/models/robot.glb', 
   function ( gltf ) {
     //console.log(gltf);
     obj = gltf.scene;
@@ -105,7 +106,7 @@ loader.load(
 )
 
 loader.load(
-  './assets/models/board_hitboxes.glb', 
+  './assets/models/game_board.glb', 
   function ( gltf ) {
     //console.log(gltf);
     obj = gltf.scene;
@@ -145,7 +146,7 @@ loader.load(
 // )
 
 loader.load(
-  './assets/models/deck_with_hitbox.glb', 
+  './assets/models/deck.glb', 
   function ( gltf ) {
     
     //console.log(gltf);
@@ -167,7 +168,7 @@ loader.load(
 )
 
 loader.load(
-  './assets/models/bell_with_hitbox.glb', 
+  './assets/models/bell.glb', 
   function ( gltf ) {
     
     //console.log(gltf);
