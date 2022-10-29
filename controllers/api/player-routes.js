@@ -24,7 +24,7 @@ router.get('/:id', (req, res) => {
     })
         .then(dbPlayerData => {
             if(!dbPlayerData) {
-                res.status(404).json({message: `No player found with this id`});
+                res.status(404).json({message: `No player found with this id!`});
                 return;
             }
             res.json(dbPlayerData);

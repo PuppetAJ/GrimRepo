@@ -1,9 +1,9 @@
 const { Model, DataTypes } = require("sequelize");
 const sequelize = require('../config/connection');
 
-class Characters extends Model {}
+class Card extends Model {}
 
-Characters.init(
+Card.init(
     {
         //define id column
         id: {
@@ -13,7 +13,7 @@ Characters.init(
             autoIncrement: true
         },
         tier: {
-            type: DataTypes.INTEGER,
+            type: DataTypes.STRING,
             notNull: true,
             validate: {
                 len: [1]
@@ -22,9 +22,9 @@ Characters.init(
         name: {
             type: DataTypes.STRING,
             allowNull: false,
-            validate: {
-                isName: true
-            }
+            // validate: {
+            //     isName: true
+            // }
         },
         attack: {
             type: DataTypes.INTEGER,
@@ -34,7 +34,7 @@ Characters.init(
             type: DataTypes.INTEGER,
             allowNull: false
         },
-        sacrifice: {
+        cost: {
             type: DataTypes.INTEGER,
             allowNull: true
         }
@@ -44,8 +44,8 @@ Characters.init(
         timestamps: false,
         freezeTableName: true,
         underscored: true,
-        modelName: 'characters'
+        modelName: 'cards'
     }
 );
 
-module.exports = Characters;
+module.exports = Card;
