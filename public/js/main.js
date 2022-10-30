@@ -6,8 +6,22 @@ import {TextGeometry} from 'TextGeometry';
 import {TTFLoader} from 'TTFLoader';
 import {FontLoader} from 'FontLoader';
 
-// create card models for all 25 cards
-// get random card to hand
+// Implement battle logic
+// Implement player and opponent health variables
+// -- check player squares, if card, then execute attack
+// ---- needs to detect if enemy in front of square
+// ------ if enemy, subtract health from enemy, call function to update health
+// -- check enemy squares, if card, then execute attack
+// ---- needs to detect if enemy in front of square
+// ------ if enemy, subtract health from enemy, call function to update health
+
+// -- cleave damage function
+// Implement reshuffle logic
+// Implement draw cap per turn
+// Implement draw by cost (start out with at least 1 0 cost to prevent softlock)
+// Implement battle animations
+// Implement health animations (?)
+// Implement cost mechanic (?)
 
 let boardState = new Map();
 
@@ -34,6 +48,10 @@ let mixer;
 let deck;
 let cardArr = [];
 let selectedCardHand;
+let initialPass = false;
+let turn = 0;
+
+const loadingManager = new THREE.LoadingManager();
 
 const scene = new THREE.Scene();
 
@@ -61,7 +79,19 @@ camera.position.setZ(-5);
 
 renderer.render( scene, camera );
 
-const loader = new GLTFLoader();
+// loadingManager.onProgress = function(url, loaded, total) {
+//   console.log(`Started loading: ${url}`);
+// }
+
+loadingManager.onLoad = async function() {
+  if(initialPass === false) {
+    console.log("done loading!");
+    initialHand();
+    initialPass = true;
+  }
+}
+
+const loader = new GLTFLoader(loadingManager);
 //const controls = new OrbitControls(camera, renderer.domElement);
 
 loader.load(
@@ -337,7 +367,7 @@ const raycastClick  = function(event) {
     } else if (intersects[0].object.name === "Bell_Hitbox" && viewToggle === false) {
       endTurn();
     } else if (intersects[0].object.name === "deck_hitbox" && viewToggle === false) {
-      drawCard();
+      deckClick();
     } else if(intersects[0].object.name === "Card_Hitbox" && intersects[0].object.inHand === true) {
       // console.log(intersects[0].object);
       const otherCards = cardArr.filter(el => el.handPosition != intersects[0].object.handPosition);
@@ -376,7 +406,9 @@ const raycastClick  = function(event) {
           if (cardIndex > -1) {
             cardArr.splice(cardIndex, 1);
           }
-          boardState.set('p1', selectedCardHand.cardName);
+          const card = {}
+          card.cardName = selectedCardHand.cardName
+          boardState.set('p1', card);
           selectedCardHand = "";
           updateHand();
           //console.log(boardState);
@@ -390,7 +422,9 @@ const raycastClick  = function(event) {
           if (cardIndex > -1) {
             cardArr.splice(cardIndex, 1);
           }
-          boardState.set('p2', selectedCardHand.cardName);
+          const card = {}
+          card.cardName = selectedCardHand.cardName
+          boardState.set('p2', card);
           selectedCardHand = "";
           updateHand();
         }
@@ -404,7 +438,9 @@ const raycastClick  = function(event) {
           if (cardIndex > -1) {
             cardArr.splice(cardIndex, 1);
           }
-          boardState.set('p3', selectedCardHand.cardName);
+          const card = {}
+          card.cardName = selectedCardHand.cardName
+          boardState.set('p3', card);
           selectedCardHand = "";
           updateHand();
         }
@@ -418,7 +454,9 @@ const raycastClick  = function(event) {
           if (cardIndex > -1) {
             cardArr.splice(cardIndex, 1);
           }
-          boardState.set('p4', selectedCardHand.cardName);
+          const card = {}
+          card.cardName = selectedCardHand.cardName
+          boardState.set('p4', card);
           selectedCardHand = "";
           updateHand();
         }
@@ -680,7 +718,26 @@ const toggleView = function() {
   }
 }
 
-const drawCard = function() {
+const cards = [
+  'BootStrapped','BrokenCode','Bug','Cookie','DeathNode','destroyEnemy(you)','Documentation','Firewall','Gitbasher','GitSome','GoogleFu','GrimRepo','Hello World','if(losing)','Iterator','JACK','JSONFoorhees','Loop','NullPointer','OffCenterDiv','RobloxDevOps','RubberDuck','SQLSyntaxErr','Syntax Err'
+];
+
+const oppCards = structuredClone(cards);
+
+cards.push('FourOhFour');
+
+const randomCard = (arr) => {
+  var index = Math.floor(Math.random()*arr.length-1);
+      return arr.splice(index, 1);
+}
+
+const deckClick = () => {
+  const rCard = randomCard(cards);
+  const rCardPath = `./assets/models/Card_models/${rCard}.glb`
+  drawCard(rCardPath);
+}
+
+const drawCard = function(cardPath) {
   let drawCard = deck.scene.children[deck.scene.children.length - 1];
   if (cardArr.length < 4) {
     gsap.to(drawCard.position, {
@@ -697,8 +754,9 @@ const drawCard = function() {
   if (deck.scene.children.length == 0) {
     console.log("empty deck");
   }
-  let cardPath = './assets/models/card_merge.glb'
-  if (cardArr.length < 4) {
+
+  // let cardPath = './assets/models/card_merge.glb'
+  if (cardArr.length < 4 && deck.scene.children.length != 0) {
     loader.load(`${cardPath}`, (gltf) => {
       const cardObjFormat = {}
       const cardObj = gltf.scene;
@@ -771,9 +829,194 @@ const drawCard = function() {
   }
 }
 
+const initialHand = () => {
+  for (let i=0; i < 4; i++) {
+    const rCard = randomCard(cards);
+    const rCardPath = `./assets/models/Card_models/${rCard}.glb`
+    drawCard(rCardPath);
+  }
+}
+
+function randomIntFromInterval(min, max) {
+  return Math.floor(Math.random() * (max - min + 1) + min)
+}
+
+const opponentInitialDraw = () => {
+  const rdmInt = randomIntFromInterval(1,4);
+  const numPool = [1,2,3,4]
+  for(let i=1; i <= rdmInt; i++) {
+    var index = Math.floor(Math.random()*numPool.length-1);
+    const cardPos = numPool.splice(index, 1);
+    const rCard = randomCard(oppCards);
+    const rCardPath = `./assets/models/Card_models/${rCard}.glb`;
+    //console.log(cardPos);
+    opponentPlaceCards(rCardPath, cardPos[0]);
+  }
+};
+
+const opponentDraw = () => {
+// ('AIB1', "");
+// ('AIB2', "");
+// ('AIB3', "");
+// ('AIB4', "");
+console.log("got this far");
+  const bs1 = boardState.get('AIB1');
+  const bs2 = boardState.get('AIB2');
+  const bs3 = boardState.get('AIB3');
+  const bs4 = boardState.get('AIB4');
+  const numPool = [];
+
+  if(!bs1) {
+    console.log('bs1 is empty');
+    numPool.push(1);
+  }
+
+  if(!bs2) {
+    numPool.push(2);
+  }
+
+  if(!bs3) {
+    numPool.push(3);
+  }
+
+  if(!bs4) {
+    numPool.push(4);
+  }
+  
+  if(numPool.length != 0) {
+    numPool.forEach(num => {
+      console.log('Flip!!!');
+      const coinFlip = Math.floor(Math.random() * 2) == 0;
+      if(coinFlip) {
+        const rCard = randomCard(oppCards);
+        const rCardPath = `./assets/models/Card_models/${rCard}.glb`;
+        opponentPlaceCards(rCardPath, num);
+      }
+    })
+  }
+};
+
+
+const opponentPlaceCards = (cardPath, pos) => {
+    loader.load(`${cardPath}`, (gltf) => {
+      const cardObjFormat = {}
+      const cardObj = gltf.scene;
+        cardObj.traverse(function(object) {
+          object.layers.set(2);
+        })
+        cardObj.layers.set(0);
+        cardObj.castShadow = true;
+        cardObj.scale.set(0.016,0.016,0.016);
+        cardObj.rotation.set(-3.15,0,-3.15);
+
+        cardObjFormat.cardObj = gltf.scene.children[1];
+        cardObjFormat.cardName = gltf.scene.children[1].name;
+        if(pos === 1) {
+          cardObj.position.setZ(-11.53);
+          cardObj.position.setX(-3.18);
+          cardObj.position.setY(7.03);
+          cardObjFormat.frontPos = 'AIF1'
+          cardObjFormat.backPos = 'AIB1'
+          boardState.set('AIB1', cardObjFormat);
+        } else if(pos === 2) {
+          cardObj.position.setZ(-11.53);
+          cardObj.position.setX(-2.38);
+          cardObj.position.setY(7.03);
+          cardObjFormat.frontPos = 'AIF2'
+          cardObjFormat.backPos = 'AIB2'
+          boardState.set('AIB2', cardObjFormat);
+        } else if(pos === 3) {
+          cardObj.position.setZ(-11.53);
+          cardObj.position.setX(-1.58);
+          cardObj.position.setY(7.03);
+          cardObjFormat.frontPos = 'AIF3'
+          cardObjFormat.backPos = 'AIB3'
+          boardState.set('AIB3', cardObjFormat);
+        } else if(pos === 4) {
+          cardObj.position.setZ(-11.51);
+          cardObj.position.setX(-0.77);
+          cardObj.position.setY(7.03);
+          cardObjFormat.frontPos = 'AIF4'
+          cardObjFormat.backPos = 'AIB4'
+          boardState.set('AIB4', cardObjFormat);
+        } else {
+          console.log("invalid position");
+        }
+
+      //console.log(boardState);
+      //cardArr.push(cardObjFormat);
+      scene.add(cardObj);
+    })
+
+};
+
+opponentInitialDraw();
+
+const backrowPush = () => {
+  const bs1 = boardState.get('AIB1');
+  const bs2 = boardState.get('AIB2');
+  const bs3 = boardState.get('AIB3');
+  const bs4 = boardState.get('AIB4');
+  const statePool = [];
+  statePool.push(bs1,bs2,bs3,bs4);
+
+  statePool.forEach(el => {
+    if(el === "") {
+      console.log("empty");
+    } else {
+      const frontPosState = boardState.get(el.frontPos);
+      if(frontPosState === "") {
+        boardState.set(el.frontPos, el);
+        const childArr = el.cardObj.parent.children
+        childArr.forEach(el => {
+          gsap.to(el.position, {
+            z: -82,
+            duration: 1
+          })
+        })
+        boardState.set(el.backPos, "");
+      }
+    }
+  })
+};
+
 const endTurn = function() {
   console.log("end turn");
+  console.log(boardState);
+  backrowPush();
+  turn++;
+  if(turn > 0) {
+    if(turn % 2 === 0) {
+      const coinFlip = Math.floor(Math.random() * 2) == 0;
+      if(coinFlip) {
+        console.log('Draw!');
+        opponentDraw();
+      }
+    }
+    const spots = boardState.keys();
+    for(const spot of spots) {
+      console.log(spot);
+      
+    }
+    // boardState.forEach(async el => {
+    //   if(el.cardName) {
+    //     let cardStats = await getStats(el.cardName);
+    //     console.log(cardStats);
+    //   }
+    // })
+  }
+};
+
+const getStats = async (name) => {
+  //console.log(window.location.href);
+  const href = window.location.href;
+  const response = await fetch(`${href}api/cards/name/${name}`)
+  const json = await response.json();
+  return json;
 }
+
+// let asyncTest = await getStats('Bug');
+// console.log(asyncTest);
 
 // const fontLoader = new FontLoader();
 // fontLoader.load(
