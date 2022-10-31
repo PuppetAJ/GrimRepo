@@ -100,7 +100,7 @@ const cards = [
     },
     {
         tier: 'C',
-        name: '//BrokenCode',
+        name: 'BrokenCode',
         attack: 3,
         defense: 4,
         cost: 1 

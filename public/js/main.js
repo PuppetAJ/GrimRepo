@@ -3,25 +3,20 @@ import {OrbitControls} from 'OrbitControls';
 import {GLTFLoader} from 'GLTFLoader';
 import {gsap} from 'GSAP';
 import {TextGeometry} from 'TextGeometry';
-import {TTFLoader} from 'TTFLoader';
 import {FontLoader} from 'FontLoader';
 
-// Implement battle logic
-// Implement player and opponent health variables
-// -- check player squares, if card, then execute attack
-// ---- needs to detect if enemy in front of square
-// ------ if enemy, subtract health from enemy, call function to update health
-// -- check enemy squares, if card, then execute attack
-// ---- needs to detect if enemy in front of square
-// ------ if enemy, subtract health from enemy, call function to update health
-
-// -- cleave damage function
-// Implement reshuffle logic
-// Implement draw cap per turn
-// Implement draw by cost (start out with at least 1 0 cost to prevent softlock)
-// Implement battle animations
-// Implement health animations (?)
-// Implement cost mechanic (?)
+// up brightness?
+// Display remaining health to screen
+// Create leaderboard / highscore item on a player
+// block screen so user can't interact with game when on login page, or make it render on another page
+// Check if game is over, if so detect if player lost or won
+// if game is over, take to leaderboard page
+// display either game over or you won! depending on if they won or not
+// use their username (from being logged in) to insert into leaderboard
+// media queries to rotate screen on mobile?
+// organize code
+// create utils folder with withAuth() function
+// loading screen? make disappear when 100% loaded
 
 let boardState = new Map();
 
@@ -30,15 +25,19 @@ boardState.set('p2', "");
 boardState.set('p3', "");
 boardState.set('p4', "");
 
+boardState.set('AIB1', "");
+boardState.set('AIB2', "");
+boardState.set('AIB3', "");
+boardState.set('AIB4', "");
+
 boardState.set('AIF1', "");
 boardState.set('AIF2', "");
 boardState.set('AIF3', "");
 boardState.set('AIF4', "");
 
-boardState.set('AIB1', "");
-boardState.set('AIB2', "");
-boardState.set('AIB3', "");
-boardState.set('AIB4', "");
+
+let AIHealth = 30;
+let playerHealth = 50;
 
 var clock = new THREE.Clock();
 var time = 0;
@@ -50,6 +49,9 @@ let cardArr = [];
 let selectedCardHand;
 let initialPass = false;
 let turn = 0;
+let drawCount = 0;
+
+const fontLoader = new FontLoader();
 
 const loadingManager = new THREE.LoadingManager();
 
@@ -65,6 +67,8 @@ const renderer = new THREE.WebGL1Renderer({
   canvas: document.querySelector('#bg'),
   antialias: true
 });
+ 
+//renderer.outputEncoding = THREE.sRGBEncoding;
 
 renderer.setPixelRatio( window.devicePixelRatio );
 renderer.setSize( window.innerWidth, window.innerHeight);
@@ -79,13 +83,9 @@ camera.position.setZ(-5);
 
 renderer.render( scene, camera );
 
-// loadingManager.onProgress = function(url, loaded, total) {
-//   console.log(`Started loading: ${url}`);
-// }
-
 loadingManager.onLoad = async function() {
   if(initialPass === false) {
-    console.log("done loading!");
+    //console.log("done loading!");
     initialHand();
     initialPass = true;
   }
@@ -144,7 +144,7 @@ loader.load(
     obj.scale.set(0.02,0.02,0.02);
     obj.position.setZ(-10);
     obj.position.setX(-1.6);
-    obj.position.setY(6.98);
+    obj.position.setY(6.9785);
     obj.rotation.set(3.15,3.15,0);
     scene.add(obj);
 
@@ -174,28 +174,31 @@ loader.load(
 //   console.error(error);
 // }
 // )
-
-loader.load(
-  './assets/models/deck.glb', 
-  function ( gltf ) {
-    
-    //console.log(gltf);
-    obj = gltf.scene;
-    deck = gltf;
-    obj.castShadow = true;
-    obj.scale.set(0.017,0.017,0.017);
-    obj.position.setZ(-8.8);
-    obj.position.setX(0.5);
-    obj.position.setY(6.993);
-    obj.rotation.set(-3.15,0,-3.15);
-    scene.add(obj);
-
-
-
-}, undefined, function (error) {
-  console.error(error);
+const loadDeck = () => {
+  loader.load(
+    './assets/models/deck.glb', 
+    function ( gltf ) {
+      
+      //console.log(gltf);
+      obj = gltf.scene;
+      deck = gltf;
+      obj.castShadow = true;
+      obj.scale.set(0.017,0.017,0.017);
+      obj.position.setZ(-8.8);
+      obj.position.setX(0.5);
+      obj.position.setY(6.993);
+      obj.rotation.set(-3.15,0,-3.15);
+      scene.add(obj);
+  
+  
+  
+  }, undefined, function (error) {
+    console.error(error);
+  }
+  )
 }
-)
+loadDeck();
+
 
 loader.load(
   './assets/models/bell.glb', 
@@ -354,7 +357,9 @@ const pointer = new THREE.Vector2();
 const raycaster = new THREE.Raycaster();
 let viewToggle = false;
 
-const raycastClick  = function(event) {
+let sacrificeCnt = 0;
+
+const raycastClick  = async function(event) {
   pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
   pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
   raycaster.setFromCamera(pointer, camera);
@@ -397,79 +402,226 @@ const raycastClick  = function(event) {
         })
       }
     } else {
-      //console.log(intersects[0].object)
       if(intersects[0].object.name === "p1" && selectedCardHand && viewToggle === true) {
-        if(boardState.get('p1') === "") {
-          playerBoardPosition("p1", selectedCardHand.cardObj, selectedCardHand.handPosition);
+        const cardStats = await getStats(selectedCardHand.cardName);
+        if(boardState.get('p1') === "" && cardStats.cost <= 0) {
+            playerBoardPosition("p1", selectedCardHand.cardObj, selectedCardHand.handPosition);
+            //console.log(selectedCardHand);
+            const cardIndex = cardArr.indexOf(selectedCardHand);
+            if (cardIndex > -1) {
+              cardArr.splice(cardIndex, 1);
+            }
+            // const card = {}
+            const card = boardState.get('p1');
+            card.cardName = selectedCardHand.cardName
+            card.frontPos = 'AIF1'
+            boardState.set('p1', card);
+            selectedCardHand = "";
+            updateHand();
+            //console.log(boardState);
+        } else if (cardStats.cost > 0 && boardState.get('p1') !== "" && !selectedCardHand.sacrifice) {
+          const boardVal = boardState.get('p1');
+          const boardStats = await getStats(boardVal.cardName);
+          let cost;
+          if (boardStats.cost === 0) {
+            cost = 1;
+          } else {
+            cost = boardStats.cost;
+          }
+          sacrificeCnt += cost;
+          console.log(sacrificeCnt)
           console.log(selectedCardHand);
+          killCard('p1', boardVal);
+          if (sacrificeCnt >= cardStats.cost){
+              console.log('card ready!');
+              selectedCardHand.sacrifice = true;
+          }
+        } else if (boardState.get('p1') === "" && selectedCardHand.sacrifice === true) {
+          console.log('got here');
+          playerBoardPosition("p1", selectedCardHand.cardObj, selectedCardHand.handPosition);
+          //console.log(selectedCardHand);
           const cardIndex = cardArr.indexOf(selectedCardHand);
           if (cardIndex > -1) {
             cardArr.splice(cardIndex, 1);
           }
-          const card = {}
+          // const card = {}
+          const card = boardState.get('p1');
           card.cardName = selectedCardHand.cardName
+          card.frontPos = 'AIF1'
           boardState.set('p1', card);
           selectedCardHand = "";
           updateHand();
+          sacrificeCnt = 0;
+          //console.log(boardState);
+      }
+      }
+
+      if(intersects[0].object.name === "p2" && selectedCardHand && viewToggle === true) {
+        const cardStats = await getStats(selectedCardHand.cardName);
+        if(boardState.get('p2') === "" && cardStats.cost <= 0) {
+          playerBoardPosition("p2", selectedCardHand.cardObj, selectedCardHand.handPosition);
+          //console.log(selectedCardHand);
+          const cardIndex = cardArr.indexOf(selectedCardHand);
+          if (cardIndex > -1) {
+            cardArr.splice(cardIndex, 1);
+          }
+          // const card = {}
+          const card = boardState.get('p2');
+          card.cardName = selectedCardHand.cardName
+          card.frontPos = 'AIF2'
+          boardState.set('p2', card);
+          selectedCardHand = "";
+          updateHand();
+          //console.log(boardState);
+        } else if (cardStats.cost > 0 && boardState.get('p2') !== "" && !selectedCardHand.sacrifice) {
+          const boardVal = boardState.get('p2');
+          const boardStats = await getStats(boardVal.cardName);
+          let cost;
+          if (boardStats.cost === 0) {
+            cost = 1;
+          } else {
+            cost = boardStats.cost;
+          }
+          sacrificeCnt += cost;
+          console.log(sacrificeCnt)
+          console.log(selectedCardHand);
+          killCard('p2', boardVal);
+          if (sacrificeCnt >= cardStats.cost){
+              console.log('card ready!');
+              selectedCardHand.sacrifice = true;
+          }
+        } else if (boardState.get('p2') === "" && selectedCardHand.sacrifice === true) {
+          console.log('got here');
+          playerBoardPosition("p2", selectedCardHand.cardObj, selectedCardHand.handPosition);
+          //console.log(selectedCardHand);
+          const cardIndex = cardArr.indexOf(selectedCardHand);
+          if (cardIndex > -1) {
+            cardArr.splice(cardIndex, 1);
+          }
+          // const card = {}
+          const card = boardState.get('p2');
+          card.cardName = selectedCardHand.cardName
+          card.frontPos = 'AIF2'
+          boardState.set('p2', card);
+          selectedCardHand = "";
+          updateHand();
+          sacrificeCnt = 0;
           //console.log(boardState);
         }
       }
 
-      if(intersects[0].object.name === "p2" && selectedCardHand && viewToggle === true) {
-        if(boardState.get('p2') === "") {
-          playerBoardPosition("p2", selectedCardHand.cardObj, selectedCardHand.handPosition);
-          const cardIndex = cardArr.indexOf(selectedCardHand);
-          if (cardIndex > -1) {
-            cardArr.splice(cardIndex, 1);
-          }
-          const card = {}
-          card.cardName = selectedCardHand.cardName
-          boardState.set('p2', card);
-          selectedCardHand = "";
-          updateHand();
-        }
-
-      }
-
       if(intersects[0].object.name === "p3" && selectedCardHand && viewToggle === true) {
-        if(boardState.get('p3') === "") {
+        const cardStats = await getStats(selectedCardHand.cardName);
+        if(boardState.get('p3') === "" && cardStats.cost <= 0) {
           playerBoardPosition("p3", selectedCardHand.cardObj, selectedCardHand.handPosition);
+          //console.log(selectedCardHand);
           const cardIndex = cardArr.indexOf(selectedCardHand);
           if (cardIndex > -1) {
             cardArr.splice(cardIndex, 1);
           }
-          const card = {}
+          // const card = {}
+          const card = boardState.get('p3');
           card.cardName = selectedCardHand.cardName
+          card.frontPos = 'AIF3'
           boardState.set('p3', card);
           selectedCardHand = "";
           updateHand();
-        }
-
-      }
-
-      if(intersects[0].object.name === "p4" && selectedCardHand && viewToggle === true) {
-        if(boardState.get('p4') === "") {
-          playerBoardPosition("p4", selectedCardHand.cardObj, selectedCardHand.handPosition);
+          //console.log(boardState);
+        } else if (cardStats.cost > 0 && boardState.get('p3') !== "" && !selectedCardHand.sacrifice) {
+          const boardVal = boardState.get('p3');
+          const boardStats = await getStats(boardVal.cardName);
+          let cost;
+          if (boardStats.cost === 0) {
+            cost = 1;
+          } else {
+            cost = boardStats.cost;
+          }
+          sacrificeCnt += cost;
+          console.log(sacrificeCnt)
+          console.log(selectedCardHand);
+          killCard('p3', boardVal);
+          if (sacrificeCnt >= cardStats.cost){
+              console.log('card ready!');
+              selectedCardHand.sacrifice = true;
+          }
+        } else if (boardState.get('p3') === "" && selectedCardHand.sacrifice === true) {
+          console.log('got here');
+          playerBoardPosition("p3", selectedCardHand.cardObj, selectedCardHand.handPosition);
+          //console.log(selectedCardHand);
           const cardIndex = cardArr.indexOf(selectedCardHand);
           if (cardIndex > -1) {
             cardArr.splice(cardIndex, 1);
           }
-          const card = {}
+          // const card = {}
+          const card = boardState.get('p3');
           card.cardName = selectedCardHand.cardName
+          card.frontPos = 'AIF3'
+          boardState.set('p3', card);
+          selectedCardHand = "";
+          updateHand();
+          sacrificeCnt = 0;
+          //console.log(boardState);
+        }
+      }
+
+      if(intersects[0].object.name === "p4" && selectedCardHand && viewToggle === true) {
+        const cardStats = await getStats(selectedCardHand.cardName);
+        if(boardState.get('p4') === "" && cardStats.cost <= 0) {
+          playerBoardPosition("p4", selectedCardHand.cardObj, selectedCardHand.handPosition);
+          //console.log(selectedCardHand);
+          const cardIndex = cardArr.indexOf(selectedCardHand);
+          if (cardIndex > -1) {
+            cardArr.splice(cardIndex, 1);
+          }
+          // const card = {}
+          const card = boardState.get('p4');
+          card.cardName = selectedCardHand.cardName
+          card.frontPos = 'AIF4'
           boardState.set('p4', card);
           selectedCardHand = "";
           updateHand();
-        }
-
+          //console.log(boardState);
+        } else if (cardStats.cost > 0 && boardState.get('p4') !== "" && !selectedCardHand.sacrifice) {
+          const boardVal = boardState.get('p4');
+          const boardStats = await getStats(boardVal.cardName);
+          let cost;
+          if (boardStats.cost === 0) {
+            cost = 1;
+          } else {
+            cost = boardStats.cost;
+          }
+          sacrificeCnt += cost;
+          console.log(sacrificeCnt)
+          console.log(selectedCardHand);
+          killCard('p4', boardVal);
+          if (sacrificeCnt >= cardStats.cost){
+              console.log('card ready!');
+              selectedCardHand.sacrifice = true;
+          }
+        } else if (boardState.get('p4') === "" && selectedCardHand.sacrifice === true) {
+          console.log('got here');
+          playerBoardPosition("p4", selectedCardHand.cardObj, selectedCardHand.handPosition);
+          //console.log(selectedCardHand);
+          const cardIndex = cardArr.indexOf(selectedCardHand);
+          if (cardIndex > -1) {
+            cardArr.splice(cardIndex, 1);
+          }
+          // const card = {}
+          const card = boardState.get('p4');
+          card.cardName = selectedCardHand.cardName
+          card.frontPos = 'AIF4'
+          boardState.set('p4', card);
+          selectedCardHand = "";
+          updateHand();
+          sacrificeCnt = 0;
+          //console.log(boardState);
       }
-
+      }
     } 
-
   }
-
 }
 
-const updateHand = function() {
+const updateHand = () => {
     // x for pos1 = -2.25
     // x for pos2 = -1.8
     // x for pos3 = -2.68
@@ -536,6 +688,10 @@ const playerBoardPosition = function(position, card, handPos) {
   const cardObjs = card.parent.children;
   
   if (position === "p1") {
+    let boardVal = {cardObj: card};
+    //boardVal.cardObj = card;
+    boardState.set('p1', boardVal)
+    //console.log(boardState);
     cardObjs.forEach(el => {
       //console.log(el.position);
       el.rotation.set(3.15,0,0);
@@ -546,33 +702,36 @@ const playerBoardPosition = function(position, card, handPos) {
         y: -240,
         z: -70,
         x: 107,
-        duration: 1
+        duration: 0.5
       })
     } else if (handPos === 2) {
       gsap.to(el.position, {
         y: -240,
         z: -70,
         x: 157,
-        duration: 1
+        duration: 0.5
       })
     } else if (handPos === 3) {
       gsap.to(el.position, {
         y: -240,
         z: -70,
         x: 60,
-        duration: 1
+        duration: 0.5
       })
     } else if (handPos === 4) {
       gsap.to(el.position, {
         y: -240, 
         z: -70,
         x: 207,
-        duration: 1
+        duration: 0.5
       })
     }
     
   })
   } else if (position === "p2") {
+    let boardVal = {};
+    boardVal.cardObj = card;
+    boardState.set('p2', boardVal)
     cardObjs.forEach(el => {
       //console.log(el.position);
       el.rotation.set(3.15,0,0);
@@ -583,33 +742,36 @@ const playerBoardPosition = function(position, card, handPos) {
           y: -240,
           z: -70,
           x: 18,
-          duration: 1
+          duration: 0.5
         });
       } else if (handPos === 2) {
         gsap.to(el.position, {
           y: -240,
           z: -70,
           x: 68,
-          duration: 1
+          duration: 0.5
         });
       } else if (handPos === 3) {
         gsap.to(el.position, {
           y: -240,
           z: -70,
           x: -28,
-          duration: 1
+          duration: 0.5
         });
       } else if (handPos === 4) {
         gsap.to(el.position, {
           y: -240,
           z: -70,
           x: 118,
-          duration: 1
+          duration: 0.5
         })
       }
     })
 
   } else if (position === "p3") {
+    let boardVal = {};
+    boardVal.cardObj = card;
+    boardState.set('p3', boardVal)
     cardObjs.forEach(el => {
       //console.log(el.position);
       el.rotation.set(3.15,0,0);
@@ -620,32 +782,35 @@ const playerBoardPosition = function(position, card, handPos) {
           y: -240,
           z: -70,
           x: -71,
-          duration: 1
+          duration: 0.5
         });
       } else if (handPos === 2) {
         gsap.to(el.position, {
           y: -240,
           z: -70,
           x: -20,
-          duration: 1
+          duration: 0.5
         });
       } else if (handPos === 3) {
         gsap.to(el.position, {
           y: -240,
           z: -70,
           x: -118,
-          duration: 1
+          duration: 0.5
         });
       } else if (handPos === 4) {
         gsap.to(el.position, {
           y: -240,
           z: -70,
           x: 27,
-          duration: 1
+          duration: 0.5
         })
       }
     })
   } else if (position === "p4") {
+    let boardVal = {};
+    boardVal.cardObj = card;
+    boardState.set('p4', boardVal)
     cardObjs.forEach(el => {
       //console.log(el.position);
       el.rotation.set(3.15,0,0);
@@ -656,28 +821,28 @@ const playerBoardPosition = function(position, card, handPos) {
           y: -240,
           z: -70,
           x: -160,
-          duration: 1
+          duration: 0.5
         });
       } else if (handPos === 2) {
         gsap.to(el.position, {
           y: -240,
           z: -70,
           x: -110,
-          duration: 1
+          duration: 0.5
         });
       } else if (handPos === 3) {
         gsap.to(el.position, {
           y: -240,
           z: -70,
           x: -208,
-          duration: 1
+          duration: 0.5
         });
       } else if (handPos === 4) {
         gsap.to(el.position, {
           y: -240,
           z: -70,
           x: -60,
-          duration: 1
+          duration: 0.5
         })
       }
     })
@@ -718,11 +883,13 @@ const toggleView = function() {
   }
 }
 
-const cards = [
+let cards = [
   'BootStrapped','BrokenCode','Bug','Cookie','DeathNode','destroyEnemy(you)','Documentation','Firewall','Gitbasher','GitSome','GoogleFu','GrimRepo','Hello World','if(losing)','Iterator','JACK','JSONFoorhees','Loop','NullPointer','OffCenterDiv','RobloxDevOps','RubberDuck','SQLSyntaxErr','Syntax Err'
 ];
 
-const oppCards = structuredClone(cards);
+let noCostCards = ['OffCenterDiv', 'Hello World', 'Syntax Err', 'Loop', 'if(losing)', 'RobloxDevOps','GoogleFu','GitSome','GrimRepo']
+
+let oppCards = structuredClone(cards);
 
 cards.push('FourOhFour');
 
@@ -732,14 +899,20 @@ const randomCard = (arr) => {
 }
 
 const deckClick = () => {
-  const rCard = randomCard(cards);
-  const rCardPath = `./assets/models/Card_models/${rCard}.glb`
-  drawCard(rCardPath);
+  console.log(drawCount);
+  if(drawCount < 1) {
+    ++drawCount;
+    const rCard = randomCard(cards);
+    const rCardPath = `./assets/models/Card_models/${rCard}.glb`
+    drawCard(rCardPath);
+  } else {
+    console.log('already drawn!');
+  }
 }
 
 const drawCard = function(cardPath) {
   let drawCard = deck.scene.children[deck.scene.children.length - 1];
-  if (cardArr.length < 4) {
+  if (cardArr.length < 4 && deck.scene.children.length) {
     gsap.to(drawCard.position, {
       x: 80,
       y: 8.5,
@@ -817,6 +990,7 @@ const drawCard = function(cardPath) {
         });
       } else {
         console.log("Hand full!");
+        drawCount = 0;
       }
 
       cardArr.push(cardObjFormat);
@@ -826,18 +1000,28 @@ const drawCard = function(cardPath) {
     })
   } else {
     console.log("Hand full!");
+    drawCount = 0;
   }
 }
 
 const initialHand = () => {
-  for (let i=0; i < 4; i++) {
+  for(let i=0; i < 2; i++) {
+    const rCard = randomCard(noCostCards);
+    const rCardPath = `./assets/models/Card_models/${rCard}.glb`
+    drawCard(rCardPath);
+    const index = cards.indexOf(rCard[0]);
+    cards.splice(index, 1);
+  }
+  for (let i=0; i < 2; i++) {
     const rCard = randomCard(cards);
     const rCardPath = `./assets/models/Card_models/${rCard}.glb`
     drawCard(rCardPath);
+    // const testCardPath = './assets/models/Card_models/Bug.glb'
+    // drawCard(testCardPath);
   }
 }
 
-function randomIntFromInterval(min, max) {
+const randomIntFromInterval = (min, max) => {
   return Math.floor(Math.random() * (max - min + 1) + min)
 }
 
@@ -859,7 +1043,7 @@ const opponentDraw = () => {
 // ('AIB2', "");
 // ('AIB3', "");
 // ('AIB4', "");
-console.log("got this far");
+//console.log("got this far");
   const bs1 = boardState.get('AIB1');
   const bs2 = boardState.get('AIB2');
   const bs3 = boardState.get('AIB3');
@@ -867,7 +1051,7 @@ console.log("got this far");
   const numPool = [];
 
   if(!bs1) {
-    console.log('bs1 is empty');
+    //console.log('bs1 is empty');
     numPool.push(1);
   }
 
@@ -885,7 +1069,7 @@ console.log("got this far");
   
   if(numPool.length != 0) {
     numPool.forEach(num => {
-      console.log('Flip!!!');
+      //console.log('Flip!!!');
       const coinFlip = Math.floor(Math.random() * 2) == 0;
       if(coinFlip) {
         const rCard = randomCard(oppCards);
@@ -895,7 +1079,6 @@ console.log("got this far");
     })
   }
 };
-
 
 const opponentPlaceCards = (cardPath, pos) => {
     loader.load(`${cardPath}`, (gltf) => {
@@ -914,28 +1097,28 @@ const opponentPlaceCards = (cardPath, pos) => {
         if(pos === 1) {
           cardObj.position.setZ(-11.53);
           cardObj.position.setX(-3.18);
-          cardObj.position.setY(7.03);
+          cardObj.position.setY(7.015);
           cardObjFormat.frontPos = 'AIF1'
           cardObjFormat.backPos = 'AIB1'
           boardState.set('AIB1', cardObjFormat);
         } else if(pos === 2) {
           cardObj.position.setZ(-11.53);
           cardObj.position.setX(-2.38);
-          cardObj.position.setY(7.03);
+          cardObj.position.setY(7.015);
           cardObjFormat.frontPos = 'AIF2'
           cardObjFormat.backPos = 'AIB2'
           boardState.set('AIB2', cardObjFormat);
         } else if(pos === 3) {
           cardObj.position.setZ(-11.53);
           cardObj.position.setX(-1.58);
-          cardObj.position.setY(7.03);
+          cardObj.position.setY(7.015);
           cardObjFormat.frontPos = 'AIF3'
           cardObjFormat.backPos = 'AIB3'
           boardState.set('AIB3', cardObjFormat);
         } else if(pos === 4) {
           cardObj.position.setZ(-11.51);
           cardObj.position.setX(-0.77);
-          cardObj.position.setY(7.03);
+          cardObj.position.setY(7.015);
           cardObjFormat.frontPos = 'AIF4'
           cardObjFormat.backPos = 'AIB4'
           boardState.set('AIB4', cardObjFormat);
@@ -952,7 +1135,7 @@ const opponentPlaceCards = (cardPath, pos) => {
 
 opponentInitialDraw();
 
-const backrowPush = () => {
+const backrowPush = async () => {
   const bs1 = boardState.get('AIB1');
   const bs2 = boardState.get('AIB2');
   const bs3 = boardState.get('AIB3');
@@ -960,18 +1143,41 @@ const backrowPush = () => {
   const statePool = [];
   statePool.push(bs1,bs2,bs3,bs4);
 
-  statePool.forEach(el => {
+  statePool.forEach(async el => {
     if(el === "") {
-      console.log("empty");
+      //console.log("empty");
+      return;
     } else {
       const frontPosState = boardState.get(el.frontPos);
       if(frontPosState === "") {
         boardState.set(el.frontPos, el);
+
+        if(el.frontPos === 'AIF1') {
+          const updatedEl = el;
+          updatedEl.frontPos = 'p1';
+          boardState.set('AIF1', updatedEl);
+        }
+        if(el.frontPos === 'AIF2') {
+          const updatedEl = el;
+          updatedEl.frontPos = 'p2';
+          boardState.set('AIF2', updatedEl);
+        }
+        if(el.frontPos === 'AIF3') {
+          const updatedEl = el;
+          updatedEl.frontPos = 'p3';
+          boardState.set('AIF3', updatedEl);
+        }
+        if(el.frontPos === 'AIF4') {
+          const updatedEl = el;
+          updatedEl.frontPos = 'p4';
+          boardState.set('AIF4', updatedEl);
+        }
+
         const childArr = el.cardObj.parent.children
         childArr.forEach(el => {
           gsap.to(el.position, {
             z: -82,
-            duration: 1
+            duration: 1,
           })
         })
         boardState.set(el.backPos, "");
@@ -980,62 +1186,528 @@ const backrowPush = () => {
   })
 };
 
-const endTurn = function() {
-  console.log("end turn");
-  console.log(boardState);
+const endTurn = async function() {
+//console.log(boardState);
+// ('p1', "");
+// ('p2', "");
+// ('p3', "");
+// ('p4', "");
+
+// ('AIF1', "");
+// ('AIF2', "");
+// ('AIF3', "");
+// ('AIF4', "");
+
+// ('AIB1', "");
+// ('AIB2', "");
+// ('AIB3', "");
+// ('AIB4', "");
+  //console.log("end turn");
+  //console.log(boardState);
+  sacrificeCnt = 0;
+  drawCount = 0;
+  if(cards.length === 0) {
+    reshuffleDeck();
+  }
+  if(oppCards.length === 0) {
+    oppCards = [
+      'BootStrapped','BrokenCode','Bug','Cookie','DeathNode','destroyEnemy(you)','Documentation','Firewall','Gitbasher','GitSome','GoogleFu','GrimRepo','Hello World','if(losing)','Iterator','JACK','JSONFoorhees','Loop','NullPointer','OffCenterDiv','RobloxDevOps','RubberDuck','SQLSyntaxErr','Syntax Err'
+    ];
+  }
+  toggleView();
   backrowPush();
-  turn++;
-  if(turn > 0) {
-    if(turn % 2 === 0) {
-      const coinFlip = Math.floor(Math.random() * 2) == 0;
-      if(coinFlip) {
-        console.log('Draw!');
-        opponentDraw();
+  setTimeout(async () => {
+    turn++;
+    if(turn > 0) {
+      if(turn % 2 === 0) {
+        const coinFlip = Math.floor(Math.random() * 2) == 0;
+        if(coinFlip) {
+          console.log('Draw!');
+          opponentDraw();
+        }
+      }
+      const spots = boardState.keys();
+      for await (const spot of spots) {
+        const val = boardState.get(spot);
+        if(val) {
+          //console.log(val);
+          //console.log(val.remainingHealth);
+          if(val.remainingHealth === 0) {
+            console.log('card dies');
+            return;
+          }
+            await dealDamage(spot, val)
+        }
       }
     }
-    const spots = boardState.keys();
-    for(const spot of spots) {
-      console.log(spot);
-      
+  }, 1000);
+
+  // const b1 = boardState.get('AIB1');
+  // const b2 = boardState.get('AIB2');
+  // const b3 = boardState.get('AIB3');
+  // const b4 = boardState.get('AIB4');
+  // const f1 = boardState.get('AIF1');
+  // const f2 = boardState.get('AIF2');
+  // const f3 = boardState.get('AIF3');
+  // const f4 = boardState.get('AIF4');
+
+  // // IF ANY backrow slots are occupied
+  // if(b1 || b2 || b3 || b4) {
+  //   //console.log(b1);
+
+  //   let f1Check;
+  //   let f2Check;
+  //   let f3Check;
+  //   let f4Check;
+
+  //   if(b1) {
+  //     //console.log('b1 is occupied');
+  //     if(f1) {
+  //       f1Check = false;
+  //     } else {
+  //       f1Check = true;
+  //     }
+  //   }
+
+  //   if(b2) {
+  //     if(f2) {
+  //       f2Check = false;
+  //     } else {
+  //       f2Check = true;
+  //     }
+  //   }
+
+  //   if(b3) {
+  //     if(f3) {
+  //       f3Check = false;
+  //     } else {
+  //       f3Check = true;
+  //     }
+  //   }
+
+  //   if(b4) {
+  //     if(f4) {
+  //       f4Check = false;
+  //     } else {
+  //       f4Check = true;
+  //     }
+  //   }
+
+  //   //console.log(f1Check);
+
+  //   // if any of the checks are true, then backrow must be pushed
+  //   if(f1Check || f2Check || f3Check || f4Check) {
+  //     backrowPush();
+  //     setTimeout(async () => {
+  //       turn++;
+  //       if(turn > 0) {
+  //         if(turn % 2 === 0) {
+  //           const coinFlip = Math.floor(Math.random() * 2) == 0;
+  //           if(coinFlip) {
+  //             console.log('Draw!');
+  //             opponentDraw();
+  //           }
+  //         }
+  //         const spots = boardState.keys();
+  //         for await (const spot of spots) {
+  //           const val = boardState.get(spot);
+  //           if(val) {
+  //             //console.log(val);
+  //             //console.log(val.remainingHealth);
+  //             if(val.remainingHealth === 0) {
+  //               console.log('card dies');
+  //               return;
+  //             }
+  //               await dealDamage(spot, val)
+  //           }
+  //         }
+  //       }
+  //   }, 1000);
+  //   } else {
+  //     turn++;
+  //     if(turn > 0) {
+  //       if(turn % 2 === 0) {
+  //         const coinFlip = Math.floor(Math.random() * 2) == 0;
+  //         if(coinFlip) {
+  //           console.log('Draw!');
+  //           opponentDraw();
+  //         }
+  //       }
+  //       const spots = boardState.keys();
+  //       for await (const spot of spots) {
+  //         const val = boardState.get(spot);
+  //         if(val) {
+  //           //console.log(val);
+  //           //console.log(val.remainingHealth);
+  //           if(val.remainingHealth === 0) {
+  //             console.log('card dies');
+  //             return;
+  //           }
+  //             await dealDamage(spot, val)
+  //         }
+  //       }
+  //     }
+  //   }
+  // } else {
+  //   turn++;
+  //     if(turn > 0) {
+  //       if(turn % 2 === 0) {
+  //         const coinFlip = Math.floor(Math.random() * 2) == 0;
+  //         if(coinFlip) {
+  //           console.log('Draw!');
+  //           opponentDraw();
+  //         }
+  //       }
+  //       const spots = boardState.keys();
+  //       for await (const spot of spots) {
+  //         const val = boardState.get(spot);
+  //         if(val) {
+  //           //console.log(val);
+  //           //console.log(val.remainingHealth);
+  //           if(val.remainingHealth === 0) {
+  //             console.log('card dies');
+  //             return;
+  //           }
+  //             await dealDamage(spot, val)
+  //         }
+  //       }
+  //     }
+  // }
+};
+
+const animateAttack = (spot) => {
+  console.log(spot);
+  const spotVal = boardState.get(spot);
+  console.log(spotVal);
+  if(spot === 'p1' || spot === 'p2' || spot === 'p3' || spot === 'p4') {
+    const animateArr = [];
+    const parent = spotVal.cardObj.parent
+    if(spotVal.textX) {
+      const textX = spotVal.textX;
+      const textMesh = spotVal.text;
+      animateArr.push(textX);
+      animateArr.push(textMesh);
     }
-    // boardState.forEach(async el => {
-    //   if(el.cardName) {
-    //     let cardStats = await getStats(el.cardName);
-    //     console.log(cardStats);
-    //   }
-    // })
+
+    animateArr.push(parent);
+
+    animateArr.forEach(el => {
+      gsap.to(el.position, {
+        z: el.position.z - 0.25,
+        duration: 0.15,
+        onComplete: () => {
+          gsap.to(el.position, {
+            z: el.position.z + 0.25,
+            duration: 0.15
+          })
+        }
+      })
+    })
+
+  } else if (spot === 'AIF1' || spot === 'AIF2' || spot === 'AIF3' || spot === 'AIF4') {
+    const animateArr = [];
+    const parent = spotVal.cardObj.parent
+    if(spotVal.textX) {
+      const textX = spotVal.textX;
+      const textMesh = spotVal.text;
+      animateArr.push(textX);
+      animateArr.push(textMesh);
+    }
+
+    animateArr.push(parent);
+
+    animateArr.forEach(el => {
+      gsap.to(el.position, {
+        z: el.position.z + 0.25,
+        duration: 0.15,
+        onComplete: () => {
+          gsap.to(el.position, {
+            z: el.position.z - 0.25,
+            duration: 0.15
+          })
+        }
+      })
+    })
   }
 };
 
+const dealDamage = async (spot, val) => {
+  if (spot === "AIB1" || spot === "AIB2" || spot === "AIB3" || spot === "AIB4") {
+    return;
+  } else {
+    let opponent;
+    if (spot === "p1" || spot === "p2" || spot === "p3" || spot === "p4") {
+      opponent = 'AI';
+    } else {
+      opponent = 'player';
+    }
+
+    if(val.remainingHealth > 0 || val.remainingHealth === undefined) {
+      const valStats = await getStats(val.cardName);
+      const frontVal = boardState.get(val.frontPos);
+      if(frontVal && valStats.attack > 0) {
+        const frontStats = await getStats(frontVal.cardName);
+        if(frontVal.remainingHealth) {
+          let frontValHealth = frontVal.remainingHealth - valStats.attack
+          console.log(frontVal.cardName + " has " + frontValHealth + " health remaining!");
+          if(frontValHealth < 0) {
+            const cleaveDmg = frontValHealth * -1
+            //console.log('deal ' + cleaveDmg + ' to opponent');
+            if(opponent === 'AI') {
+              AIHealth -= cleaveDmg;
+              console.log('AI has ' + AIHealth + ' health left.');
+            } else {
+              playerHealth -= cleaveDmg;
+              console.log('player has ' + playerHealth + ' health left.');
+            }
+            frontValHealth = 0;
+            animateAttack(spot);
+            killCard(val.frontPos, frontVal);
+            return;
+          } else if (frontValHealth === 0) {
+            console.log('exact dmg, no cleave done');
+            frontValHealth = 0;
+            animateAttack(spot);
+            killCard(val.frontPos, frontVal);
+            return;
+          }
+          
+          frontVal.remainingHealth = frontValHealth;
+          boardState.set(val.frontPos, frontVal);
+          // HERE IS WHERE WE EXECUTE THE UPDATE CARD FUNC
+          updateCard(spot);
+          animateAttack(spot);
+        } else if (!frontVal.remainingHealth) {
+          let frontValHealth = frontStats.defense - valStats.attack
+          console.log(frontVal.cardName + " has " + frontValHealth + " health remaining!");
+          if(frontValHealth < 0) {
+            const cleaveDmg = frontValHealth * -1
+            // deal dmg to backrank cards if able
+            //console.log('deal ' + cleaveDmg + ' to opponent');
+            if(opponent === 'AI') {
+              AIHealth -= cleaveDmg;
+              console.log('AI has ' + AIHealth + ' health left.');
+            } else {
+              playerHealth -= cleaveDmg;
+              console.log('player has ' + playerHealth + ' health left.');
+            }
+            frontValHealth = 0;
+            killCard(val.frontPos, frontVal);
+            animateAttack(spot);
+            return;
+          } else if (frontValHealth === 0) {
+            console.log('exact dmg, no cleave done');
+            frontValHealth = 0;
+            killCard(val.frontPos, frontVal);
+            animateAttack(spot);
+            return;
+          }
+          frontVal.remainingHealth = frontValHealth;
+          boardState.set(val.frontPos, frontVal);
+          updateCard(spot);
+          animateAttack(spot);
+        } 
+      } else {
+        //console.log('direct damage of ' + valStats.attack + ' done to opponent');
+        if(opponent === 'AI') {
+          AIHealth -= valStats.attack;
+          console.log('AI has ' + AIHealth + ' health left.');
+        } else {
+          playerHealth -= valStats.attack;
+          console.log('player has ' + playerHealth + ' health left.');
+        }
+        animateAttack(spot);
+        // deal direct damage to player / opponent
+      }
+    } else {
+      killCard(spot, val);
+    }
+  }
+}
+
+const killCard = (key, val) => {
+  console.log(val);
+  console.log(val.cardObj);
+  gsap.to(val.cardObj.parent.position, {
+    y: val.cardObj.parent.position.y - 1,
+    duration:2
+  })
+  if(val.textX) {
+    gsap.to(val.textX.position, {
+      y: val.textX.position.y -1,
+      duration: 2
+    })
+    gsap.to(val.text.position, {
+      y: val.text.position.y -1,
+      duration: 2
+    })
+  }
+
+  setTimeout(() => {
+    scene.remove(val.cardObj.parent);
+    scene.remove(val.textX);
+    scene.remove(val.text);
+  }, 2000)
+
+  boardState.set(key, "");
+}
 const getStats = async (name) => {
-  //console.log(window.location.href);
   const href = window.location.href;
   const response = await fetch(`${href}api/cards/name/${name}`)
   const json = await response.json();
   return json;
 }
 
-// let asyncTest = await getStats('Bug');
-// console.log(asyncTest);
+const reshuffleDeck = () => {
+  scene.remove(deck);
+  loadDeck();
+  cards = [
+    'BootStrapped','BrokenCode','Bug','Cookie','DeathNode','destroyEnemy(you)','Documentation','Firewall','Gitbasher','GitSome','GoogleFu','GrimRepo','Hello World','if(losing)','Iterator','JACK','JSONFoorhees','Loop','NullPointer','OffCenterDiv','RobloxDevOps','RubberDuck','SQLSyntaxErr','Syntax Err'
+  ];
+}
+const updateCard = async (spot) => {
+  console.log(spot);
+  const spotVal = boardState.get(spot);
+  const frontPos = spotVal.frontPos;
+  const frontVal = boardState.get(frontPos);
+  let health;
+  let fontSize = 0.2;
 
-// const fontLoader = new FontLoader();
-// fontLoader.load(
-//   './assets/fonts/droid_sans_mono_regular.typeface.json',
-//   (droidFont) => {
-//     const textGeometry = new TextGeometry('FatalErr', {
-//       height: 0,
-//       size: 0.09,
-//       font: droidFont
-//     })
-//     const textMaterial = new THREE.MeshBasicMaterial({color: 0x000000});
-//     const textMesh = new THREE.Mesh(textGeometry, textMaterial);
-//     scene.add(textMesh);
-//     textMesh.position.setZ(-9.28);
-//     textMesh.position.setX(-1);
-//     textMesh.position.setY(7.016);
-//     textMesh.rotation.set(-1.575,0,0);
-//   }
-// );
+  const textAnimate = (spot, el) => {
+    if(spot === 'p1' || spot === 'p2' || spot === 'p3' || spot === 'p4') {
+      gsap.to(el.position, {
+        z: el.position.z - 0.25,
+        //y: parent.position.y + 0.05,
+        duration: 0.15,
+        onComplete: () => {
+          gsap.to(el.position, {
+            z: el.position.z + 0.25,
+            //y: parent.position.y - 0.05,
+            duration: 0.15,
+            onComplete: () => {
+              //scene.remove(frontVal.textX);
+              //scene.remove(frontVal.text);
+            }
+          })
+        }
+      })
+    } else if (spot === 'AIF1' || spot === 'AIF2' || spot === 'AIF3' || spot === 'AIF4') {
+      gsap.to(el.position, {
+        z: el.position.z - 0.25,
+        //y: parent.position.y + 0.05,
+        duration: 0.15,
+        onComplete: () => {
+          gsap.to(el.position, {
+            z: el.position.z + 0.25,
+            //y: parent.position.y - 0.05,
+            duration: 0.15,
+            onComplete: () => {
+              //scene.remove(frontVal.textX);
+              //scene.remove(frontVal.text);
+            }
+          })
+        }
+      })
+    }
+  }
+
+  if(frontVal.textX || frontVal.text) {
+    scene.remove(frontVal.textX);
+    scene.remove(frontVal.text);
+  }
+
+  let x;
+  let z;
+
+  if (spot === 'p4') {
+    x = -0.65;
+    z = -9.7;
+  }
+
+  if(spot === 'p3') {
+    x = -1.45;
+    z = -9.7;
+  }
+
+  if(spot === 'p2') {
+    x = -2.25;
+    z = -9.7;
+  }
+
+  if(spot === 'p1') {
+    x = -3.05;
+    z = -9.7;
+  }
+
+  if(spot === 'AIF4') {
+    x = -0.65;
+    z = -8.23;
+  }
+
+  if(spot === 'AIF3') {
+    x = -1.45;
+    z = -8.23;
+  }
+
+  if(spot === 'AIF2') {
+    x = -2.25;
+    z = -8.23;
+  }
+
+  if(spot === 'AIF1') {
+    x = -3.05;
+    z = -8.23;
+  }
+
+  if(frontVal.remainingHealth) {
+    health = frontVal.remainingHealth;
+    if (health >= 10) {
+      fontSize = 0.1;
+    }
+    //console.log(health);
+  }
+
+fontLoader.load(
+  './assets/fonts/droid_sans_mono_regular.typeface.json',
+  (droidFont) => {
+    const textGeometry = new TextGeometry('X', {
+      height: 0,
+      size: 0.2,
+      font: droidFont
+    })
+    const textMaterial = new THREE.MeshBasicMaterial({color: 0x000000});
+    const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+    scene.add(textMesh);
+    textMesh.position.setZ(z);
+    textMesh.position.setX(x);
+    textMesh.position.setY(7.059);
+    textMesh.rotation.set(-1.575,0,0);
+    frontVal.textX = textMesh;
+    textAnimate(spot, textMesh)
+  }
+);
+
+fontLoader.load(
+  './assets/fonts/droid_sans_mono_regular.typeface.json',
+  (droidFont) => {
+    const textGeometry = new TextGeometry(`${health}`, {
+      height: 0,
+      size: fontSize,
+      font: droidFont
+    })
+    const textMaterial = new THREE.MeshBasicMaterial({color: 0xFF0000});
+    const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+    scene.add(textMesh);
+    textMesh.position.setZ(z);
+    textMesh.position.setX(x);
+    textMesh.position.setY(7.065);
+    textMesh.rotation.set(-1.575,0,0);
+    frontVal.text = textMesh
+    textAnimate(spot, textMesh);
+  }
+)
+
+};
 
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
