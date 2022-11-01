@@ -1,22 +1,13 @@
 import * as THREE from 'three';
-import {OrbitControls} from 'OrbitControls';
+// import {OrbitControls} from 'OrbitControls';
 import {GLTFLoader} from 'GLTFLoader';
 import {gsap} from 'GSAP';
 import {TextGeometry} from 'TextGeometry';
 import {FontLoader} from 'FontLoader';
 
-// up brightness?
 // Display remaining health to screen
-// Create leaderboard / highscore item on a player
-// block screen so user can't interact with game when on login page, or make it render on another page
-// Check if game is over, if so detect if player lost or won
-// if game is over, take to leaderboard page
-// display either game over or you won! depending on if they won or not
-// use their username (from being logged in) to insert into leaderboard
 // media queries to rotate screen on mobile?
 // organize code
-// create utils folder with withAuth() function
-// loading screen? make disappear when 100% loaded
 
 let boardState = new Map();
 
@@ -35,6 +26,7 @@ boardState.set('AIF2', "");
 boardState.set('AIF3', "");
 boardState.set('AIF4', "");
 
+//let clock, camera, scene, renderer, mixer;
 
 let AIHealth = 30;
 let playerHealth = 50;
@@ -68,8 +60,6 @@ const renderer = new THREE.WebGL1Renderer({
   antialias: true
 });
  
-//renderer.outputEncoding = THREE.sRGBEncoding;
-
 renderer.setPixelRatio( window.devicePixelRatio );
 renderer.setSize( window.innerWidth, window.innerHeight);
 renderer.autoClear = false;
@@ -79,15 +69,14 @@ camera.position.setX(-2);
 camera.position.setY(8.5);
 camera.position.setZ(-5);
 
-//camera.lookAt(camera.position);
-
 renderer.render( scene, camera );
 
 loadingManager.onLoad = async function() {
   if(initialPass === false) {
-    //console.log("done loading!");
     initialHand();
     initialPass = true;
+    const loadingScreen = document.getElementById( 'loading-screen' );
+    loadingScreen.classList.add( 'fade-out' );
   }
 }
 
@@ -221,7 +210,11 @@ loader.load(
 }
 )
 
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+const ambientLight = new THREE.AmbientLight(0xffaa33, 0.1);
+const handLight = new THREE.PointLight(0xffaa33, 1, 9);
+
+handLight.position.set(-2, 8.5 -5);
+scene.add(handLight);
 scene.add(ambientLight);
 
 function getFlameMaterial(isFrontSide){
@@ -1187,23 +1180,6 @@ const backrowPush = async () => {
 };
 
 const endTurn = async function() {
-//console.log(boardState);
-// ('p1', "");
-// ('p2', "");
-// ('p3', "");
-// ('p4', "");
-
-// ('AIF1', "");
-// ('AIF2', "");
-// ('AIF3', "");
-// ('AIF4', "");
-
-// ('AIB1', "");
-// ('AIB2', "");
-// ('AIB3', "");
-// ('AIB4', "");
-  //console.log("end turn");
-  //console.log(boardState);
   sacrificeCnt = 0;
   drawCount = 0;
   if(cards.length === 0) {
@@ -1230,8 +1206,6 @@ const endTurn = async function() {
       for await (const spot of spots) {
         const val = boardState.get(spot);
         if(val) {
-          //console.log(val);
-          //console.log(val.remainingHealth);
           if(val.remainingHealth === 0) {
             console.log('card dies');
             return;
@@ -1240,139 +1214,8 @@ const endTurn = async function() {
         }
       }
     }
+  checkGame();
   }, 1000);
-
-  // const b1 = boardState.get('AIB1');
-  // const b2 = boardState.get('AIB2');
-  // const b3 = boardState.get('AIB3');
-  // const b4 = boardState.get('AIB4');
-  // const f1 = boardState.get('AIF1');
-  // const f2 = boardState.get('AIF2');
-  // const f3 = boardState.get('AIF3');
-  // const f4 = boardState.get('AIF4');
-
-  // // IF ANY backrow slots are occupied
-  // if(b1 || b2 || b3 || b4) {
-  //   //console.log(b1);
-
-  //   let f1Check;
-  //   let f2Check;
-  //   let f3Check;
-  //   let f4Check;
-
-  //   if(b1) {
-  //     //console.log('b1 is occupied');
-  //     if(f1) {
-  //       f1Check = false;
-  //     } else {
-  //       f1Check = true;
-  //     }
-  //   }
-
-  //   if(b2) {
-  //     if(f2) {
-  //       f2Check = false;
-  //     } else {
-  //       f2Check = true;
-  //     }
-  //   }
-
-  //   if(b3) {
-  //     if(f3) {
-  //       f3Check = false;
-  //     } else {
-  //       f3Check = true;
-  //     }
-  //   }
-
-  //   if(b4) {
-  //     if(f4) {
-  //       f4Check = false;
-  //     } else {
-  //       f4Check = true;
-  //     }
-  //   }
-
-  //   //console.log(f1Check);
-
-  //   // if any of the checks are true, then backrow must be pushed
-  //   if(f1Check || f2Check || f3Check || f4Check) {
-  //     backrowPush();
-  //     setTimeout(async () => {
-  //       turn++;
-  //       if(turn > 0) {
-  //         if(turn % 2 === 0) {
-  //           const coinFlip = Math.floor(Math.random() * 2) == 0;
-  //           if(coinFlip) {
-  //             console.log('Draw!');
-  //             opponentDraw();
-  //           }
-  //         }
-  //         const spots = boardState.keys();
-  //         for await (const spot of spots) {
-  //           const val = boardState.get(spot);
-  //           if(val) {
-  //             //console.log(val);
-  //             //console.log(val.remainingHealth);
-  //             if(val.remainingHealth === 0) {
-  //               console.log('card dies');
-  //               return;
-  //             }
-  //               await dealDamage(spot, val)
-  //           }
-  //         }
-  //       }
-  //   }, 1000);
-  //   } else {
-  //     turn++;
-  //     if(turn > 0) {
-  //       if(turn % 2 === 0) {
-  //         const coinFlip = Math.floor(Math.random() * 2) == 0;
-  //         if(coinFlip) {
-  //           console.log('Draw!');
-  //           opponentDraw();
-  //         }
-  //       }
-  //       const spots = boardState.keys();
-  //       for await (const spot of spots) {
-  //         const val = boardState.get(spot);
-  //         if(val) {
-  //           //console.log(val);
-  //           //console.log(val.remainingHealth);
-  //           if(val.remainingHealth === 0) {
-  //             console.log('card dies');
-  //             return;
-  //           }
-  //             await dealDamage(spot, val)
-  //         }
-  //       }
-  //     }
-  //   }
-  // } else {
-  //   turn++;
-  //     if(turn > 0) {
-  //       if(turn % 2 === 0) {
-  //         const coinFlip = Math.floor(Math.random() * 2) == 0;
-  //         if(coinFlip) {
-  //           console.log('Draw!');
-  //           opponentDraw();
-  //         }
-  //       }
-  //       const spots = boardState.keys();
-  //       for await (const spot of spots) {
-  //         const val = boardState.get(spot);
-  //         if(val) {
-  //           //console.log(val);
-  //           //console.log(val.remainingHealth);
-  //           if(val.remainingHealth === 0) {
-  //             console.log('card dies');
-  //             return;
-  //           }
-  //             await dealDamage(spot, val)
-  //         }
-  //       }
-  //     }
-  // }
 };
 
 const animateAttack = (spot) => {
@@ -1570,9 +1413,9 @@ const killCard = (key, val) => {
 
   boardState.set(key, "");
 }
+
 const getStats = async (name) => {
-  const protocol = document.location.protocol;
-  const response = await fetch(`${protocol}/api/cards/name/${name}`)
+  const response = await fetch(`/api/cards/name/${name}`)
   const json = await response.json();
   return json;
 }
@@ -1584,6 +1427,66 @@ const reshuffleDeck = () => {
     'BootStrapped','BrokenCode','Bug','Cookie','DeathNode','destroyEnemy(you)','Documentation','Firewall','Gitbasher','GitSome','GoogleFu','GrimRepo','Hello World','if(losing)','Iterator','JACK','JSONFoorhees','Loop','NullPointer','OffCenterDiv','RobloxDevOps','RubberDuck','SQLSyntaxErr','Syntax Err'
   ];
 }
+
+const checkGame = () => {
+  setTimeout(() => {
+    if(playerHealth <= 0) {
+      gameOver('loss');
+    } else if (AIHealth <= 0) {
+      gameOver('win');
+    }
+  }, 500)
+}
+
+const gameOver = async (gameState) => {
+  // update fetch request to player
+  const response = await fetch('/api/players/highscore');
+  const json = await response.json();
+  const highscore = await json.highscore;
+  let score = turn;
+  if(gameState === 'win') {
+    if(score < 10) {
+      score *= 1000;
+    } else if (score < 20) {
+      score *= 100;
+    } else {
+      score *= 10;
+    }
+  } 
+
+  if (!highscore || highscore < score) {
+    console.log('NOT ELSEEEEEEEEEEE');
+    console.log(score);
+    //console.log('null score!');
+    const response = await fetch('/api/players', {
+      method: 'PUT',
+      body: JSON.stringify({
+        score
+      }),
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (response.ok) {
+      if(gameState === 'loss') {
+        document.location.replace('/leaderboard?loss');
+      } else {
+       document.location.replace('/leaderboard?win');
+      }
+    } else {
+      alert(response.statusText);
+    }
+  } else {
+    console.log('ELSEEEEEEEEEEEEEE'); 
+    if(gameState === 'loss') {
+      document.location.replace('/leaderboard?loss');
+    } else {
+      document.location.replace('/leaderboard?win');
+    }
+  }
+};
+
 const updateCard = async (spot) => {
   console.log(spot);
   const spotVal = boardState.get(spot);
@@ -1600,41 +1503,18 @@ const updateCard = async (spot) => {
 
   const textAnimate = (spot, el) => {
     if(spot === 'p1' || spot === 'p2' || spot === 'p3' || spot === 'p4') {
-      // gsap.to(el.position, {
-      //   z: el.position.z + 0.25,
-      //   //y: parent.position.y + 0.05,
-      //   duration: 0.15,
-      //   onComplete: () => {
-      //     gsap.to(el.position, {
-      //       z: el.position.z - 0.25,
-      //       //y: parent.position.y - 0.05,
-      //       duration: 0.15,
-      //       onComplete: () => {
-      //         //scene.remove(frontVal.textX);
-      //         //scene.remove(frontVal.text);
-      //       }
-      //     })
-      //   }
-      // })
       return;
     } else if (spot === 'AIF1' || spot === 'AIF2' || spot === 'AIF3' || spot === 'AIF4') {
       gsap.to(el.position, {
         z: el.position.z - 0.25,
-        //y: parent.position.y + 0.05,
         duration: 0.15,
         onComplete: () => {
           gsap.to(el.position, {
             z: el.position.z + 0.25,
-            //y: parent.position.y - 0.05,
-            duration: 0.15,
-            onComplete: () => {
-              //scene.remove(frontVal.textX);
-              //scene.remove(frontVal.text);
-            }
+            duration: 0.15
           })
         }
       })
-      // return;
     }
   }
 

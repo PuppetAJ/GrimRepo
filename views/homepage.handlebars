@@ -1,10 +1,12 @@
+    <link rel="stylesheet" href="./stylesheet/style.css" type="text/css">
+    <link rel="stylesheet" href="./stylesheet/login.css">
     <div class = "circle"></div>
     <div class = "circle-2"></div>
     <div class = "circle-3"></div>
     <main>
    <!-- Title section -->
         <section class="title-section">
-            <h1>
+            <h1 class = 'shad'>
                 Welcome to <br> The <span>Magic Cards</span>
             </h1>
             <p>
@@ -24,15 +26,15 @@
 
 
         <!-- login section -->
-        <section class="login-section">
 
+        <section class="login-section">
+        {{#if loggedIn}}
+          <button class="play btn shad">Play</p> 
+          <button class="sign-out_btn shad">Sign Out</p>
+        {{else}}
             <div class="login-register">
                 <p class="sign-in">Sign In</p>
                 <p class="register">Register</p>
-                {{#if loggedIn}}
-                <p class="sign-out">Sign Out</p>
-                <p class="play">Play</p> 
-                {{/if}}
             </div>
 
             <form action="" class="sign-in-form form">
@@ -82,6 +84,7 @@
 
                 <button class="register_btn" type="submit">Register</button>
             </form>
+        {{/if}}
         </section>
     </main>
   <script type="module" src="../js/login.js"></script>

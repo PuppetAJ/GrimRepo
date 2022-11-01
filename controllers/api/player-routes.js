@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const { Player } = require('../../models');
+const withAuth = require('../../utils/auth');
 
 // Get /api/players
 router.get('/', (req, res) => {
@@ -11,6 +12,28 @@ router.get('/', (req, res) => {
             console.log(err);
             res.status(500).json(err);
         });
+});
+
+// GET /api/players/highscore/
+router.get('/highscore/', withAuth, (req, res) => {
+  Player.findOne({
+      attributes: {exclude: ['password']},
+
+      where: {
+          id: req.session.user_id
+      }
+  })
+      .then(dbPlayerData => {
+          if(!dbPlayerData) {
+              res.status(404).json({message: `No player found with this id!`});
+              return;
+          }
+          res.json(dbPlayerData);
+      })
+      .catch(err => {
+          console.log(err);
+          res.status(500).json(err);
+      });
 });
 
 // GET /api/players/1
@@ -98,7 +121,7 @@ router.put('/:id', (req, res) => {
     })
         .then(dbPlayerData => {
             if(!dbPlayerData[0]) {
-                res.status(404).json({message: 'No Player found with this id'});
+                res.status(404).json({message: 'No Player found with this id!'});
                 return;
             }
             res.json(dbPlayerData);
@@ -108,6 +131,30 @@ router.put('/:id', (req, res) => {
             res.status(500).json(err);
         });
 });
+
+// PUT /api/players/ (route for updating using session ID)
+router.put('/', withAuth, (req, res) => {
+  Player.update(
+  {
+    highscore: req.body.score
+  },
+  {
+    where: {
+      id: req.session.user_id
+    }
+  })
+    .then(dbPlayerData => {
+      if(!dbPlayerData[0]) {
+        res.status(404).json({message: 'No Player found with this id!'});
+        return;
+      }
+      res.json(dbPlayerData);
+    })
+    .catch(err => {
+      console.log(err);
+      res.status(500).json(err);
+    })
+})
 
 // DELETE /api/players/1
 router.delete('/:id', (req, res) => {

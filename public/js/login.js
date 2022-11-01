@@ -40,7 +40,8 @@ const signInColor = 'rgb(184, 203, 253)';
     const register = document.querySelector(`.register`);
     const registerForm = document.querySelector(`.register-form`);
 
-    const signOut = document.querySelector('.sign-out');
+    const signOut = document.querySelector('.sign-out_btn');
+    const play = document.querySelector('.play');
 
     // Inputs Const for login form
     const emailLogin = document.querySelector(`.login-input`);
@@ -59,40 +60,49 @@ const signInColor = 'rgb(184, 203, 253)';
 
 
 //=========================
-//    EVENTS LISTENERS    
+//    EVENT LISTENERS    
 //=========================  
 
 // ----- Event listener for the Forms -----
 eventListener();
 function eventListener() {
     // Disable Sign In Btn
-    document.addEventListener(`DOMContentLoaded`, disableBtn);
-
+    if(usernameRegister) {
+      document.addEventListener(`DOMContentLoaded`, disableBtn);
+    }
+    
     // Inputs Fields Validations
-    usernameRegister.addEventListener(`blur`, formValidationUsername);
-    emailRegister.addEventListener(`blur`, formValidationEmail);
-    pswdRegister.addEventListener(`blur`, formValidationPswd);
+    if(usernameRegister) {
+      usernameRegister.addEventListener(`blur`, formValidationUsername);
+      emailRegister.addEventListener(`blur`, formValidationEmail);
+      pswdRegister.addEventListener(`blur`, formValidationPswd);
+    }
 }
 
 
 // ----- Event Listener Changing Login & Register -----
-signIn.onclick = () => {
+if(signIn) {
+  signIn.onclick = () => {
     registerForm.style.display = `none`;
     register.style.color = `white`;
     
     signInForm.style.display = `block`;
     signIn.style.color = signInColor;
 
+  }
 }
 
-register.onclick = () => {
+if(register) {
+  register.onclick = () => {
     register.style.color = signInColor;
     registerForm.style.display = `block`
 
     signInForm.style.display = `none`;
     signIn.style.color = `white`;
 
+  }
 }
+
 
 if(signOut) {
   signOut.addEventListener('click', async () => {
@@ -111,9 +121,16 @@ if(signOut) {
   })
 }
 
+if(play) {
+  play.addEventListener('click', () => {
+    document.location.replace('/game')
+  })
+}
+
 
 // ----- Event Listener Show & Hide Password
-eyeIconRegister.onclick = () => {
+if(eyeIconRegister) {
+  eyeIconRegister.onclick = () => {
     if(pswdRegister.type === `password`) {
         pswdRegister.setAttribute(`type`, `text`);
         eyeIconRegister.classList.remove(`fa-eye`);
@@ -124,8 +141,10 @@ eyeIconRegister.onclick = () => {
         eyeIconRegister.classList.add(`fa-eye`);
     };
 };
+}
 
-eyeIconLogin.onclick = () => {
+if(eyeIconLogin) {
+  eyeIconLogin.onclick = () => {
     if(pswdLogin.type === `password`) {
         pswdLogin.setAttribute(`type`, `text`);
         eyeIconLogin.classList.remove(`fa-eye`);
@@ -136,6 +155,8 @@ eyeIconLogin.onclick = () => {
         eyeIconLogin.classList.add(`fa-eye`);
     };
 };
+}
+
 
 
 
@@ -259,6 +280,7 @@ function handleRegisterFormSubmit(e) {
     
             signInForm.style.display = `block`;
             signIn.style.color = primaryColor;
+            document.location.reload();
             //alert(`You create an account`);
     });
 
@@ -292,7 +314,7 @@ function handleLoginFormSubmit(e) {
             // alert(`Error: ` + response.statusText);
         })
         .then(postResponse => {
-            console.log(postResponse);
+            //console.log(postResponse);
             if(postResponse === undefined) {
                 showError(signInForm, `Email or password is incorrect`);
                 
@@ -309,10 +331,13 @@ function handleLoginFormSubmit(e) {
         })
 }
 
-registerForm.addEventListener(`submit`, handleRegisterFormSubmit);
+if(registerForm) {
+  registerForm.addEventListener(`submit`, handleRegisterFormSubmit);
+}
 
-signInForm.addEventListener(`submit`, handleLoginFormSubmit);
-
+if(signInForm) {
+  signInForm.addEventListener(`submit`, handleLoginFormSubmit);
+}
 
 //=========================
 //     GSAP ANIMATION    

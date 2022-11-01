@@ -65,7 +65,7 @@ i {
 }
 
 .title-section h1 span {
-    color: var(--primary-color);
+    color: rgb(149, 174, 245);
 }
 
 .title-section p {
@@ -136,7 +136,7 @@ i {
 
 .login-section .login-register {
     display: flex;
-    gap: 55px;
+    gap: 2vw;
     font-size: 2rem;
     font-weight: medium;
     margin-bottom: 35px;
@@ -168,7 +168,7 @@ i {
 .login-input {
     border: solid 1.5px var(--grey);
     border-radius: 1rem;
-    background: none;
+    background-color: var(--bg-color);
     padding: 1rem;
     font-size: 1.7rem;
     color: #f5f5f5;
@@ -194,7 +194,8 @@ i {
    
 .login-input:focus ~ label, input:valid ~ label {
     transform: translateY(-50%) scale(0.8);
-    background-color: var(--bg-color);
+    background-color:  rgb(13, 15, 16 );
+    border-radius: 5px;
     padding: 0 .2em;
     color: var(--primary-color);
 }
@@ -225,7 +226,7 @@ i {
     transition: all ease-out .5s;
 }
 
-.sign-in_btn, .register_btn {
+.sign-in_btn, .register_btn, .btn {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -260,6 +261,10 @@ i {
   transition: all 0.4s;
   cursor: pointer;
   font-weight: bold;
+}
+
+.shad {
+  filter: drop-shadow(0 0 0.75rem black);
 }
 
 /* DESKTOP SCREEN */
@@ -318,6 +323,30 @@ i {
   .login-section {
       max-width: 500px;
       margin: 0;
+  }
+}
+
+@media screen and (max-width: 544px) {
+  .login-register {
+    flex-direction: column;
+    text-align: center;
+    padding: 15px;
+    background-color: rgba(10, 1, 6, 0.5);
+    filter: drop-shadow(0 0 0.75rem black);
+    border-radius: 15px;
+  }
+
+  .login-section {
+    padding-top: 0px;
+  }
+
+  .card-section {
+    padding-bottom: 15px;
+  }
+  
+  p {
+    font-size: 3rem;
+    text-decoration: underline;
   }
 }
 
