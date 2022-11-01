@@ -237,7 +237,11 @@ function handleRegisterFormSubmit(e) {
             signInForm.style.display = `block`;
             signIn.style.color = primaryColor;
             alert(`You create an account`);
-    })
+    });
+
+    usernameRegister.value =  ` `;
+    emailRegister.value = ` `;
+    pswdRegister.value = ` `;
 }
 
 // ----- Login Function -----
@@ -303,16 +307,16 @@ signInForm.addEventListener(`submit`, handleLoginFormSubmit);
 //     mvAnimation();
 
 
-// // ----- Duration Template -----
-// const tl = gsap.timeline({defaults:{duration: 1.5}});
+// ----- Duration Template -----
+const tl = gsap.timeline({defaults:{duration: 1.5}});
 
-// // Elements Animation when the page is loading
-// tl.from(`.title-section`, {y: -50, opacity:0});
-// tl.from(`.login-section`, {y: 50, opacity: 0}, `-=1.1`);
+// Elements Animation when the page is loading
+tl.from(`.title-section`, {y: -50, opacity:0});
+tl.from(`.login-section`, {y: 50, opacity: 0}, `-=1.1`);
 
-// function formAnimation(form) {
-//     tl.to(form, {y: 50, opacity: 0, duration: 0.5}.reversed(true));
-// };
+function formAnimation(form) {
+    tl.to(form, {y: 50, opacity: 0, duration: 0.5}.reversed(true));
+};
 
 //=========================
 //     TIPPY TOOLTIP    
