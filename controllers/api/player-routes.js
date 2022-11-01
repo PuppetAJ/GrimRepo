@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const { Player } = require('../../models');
 
-// Get /api/player
+// Get /api/players
 router.get('/', (req, res) => {
     Player.findAll({
         attributes: {exclude: ['password']}
@@ -13,7 +13,7 @@ router.get('/', (req, res) => {
         });
 });
 
-// GET /api/player/1
+// GET /api/players/1
 router.get('/:id', (req, res) => {
     Player.findOne({
         attributes: {exclude: ['password']},
@@ -35,7 +35,7 @@ router.get('/:id', (req, res) => {
         });
 });
 
-// POST /api/player
+// POST /api/players
 router.post('/', (req, res) => {
     Player.create({
         username: req.body.username,
@@ -87,7 +87,7 @@ router.post('/login', (req, res) => {
         });
 });
 
-// PUT /api/player/1
+// PUT /api/players/1
 router.put('/:id', (req, res) => {
     Player.update(req.body, {
         individualHooks: true,
@@ -109,7 +109,7 @@ router.put('/:id', (req, res) => {
         });
 });
 
-// DELETE /api/player/1
+// DELETE /api/players/1
 router.delete('/:id', (req, res) => {
     Player.destroy({
         where: {

@@ -1,4 +1,5 @@
 const router = require('express').Router();
+const withAuth = require('../utils/auth');
 
 router.get('/', (req, res) => {
   res.render('homepage', {
@@ -17,5 +18,13 @@ router.post('/logout', (req, res) => {
     res.status(404).end();
   }
 });
+
+router.get('/game', withAuth, (req, res) => {
+  res.render('game', {
+    loggedIn: req.session.loggedIn
+  })
+})
+
+
 
 module.exports = router;

@@ -6,7 +6,7 @@
 :root {
     --primary-color: rgb(86, 124, 228);
     --secondary-color: rgb(255, 139, 93);
-    --bg-color: #1E1E1E;
+    --bg-color: #0d0f10;
     --white: white;
     --grey: #9e9e9e;
     --soft-red: #F8D7DA;
@@ -25,11 +25,26 @@
 }
 
 html {
+    height: 100vh;
     font-size: 62.5%;
     font-family: 'Barlow', sans-serif;
     background-color: var(--bg-color);
     color: var(--white);
 }
+
+main {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  width: 100%;
+  height: 100vh;
+  padding: var(--box-padding);
+}
+
+/* body, section, main {
+  height: 100vh;
+} */
 
 i {
     cursor: pointer;
@@ -179,7 +194,7 @@ i {
    
 .login-input:focus ~ label, input:valid ~ label {
     transform: translateY(-50%) scale(0.8);
-    background-color: #212121;
+    background-color: var(--bg-color);
     padding: 0 .2em;
     color: var(--primary-color);
 }
@@ -228,6 +243,25 @@ i {
     cursor: pointer;
 }
 
+.sign-out_btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  border: none;
+  background: rgb(199, 11, 11);
+  color: white;
+  text-decoration: none;
+  box-shadow: 0px 14px 56px -20px var(--primary-color);
+  width: 100%;
+  height: 55px;
+  font-size: 1.7rem;
+  margin: 10px 0;
+  transition: all 0.4s;
+  cursor: pointer;
+  font-weight: bold;
+}
+
 /* DESKTOP SCREEN */
 @media  (min-width: 1500px) {
     main {
@@ -241,7 +275,7 @@ i {
 
     /* Title section */
     .title-section {
-        text-align: start;
+        text-align: center;
         display: flex;
         flex-direction: column;
     }
@@ -249,6 +283,7 @@ i {
     .title-section h1 {
         font-size: 6rem;
         margin-bottom: 35px;
+        
     }
 
     .title-section p {
@@ -258,7 +293,7 @@ i {
     }
 
 
-    /* Card section */
+  /* Card section */
 
 .card-section {
     display: flex;
@@ -280,13 +315,10 @@ i {
       bottom: -100px;
   }
 
-
-
-
-    .login-section {
-        max-width: 500px;
-        margin: 0;
-    }
+  .login-section {
+      max-width: 500px;
+      margin: 0;
+  }
 }
 
 /* @media only screen and (max-width: 350px) {

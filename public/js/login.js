@@ -32,12 +32,14 @@ const primaryColor = `rgb(86, 124, 228)`;
     const eyeIconRegister = document.getElementById(`eye-pswd_register`);
     
 
-    // Sign In & Register Btns & Form
+    // Sign In & Register Btns & Form & Sign Out
     const signIn = document.querySelector(`.sign-in`);
     const signInForm = document.querySelector(`.sign-in-form`);
 
     const register = document.querySelector(`.register`);
     const registerForm = document.querySelector(`.register-form`);
+
+    const signOut = document.querySelector('.sign-out');
 
     // Inputs Const for login form
     const emailLogin = document.querySelector(`.login-input`);
@@ -89,6 +91,23 @@ register.onclick = () => {
     signInForm.style.display = `none`;
     signIn.style.color = `white`;
 
+}
+
+if(signOut) {
+  signOut.addEventListener('click', async () => {
+    const response = await fetch('/logout', {
+      method: 'post',
+      headers: { 'Content-Type': 'application/json' }
+    });
+  
+    // if it went through okay, send to home page
+    if (response.ok) {
+      document.location.replace('/');
+    } else {
+      alert(response.statusText);
+    }
+  
+  })
 }
 
 
@@ -180,6 +199,8 @@ function formValidationPswd(e) {
 };
 
 function showError(appendContainer, errMessage) {
+  const errTest = document.querySelector('.error-message')
+  if (!errTest) {
     const errorDiv = document.createElement(`div`);
     const errorMessage = document.createElement(`p`);
 
@@ -194,6 +215,7 @@ function showError(appendContainer, errMessage) {
     setTimeout(() => {
         appendContainer.removeChild(errorDiv);
     }, 5000);
+  }
 }
 
 // ----- Enable Btn for register -----
@@ -216,7 +238,7 @@ function handleRegisterFormSubmit(e) {
 
     const userDataObj = {username, email, password};
 
-    fetch(`api/player`, {
+    fetch(`api/players`, {
         method: `POST`,
         headers: {
             Accept: 'application/json',
@@ -225,23 +247,23 @@ function handleRegisterFormSubmit(e) {
     body: JSON.stringify(userDataObj)
     })
         .then(response => {
-            if(response.ok) return response.json();
-
-            alert(`Error: ` + response.statusText);
+            if(response.ok) {
+              return response.json();
+            }
     })
         .then(postResponse => {
-            console.log(postResponse);
+            //console.log(postResponse);
             registerForm.style.display = `none`;
             register.style.color = `white`;
     
             signInForm.style.display = `block`;
             signIn.style.color = primaryColor;
-            alert(`You create an account`);
+            //alert(`You create an account`);
     });
 
-    usernameRegister.value =  ` `;
-    emailRegister.value = ` `;
-    pswdRegister.value = ` `;
+    usernameRegister.value =  ``;
+    emailRegister.value = ``;
+    pswdRegister.value = ``;
 }
 
 // ----- Login Function -----
@@ -253,7 +275,7 @@ function handleLoginFormSubmit(e) {
 
     const loginData = {email, password};
 
-    fetch(`api/player/login`, {
+    fetch(`api/players/login`, {
         method: `POST`,
         headers: {
             Accept: 'application/json',
@@ -276,7 +298,7 @@ function handleLoginFormSubmit(e) {
                 emailLogin.value = ``;
                 pswdLogin.value = ``;
             } else {
-                alert(`You logged in!`);
+              document.location.replace('/');
 
                 emailLogin.value = ``;
                 pswdLogin.value = ``;
@@ -294,18 +316,6 @@ signInForm.addEventListener(`submit`, handleLoginFormSubmit);
 //=========================
 //     GSAP ANIMATION    
 //=========================   
-
-// ----- Model viewer animation ------
-// function mvAnimation() {
-
-//     const modelViewer = document.querySelector(`.model-viewer`);
-
-//     setTimeout(() => {
-//         modelViewer.style.display = `block`;
-//     }, 2000);
-//     }
-//     mvAnimation();
-
 
 // ----- Duration Template -----
 const tl = gsap.timeline({defaults:{duration: 1.5}});

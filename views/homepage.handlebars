@@ -2,7 +2,7 @@
    <!-- Title section -->
         <section class="title-section">
             <h1>
-                Sign In to <br> The <span>Magic Cards</span>
+                Welcome to <br> The <span>Magic Cards</span>
             </h1>
             <p>
                 Your deck <br> of magic cards is waiting for you
@@ -26,6 +26,10 @@
             <div class="login-register">
                 <p class="sign-in">Sign In</p>
                 <p class="register">Register</p>
+                {{#if loggedIn}}
+                <p class="sign-out">Sign Out</p>
+                <p class="play">Play</p> 
+                {{/if}}
             </div>
 
             <form action="" class="sign-in-form form">

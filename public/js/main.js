@@ -1031,8 +1031,8 @@ const opponentInitialDraw = () => {
   for(let i=1; i <= rdmInt; i++) {
     var index = Math.floor(Math.random()*numPool.length-1);
     const cardPos = numPool.splice(index, 1);
-    // const rCard = randomCard(oppCards);
-    const rCard = 'Bug'
+    const rCard = randomCard(oppCards);
+    //const rCard = 'Bug'
     const rCardPath = `./assets/models/Card_models/${rCard}.glb`;
     opponentPlaceCards(rCardPath, cardPos[0]);
   }
@@ -1571,8 +1571,8 @@ const killCard = (key, val) => {
   boardState.set(key, "");
 }
 const getStats = async (name) => {
-  const href = window.location.href;
-  const response = await fetch(`${href}api/cards/name/${name}`)
+  const protocol = document.location.protocol;
+  const response = await fetch(`${protocol}/api/cards/name/${name}`)
   const json = await response.json();
   return json;
 }
