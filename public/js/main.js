@@ -1031,9 +1031,9 @@ const opponentInitialDraw = () => {
   for(let i=1; i <= rdmInt; i++) {
     var index = Math.floor(Math.random()*numPool.length-1);
     const cardPos = numPool.splice(index, 1);
-    const rCard = randomCard(oppCards);
+    // const rCard = randomCard(oppCards);
+    const rCard = 'Bug'
     const rCardPath = `./assets/models/Card_models/${rCard}.glb`;
-    //console.log(cardPos);
     opponentPlaceCards(rCardPath, cardPos[0]);
   }
 };
@@ -1376,13 +1376,19 @@ const endTurn = async function() {
 };
 
 const animateAttack = (spot) => {
-  console.log(spot);
+  //console.log(spot);
   const spotVal = boardState.get(spot);
-  console.log(spotVal);
+  const frontPos = spotVal.frontPos;
+  const frontPosVal = boardState.get(frontPos);
   if(spot === 'p1' || spot === 'p2' || spot === 'p3' || spot === 'p4') {
     const animateArr = [];
     const parent = spotVal.cardObj.parent
-    if(spotVal.textX) {
+    if(spotVal.textX && frontPosVal === "") {
+      const textX = spotVal.textX;
+      const textMesh = spotVal.text;
+      animateArr.push(textX);
+      animateArr.push(textMesh);
+    } else if (spotVal.textX && frontPosVal.remainingHealth === 0) {
       const textX = spotVal.textX;
       const textMesh = spotVal.text;
       animateArr.push(textX);
@@ -1407,7 +1413,12 @@ const animateAttack = (spot) => {
   } else if (spot === 'AIF1' || spot === 'AIF2' || spot === 'AIF3' || spot === 'AIF4') {
     const animateArr = [];
     const parent = spotVal.cardObj.parent
-    if(spotVal.textX) {
+    if(spotVal.textX && frontPosVal === "") {
+      const textX = spotVal.textX;
+      const textMesh = spotVal.text;
+      animateArr.push(textX);
+      animateArr.push(textMesh);
+    } else if (spotVal.textX && frontPosVal.remainingHealth === 0) {
       const textX = spotVal.textX;
       const textMesh = spotVal.text;
       animateArr.push(textX);
@@ -1461,12 +1472,16 @@ const dealDamage = async (spot, val) => {
               console.log('player has ' + playerHealth + ' health left.');
             }
             frontValHealth = 0;
+            frontVal.remainingHealth = frontValHealth;
+            boardState.set(val.frontPos, frontVal);
             animateAttack(spot);
             killCard(val.frontPos, frontVal);
             return;
           } else if (frontValHealth === 0) {
             console.log('exact dmg, no cleave done');
             frontValHealth = 0;
+            frontVal.remainingHealth = frontValHealth;
+            boardState.set(val.frontPos, frontVal);
             animateAttack(spot);
             killCard(val.frontPos, frontVal);
             return;
@@ -1492,12 +1507,16 @@ const dealDamage = async (spot, val) => {
               console.log('player has ' + playerHealth + ' health left.');
             }
             frontValHealth = 0;
+            frontVal.remainingHealth = frontValHealth;
+            boardState.set(val.frontPos, frontVal);
             killCard(val.frontPos, frontVal);
             animateAttack(spot);
             return;
           } else if (frontValHealth === 0) {
             console.log('exact dmg, no cleave done');
             frontValHealth = 0;
+            frontVal.remainingHealth = frontValHealth;
+            boardState.set(val.frontPos, frontVal);
             killCard(val.frontPos, frontVal);
             animateAttack(spot);
             return;
@@ -1507,7 +1526,7 @@ const dealDamage = async (spot, val) => {
           updateCard(spot);
           animateAttack(spot);
         } 
-      } else {
+      } else if (valStats.attack > 0) {
         //console.log('direct damage of ' + valStats.attack + ' done to opponent');
         if(opponent === 'AI') {
           AIHealth -= valStats.attack;
@@ -1573,24 +1592,31 @@ const updateCard = async (spot) => {
   let health;
   let fontSize = 0.2;
 
+  if(frontVal.textX || frontVal.text) {
+    //console.log(frontVal);
+    scene.remove(frontVal.textX);
+    scene.remove(frontVal.text);
+  } 
+
   const textAnimate = (spot, el) => {
     if(spot === 'p1' || spot === 'p2' || spot === 'p3' || spot === 'p4') {
-      gsap.to(el.position, {
-        z: el.position.z - 0.25,
-        //y: parent.position.y + 0.05,
-        duration: 0.15,
-        onComplete: () => {
-          gsap.to(el.position, {
-            z: el.position.z + 0.25,
-            //y: parent.position.y - 0.05,
-            duration: 0.15,
-            onComplete: () => {
-              //scene.remove(frontVal.textX);
-              //scene.remove(frontVal.text);
-            }
-          })
-        }
-      })
+      // gsap.to(el.position, {
+      //   z: el.position.z + 0.25,
+      //   //y: parent.position.y + 0.05,
+      //   duration: 0.15,
+      //   onComplete: () => {
+      //     gsap.to(el.position, {
+      //       z: el.position.z - 0.25,
+      //       //y: parent.position.y - 0.05,
+      //       duration: 0.15,
+      //       onComplete: () => {
+      //         //scene.remove(frontVal.textX);
+      //         //scene.remove(frontVal.text);
+      //       }
+      //     })
+      //   }
+      // })
+      return;
     } else if (spot === 'AIF1' || spot === 'AIF2' || spot === 'AIF3' || spot === 'AIF4') {
       gsap.to(el.position, {
         z: el.position.z - 0.25,
@@ -1608,12 +1634,8 @@ const updateCard = async (spot) => {
           })
         }
       })
+      // return;
     }
-  }
-
-  if(frontVal.textX || frontVal.text) {
-    scene.remove(frontVal.textX);
-    scene.remove(frontVal.text);
   }
 
   let x;

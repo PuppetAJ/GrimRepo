@@ -40,18 +40,9 @@ Player.init (
                 len: [8]
             }
         },
-        health: {
+        highscore: {
             type: DataTypes.INTEGER
-        },
-        wins: {
-            type: DataTypes.INTEGER,
-            allowNull: true
-        },
-        losses: {
-            type: DataTypes.INTEGER,
-            allowNull: true
-        }    
-        
+        }
     },
     {
         hooks: {
