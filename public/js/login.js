@@ -11,6 +11,7 @@
 
 // ----- Abstract Variables -----
 const primaryColor = `rgb(86, 124, 228)`;
+const signInColor = 'rgb(184, 203, 253)';
 
 
 // ---- Form Register Variables -----
@@ -80,12 +81,12 @@ signIn.onclick = () => {
     register.style.color = `white`;
     
     signInForm.style.display = `block`;
-    signIn.style.color = primaryColor;
+    signIn.style.color = signInColor;
 
 }
 
 register.onclick = () => {
-    register.style.color = primaryColor;
+    register.style.color = signInColor;
     registerForm.style.display = `block`
 
     signInForm.style.display = `none`;

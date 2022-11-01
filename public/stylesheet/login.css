@@ -147,7 +147,7 @@ i {
 }
 
 .login-register .sign-in {
-    color: var(--primary-color);
+    color:  rgb(184, 203, 253);
 }
 
 .form {

@@ -8,6 +8,61 @@ canvas {
   left: 0;
 }
 
+/* html {
+  overflow: auto;
+} */
+
+/* body {
+  overflow: hidden
+} */
+
+#contentWrapper {
+  overflow-x: hidden;
+  position: relative;
+}
+
 .hidden {
   display: none;
+}
+
+.circle {
+  overflow: hidden;
+  display: flex;
+  position: absolute;
+  left: -55rem;
+  top: 20rem;
+  height: 80rem;
+  width: 80rem;
+  background-color: rgb(58, 102, 185, 1);
+  filter: drop-shadow(0 0 0.75rem black);
+  border-radius: 50%;
+  z-index: -501;
+}
+
+.circle-2 {
+  overflow: hidden;
+  display: flex;
+  position: absolute;
+  filter: drop-shadow(0 0 0.75rem black);
+  left: 5rem;
+  top: 25rem;
+  height: 15rem;
+  width: 15rem;
+  background-color: rgb(38, 163, 231);
+  border-radius: 50%;
+  z-index: -499;
+}
+
+.circle-3 {
+  overflow: hidden;
+  display: flex;
+  position: absolute;
+  right: -25rem;
+  filter: drop-shadow(0 0 0.75rem black);
+  height: 50rem;
+  width: 50rem;
+  top: -25rem;
+  background-color: rgb(72, 9, 243, 0.75);
+  border-radius: 50%;
+  z-index: -502;
 }
