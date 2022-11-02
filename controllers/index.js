@@ -1,7 +1,11 @@
+// Import router
 const router = require('express').Router();
+
+// Import routes
 const homeRoutes = require('./home-routes.js');
 const apiRoutes = require('./api');
 
+// Declare prefixes to use before routes
 router.use('/', homeRoutes);
 router.use('/api', apiRoutes);
 

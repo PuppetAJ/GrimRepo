@@ -1,93 +1,100 @@
-    <link rel="stylesheet" href="./stylesheet/style.css" type="text/css">
-    <link rel="stylesheet" href="./stylesheet/login.css">
-    <div class = "circle"></div>
-    <div class = "circle-2"></div>
-    <div class = "circle-3"></div>
-    <main>
-   <!-- Title section -->
-        <section class="title-section">
-            <h1 class = 'shad'>
-                Welcome to <br> The <span>Magic Cards</span>
-            </h1>
-            <p>
-                Your deck <br> of magic cards is waiting for you
-            </p>
-        </section>
+{{!-- Homepage layout --}}
+{{!-- Stylesheet imports --}}
+<link rel="stylesheet" href="./stylesheet/style.css" type="text/css">
+<link rel="stylesheet" href="./stylesheet/login.css">
+
+{{!-- Decorative shapes --}}
+<div class="circle"></div>
+<div class="circle-2"></div>
+<div class="circle-3"></div>
 
 
-        <!-- Card section -->
-        <section class="card-section">
-            <div class="shape-1 shape"></div>
-            <div class="shape-2 shape"></div>
-            <div class="circle-container">
-                <img src="../assets/images/robot.png" alt="" class="circle-img">
-            </div>
-        </section>
+<main>
+  <!-- Title section -->
+  <section class="title-section">
+    <h1 class='shad'>
+      Welcome to <br> The <span>Grim Repo</span>
+    </h1>
+    <p>
+      Your deck <br> of magic cards is waiting for you
+    </p>
+  </section>
 
+  <!-- Google 3D model viewer -->
+  <model-viewer class="model-viewer" alt="" loading="eager" orientation="0 0 180deg" src="./assets/models/robot.glb" shadow-intensity="1" camera-controls touch-action="pan-y" disable-zoom autoplay></model-viewer>
 
-        <!-- login section -->
+  <!-- login / register section -->
+  <section class="login-section">
+  
+  {{!-- If logged in , display these buttons --}}
+  {{#if loggedIn}}
+    <button class="play btn shad">Play</p> 
+    <button class="sign-out_btn shad">Sign Out</p>
+  {{!-- Otherwise, display this --}}
+  {{else}}
+    <div class="login-register">
+      <p class="sign-in">Sign In</p>
+      <p class="register">Register</p>
+    </div>
 
-        <section class="login-section">
-        {{#if loggedIn}}
-          <button class="play btn shad">Play</p> 
-          <button class="sign-out_btn shad">Sign Out</p>
-        {{else}}
-            <div class="login-register">
-                <p class="sign-in">Sign In</p>
-                <p class="register">Register</p>
-            </div>
+    {{!-- Login form --}}
+    <form action="" class="sign-in-form form">
+      {{!-- Email field --}}
+      <div class="input-group login-input_div">
+          <input required="" type="text" name="text" autocomplete="off" class="login-input input-email" id="email">
+          <label id="email" class="user-label email-label">Enter Email</label>
+      </div>
 
-            <form action="" class="sign-in-form form">
+      {{!-- Password field --}}
+      <div class="input-group login-input_div">
+        <input required="" type="password" name="password" autocomplete="off" class="login-input input-pswd input-pswd_login" id="pswd">
+        <label id="pswd" class="user-label pswd-label">Password</label>
+        <div class="login-input_icon">
+          <i id="eye-pswd_login" class="fa-regular fa-eye"></i>
+        </div>
+      </div>
+      {{!-- Sign in button --}}
+      <button class="sign-in_btn" type="submit">Sign In</button>
+    </form>
 
-                <div class="input-group login-input_div">
-                    <input required="" type="text" name="text" autocomplete="off" class="login-input input-email" id="email">
-                    <label id="email" class="user-label email-label">Enter Email</label>
-                  </div>
+    {{!-- Register form --}}
+    <form action="" class="register-form form">
+      {{!-- Username field --}}
+      <div class="input-group login-input_div">
+          <input required="" type="text" name="username-label" autocomplete="off" class="login-input" id="input-username_register">
+          <label id="username-label_register" class="user-label">Enter Username</label>
+          <div class="login-input_icon">
+            <i class="fa-regular fa-circle-check" id="icon-username"></i>
+          </div>
+      </div>
+      {{!-- Email field --}}
+      <div class="input-group login-input_div">
+          <input required="" type="text" name="email-label" autocomplete="off" class="login-input input-email" id="input-email_register">
+          <label id="email-label_register" class="user-label">Enter Email</label>
+          <div class="login-input_icon">
+            <i class="fa-regular fa-at" id="icon-email"></i>
+          </div>
+      </div>
 
-                  <div class="input-group login-input_div">
-                    <input required="" type="password" name="password" autocomplete="off" class="login-input input-pswd input-pswd_login" id="pswd">
-                    <label id="pswd" class="user-label pswd-label">Password</label>
-                    <div class="login-input_icon">
-                        <i id="eye-pswd_login" class="fa-regular fa-eye"></i>
-                    </div>
-                  </div>
+      {{!-- Password field --}}
+      <div class="input-group login-input_div">
+        <input required="" type="password" name="input-pswd_register" autocomplete="off" class="login-input" id="input-pswd_register">
+        <label id="pswd-label_register" class="user-label">Password</label>
+        <div class="login-input_icon">
+          <i id="eye-pswd_register" class="fa-regular fa-eye"></i>
+        </div>
+      </div>
 
-                <button class="sign-in_btn" type="submit">Sign In</button>
-            </form>
+      {{!-- Register button --}}
+      <button class="register_btn" type="submit">Register</button>
+    </form>
+  {{/if}}
+  </section>
+</main>
 
-            <!--- Form for register  -->
-
-            <form action="" class="register-form form">
-
-                <div class="input-group login-input_div">
-                    <input required="" type="text" name="username-label" autocomplete="off" class="login-input" id="input-username_register">
-                    <label id="username-label_register" class="user-label">Enter Username</label>
-                    <div class="login-input_icon">
-                        <i class="fa-regular fa-circle-check" id="icon-username"></i>
-                    </div>
-                </div>
-                <div class="input-group login-input_div">
-                    <input required="" type="text" name="email-label" autocomplete="off" class="login-input input-email" id="input-email_register">
-                    <label id="email-label_register" class="user-label">Enter Email</label>
-                    <div class="login-input_icon">
-                        <i class="fa-regular fa-at" id="icon-email"></i>
-                    </div>
-                  </div>
-
-                  <div class="input-group login-input_div">
-                    <input required="" type="password" name="input-pswd_register" autocomplete="off" class="login-input" id="input-pswd_register">
-                    <label id="pswd-label_register" class="user-label">Password</label>
-                    <div class="login-input_icon">
-                        <i id="eye-pswd_register" class="fa-regular fa-eye"></i>
-                    </div>
-                  </div>
-
-                <button class="register_btn" type="submit">Register</button>
-            </form>
-        {{/if}}
-        </section>
-    </main>
-  <script type="module" src="../js/login.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.3/gsap.min.js"></script>
-  <script src="https://unpkg.com/@popperjs/core@2/dist/umd/popper.min.js"></script>
-  <script src="https://unpkg.com/tippy.js@6/dist/tippy-bundle.umd.js"></script>
+{{!-- Script imports --}}
+<script type="module" src="../js/login.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.3/gsap.min.js"></script>
+<script src="https://unpkg.com/@popperjs/core@2/dist/umd/popper.min.js"></script>
+<script src="https://unpkg.com/tippy.js@6/dist/tippy-bundle.umd.js"></script>
+<script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>

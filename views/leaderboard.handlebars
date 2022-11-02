@@ -1,3 +1,33 @@
+{{!-- Leaderboard page layout --}}
+
+{{!-- Stylesheet import --}}
 <link rel="stylesheet" href="./stylesheet/leaderboard.css">
-<div id="test">hello there!</div>
-<script src="../js/leaderboard.js"></script>
+
+{{!-- Win / loss message --}}
+{{!-- (Default message is hello there!) --}}
+<div id="message">Hello there!</div>
+
+{{!-- Leaderboard --}}
+<section class="leaderboard-section">
+  {{!-- Leaderboard header --}}
+  <div class="div-user-ranking">
+    <div class="user-info">
+      <p  class="user">{{username}}</p>
+    </div>
+    <div class="table-info">
+      <p>Highscore</p>
+    </div>
+  </div>
+  {{!-- Leaderboard content --}}
+  <ol class="general-ranking">
+  {{!-- Score partial call --}}
+    {{> score scores}}
+  </ol>
+</section>
+{{!-- Home button --}}
+<button class='btn'>Home</button>
+
+{{!-- Script imports --}}
+<script src="https://unpkg.com/@popperjs/core@2/dist/umd/popper.min.js"></script>
+<script src="https://unpkg.com/tippy.js@6/dist/tippy-bundle.umd.js"></script>
+<script src="./js/leaderboard.js"></script>

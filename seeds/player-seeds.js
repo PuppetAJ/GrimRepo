@@ -1,20 +1,31 @@
+// Imports
 const sequelize = require('../config/connection');
 const { Player } = require('../models');
 
+// Data we want to insert
 const playerdata = [
   {
     username: 'kwm0304',
-    password: '',
-
-    wins: 5,
-    losses: 1
+    email: 'testuser1@gmail.com',
+    password: 'testpassword',
+    highscore: 500
+  },
+  {
+    username: 'PuppetAJ',
+    email: 'testuser2@gmail.com',
+    password: 'testpassword',
+    highscore: 1000
+  },
+  {
+    username: 'JohanH',
+    email: 'testuser3@gmail.com',
+    password: 'testpassword',
+    highscore: 5000
   }
 ];
 
-const seedPlayers = () => Player.bulkCreate(playerdata) //{individualHooks: true});
+// Seeding function
+const seedPlayers = () => Player.bulkCreate(playerdata);
 
+// Export
 module.exports = seedPlayers;
-
-//create user db in schema
-//split player table into login info and record table  w/ player username 
-// join these on primaryKey

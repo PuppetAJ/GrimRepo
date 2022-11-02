@@ -1,14 +1,9 @@
+/* Global style reset */
 * {
   margin: 0px;
 }
 
-/* html {
-  overflow: auto;
-} */
-
-/* body {
-  overflow: hidden
-} */
+/* General styles */
 
 #contentWrapper {
   overflow-x: hidden;
@@ -18,6 +13,8 @@
 .hidden {
   display: none;
 }
+
+/* Shapes */
 
 .circle {
   overflow: hidden;

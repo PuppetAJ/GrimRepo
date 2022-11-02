@@ -1,0 +1,11 @@
+{{!-- Scores partial --}}
+{{#each this}}
+
+{{!-- Generate li for every highscore --}}
+<li>
+  <div class="row-ranking">
+    <p class="ranking-user">{{this.dataValues.username}}</p>
+    <p class="ranking-time">{{this.dataValues.highscore}}</p>
+  </div>
+</li>
+{{/each}}
