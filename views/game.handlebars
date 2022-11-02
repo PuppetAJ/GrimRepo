@@ -1,6 +1,14 @@
   {{!-- Loading screen src: https://discourse.threejs.org/t/basic-loading-screen/2332 --}}
   <link rel="manifest" href="./assets/manifest.json">
   <link rel="stylesheet" href="./stylesheet/loader.css" type="text/css">
+  <article class="opp-container">
+		<h3>OPPONENT</h3>
+		<section id="healthbar"><i class="fa-solid fa-heart" id="oh1"></i><i class="fa-solid fa-heart" id="oh2"></i><i class="fa-solid fa-heart" id="oh3"></i><i class="fa-solid fa-heart" id="oh4"></i><i class="fa-solid fa-heart" id="oh5"></i></section>
+	</article>
+	<article class="player-container">
+		<h3>{{username}}</h3>
+		<section id="opphealthbar"><i class="fa-solid fa-heart" id="1"></i><i class="fa-solid fa-heart" id="2"></i><i class="fa-solid fa-heart" id="3"></i><i class="fa-solid fa-heart" id="4"></i><i class="fa-solid fa-heart" id="5"></i></section>
+	</article>
   <section id="loading-screen">
 	<div id="loader"></div>
   </section>

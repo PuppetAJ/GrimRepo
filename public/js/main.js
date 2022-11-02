@@ -9,6 +9,17 @@ import {FontLoader} from 'FontLoader';
 // media queries to rotate screen on mobile?
 // organize code
 
+var heart5 = document.getElementById("5")
+var heart4 = document.getElementById("4")
+var heart3 = document.getElementById("3")
+var heart2 = document.getElementById("2")
+var heart1 = document.getElementById("1")
+var oppheart5 = document.getElementById("oh5")
+var oppheart4 = document.getElementById("oh4")
+var oppheart3 = document.getElementById("oh3")
+var oppheart2 = document.getElementById("oh2")
+var oppheart1 = document.getElementById("oh1")
+
 let boardState = new Map();
 
 boardState.set('p1', "");
@@ -28,7 +39,7 @@ boardState.set('AIF4', "");
 
 //let clock, camera, scene, renderer, mixer;
 
-let AIHealth = 30;
+let AIHealth = 50;
 let playerHealth = 50;
 
 var clock = new THREE.Clock();
@@ -1429,6 +1440,7 @@ const reshuffleDeck = () => {
 }
 
 const checkGame = () => {
+  adjustHealth();
   setTimeout(() => {
     if(playerHealth <= 0) {
       gameOver('loss');
@@ -1609,6 +1621,47 @@ fontLoader.load(
   }
 )
 
+};
+
+// function credit: Kenan McKenzie (as well as health bars)
+function adjustHealth() {
+  //variables selecting icons)
+   
+  if (playerHealth <= 40) {
+      heart5.classList.add("hidden")
+  }
+  if (playerHealth <= 30) {
+      heart4.classList.add("hidden")
+  }
+  if (playerHealth <= 20) {
+      heart3.classList.add("hidden")
+  }
+  if (playerHealth <= 10) {
+      heart2.classList.add("hidden")
+  }
+  if (playerHealth < 0) {
+      heart1.classList.add("hidden")
+      heart3.classList.remove("hidden")
+      heart3.classList.add("fa-solid", "fa-skull-crossbones")
+  }
+  
+  if (AIHealth <= 40) {
+      oppheart5.classList.add("hidden")
+  }
+  if (AIHealth <= 30) {
+      oppheart4.classList.add("hidden")
+  }
+  if (AIHealth <= 20) {
+      oppheart3.classList.add("hidden")
+  }
+  if (AIHealth <= 10) {
+      oppheart2.classList.add("hidden")
+  }
+  if (AIHealth < 0) {
+      oppheart1.classList.add("hidden")
+      oppheart3.classList.remove("hidden")
+      oppheart3.classList.add('fa-solid', 'fa-skull-crossbones')
+  }
 };
 
 window.addEventListener('resize', () => {

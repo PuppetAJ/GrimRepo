@@ -21,10 +21,12 @@ router.post('/logout', (req, res) => {
 });
 
 router.get('/game', withAuth, (req, res) => {
+  let username = req.session.username
+  username = username.toUpperCase();
   res.render('game', {
     loggedIn: req.session.loggedIn,
     user_id: req.session.user_id,
-    username: req.session.username
+    username: username
   })
 });
 
