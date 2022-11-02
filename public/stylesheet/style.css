@@ -2,14 +2,6 @@
   margin: 0px;
 }
 
-/* html {
-  overflow: auto;
-} */
-
-/* body {
-  overflow: hidden
-} */
-
 #contentWrapper {
   overflow-x: hidden;
   position: relative;

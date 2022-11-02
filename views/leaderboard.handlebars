@@ -1,3 +1,19 @@
 <link rel="stylesheet" href="./stylesheet/leaderboard.css">
-<div id="test">hello there!</div>
-<script src="../js/leaderboard.js"></script>
+<div id="message">Hello there!</div>
+<section class="leaderboard-section">
+  <div class="div-user-ranking">
+      <div class="user-info">
+          <p  class="user">{{username}}</p>
+      </div>
+      <div class="table-info">
+          <p>Highscore</p>
+      </div>
+  </div>
+  <ol class="general-ranking">
+  {{> score scores}}
+  </ol>
+</section>
+<button class='btn'>Home</button>
+<script src="https://unpkg.com/@popperjs/core@2/dist/umd/popper.min.js"></script>
+<script src="https://unpkg.com/tippy.js@6/dist/tippy-bundle.umd.js"></script>
+<script src="./js/leaderboard.js"></script>

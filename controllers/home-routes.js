@@ -1,5 +1,7 @@
 const router = require('express').Router();
 const withAuth = require('../utils/auth');
+const { Player } = require('../models');
+
 
 router.get('/', (req, res) => {
   sess = req.session;
@@ -30,10 +32,22 @@ router.get('/game', withAuth, (req, res) => {
   })
 });
 
-router.get('/leaderboard', (req, res) => {
-  res.render('leaderboard')
+router.get('/leaderboard', withAuth, (req, res) => {
+  Player.findAll({
+    order: [['highscore', 'DESC']],
+    attributes: ['highscore', 'username'],
+  })
+  .then(dbPlayerData => {
+    const scores = dbPlayerData;
+    res.render('leaderboard', {
+      scores,
+      username: req.session.username
+    })
+  })
+  .catch(err => {
+      console.log(err);
+      res.status(500).json(err);
+  });
 })
-
-
 
 module.exports = router;
