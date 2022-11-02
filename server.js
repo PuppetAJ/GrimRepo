@@ -1,3 +1,4 @@
+// Imports
 const express = require('express');
 const session = require('express-session');
 const exphbs = require('express-handlebars');
@@ -20,10 +21,11 @@ const sess = {
   expires: new Date(Date.now() + 3600000)
 };
 
+// Create express instance and declare port
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-//Express middleware
+// Express middleware
 app.use(session(sess));
 app.engine('handlebars', hbs.engine);
 app.set('view engine', 'handlebars');
@@ -31,9 +33,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Declare routes to use
 app.use(routes);
 
-// sync with database and then start the server
+// Sync with database and then start the server
 sequelize.sync({ force: false }).then(() => {
   app.listen(PORT, () => console.log(`Now listening on url: http://localhost:${PORT}`));
 });

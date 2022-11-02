@@ -1,4 +1,7 @@
+// Import Card model
 const { Card } = require('../models')
+
+// Card seeds
 const cards = [
     {
         tier: 'E',
@@ -184,6 +187,8 @@ const cards = [
     }
 ];
 
+// Seeding function
 const seedCards = () => Card.bulkCreate(cards);
 
+// Export seedCards function
 module.exports = seedCards;

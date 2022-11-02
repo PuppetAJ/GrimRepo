@@ -1,6 +1,9 @@
+/* Global style reset */
 * {
   margin: 0px;
 }
+
+/* General styles */
 
 #contentWrapper {
   overflow-x: hidden;
@@ -10,6 +13,8 @@
 .hidden {
   display: none;
 }
+
+/* Shapes */
 
 .circle {
   overflow: hidden;

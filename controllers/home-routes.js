@@ -1,8 +1,9 @@
+// Import models, helper functions, and router
 const router = require('express').Router();
 const withAuth = require('../utils/auth');
 const { Player } = require('../models');
 
-
+// GET '/' render homepage
 router.get('/', (req, res) => {
   sess = req.session;
   res.render('homepage', {
@@ -22,6 +23,7 @@ router.post('/logout', (req, res) => {
   }
 });
 
+// GET game page '/game'
 router.get('/game', withAuth, (req, res) => {
   let username = req.session.username
   username = username.toUpperCase();
@@ -32,6 +34,7 @@ router.get('/game', withAuth, (req, res) => {
   })
 });
 
+// GET leaderboard page '/leaderboard'
 router.get('/leaderboard', withAuth, (req, res) => {
   Player.findAll({
     order: [['highscore', 'DESC']],
@@ -50,4 +53,5 @@ router.get('/leaderboard', withAuth, (req, res) => {
   });
 })
 
+// Export router
 module.exports = router;

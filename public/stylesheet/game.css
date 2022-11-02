@@ -1,9 +1,13 @@
+/* General style overrides */
+
 html, body {
 	overflow: hidden;
 	margin: 0;
 	width: 100%;
 	height: 100%;
 }
+
+/* Canvas styles */
 
 canvas {
   position: fixed;
@@ -13,6 +17,8 @@ canvas {
   height: 0%;
   z-index: -1;
 }
+
+/* Loading screen styles */
 
 #loading-screen {
 	position: absolute;
@@ -94,6 +100,8 @@ canvas {
         transform: rotate(360deg);
     }
 }
+
+/* Health bar styles */
 
 .opp-container {
   text-align: center;

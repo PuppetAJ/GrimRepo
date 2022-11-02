@@ -1,11 +1,4 @@
 //=========================
-//       IMPORTS     
-//=========================   
-
-// For some reason the gsap module it's not working on  the server, I have to figure out how send it to the model, but this
-// is just animations, at the end are the animation code in comments to avoid any error.
-// import { gsap }  from "../../node_modules/gsap/all.js";
-//=========================
 //   VARIABLES & CONST     
 //=========================    
 
