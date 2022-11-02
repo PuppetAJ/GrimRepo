@@ -433,8 +433,8 @@ const raycastClick  = async function(event) {
 
   // calculate pointer position in normalized device coordinates
 	// (-1 to +1) for both components
-  pointer.x = (event.pageX / window.innerWidth) * 2 - 1;
-  pointer.y = -(event.pageY / window.innerHeight) * 2 + 1;
+  pointer.x = (event.targetTouches[0].pageX / window.innerWidth) * 2 - 1;
+  pointer.y = -(event.targetTouches[0].pageY / window.innerHeight) * 2 + 1;
 
   // Set raycaster from camera
   raycaster.setFromCamera(pointer, camera);
