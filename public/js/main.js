@@ -433,6 +433,279 @@ const raycastClick  = async function(event) {
 
   // calculate pointer position in normalized device coordinates
 	// (-1 to +1) for both components
+  pointer.x = (event.pageX / window.innerWidth) * 2 - 1;
+  pointer.y = -(event.pageY / window.innerHeight) * 2 + 1;
+
+  // Set raycaster from camera
+  raycaster.setFromCamera(pointer, camera);
+  // Allow raycaster to intersect 3D objects in layer 2
+  raycaster.layers.enable(2);
+
+  // Variable which is equal to what the raycaster intersected in our scene
+  const intersects = raycaster.intersectObjects(scene.children);
+
+  // If we intersected anything...
+  if(intersects.length > 0) { 
+    // Check if we intersected the table. If so, execute toggleView function
+    if (intersects[0].object.name === "Table_-_Rectangular_Wood_Planks_0001") {
+      toggleView();
+    // Check if we intersected the bell while not looking at the board. If so, execute the endTurn function
+    } else if (intersects[0].object.name === "Bell_Hitbox" && viewToggle === false) {
+      endTurn();
+    // Check if we intersected the deck while not looking at the board. If so, execute the deckClick function
+    } else if (intersects[0].object.name === "deck_hitbox" && viewToggle === false) {
+      deckClick();
+    // Check if we intersected a card that is also in our hand (not anywhere else)
+    } else if(intersects[0].object.name === "Card_Hitbox" && intersects[0].object.inHand === true) {
+      // Variable containing the other cards in our hand that weren't clicked on
+      const otherCards = cardArr.filter(el => el.handPosition != intersects[0].object.handPosition);
+      // Variable containing our selected card
+      const selectedCard = cardArr.find(el => el.handPosition === intersects[0].object.handPosition);
+      // Set selectedCardHand to our selected card
+      selectedCardHand = selectedCard;
+      // Get all 3D elements that are children of our selected card
+      const selectedCardChildArr = selectedCard.cardObj.parent.children
+      // Use GSAP to animate each child
+      selectedCardChildArr.forEach(obj => {
+        gsap.to(obj.position, {
+          z: 8.5,
+          duration: 0.25
+        })
+      });
+      // If there are other cards in our hand
+      if (otherCards.length) {
+        // Animate each of their children to go down (used to reset any cards that animated up when selected)
+        otherCards.forEach(obj => {
+          const otherCardsChildArr = obj.cardObj.parent.children
+          otherCardsChildArr.forEach(obj => {
+            gsap.to(obj.position, {
+              z: 0,
+              duration: 0.25
+            })
+          });
+        });
+      }
+    // Otherwise..
+    } else {
+      // If we intersected an object named p1 (hitbox on the board) and we have a card selected, and we're in board view
+      if(intersects[0].object.name === "p1" && selectedCardHand && viewToggle === true) {
+        // Get the card's stats using our getStats function
+        const cardStats = await getStats(selectedCardHand.cardName);
+        // If the p1 spot is empty on our board, and our card's cost is 0 or lower
+        if(boardState.get('p1') === "" && cardStats.cost <= 0) {
+          // Run the playerBoardPosition function
+          playerBoardPosition("p1", selectedCardHand.cardObj, selectedCardHand.handPosition);
+          // Get the index of the card we want to place from our cardArr which stores the cards in our hand
+          const cardIndex = cardArr.indexOf(selectedCardHand);
+          // If an index is returned, then splice it from the array since it will no longer be in our hand
+          if (cardIndex > -1) {
+            cardArr.splice(cardIndex, 1);
+          }
+
+          // Get card in p1 slot (as we set it down earlier)
+          const card = boardState.get('p1');
+          // Set object properties
+          card.cardName = selectedCardHand.cardName
+          // position in front of our card
+          card.frontPos = 'AIF1'
+          // Set p1 to our updated object
+          boardState.set('p1', card);
+          // Set our hand to empty
+          selectedCardHand = "";
+          // Run updateHand function
+          updateHand();
+        // If our card has a cost greater than 0, and we intersected the p1 slot, and our sacrifice count doesn't exist yet  
+        } else if (cardStats.cost > 0 && boardState.get('p1') !== "" && !selectedCardHand.sacrifice) {
+          // Get the card that's currently on our board
+          const boardVal = boardState.get('p1');
+          const boardStats = await getStats(boardVal.cardName);
+          // Initialize cost variable
+          let cost;
+          // Set cost variable equal to cost of card on board
+          if (boardStats.cost === 0) {
+            // 0 cost cards should give a sacrifice count of one, not 0
+            cost = 1;
+          } else {
+            cost = boardStats.cost;
+          }
+
+          // Up our sacrificeCnt variable by the cost
+          sacrificeCnt += cost;
+
+          // Kill the card we just sacrificed
+          killCard('p1', boardVal);
+
+          // If the cost has been met, then set sacrifice equal to true
+          if (sacrificeCnt >= cardStats.cost){
+            selectedCardHand.sacrifice = true;
+          }
+
+        // Otherwise, if the p1 slot was intersected, and our card that has a cost has met it's sacrifice threshold
+        } else if (boardState.get('p1') === "" && selectedCardHand.sacrifice === true) {
+          // Place the card
+          playerBoardPosition("p1", selectedCardHand.cardObj, selectedCardHand.handPosition);
+          
+          // Remove it from our hand array
+          const cardIndex = cardArr.indexOf(selectedCardHand);
+          if (cardIndex > -1) {
+            cardArr.splice(cardIndex, 1);
+          }
+          
+          // And update the object stored in the boardState map
+          const card = boardState.get('p1');
+          card.cardName = selectedCardHand.cardName
+          card.frontPos = 'AIF1'
+          boardState.set('p1', card);
+          selectedCardHand = "";
+          updateHand();
+          
+          // Reset the sacrifice count
+          sacrificeCnt = 0;
+      }
+      }
+
+      // Section's logic is the same as for p1 but references p2 (Could be refactored into a function with more time)
+      if(intersects[0].object.name === "p2" && selectedCardHand && viewToggle === true) {
+        const cardStats = await getStats(selectedCardHand.cardName);
+        if(boardState.get('p2') === "" && cardStats.cost <= 0) {
+          playerBoardPosition("p2", selectedCardHand.cardObj, selectedCardHand.handPosition);
+          const cardIndex = cardArr.indexOf(selectedCardHand);
+          if (cardIndex > -1) {
+            cardArr.splice(cardIndex, 1);
+          }
+          const card = boardState.get('p2');
+          card.cardName = selectedCardHand.cardName
+          card.frontPos = 'AIF2'
+          boardState.set('p2', card);
+          selectedCardHand = "";
+          updateHand();
+        } else if (cardStats.cost > 0 && boardState.get('p2') !== "" && !selectedCardHand.sacrifice) {
+          const boardVal = boardState.get('p2');
+          const boardStats = await getStats(boardVal.cardName);
+          let cost;
+          if (boardStats.cost === 0) {
+            cost = 1;
+          } else {
+            cost = boardStats.cost;
+          }
+          sacrificeCnt += cost;
+          killCard('p2', boardVal);
+          if (sacrificeCnt >= cardStats.cost){
+            selectedCardHand.sacrifice = true;
+          }
+        } else if (boardState.get('p2') === "" && selectedCardHand.sacrifice === true) {
+          playerBoardPosition("p2", selectedCardHand.cardObj, selectedCardHand.handPosition);
+          const cardIndex = cardArr.indexOf(selectedCardHand);
+          if (cardIndex > -1) {
+            cardArr.splice(cardIndex, 1);
+          }
+          const card = boardState.get('p2');
+          card.cardName = selectedCardHand.cardName
+          card.frontPos = 'AIF2'
+          boardState.set('p2', card);
+          selectedCardHand = "";
+          updateHand();
+          sacrificeCnt = 0;
+        }
+      }
+
+      // Section's logic is the same as for p1 but references p3
+      if(intersects[0].object.name === "p3" && selectedCardHand && viewToggle === true) {
+        const cardStats = await getStats(selectedCardHand.cardName);
+        if(boardState.get('p3') === "" && cardStats.cost <= 0) {
+          playerBoardPosition("p3", selectedCardHand.cardObj, selectedCardHand.handPosition);
+          const cardIndex = cardArr.indexOf(selectedCardHand);
+          if (cardIndex > -1) {
+            cardArr.splice(cardIndex, 1);
+          }
+          const card = boardState.get('p3');
+          card.cardName = selectedCardHand.cardName
+          card.frontPos = 'AIF3'
+          boardState.set('p3', card);
+          selectedCardHand = "";
+          updateHand();
+        } else if (cardStats.cost > 0 && boardState.get('p3') !== "" && !selectedCardHand.sacrifice) {
+          const boardVal = boardState.get('p3');
+          const boardStats = await getStats(boardVal.cardName);
+          let cost;
+          if (boardStats.cost === 0) {
+            cost = 1;
+          } else {
+            cost = boardStats.cost;
+          }
+          sacrificeCnt += cost;
+          killCard('p3', boardVal);
+          if (sacrificeCnt >= cardStats.cost){
+            selectedCardHand.sacrifice = true;
+          }
+        } else if (boardState.get('p3') === "" && selectedCardHand.sacrifice === true) {
+          playerBoardPosition("p3", selectedCardHand.cardObj, selectedCardHand.handPosition);
+          const cardIndex = cardArr.indexOf(selectedCardHand);
+          if (cardIndex > -1) {
+            cardArr.splice(cardIndex, 1);
+          }
+          const card = boardState.get('p3');
+          card.cardName = selectedCardHand.cardName
+          card.frontPos = 'AIF3'
+          boardState.set('p3', card);
+          selectedCardHand = "";
+          updateHand();
+          sacrificeCnt = 0;
+        }
+      }
+
+      // Section's logic is the same as for p1 but references p4
+      if(intersects[0].object.name === "p4" && selectedCardHand && viewToggle === true) {
+        const cardStats = await getStats(selectedCardHand.cardName);
+        if(boardState.get('p4') === "" && cardStats.cost <= 0) {
+          playerBoardPosition("p4", selectedCardHand.cardObj, selectedCardHand.handPosition);
+          const cardIndex = cardArr.indexOf(selectedCardHand);
+          if (cardIndex > -1) {
+            cardArr.splice(cardIndex, 1);
+          }
+          const card = boardState.get('p4');
+          card.cardName = selectedCardHand.cardName
+          card.frontPos = 'AIF4'
+          boardState.set('p4', card);
+          selectedCardHand = "";
+          updateHand();
+        } else if (cardStats.cost > 0 && boardState.get('p4') !== "" && !selectedCardHand.sacrifice) {
+          const boardVal = boardState.get('p4');
+          const boardStats = await getStats(boardVal.cardName);
+          let cost;
+          if (boardStats.cost === 0) {
+            cost = 1;
+          } else {
+            cost = boardStats.cost;
+          }
+          sacrificeCnt += cost;
+          killCard('p4', boardVal);
+          if (sacrificeCnt >= cardStats.cost){
+              selectedCardHand.sacrifice = true;
+          }
+        } else if (boardState.get('p4') === "" && selectedCardHand.sacrifice === true) {
+          playerBoardPosition("p4", selectedCardHand.cardObj, selectedCardHand.handPosition);
+          const cardIndex = cardArr.indexOf(selectedCardHand);
+          if (cardIndex > -1) {
+            cardArr.splice(cardIndex, 1);
+          }
+          const card = boardState.get('p4');
+          card.cardName = selectedCardHand.cardName
+          card.frontPos = 'AIF4'
+          boardState.set('p4', card);
+          selectedCardHand = "";
+          updateHand();
+          sacrificeCnt = 0;
+      }
+      }
+    } 
+  }
+};
+
+const raycastClick2  = async function(event) {
+
+  // calculate pointer position in normalized device coordinates
+	// (-1 to +1) for both components
   pointer.x = (event.targetTouches[0].pageX / window.innerWidth) * 2 - 1;
   pointer.y = -(event.targetTouches[0].pageY / window.innerHeight) * 2 + 1;
 
@@ -701,6 +974,7 @@ const raycastClick  = async function(event) {
     } 
   }
 };
+
 
 // -- Logic for updating our hand on card place --
 const updateHand = () => {
@@ -1917,6 +2191,7 @@ window.addEventListener('resize', () => {
 
 // Adds our raycaster listener to the whole window
 window.addEventListener('click', raycastClick);
+window.addEventListener('touchstart', raycastClick2);
 
 // Calls functions
 opponentInitialDraw();
