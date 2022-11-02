@@ -537,7 +537,7 @@ const raycastClick  = async function(event) {
 
           // If the cost has been met, then set sacrifice equal to true
           if (sacrificeCnt >= cardStats.cost){
-              selectedCardHand.sacrifice = true;
+            selectedCardHand.sacrifice = true;
           }
 
         // Otherwise, if the p1 slot was intersected, and our card that has a cost has met it's sacrifice threshold
@@ -636,7 +636,7 @@ const raycastClick  = async function(event) {
           sacrificeCnt += cost;
           killCard('p3', boardVal);
           if (sacrificeCnt >= cardStats.cost){
-              selectedCardHand.sacrifice = true;
+            selectedCardHand.sacrifice = true;
           }
         } else if (boardState.get('p3') === "" && selectedCardHand.sacrifice === true) {
           playerBoardPosition("p3", selectedCardHand.cardObj, selectedCardHand.handPosition);
