@@ -55,7 +55,7 @@ In order to use this project, please create a .env file with the appropriate var
 
 If you wish to seed the database, run "npm run seed"
 
-Alternatively, visit the site here: 
+Alternatively, visit the site here: https://grimrepo-aj.herokuapp.com/
 
 All test account logins use the password "testpassword"
 
