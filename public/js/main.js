@@ -1122,12 +1122,12 @@ const initialHand = () => {
   }
   // Gets two random cards of any cost
   for (let i=0; i < 2; i++) {
-    const rCard = randomCard(cards);
-    const rCardPath = `./assets/models/Card_models/${rCard}.glb`
-    drawCard(rCardPath);
+    // const rCard = randomCard(cards);
+    // const rCardPath = `./assets/models/Card_models/${rCard}.glb`
+    // drawCard(rCardPath);
     // ---- For debugging (Lol) ----
-    // const testCardPath = './assets/models/Card_models/Bug.glb'
-    // drawCard(testCardPath);
+    const testCardPath = './assets/models/Card_models/Gitbasher.glb'
+    drawCard(testCardPath);
   }
 };
 
