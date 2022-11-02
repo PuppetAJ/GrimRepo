@@ -44,7 +44,8 @@ Once all dependencies have been downloaded, you can excecute server.js by typing
 * connect-session-sequelize
 * HTML
 * CSS
-* Bootstrap
+* THREE.js
+* GSAP
 
 ## Usage
 
