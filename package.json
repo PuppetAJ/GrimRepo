@@ -1,7 +1,7 @@
 {
-  "name": "boss-fight",
+  "name": "boss-f",
   "version": "1.0.0",
-  "description": "",
+  "description": "GrimRepo",
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
