@@ -993,18 +993,36 @@ const randomCard = (arr) => {
 }
 
 // -- Logic we run when the deck is clicked --
-const deckClick = () => {
+const deckClick = async () => {
+  let sacCnt = 0;
   // If we haven't drawn already then draw a random card
-  if(drawCount < 1) {
+  if(drawCount < 1 && cardArr.length < 4) {
     ++drawCount;
     const rCard = randomCard(cards);
     const rCardPath = `./assets/models/Card_models/${rCard}.glb`
     // Call the drawCard function with our card model path
     drawCard(rCardPath);
+  } else if (cardArr.length === 4) {
+    ++drawCount;
+    cardArr.forEach(async card => {
+      let cardVal = await getStats(card.cardName);
+      if (cardVal.cost >= 1) sacCnt++;
+      if(sacCnt === 4) {
+        cardArr.forEach(card => {
+          scene.remove(card.cardObj.parent);
+        });
+        cardArr = [];
+        initialHand();
+        setTimeout(() => {
+          reshuffleDeck();          
+        }, 500);
+      }
+    });
   // Otherwise, do nothing
   } else {
     return;
   }
+
 };
 
 // -- Logic for loading the drawn card and adding it to our hand --
