@@ -71,7 +71,7 @@ let cards = [
 ];
 let noCostCards = ['OffCenterDiv', 'Hello World', 'Syntax Err', 'Loop', 'if(losing)', 'RobloxDevOps','GoogleFu','GitSome','GrimRepo']
 // We don't want the opponent to use 404 
-// (404's feature is not yet implemented, but it was meant to clear the whole board.. so it'd be unfair to allow the AI to randomly pull it)
+// (it is meant to clear the whole board.. so it'd be unfair to allow the AI to randomly pull it)
 let oppCards = structuredClone(cards);
 cards.push('FourOhFour');
 
@@ -551,6 +551,18 @@ const raycastClick  = async function(event) {
         } else if (boardState.get('p1') === "" && selectedCardHand.sacrifice === true) {
           // Place the card
           playerBoardPosition("p1", selectedCardHand.cardObj, selectedCardHand.handPosition);
+
+          // 404 Check
+          if (selectedCardHand.cardName === "FourOhFour") {
+            // If the card just placed was the 404 card, then kill every card on the table in the AI spots
+            const arrCheck = ['AIB1', 'AIB2', 'AIB3', 'AIB4', 'AIF1', 'AIF2', 'AIF3', 'AIF4'];
+            arrCheck.forEach(el => {
+              const val = boardState.get(el);
+              if(val) {
+                killCard(el, val);
+              }
+            })
+          }
           
           // Remove it from our hand array
           const cardIndex = cardArr.indexOf(selectedCardHand);
@@ -602,6 +614,15 @@ const raycastClick  = async function(event) {
           }
         } else if (boardState.get('p2') === "" && selectedCardHand.sacrifice === true) {
           playerBoardPosition("p2", selectedCardHand.cardObj, selectedCardHand.handPosition);
+          if (selectedCardHand.cardName === "FourOhFour") {
+            const arrCheck = ['AIB1', 'AIB2', 'AIB3', 'AIB4', 'AIF1', 'AIF2', 'AIF3', 'AIF4'];
+            arrCheck.forEach(el => {
+              const val = boardState.get(el);
+              if(val) {
+                killCard(el, val);
+              }
+            })
+          }
           const cardIndex = cardArr.indexOf(selectedCardHand);
           if (cardIndex > -1) {
             cardArr.splice(cardIndex, 1);
@@ -647,6 +668,15 @@ const raycastClick  = async function(event) {
           }
         } else if (boardState.get('p3') === "" && selectedCardHand.sacrifice === true) {
           playerBoardPosition("p3", selectedCardHand.cardObj, selectedCardHand.handPosition);
+          if (selectedCardHand.cardName === "FourOhFour") {
+            const arrCheck = ['AIB1', 'AIB2', 'AIB3', 'AIB4', 'AIF1', 'AIF2', 'AIF3', 'AIF4'];
+            arrCheck.forEach(el => {
+              const val = boardState.get(el);
+              if(val) {
+                killCard(el, val);
+              }
+            })
+          }
           const cardIndex = cardArr.indexOf(selectedCardHand);
           if (cardIndex > -1) {
             cardArr.splice(cardIndex, 1);
@@ -692,6 +722,15 @@ const raycastClick  = async function(event) {
           }
         } else if (boardState.get('p4') === "" && selectedCardHand.sacrifice === true) {
           playerBoardPosition("p4", selectedCardHand.cardObj, selectedCardHand.handPosition);
+          if (selectedCardHand.cardName === "FourOhFour") {
+            const arrCheck = ['AIB1', 'AIB2', 'AIB3', 'AIB4', 'AIF1', 'AIF2', 'AIF3', 'AIF4'];
+            arrCheck.forEach(el => {
+              const val = boardState.get(el);
+              if(val) {
+                killCard(el, val);
+              }
+            })
+          }
           const cardIndex = cardArr.indexOf(selectedCardHand);
           if (cardIndex > -1) {
             cardArr.splice(cardIndex, 1);
@@ -1002,8 +1041,8 @@ const deckClick = async () => {
     const rCardPath = `./assets/models/Card_models/${rCard}.glb`
     // Call the drawCard function with our card model path
     drawCard(rCardPath);
+  // Reshuffle hand logic to prevent softlock (when all cards are sacrifice cards)
   } else if (cardArr.length === 4) {
-    ++drawCount;
     cardArr.forEach(async card => {
       let cardVal = await getStats(card.cardName);
       if (cardVal.cost >= 1) sacCnt++;
@@ -1022,7 +1061,6 @@ const deckClick = async () => {
   } else {
     return;
   }
-
 };
 
 // -- Logic for loading the drawn card and adding it to our hand --
@@ -1151,7 +1189,7 @@ const initialHand = () => {
     const rCardPath = `./assets/models/Card_models/${rCard}.glb`
     drawCard(rCardPath);
     // ---- For debugging (Lol) ----
-    // const testCardPath = './assets/models/Card_models/bug.glb'
+    // const testCardPath = './assets/models/Card_models/Bug.glb'
     // drawCard(testCardPath);
   }
 };
