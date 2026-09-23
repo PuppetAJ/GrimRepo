@@ -1,5 +1,7 @@
 // The app boots, the client reaches the API, accounts and scores work end to end. Grows as pages arrive.
-import { BASE, launch, reporter } from './lib.mjs'
+import { BASE, launch, reporter, resetRateLimits } from './lib.mjs'
+
+await resetRateLimits()
 
 const { page, pageErrors, close } = await launch()
 const { check, section, report } = reporter()
