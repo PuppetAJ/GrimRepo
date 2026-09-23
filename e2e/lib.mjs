@@ -1,4 +1,5 @@
 /** Shared setup for the browser suites. Mirrors the ones in Chunkd and Wicken. */
+import pg from 'pg'
 import { chromium } from 'playwright'
 
 export const BASE = process.env.E2E_BASE_URL ?? 'http://localhost:3000'
@@ -45,4 +46,17 @@ export function reporter() {
   }
 
   return { check, section, report, results }
+}
+
+/**
+ * Clears the sign-in and sign-up counters, but only on a local or CI database, never a live one.
+ * Against the live site each suite must stay inside the real limits: 5 sign-ups and 5 sign-ins a minute.
+ */
+export async function resetRateLimits() {
+  const local = /^http:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(BASE)
+  if (!local || !process.env.DATABASE_URL) return
+  const client = new pg.Client({ connectionString: process.env.DATABASE_URL })
+  await client.connect()
+  await client.query('DELETE FROM rate_limits')
+  await client.end()
 }

@@ -32,6 +32,10 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://grimrepo:grimrepo@127.0.0.1:5433/grimrepo
+      # Created and migrated by the test script, and wiped between tests.
+      TEST_DATABASE_URL: postgresql://grimrepo:grimrepo@127.0.0.1:5433/grimrepo_test
+      # Throwaway: nothing in CI signs a cookie that has to be read back later.
+      BETTER_AUTH_SECRET: ci-secret-not-used-for-anything-real-0123456789
 
     steps:
       - uses: actions/checkout@v7

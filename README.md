@@ -21,10 +21,14 @@ You need Node 24 (`.node-version`), pnpm, and Docker for the database.
 
 ```sh
 pnpm install
-cp .env.example .env
+cp .env.example .env      # then put a real secret in BETTER_AUTH_SECRET: openssl rand -base64 32
 pnpm db:up
+pnpm db:migrate
+pnpm db:seed
 pnpm dev
 ```
+
+The seed creates a demo account anyone can use, `demo` with the password `demo-password`, and the three original players with some games behind them.
 
 The client is at http://localhost:3000 and proxies `/api` and `/health` to the API on port 3001. The database listens on 5433 so it can run beside another project's Postgres on 5432.
 
@@ -40,6 +44,9 @@ The client is at http://localhost:3000 and proxies `/api` and `/health` to the A
 | `pnpm test`                   | Unit tests in every package                                               |
 | `pnpm test:e2e`               | The browser suite, against `E2E_BASE_URL` (default http://localhost:3000) |
 | `pnpm db:up` / `pnpm db:down` | Start and stop the local Postgres                                         |
+| `pnpm db:migrate`             | Apply the migrations in `server/migrations`                               |
+| `pnpm db:seed`                | Wipe the database and reseed the demo state                               |
+| `pnpm db:seed:empty`          | Seed only if there are no players yet; Railway runs this on every boot    |
 
 ## How the code is arranged
 
@@ -51,6 +58,18 @@ e2e/      browser suites, plain Playwright scripts
 ```
 
 Imports run one way, and oxlint enforces it: the client and the server may use `shared`, `shared` uses neither, and neither imports the other.
+
+## The API
+
+| Route                              | Does                                                                                                |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `/api/auth/*`                      | Sign up, sign in by email or username, rename, delete the account, sign out; handled by Better Auth |
+| `GET /api/me`                      | The signed-in player, their best score and games played                                             |
+| `POST /api/games`                  | Records a finished game; the server works out the score                                             |
+| `GET /api/leaderboard`             | Players ranked by their best game                                                                   |
+| `GET /api/players/:username/stats` | A player's record: wins, losses, best score, recent games                                           |
+
+Every figure is computed from the stored games, so nothing the browser sends can set a score, and a player can only ever be shown under their own username. Sign-in attempts are rate limited by the client's real address and game submissions per player; the browser suite clears the counters first when it runs against a local database. The tests run against a real Postgres database whose name must end in `_test`.
 
 ## Credits
 
