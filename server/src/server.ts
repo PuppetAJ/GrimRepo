@@ -6,9 +6,13 @@ async function start(): Promise<void> {
   // Connect first, so a database that never answers fails the boot instead of every request.
   await checkDatabase()
 
-  createApp({ production: isProduction }).listen(env.PORT, () => {
-    console.log(`API ready at http://localhost:${env.PORT}`)
-  })
+  // Railway's edge controls X-Forwarded-For, so there its first entry is the client.
+  createApp({ production: isProduction, firstForwarded: Boolean(process.env['RAILWAY_ENVIRONMENT']) }).listen(
+    env.PORT,
+    () => {
+      console.log(`API ready at http://localhost:${env.PORT}`)
+    },
+  )
 }
 
 start().catch((error: unknown) => {
