@@ -5,12 +5,19 @@ import helmet from 'helmet'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { auth, CLIENT_IP_HEADER } from './auth/auth.ts'
+import { clientAddress } from './http/client-address.ts'
 import { api } from './routes/api.ts'
 import { errorHandler } from './routes/errors.ts'
 
 const clientBuildDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../client/dist')
 
-export function createApp({ production }: { production: boolean }): express.Express {
+export function createApp({
+  production,
+  firstForwarded = false,
+}: {
+  production: boolean
+  firstForwarded?: boolean
+}): express.Express {
   const app = express()
 
   // Railway puts one proxy in front, so req.ip and secure cookies see the real client.
@@ -36,9 +43,9 @@ export function createApp({ production }: { production: boolean }): express.Expr
     res.json({ ok: true })
   })
 
-  // Better Auth rate limits by address, so it gets the one Express resolved, never one a client claimed.
+  // Better Auth rate limits by address, so it gets the one resolved here, never one a client claimed.
   app.use('/api/auth', (req, _res, next) => {
-    req.headers[CLIENT_IP_HEADER] = req.ip
+    req.headers[CLIENT_IP_HEADER] = clientAddress(req, { firstForwarded })
     next()
   })
   // Better Auth reads its own request bodies, so it goes before the JSON parser.
