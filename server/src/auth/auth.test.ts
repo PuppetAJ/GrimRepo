@@ -85,9 +85,121 @@ describe('accounts', () => {
     assert.ok(statuses.includes(429), `no attempt was refused: ${statuses.join(', ')}`)
   })
 
+  it('counts attempts per client address, not in one shared bucket', async () => {
+    const player = newPlayer()
+    await signUp(player)
+    // The last forwarded entry is the one the single trusted proxy added, so it is the client.
+    const from = (address: string) => ({ 'x-forwarded-for': address })
+    const guess = (address: string) =>
+      app.call('POST', '/api/auth/sign-in/email', {
+        body: { email: player.email, password: 'not-the-password' },
+        headers: from(address),
+      })
+    for (let attempt = 0; attempt < 6; attempt++) await guess('203.0.113.7')
+    assert.equal((await guess('203.0.113.7')).status, 429)
+    assert.equal((await guess('198.51.100.9')).status, 401, 'someone else is still allowed to try')
+  })
+
+  it('cannot be dodged by making up a forwarded address', async () => {
+    const player = newPlayer()
+    await signUp(player)
+    const statuses: number[] = []
+    for (let attempt = 0; attempt < 7; attempt++) {
+      // A client can prepend anything; the proxy appends the real address last.
+      const reply = await app.call('POST', '/api/auth/sign-in/email', {
+        body: { email: player.email, password: 'not-the-password' },
+        headers: { 'x-forwarded-for': `10.9.8.${attempt}, 203.0.113.50` },
+      })
+      statuses.push(reply.status)
+    }
+    assert.ok(statuses.includes(429), statuses.join(', '))
+  })
+
+  it('never limits the session check a page makes on every load', async () => {
+    const { cookie } = await signUp(newPlayer())
+    for (let check = 0; check < 120; check++) {
+      const reply = await app.call('GET', '/api/auth/get-session', { cookie })
+      assert.equal(reply.status, 200, `check ${check} was refused`)
+    }
+  })
+
   it('forgets a session once signed out', async () => {
     const created = await signUp(newPlayer())
     await app.call('POST', '/api/auth/sign-out', { cookie: created.cookie, body: {} })
     assert.equal((await app.call('GET', '/api/me', { cookie: created.cookie })).status, 401)
+  })
+})
+
+describe('changing an account', () => {
+  const rename = (cookie: string, username: string) =>
+    app.call('POST', '/api/auth/update-user', { cookie, body: { username } })
+
+  it('lets a player change their username and keeps their games', async () => {
+    const player = newPlayer('Before')
+    const { cookie } = await signUp(player)
+    await app.call('POST', '/api/games', { cookie, body: { outcome: 'win', turns: 10 } })
+
+    const reply = await rename(cookie, 'After_Name')
+    assert.equal(reply.status, 200, JSON.stringify(reply.body))
+
+    const stats = await app.call('GET', '/api/players/after_name/stats')
+    assert.equal(stats.body.username, 'After_Name', 'shown as typed')
+    assert.equal(stats.body.games, 1, 'the games follow the account, not the name')
+    assert.equal((await app.call('GET', `/api/players/${player.username}/stats`)).status, 404)
+  })
+
+  it('refuses a name someone else has, whatever its case', async () => {
+    const first = newPlayer('Holder')
+    await signUp(first)
+    const { cookie } = await signUp(newPlayer())
+    const reply = await rename(cookie, first.username.toUpperCase())
+    assert.ok(reply.status >= 400 && reply.status < 500, `got ${reply.status}`)
+  })
+
+  it('refuses a name that breaks the rules', async () => {
+    const { cookie } = await signUp(newPlayer())
+    const reply = await rename(cookie, 'no spaces allowed')
+    assert.ok(reply.status >= 400 && reply.status < 500, `got ${reply.status}`)
+  })
+
+  it('never lets a player show a name other than their own', async () => {
+    const victim = newPlayer('Famous')
+    await signUp(victim)
+    const { cookie } = await signUp(newPlayer('Impostor'))
+    await app.call('POST', '/api/games', { cookie, body: { outcome: 'win', turns: 10 } })
+
+    await app.call('POST', '/api/auth/update-user', { cookie, body: { displayUsername: victim.username } })
+    const board = await app.call('GET', '/api/leaderboard')
+    assert.ok(
+      board.body.players.every((row: { username: string }) => row.username !== victim.username),
+      JSON.stringify(board.body),
+    )
+  })
+
+  it('ignores a display name sent at sign-up', async () => {
+    const player = newPlayer('Honest')
+    const { cookie } = await signUp({ ...player, displayUsername: 'JohanH' } as typeof player)
+    assert.equal((await app.call('GET', '/api/me', { cookie })).body.username, player.username)
+  })
+
+  it('lets a player delete their account, and their scores with it', async () => {
+    const player = newPlayer('Leaving')
+    const { cookie } = await signUp(player)
+    await app.call('POST', '/api/games', { cookie, body: { outcome: 'win', turns: 10 } })
+
+    const reply = await app.call('POST', '/api/auth/delete-user', { cookie, body: { password: player.password } })
+    assert.equal(reply.status, 200, JSON.stringify(reply.body))
+
+    assert.equal((await app.call('GET', '/api/me', { cookie })).status, 401)
+    assert.deepEqual((await app.call('GET', '/api/leaderboard')).body.players, [])
+    const { rows } = await pool.query('SELECT 1 FROM games UNION ALL SELECT 1 FROM accounts')
+    assert.equal(rows.length, 0, 'nothing of theirs is left behind')
+  })
+
+  it('refuses a deletion with the wrong password', async () => {
+    const { cookie } = await signUp(newPlayer())
+    const reply = await app.call('POST', '/api/auth/delete-user', { cookie, body: { password: 'not-the-password' } })
+    assert.ok(reply.status >= 400 && reply.status < 500, `got ${reply.status}`)
+    assert.equal((await app.call('GET', '/api/me', { cookie })).status, 200)
   })
 })

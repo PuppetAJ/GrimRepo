@@ -1,9 +1,12 @@
 import { betterAuth, type BetterAuthOptions } from 'better-auth'
+import { createAuthMiddleware } from 'better-auth/api'
 import { username } from 'better-auth/plugins'
 import { pool } from '../config/db.ts'
 import { env } from '../config/env.ts'
 
 export const USERNAME_PATTERN = /^[A-Za-z0-9_]{3,20}$/
+
+export const CLIENT_IP_HEADER = 'x-grimrepo-client-ip'
 
 export const authOptions = {
   appName: 'Grim Repo',
@@ -25,9 +28,20 @@ export const authOptions = {
       maxUsernameLength: 20,
       // Letters, digits and underscores only, so a name is safe in a URL and on the leaderboard.
       usernameValidator: (value) => USERNAME_PATTERN.test(value),
+      displayUsernameValidator: (value) => USERNAME_PATTERN.test(value),
       schema: { user: { fields: { displayUsername: 'display_username' } } },
     }),
   ],
+
+  hooks: {
+    // The shown name is always the username as typed; otherwise a player could display as someone else.
+    before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path !== '/sign-up/email' && ctx.path !== '/update-user') return
+      const body = (ctx.body ?? {}) as Record<string, unknown>
+      delete body['displayUsername']
+      if (typeof body['username'] === 'string') body['displayUsername'] = body['username']
+    }),
+  },
 
   session: {
     modelName: 'sessions',
@@ -41,10 +55,14 @@ export const authOptions = {
     },
     expiresIn: 60 * 60 * 24 * 7,
     updateAge: 60 * 60 * 24,
+    // Deleting an account needs the password, or a sign-in from the last ten minutes.
+    freshAge: 60 * 10,
   },
   user: {
     modelName: 'users',
     fields: { emailVerified: 'email_verified', createdAt: 'created_at', updatedAt: 'updated_at' },
+    // A player can remove themselves; their games go with them through the foreign key.
+    deleteUser: { enabled: true },
   },
   account: {
     modelName: 'accounts',
@@ -66,6 +84,11 @@ export const authOptions = {
     fields: { expiresAt: 'expires_at', createdAt: 'created_at', updatedAt: 'updated_at' },
   },
 
+  advanced: {
+    // app.ts writes this from Express's req.ip, which trusts exactly one proxy hop, and overwrites any a client sent.
+    ipAddress: { ipAddressHeaders: [CLIENT_IP_HEADER] },
+  },
+
   rateLimit: {
     // Better Auth only limits in production by default; on everywhere so the tests exercise it.
     enabled: true,
@@ -75,6 +98,8 @@ export const authOptions = {
     window: 60,
     max: 100,
     customRules: {
+      // Every page load asks for the session; it reveals nothing and guesses nothing.
+      '/get-session': false,
       '/sign-in/email': { window: 60, max: 5 },
       '/sign-in/username': { window: 60, max: 5 },
       '/sign-up/email': { window: 60, max: 5 },

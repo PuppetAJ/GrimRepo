@@ -12,7 +12,9 @@ CREATE TABLE users (
   display_username text NOT NULL,
   created_at       timestamptz NOT NULL DEFAULT now(),
   updated_at       timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT users_username_shape CHECK (username ~ '^[a-z0-9_]{3,20}$')
+  CONSTRAINT users_username_shape CHECK (username ~ '^[a-z0-9_]{3,20}$'),
+  -- The shown name may differ only in case, so nobody can appear on the leaderboard as someone else.
+  CONSTRAINT users_display_matches CHECK (lower(display_username) = username)
 );
 
 CREATE TABLE sessions (

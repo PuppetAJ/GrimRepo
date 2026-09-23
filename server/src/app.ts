@@ -4,7 +4,7 @@ import express from 'express'
 import helmet from 'helmet'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { auth } from './auth/auth.ts'
+import { auth, CLIENT_IP_HEADER } from './auth/auth.ts'
 import { api } from './routes/api.ts'
 import { errorHandler } from './routes/errors.ts'
 
@@ -36,6 +36,11 @@ export function createApp({ production }: { production: boolean }): express.Expr
     res.json({ ok: true })
   })
 
+  // Better Auth rate limits by address, so it gets the one Express resolved, never one a client claimed.
+  app.use('/api/auth', (req, _res, next) => {
+    req.headers[CLIENT_IP_HEADER] = req.ip
+    next()
+  })
   // Better Auth reads its own request bodies, so it goes before the JSON parser.
   app.all('/api/auth/*splat', toNodeHandler(auth))
 

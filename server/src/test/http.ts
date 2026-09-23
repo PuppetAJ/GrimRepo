@@ -12,11 +12,16 @@ export async function startApp() {
   async function call(
     method: string,
     path: string,
-    { body, cookie = '', raw }: { body?: unknown; cookie?: string; raw?: string } = {},
+    {
+      body,
+      cookie = '',
+      raw,
+      headers = {},
+    }: { body?: unknown; cookie?: string; raw?: string; headers?: Record<string, string> } = {},
   ): Promise<Reply> {
     const response = await fetch(`${base}${path}`, {
       method,
-      headers: { 'content-type': 'application/json', cookie, origin: base },
+      headers: { 'content-type': 'application/json', cookie, origin: base, ...headers },
       body: raw ?? (body === undefined ? undefined : JSON.stringify(body)),
     })
     const set = response.headers
