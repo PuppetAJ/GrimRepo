@@ -2,13 +2,23 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
+@import '@fontsource/ibm-plex-sans/400.css';
+@import '@fontsource/ibm-plex-sans/500.css';
+@import '@fontsource/ibm-plex-sans/600.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+@import '@fontsource/pirata-one/400.css';
+@import '@fontsource/vt323/400.css';
 
 @custom-variant dark (&:is(.dark *));
 
 /* `:root` holds the values; `@theme inline` maps each to the Tailwind name shadcn's components use. */
 @theme inline {
-  --font-sans: ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
   --font-heading: var(--font-sans);
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --font-display: 'Pirata One', serif;
+  --font-terminal: 'VT323', ui-monospace, monospace;
 
   --color-ring: var(--ring);
   --color-input: var(--input);
@@ -29,38 +39,51 @@
   --color-foreground: var(--foreground);
   --color-background: var(--background);
 
+  /* Not shadcn tokens: the page chrome, deaths, and P03, whose green nothing else may use. */
+  --color-chrome: var(--chrome);
+  --color-death: var(--death);
+  --color-p03: var(--p03);
+  --color-p03-dim: var(--p03-dim);
+  --color-p03-ground: var(--p03-ground);
+
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) * 1.4);
 }
 
-/* Placeholder candlelight palette until the Phase 7 design pass. */
+/* The cursed repository: violet-grey surfaces, a soft green accent, red for deaths. */
 :root,
 .dark {
   color-scheme: dark;
 
-  --background: #120f0d;
-  --card: #1b1714;
-  --popover: #211c18;
-  --muted: #26201b;
-  --accent: #2e2620;
-  --secondary: #26201b;
-  --border: #3a3029;
-  --input: #3a3029;
+  --background: #111013;
+  --chrome: #0c0b0e;
+  --card: #151318;
+  --popover: #19171c;
+  --muted: #1d1a22;
+  --accent: #221f27;
+  --secondary: #1d1a22;
+  --border: #2c2831;
+  --input: #3a3440;
 
-  --foreground: #efe6d8;
-  --card-foreground: #efe6d8;
-  --popover-foreground: #efe6d8;
-  --muted-foreground: #b3a593;
-  --accent-foreground: #efe6d8;
-  --secondary-foreground: #efe6d8;
+  --foreground: #ece6f0;
+  --card-foreground: #ece6f0;
+  --popover-foreground: #ece6f0;
+  --muted-foreground: #a39cab;
+  --accent-foreground: #ece6f0;
+  --secondary-foreground: #ece6f0;
 
-  --primary: #e0a458;
-  --primary-foreground: #1b120a;
-  --ring: #e0a458;
+  --primary: #9fdc97;
+  --primary-foreground: #111013;
+  --ring: #9fdc97;
 
-  --destructive: #e5726a;
+  --destructive: #e5534b;
+  --death: #e5534b;
+
+  --p03: #7dff9a;
+  --p03-dim: #74b884;
+  --p03-ground: #0a0e0a;
 
   --radius: 0.5rem;
 }
@@ -73,11 +96,26 @@
   html,
   body,
   #root {
-    height: 100%;
+    min-height: 100%;
     margin: 0;
   }
 
   body {
-    @apply bg-background font-sans text-foreground;
+    @apply bg-background font-sans text-foreground antialiased;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}
+
+@layer utilities {
+  /* P03's screen: scanlines under phosphor text. Never under body copy. */
+  .p03-screen {
+    background-color: var(--p03-ground);
+    background-image: repeating-linear-gradient(0deg, rgb(0 0 0 / 0.3) 0 1px, transparent 1px 3px);
+    color: #b8f5c4;
+    text-shadow: 0 0 8px rgb(125 255 154 / 0.35);
   }
 }
