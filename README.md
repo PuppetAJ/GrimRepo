@@ -1,88 +1,69 @@
+# Grim Repo
 
-# Project 2: Grim Repo
+A card game of sacrifices, played by candlelight against a robot. Inspired by [Inscryption](https://www.inscryption.com/), with a deck of programming jokes.
 
+Grim Repo started in 2022 as a bootcamp group project (Express, Handlebars, MySQL and a single three.js script) and is being rebuilt. The original is tagged `v1-legacy`.
 
-![](https://img.shields.io/badge/License-MIT-green)
+## What it is built on
 
+| Area     | Choice                                                                          |
+| -------- | ------------------------------------------------------------------------------- |
+| Client   | Vite, React 19, Tailwind v4 and shadcn/ui; React Three Fiber for the table      |
+| Server   | Express 5 on Node 24, which runs its TypeScript directly                        |
+| Rules    | A `shared` package of plain TypeScript used by both sides                       |
+| Database | Postgres 18                                                                     |
+| Tooling  | pnpm workspaces, TypeScript 7, oxlint, Prettier, Node's test runner, Playwright |
+| Hosting  | Railway, described in code in `.railway/railway.ts`                             |
 
-## Description
+## Running it
 
-This is Adrian Jimenez, Kenan McKenzie, and Johan Herrera's Project 2 submission. 
-original repo: https://github.com/kwm0304/Boss-fight
+You need Node 24 (`.node-version`), pnpm, and Docker for the database.
 
-For our project, we decided to create a card game based off of the horror game Inscryption. In order to achieve this we began by learning how to incorporate 3D models onto our page using three.js, and animating them using GSAP. We set up a database to store the data for the cards as well as data for our players so that we could implement a leaderboard later on. Once our database was ready, we were able to create login routes and authentication for our users to be able to play the game. After being able to authenticate users, we created custom made cards, and were able to construct the game visuals and game logic to allow for a truly interactive user experience. Once the game has ended, our database is called to store the highscore of the player, and when the user is on the leaderboards page, then we display all scores from top to bottom.
+```sh
+pnpm install
+cp .env.example .env
+pnpm db:up
+pnpm dev
+```
 
-## Table of Contents
+The client is at http://localhost:3000 and proxies `/api` and `/health` to the API on port 3001. The database listens on 5433 so it can run beside another project's Postgres on 5432.
 
-- [Installation](#installation)
-- [Languages](#languages)
-- [Usage](#usage)
-- [Credits](#credits)
-- [License](#license)
-- [Contributing](#contributing)
-- [Questions](#questions)
+## Scripts
 
-## Installation
+| Script                        | Does                                                                      |
+| ----------------------------- | ------------------------------------------------------------------------- |
+| `pnpm dev`                    | Client and API together, reloading on change                              |
+| `pnpm build`                  | Builds the client into `client/dist`                                      |
+| `pnpm start`                  | The API, serving the built client when `NODE_ENV=production`              |
+| `pnpm lint` / `pnpm format`   | oxlint / Prettier                                                         |
+| `pnpm typecheck`              | TypeScript across every package                                           |
+| `pnpm test`                   | Unit tests in every package                                               |
+| `pnpm test:e2e`               | The browser suite, against `E2E_BASE_URL` (default http://localhost:3000) |
+| `pnpm db:up` / `pnpm db:down` | Start and stop the local Postgres                                         |
 
-In order to install this project, download all files and have node.js installed on your machine. Navigate to the directory in which server.js is stored in and type: 
+## How the code is arranged
 
-    npm install
+```
+client/   the web app
+server/   the API
+shared/   game rules and data, imported by both
+e2e/      browser suites, plain Playwright scripts
+```
 
-
-Once all dependencies have been downloaded, you can excecute server.js by typing npm start
-
-## Technologies Used
-
-* JavaScript
-* Node.JS
-* MySQL
-* dotenv
-* mysql2
-* sequelize
-* express.js
-* express-handlebars
-* express-session
-* connect-session-sequelize
-* HTML
-* CSS
-* THREE.js
-* GSAP
-
-## Usage
-
-![](./images/preview.jpg)
-
-In order to use this project, please create a .env file with the appropriate variables and set up the database using the schema.sql file in the db directory. Once that is set up, simply execute npm start and the application should start.
-
-If you wish to seed the database, run "npm run seed"
-
-Alternatively, visit the site here: https://grimrepo-aj.herokuapp.com/
-
-All test account logins use the password "testpassword"
+Imports run one way, and oxlint enforces it: the client and the server may use `shared`, `shared` uses neither, and neither imports the other.
 
 ## Credits
 
-* Adrian Jimenez
-* Kenan McKenzie
-* Johan Herrera
-* (Model and code credits provided in main.js)
+The original team: Adrian Jimenez, Kenan McKenzie and Johan Herrera ([original repository](https://github.com/kwm0304/Boss-fight)). Kenan built the health overlay; Johan built the leaderboard and the first login page.
+
+- **The room:** [Fantasy interior items](https://sketchfab.com/3d-models/fantasy-interior-items-6542c39c66394888994d7343fd03fdef) by Tedium Interactive.
+- **The robot:** P03 from Inscryption, animated by Adrian Jimenez.
+- **The bell:** [Table bell](https://sketchfab.com/3d-models/table-bell-77f2ea17b4c84fe1a8d2aec02caa9de3) on Sketchfab, edited by Adrian Jimenez.
+- **The board and the deck:** made by Adrian Jimenez, with Inscryption's textures on the deck.
+- **The candle:** [The lonely candle](https://discourse.threejs.org/t/the-lonely-candle/4097) by prisoner849, using noise from [The Book of Shaders](https://thebookofshaders.com/11/) and [Morgan McGuire](https://www.shadertoy.com/view/4dS3Wd) and a [heatmap gradient](https://www.shadertoy.com/view/4dsSzr) from Shadertoy.
+- **The loading screen:** adapted from a [three.js forum thread](https://discourse.threejs.org/t/basic-loading-screen/2332).
+- **The game** is a tribute to Inscryption by Daniel Mullins Games.
 
 ## License
 
-This project is licensed under the MIT License. See [LICENSE.md](./LICENSE.md) for more details.
-
----
-
-## Contributing
-
-
-![](https://img.shields.io/badge/Contribution-CC%20v2.1-blueviolet)
-
-
-This project follows the contributor covenant contribution guidelines. See [here](https://www.contributor-covenant.org/version/2/1/code_of_conduct/) 
-
-
-## Questions
-
-If you have any questions or concerns visit my [github](https://github.com/PuppetAJ) or send me an email at <adrianjimenez1950@gmail.com>. 
-
+MIT. See [LICENSE](./LICENSE).
