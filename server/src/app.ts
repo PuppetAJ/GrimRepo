@@ -1,8 +1,12 @@
+import { toNodeHandler } from 'better-auth/node'
 import compression from 'compression'
 import express from 'express'
 import helmet from 'helmet'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { auth } from './auth/auth.ts'
+import { api } from './routes/api.ts'
+import { errorHandler } from './routes/errors.ts'
 
 const clientBuildDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../client/dist')
 
@@ -32,6 +36,13 @@ export function createApp({ production }: { production: boolean }): express.Expr
     res.json({ ok: true })
   })
 
+  // Better Auth reads its own request bodies, so it goes before the JSON parser.
+  app.all('/api/auth/*splat', toNodeHandler(auth))
+
+  // Nothing the API accepts is anywhere near this size.
+  app.use(express.json({ limit: '16kb' }))
+  app.use('/api', api)
+
   // An unknown API route is a 404 in JSON, never the client's index.html.
   app.use('/api', (_req, res) => {
     res.status(404).json({ error: 'Not found' })
@@ -53,6 +64,8 @@ export function createApp({ production }: { production: boolean }): express.Expr
       res.sendFile(path.join(clientBuildDir, 'index.html'))
     })
   }
+
+  app.use(errorHandler({ production }))
 
   return app
 }
