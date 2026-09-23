@@ -2,3 +2,10 @@ DS_Store
 node_modules/
 package-lock.json
 .env
+
+# Working notes: the audit, the phase plan and what each phase taught. For me, not for anyone using the project.
+docs/
+
+# Agent tooling
+AGENTS.md
+CLAUDE.md
