@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    // Node strips the types and Vite bundles the file, so TypeScript only checks.
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+
+    "target": "es2023",
+    "lib": ["es2023"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    // Only the tests touch Node; the rules themselves must run in a browser too.
+    "types": ["node"],
+
+    // Node strips types one file at a time, so every file must be strippable on its own.
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*.ts"]
+}

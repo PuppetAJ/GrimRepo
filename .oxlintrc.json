@@ -1,0 +1,57 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "react", "unicorn", "oxc", "import"],
+  "categories": {
+    "correctness": "error"
+  },
+  "rules": {
+    // The automatic JSX transform means React need not be imported to use JSX.
+    "react/react-in-jsx-scope": "off",
+    "import/no-cycle": "error"
+  },
+  // Imports run one way: client and server may use shared; shared uses neither, and neither uses the other.
+  "overrides": [
+    {
+      "files": ["shared/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["client", "client/*", "server", "server/*", "react", "three", "express"],
+                "message": "shared is plain TypeScript with no runtime of its own."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["client/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["server", "server/*"],
+                "message": "The client talks to the server over HTTP, never by import."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["server/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          { "patterns": [{ "group": ["client", "client/*"], "message": "The server never imports the client." }] }
+        ]
+      }
+    }
+  ],
+  "ignorePatterns": ["**/dist/**", "docs/**", "client/src/components/ui/**"]
+}

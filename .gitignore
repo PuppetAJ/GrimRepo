@@ -1,6 +1,37 @@
-DS_Store
+# Dependencies
 node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Environment - .env.example is the only env file that belongs in git
 .env
+.env.*
+!.env.example
+
+# Logs
+logs/
+*.log
+pnpm-debug.log*
+
+# Test and coverage output
+coverage/
+playwright-report/
+test-results/
+
+# Editor and OS noise
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+
+# Caches
+.cache/
+.vite/
 
 # Working notes: the audit, the phase plan and what each phase taught. For me, not for anyone using the project.
 docs/

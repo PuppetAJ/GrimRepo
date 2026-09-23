@@ -1,0 +1,57 @@
+name: CI
+
+# A pull request run covers a branch; the push trigger is for main only, so a branch push does not run twice.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    # The database tests run against a real Postgres rather than a mock.
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: grimrepo
+          POSTGRES_PASSWORD: grimrepo
+          POSTGRES_DB: grimrepo
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U grimrepo"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://grimrepo:grimrepo@127.0.0.1:5433/grimrepo
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      # Fails if the lockfile disagrees with a package.json, which catches a dependency never committed.
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm lint
+
+      - run: pnpm exec prettier --check .
+
+      - run: pnpm typecheck
+
+      - run: pnpm test
+
+      - run: pnpm build
