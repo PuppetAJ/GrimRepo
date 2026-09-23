@@ -85,7 +85,7 @@ export const authOptions = {
   },
 
   advanced: {
-    // app.ts writes this from Express's req.ip, which trusts exactly one proxy hop, and overwrites any a client sent.
+    // app.ts always overwrites this with the address it resolved, so a client cannot choose it.
     ipAddress: { ipAddressHeaders: [CLIENT_IP_HEADER] },
   },
 
