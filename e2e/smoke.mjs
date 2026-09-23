@@ -1,5 +1,6 @@
 // The app boots, the client reaches the API, accounts and scores work end to end. Grows as pages arrive.
-import { BASE, launch, reporter, resetRateLimits } from './lib.mjs'
+import { apply, createGame, nextBotAction, summary } from '../shared/src/index.ts'
+import { BASE, deletePlayer, launch, reporter, resetRateLimits } from './lib.mjs'
 
 await resetRateLimits()
 
@@ -23,9 +24,16 @@ section('The home page')
   check('it has the name', (await page.getByRole('heading', { name: 'Grim Repo' }).count()) === 1)
   check('and a title', (await page.title()) === 'Grim Repo')
 
-  const status = page.getByRole('status')
-  await page.waitForFunction(() => /API (up|down)/.test(document.querySelector('[role="status"]')?.textContent ?? ''))
-  check('the client reaches the API', /API up/.test(await status.innerText()), await status.innerText())
+  // The top maintainers come from the API, so seeing them means the client reached it.
+  const maintainers = page.getByRole('heading', { name: 'Top maintainers' }).locator('..')
+  // The shortlog link is there from the start; a player's link only arrives from the API.
+  const reached = await maintainers
+    .locator('a[href^="/players/"]')
+    .first()
+    .waitFor()
+    .then(() => true)
+    .catch(() => false)
+  check('the client reaches the API', reached)
 }
 
 section('Accounts and scores')
@@ -46,13 +54,32 @@ section('Accounts and scores')
   check('and is signed in straight away', me.ok() && (await me.json()).username === player.username)
 
   const cheat = await page.request.post(`${BASE}/api/games`, { data: { outcome: 'win', turns: 3, score: 9_999_999 } })
-  check('a score sent by the browser is refused', cheat.status() === 400, String(cheat.status()))
+  const opened = await cheat.json().catch(() => ({}))
+  check(
+    'a game starts with a seed the server chose, whatever the request says',
+    typeof opened.seed === 'number',
+    JSON.stringify(opened),
+  )
 
-  const game = await page.request.post(`${BASE}/api/games`, { data: { outcome: 'win', turns: 29 } })
+  // The bot plays the dealt game here and the whole record goes up at once; the server replays it.
+  let state = createGame({ seed: opened.seed })
+  const actions = []
+  while (state.status === 'playing') {
+    const action = nextBotAction(state)
+    const result = apply(state, action)
+    if (!result.ok) throw new Error(result.reason)
+    state = result.state
+    actions.push(action)
+  }
+  const illegal = await page.request.post(`${BASE}/api/games/${opened.id}/moves`, {
+    data: { from: 0, actions: [{ type: 'ringBell' }] },
+  })
+  check('an illegal move is refused', illegal.status() === 400, String(illegal.status()))
+  const game = await page.request.post(`${BASE}/api/games/${opened.id}/moves`, { data: { from: 0, actions } })
   const scored = await game.json().catch(() => ({}))
   check(
-    'a finished game is recorded and scored by the server',
-    game.status() === 201 && scored.score > 0,
+    'a finished game is replayed and scored by the server',
+    game.ok() && scored.status === 'finished' && scored.outcome === summary(state).outcome,
     JSON.stringify(scored),
   )
 
@@ -64,7 +91,7 @@ section('Accounts and scores')
   check('which shows no email addresses', !JSON.stringify(board).includes('@'))
 
   const stats = await (await page.request.get(`${BASE}/api/players/${player.username}/stats`)).json()
-  check('their stats count the game', stats.games === 1 && stats.wins === 1, JSON.stringify(stats))
+  check('their stats count the game', stats.games === 1, JSON.stringify(stats))
 
   // A browser always sends Origin on a POST; one without it is how a cross-site forgery looks.
   const forged = await page.request.post(`${BASE}/api/auth/sign-out`, { data: {} })
@@ -72,6 +99,13 @@ section('Accounts and scores')
 
   await page.request.post(`${BASE}/api/auth/sign-out`, { data: {}, headers: { origin: BASE } })
   check('signing out ends the session', (await page.request.get(`${BASE}/api/me`)).status() === 401)
+
+  // Sign back in to remove the player, so a run against the live site leaves nothing behind.
+  await page.request.post(`${BASE}/api/auth/sign-in/email`, {
+    data: { email: player.email, password: player.password },
+    headers: { origin: BASE },
+  })
+  check('and the test player is removed afterwards', await deletePlayer(page, player))
 }
 
 await close()
