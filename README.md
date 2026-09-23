@@ -61,15 +61,15 @@ Imports run one way, and oxlint enforces it: the client and the server may use `
 
 ## The API
 
-| Route                              | Does                                                                    |
-| ---------------------------------- | ----------------------------------------------------------------------- |
-| `/api/auth/*`                      | Sign up, sign in by email or username, sign out; handled by Better Auth |
-| `GET /api/me`                      | The signed-in player, their best score and games played                 |
-| `POST /api/games`                  | Records a finished game; the server works out the score                 |
-| `GET /api/leaderboard`             | Players ranked by their best game                                       |
-| `GET /api/players/:username/stats` | A player's record: wins, losses, best score, recent games               |
+| Route                              | Does                                                                                                |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `/api/auth/*`                      | Sign up, sign in by email or username, rename, delete the account, sign out; handled by Better Auth |
+| `GET /api/me`                      | The signed-in player, their best score and games played                                             |
+| `POST /api/games`                  | Records a finished game; the server works out the score                                             |
+| `GET /api/leaderboard`             | Players ranked by their best game                                                                   |
+| `GET /api/players/:username/stats` | A player's record: wins, losses, best score, recent games                                           |
 
-Every figure is computed from the stored games, so nothing the browser sends can set a score. Sign-in attempts and game submissions are rate limited, and the tests run against a real Postgres database whose name must end in `_test`.
+Every figure is computed from the stored games, so nothing the browser sends can set a score, and a player can only ever be shown under their own username. Sign-in attempts are rate limited by the client's real address and game submissions per player; the browser suite clears the counters first when it runs against a local database. The tests run against a real Postgres database whose name must end in `_test`.
 
 ## Credits
 
