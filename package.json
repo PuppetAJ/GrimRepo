@@ -30,7 +30,10 @@
     "test": "pnpm --recursive test",
     "test:e2e": "node e2e/smoke.mjs",
     "db:up": "docker compose up -d",
-    "db:down": "docker compose down"
+    "db:down": "docker compose down",
+    "db:migrate": "pnpm --filter server db:migrate",
+    "db:seed": "pnpm --filter server db:seed",
+    "db:seed:empty": "pnpm --filter server db:seed:empty"
   },
   "prettier": {
     "semi": false,
