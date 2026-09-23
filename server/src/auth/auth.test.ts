@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { after, before, beforeEach, describe, it } from 'node:test'
 import { pool } from '../config/db.ts'
 import { newPlayer, startApp } from '../test/http.ts'
-import { resetDatabase } from '../test/support.ts'
+import { insertGame, resetDatabase } from '../test/support.ts'
 
 const app = await startApp()
 after(async () => {
@@ -137,7 +137,7 @@ describe('changing an account', () => {
   it('lets a player change their username and keeps their games', async () => {
     const player = newPlayer('Before')
     const { cookie } = await signUp(player)
-    await app.call('POST', '/api/games', { cookie, body: { outcome: 'win', turns: 10 } })
+    await insertGame(player.username, 'win', 10)
 
     const reply = await rename(cookie, 'After_Name')
     assert.equal(reply.status, 200, JSON.stringify(reply.body))
@@ -165,8 +165,9 @@ describe('changing an account', () => {
   it('never lets a player show a name other than their own', async () => {
     const victim = newPlayer('Famous')
     await signUp(victim)
-    const { cookie } = await signUp(newPlayer('Impostor'))
-    await app.call('POST', '/api/games', { cookie, body: { outcome: 'win', turns: 10 } })
+    const impostor = newPlayer('Impostor')
+    const { cookie } = await signUp(impostor)
+    await insertGame(impostor.username, 'win', 10)
 
     await app.call('POST', '/api/auth/update-user', { cookie, body: { displayUsername: victim.username } })
     const board = await app.call('GET', '/api/leaderboard')
@@ -185,7 +186,7 @@ describe('changing an account', () => {
   it('lets a player delete their account, and their scores with it', async () => {
     const player = newPlayer('Leaving')
     const { cookie } = await signUp(player)
-    await app.call('POST', '/api/games', { cookie, body: { outcome: 'win', turns: 10 } })
+    await insertGame(player.username, 'win', 10)
 
     const reply = await app.call('POST', '/api/auth/delete-user', { cookie, body: { password: player.password } })
     assert.equal(reply.status, 200, JSON.stringify(reply.body))
