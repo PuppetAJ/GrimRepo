@@ -1,0 +1,18 @@
+services:
+  postgres:
+    image: postgres:18
+    container_name: grimrepo-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: grimrepo
+      POSTGRES_PASSWORD: grimrepo
+      POSTGRES_DB: grimrepo
+    ports:
+      # Loopback only so the dev database is not published; 5433 so it runs beside Wicken's on 5432.
+      - '127.0.0.1:5433:5432'
+    volumes:
+      # Postgres 18 wants the whole directory mounted, not the data subdirectory.
+      - grimrepo-postgres-data:/var/lib/postgresql
+
+volumes:
+  grimrepo-postgres-data:

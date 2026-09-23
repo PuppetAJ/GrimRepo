@@ -1,0 +1,83 @@
+/* Tailwind v4 is configured here rather than in a tailwind.config.js. */
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+@custom-variant dark (&:is(.dark *));
+
+/* `:root` holds the values; `@theme inline` maps each to the Tailwind name shadcn's components use. */
+@theme inline {
+  --font-sans: ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-sans);
+
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+}
+
+/* Placeholder candlelight palette until the Phase 7 design pass. */
+:root,
+.dark {
+  color-scheme: dark;
+
+  --background: #120f0d;
+  --card: #1b1714;
+  --popover: #211c18;
+  --muted: #26201b;
+  --accent: #2e2620;
+  --secondary: #26201b;
+  --border: #3a3029;
+  --input: #3a3029;
+
+  --foreground: #efe6d8;
+  --card-foreground: #efe6d8;
+  --popover-foreground: #efe6d8;
+  --muted-foreground: #b3a593;
+  --accent-foreground: #efe6d8;
+  --secondary-foreground: #efe6d8;
+
+  --primary: #e0a458;
+  --primary-foreground: #1b120a;
+  --ring: #e0a458;
+
+  --destructive: #e5726a;
+
+  --radius: 0.5rem;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+  }
+
+  body {
+    @apply bg-background font-sans text-foreground;
+  }
+}

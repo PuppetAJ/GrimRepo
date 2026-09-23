@@ -1,33 +1,57 @@
 {
-  "name": "boss-f",
-  "version": "1.0.0",
-  "description": "GrimRepo",
-  "main": "server.js",
+  "name": "grimrepo",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Grim Repo - an Inscryption-style card game on a three.js table. React Three Fiber client, Express API, Postgres.",
+  "author": "Adrian Jimenez",
+  "license": "MIT",
+  "type": "module",
   "packageManager": "pnpm@11.2.2",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js",
-    "seed": "node seeds/index.js"
+  "engines": {
+    "node": ">=24"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kwm0304/Boss-fight.git"
+    "url": "git+https://github.com/PuppetAJ/GrimRepo.git"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "bugs": {
-    "url": "https://github.com/kwm0304/Boss-fight/issues"
+    "url": "https://github.com/PuppetAJ/GrimRepo/issues"
   },
-  "homepage": "https://github.com/kwm0304/Boss-fight#readme",
-  "dependencies": {
-    "bcrypt": "^5.1.0",
-    "connect-session-sequelize": "^7.1.5",
-    "dotenv": "^16.0.3",
-    "express": "^4.18.2",
-    "express-handlebars": "^6.0.6",
-    "express-session": "^1.17.3",
-    "mysql2": "^2.3.3",
-    "sequelize": "^6.25.3"
+  "scripts": {
+    "dev": "pnpm --recursive --parallel --stream dev",
+    "dev:client": "pnpm --filter client dev",
+    "dev:server": "pnpm --filter server dev",
+    "build": "pnpm --recursive build",
+    "start": "pnpm --filter server start",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "format": "prettier --write .",
+    "typecheck": "pnpm --recursive typecheck",
+    "test": "pnpm --recursive test",
+    "test:e2e": "node e2e/smoke.mjs",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down"
+  },
+  "prettier": {
+    "semi": false,
+    "singleQuote": true,
+    "printWidth": 120,
+    "plugins": [
+      "prettier-plugin-organize-imports",
+      "prettier-plugin-tailwindcss"
+    ],
+    "tailwindStylesheet": "./client/src/index.css",
+    "tailwindFunctions": [
+      "cn",
+      "cva"
+    ]
+  },
+  "devDependencies": {
+    "oxlint": "^1.85.0",
+    "playwright": "^1.63.0",
+    "prettier": "^3.9.8",
+    "prettier-plugin-organize-imports": "^4.3.0",
+    "prettier-plugin-tailwindcss": "^0.8.1",
+    "railway": "^3.11.0"
   }
 }

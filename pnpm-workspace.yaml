@@ -1,3 +1,9 @@
+packages:
+  - client
+  - server
+  - shared
+
+# pnpm runs a dependency's install script only if it is listed here.
 allowBuilds:
-  # Native module; its install script fetches the prebuilt binary.
-  bcrypt: true
+  # The Railway CLI bundles the config file with esbuild, which fetches its binary on install.
+  esbuild: true
