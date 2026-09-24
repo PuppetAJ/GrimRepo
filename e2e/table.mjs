@@ -116,6 +116,19 @@ section('The 3D table')
     )
   }
 
+  section('Full screen')
+  await page.getByRole('button', { name: 'Full screen' }).click()
+  await until(page, () => Boolean(document.fullscreenElement))
+  const filled = await page.evaluate(() => {
+    const box = document.querySelector('[data-table="3d"]').getBoundingClientRect()
+    return box.top === 0 && box.left === 0 && box.width === window.innerWidth && box.height === window.innerHeight
+  })
+  check('the table can take the whole screen', filled)
+  check('with a way out, since the header is covered', (await page.getByRole('link', { name: 'Exit' }).count()) === 1)
+  await page.getByRole('button', { name: 'Leave full screen' }).click()
+  await until(page, () => !document.fullscreenElement)
+  check('and give it back', (await page.getByRole('link', { name: 'Exit' }).isVisible()) === false)
+
   section('The text table')
   await page.getByRole('button', { name: 'Text table' }).click()
   await page.locator('[data-table="text"]').waitFor()

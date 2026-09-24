@@ -3,7 +3,7 @@ import { locate, project, step, type View } from '../view.ts'
 import { DECK, P03_HAND, PILE, slot, TABLE_Y, type Row, type Vec3 } from './layout.ts'
 
 export type Popup = { id: number; text: string; tone: 'damage' | 'heal' | 'note'; position: Vec3; at: number }
-export type Leaving = { unit: Unit; row: Row; lane: number; at: number }
+export type Leaving = { unit: Unit; row: Row; lane: number; at: number; how: 'died' | 'sacrificed' }
 export type Lunge = { at: number; toward: 1 | -1 }
 
 /** The view plus what is moving: attacks, numbers rising, and cards on their way out. */
@@ -83,9 +83,9 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
     popupIds += 1
     next.popups = [...next.popups, { id: popupIds, text, tone, position, at: now }]
   }
-  const leave = (uid: number) => {
+  const leave = (uid: number, how: Leaving['how'] = 'died') => {
     const found = where(view, uid)
-    if (found) next.leaving = [...next.leaving, { ...found, at: now }]
+    if (found) next.leaving = [...next.leaving, { ...found, at: now, how }]
   }
 
   switch (event.type) {
@@ -121,7 +121,8 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
       leave(event.uid)
       break
     case 'sacrificed':
-      if (!event.survived) leave(event.uid)
+      if (!event.survived) leave(event.uid, 'sacrificed')
+      popup(event.survived ? 'caught' : 'sacrificed', 'note', slot('board', event.lane, 0.45))
       break
     case 'wiped':
       for (const uid of event.uids) leave(uid)

@@ -2,7 +2,7 @@ import { Heart, Swords } from 'lucide-react'
 import { Link } from 'react-router'
 import { card, legalActions, SIGILS, type Action, type GameState, type Slot, type Unit } from 'shared'
 import { Button } from '@/components/ui/button.tsx'
-import { DemoNote, describe, GameOver, has, laneAction, prompt, WalkAway } from './controls.tsx'
+import { DemoNote, describe, GameOver, has, laneAction, owed, prompt, WalkAway } from './controls.tsx'
 import type { Ready } from './useGame.ts'
 
 function CardFace({ unit, faded = false }: { unit: Unit; faded?: boolean }) {
@@ -154,7 +154,13 @@ export function TextTable({ game, onDemo, on3d }: { game: Ready; onDemo: boolean
       ) : (
         <>
           <section aria-label="Your hand" className="flex flex-col gap-2">
-            <p className="text-p03-dim">{prompt(mustDraw, summoning)}</p>
+            <p className="text-p03-dim">
+              {prompt(
+                mustDraw,
+                summoning,
+                summoning ? owed(summoning, state.player.board, state.summon?.marked ?? []) : 0,
+              )}
+            </p>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
               {state.player.hand.map((unit) => {
                 const selected = unit.uid === state.summon?.uid

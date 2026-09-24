@@ -1,27 +1,33 @@
 import { useProgress } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { easing } from 'maath'
-import { Suspense, use, useEffect, useRef, useState } from 'react'
+import { Flag, LayoutGrid, LogOut, Maximize, Minimize, MoveUp, Type } from 'lucide-react'
+import { Suspense, use, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { legalActions, PLAYER_DECK, type Action, type GameState } from 'shared'
 import * as THREE from 'three'
 import { Button } from '@/components/ui/button.tsx'
-import { DemoNote, GameOver, has, laneAction, prompt, WalkAway } from '../controls.tsx'
+import { DemoNote, GameOver, has, laneAction, owed, prompt, WalkAway } from '../controls.tsx'
 import type { Ready } from '../useGame.ts'
 import type { View } from '../view.ts'
 import { Card, Popup, type Look, type Place } from './Cards.tsx'
 import { disposeFaces, loadCardAssets } from './faces.ts'
-import { BELL, CAMERA, CARD, DECK, lanes, PILE, slot, type CameraView } from './layout.ts'
-import { Board, Bell, Candle, Deck, Lights, Pile, Robot, Room } from './Scene.tsx'
+import { BELL, BOARD_DEPTH, CAMERA, CARD, DECK, lanes, PILE, slot, TABLE_Y, type CameraView } from './layout.ts'
+import { Board, Deck, Pile } from './Board.tsx'
+import { Bell, Candle, Lights, Robot, Room } from './Scene.tsx'
 import { usePlayback } from './usePlayback.ts'
 
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
 
-/** Eases the camera between the seat and the view over the board. */
+const seat = new THREE.Vector3()
+
+/** Eases the camera between the seat and the view over the board, leaning a little towards the pointer. */
 function CameraRig({ view }: { view: CameraView }) {
   const target = useRef(new THREE.Vector3(...CAMERA[view].target))
-  useFrame(({ camera }, delta) => {
-    easing.damp3(camera.position, CAMERA[view].position, 0.35, delta)
+  useFrame(({ camera, pointer }, delta) => {
+    const [x, y, z] = CAMERA[view].position
+    seat.set(x + pointer.x * 0.12, y + pointer.y * 0.06, z)
+    easing.damp3(camera.position, seat, 0.35, delta)
     easing.damp3(target.current, CAMERA[view].target, 0.35, delta)
     camera.lookAt(target.current)
   })
@@ -30,29 +36,36 @@ function CameraRig({ view }: { view: CameraView }) {
 
 /** Glows over the player's lanes that can take a click, and catches the click on empty ones. */
 function Lanes({ view, legal, act }: { view: View; legal: Action[]; act: (action: Action) => void }) {
+  const [hovered, setHovered] = useState<number | null>(null)
   return lanes.map((lane) => {
     const action = laneAction(legal, lane)
     const marked = view.summon?.marked.includes(lane) ?? false
-    const [x, y, z] = slot('board', lane)
+    const [x, , z] = slot('board', lane)
     const colour = action?.type === 'place' ? '#7dff9a' : '#ff4a3d'
     return (
       <mesh
         key={lane}
         name={`lane-${lane}`}
-        position={[x, y - CARD.depth / 2 + 0.002, z]}
+        position={[x, TABLE_Y + BOARD_DEPTH + 0.002, z]}
         rotation={[-Math.PI / 2, 0, 0]}
         onClick={(event) => {
           event.stopPropagation()
           if (action) act(action)
         }}
-        onPointerOver={() => action && (document.body.style.cursor = 'pointer')}
-        onPointerOut={() => (document.body.style.cursor = '')}
+        onPointerOver={() => {
+          setHovered(lane)
+          if (action) document.body.style.cursor = 'pointer'
+        }}
+        onPointerOut={() => {
+          setHovered(null)
+          document.body.style.cursor = ''
+        }}
       >
         <planeGeometry args={[CARD.width * 1.12, CARD.height * 1.08]} />
         <meshBasicMaterial
           color={colour}
           transparent
-          opacity={action || marked ? (marked ? 0.5 : 0.42) : 0}
+          opacity={marked ? 0.5 : action ? (hovered === lane ? 0.65 : 0.4) : 0}
           depthWrite={false}
         />
       </mesh>
@@ -101,6 +114,7 @@ function Scene({
       </Suspense>
       <Board />
       <Deck
+        assets={assets}
         count={view.deck}
         total={PLAYER_DECK.length}
         active={can({ type: 'draw', from: 'deck' } as Partial<Action>)}
@@ -162,6 +176,7 @@ function Scene({
           unit={gone.unit}
           place={{ at: gone.row, lane: gone.lane }}
           leavingAt={gone.at}
+          leavingHow={gone.how}
           assets={assets}
         />
       ))}
@@ -238,6 +253,9 @@ function Loaded({ onLoad }: { onLoad: (loaded: boolean) => void }) {
   return null
 }
 
+/** A control's words, hidden on a phone held sideways where the icon stands in; screen readers always get them. */
+const Label = ({ children }: { children: ReactNode }) => <span className="short:sr-only">{children}</span>
+
 /** A health readout that shows each change rising off it for a moment. */
 function Health({
   label,
@@ -280,6 +298,7 @@ function Hud({
   setCamera,
   onDemo,
   onText,
+  fullScreen,
   ring,
 }: {
   game: Ready
@@ -290,6 +309,7 @@ function Hud({
   setCamera: (view: CameraView) => void
   onDemo: boolean
   onText: () => void
+  fullScreen: ReturnType<typeof useFullScreen>
   ring: () => void
 }) {
   const { state, act } = game
@@ -309,6 +329,7 @@ function Hud({
 
       <div className="absolute top-0 right-0 z-10 flex flex-col items-end gap-1 p-3 sm:p-4">
         <Health label="P03" whose="P03's" value={view.health.opponent} className="text-p03" />
+        {/* Words on a laptop; on a phone held sideways, icons, so the row stays off P03's face. */}
         <div className="flex flex-wrap justify-end">
           <Button
             size="sm"
@@ -316,16 +337,37 @@ function Hud({
             disabled={Boolean(view.summon)}
             onClick={() => setCamera(camera === 'table' ? 'board' : 'table')}
           >
-            {camera === 'table' ? 'Look at the board' : 'Look up'}
+            {camera === 'table' ? <LayoutGrid aria-hidden /> : <MoveUp aria-hidden />}
+            <Label>{camera === 'table' ? 'Look at the board' : 'Look up'}</Label>
           </Button>
           <Button size="sm" variant="ghost" onClick={onText}>
-            Text table
+            <Type aria-hidden />
+            <Label>Text table</Label>
           </Button>
-          {/* The site header is hidden on a phone held sideways, so the way out is here. */}
-          <Button size="sm" variant="ghost" asChild className="hidden short:inline-flex">
-            <Link to="/">Exit</Link>
+          {fullScreen.supported ? (
+            <Button size="sm" variant="ghost" onClick={fullScreen.toggle}>
+              {fullScreen.on ? <Minimize aria-hidden /> : <Maximize aria-hidden />}
+              <Label>{fullScreen.on ? 'Leave full screen' : 'Full screen'}</Label>
+            </Button>
+          ) : null}
+          {/* The site header is hidden on a phone held sideways and in full screen, so the way out is here. */}
+          <Button
+            size="sm"
+            variant="ghost"
+            asChild
+            className={fullScreen.on ? 'inline-flex' : 'hidden short:inline-flex'}
+          >
+            <Link to="/">
+              <LogOut aria-hidden />
+              <Label>Exit</Label>
+            </Link>
           </Button>
-          {game.result ? null : <WalkAway forfeit={game.forfeit} className="h-8 px-3" />}
+          {game.result ? null : (
+            <WalkAway forfeit={game.forfeit} className="h-8 px-3">
+              <Flag aria-hidden />
+              <Label>Walk away</Label>
+            </WalkAway>
+          )}
         </div>
         {onDemo ? (
           <div className="mt-1 w-72 max-w-[40vw]">
@@ -347,7 +389,9 @@ function Hud({
               ))}
             </ol>
             <p className="text-lg leading-tight text-p03 sm:text-xl">
-              {busy ? "P03's turn…" : prompt(mustDraw, summoning)}
+              {busy
+                ? "P03's turn…"
+                : prompt(mustDraw, summoning, summoning ? owed(summoning, view.board, view.summon?.marked ?? []) : 0)}
             </p>
           </div>
 
@@ -388,6 +432,26 @@ function Hud({
   )
 }
 
+/** Full screen for the whole page rather than the canvas, so dialogs and toasts still show over the table. */
+function useFullScreen() {
+  const [on, setOn] = useState(() => Boolean(document.fullscreenElement))
+  useEffect(() => {
+    const sync = () => setOn(Boolean(document.fullscreenElement))
+    document.addEventListener('fullscreenchange', sync)
+    return () => {
+      document.removeEventListener('fullscreenchange', sync)
+      // Leaving the table leaves full screen too.
+      if (document.fullscreenElement) void document.exitFullscreen()
+    }
+  }, [])
+  const toggle = () =>
+    document.fullscreenElement
+      ? void document.exitFullscreen()
+      : void document.documentElement.requestFullscreen().catch(() => {})
+  // iPhones have no full-screen API for pages; the button is left out there.
+  return { supported: document.fullscreenEnabled, on, toggle }
+}
+
 /** The 3D table: the 2022 room and board, with every card drawn from data and every move played back. */
 export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo: boolean; onText: () => void }) {
   const assets = use(loadCardAssets())
@@ -398,6 +462,7 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
   const camera: CameraView = playback.view.summon ? 'board' : chosen
   const [ready, setReady] = useState(false)
   const [rung, setRung] = useState(0)
+  const fullScreen = useFullScreen()
   useEffect(() => () => disposeFaces(), [])
 
   const act = (action: Action) => {
@@ -407,7 +472,12 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
   const playing = { ...game, act }
 
   return (
-    <div data-game-id={game.id} data-seed={game.state.seed} data-table="3d" className="relative h-full w-full">
+    <div
+      data-game-id={game.id}
+      data-seed={game.state.seed}
+      data-table="3d"
+      className={fullScreen.on ? 'fixed inset-0 z-40 bg-[#050403]' : 'relative h-full w-full'}
+    >
       <Canvas
         dpr={[1, 2]}
         camera={{ fov: 60, near: 0.05, far: 200, position: CAMERA.table.position }}
@@ -446,6 +516,7 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
           setCamera={setCamera}
           onDemo={onDemo}
           onText={onText}
+          fullScreen={fullScreen}
           ring={() => act({ type: 'ringBell' })}
         />
       ) : (

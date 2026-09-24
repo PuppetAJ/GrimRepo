@@ -1,5 +1,6 @@
+import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router'
-import { card, SIGILS, type Action, type Unit } from 'shared'
+import { card, costOf, SIGILS, worthOf, type Action, type Slot, type Unit } from 'shared'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,11 +31,19 @@ export function describe(unit: Unit): string {
   return `${card(unit.card).name}, ${unit.attack} attack, ${unit.health} health${sigils ? `, ${sigils}` : ''}`
 }
 
+/** What a summon still costs, in the diamonds on its card, after the cards marked so far. */
+export function owed(summoning: Unit, board: Slot[], marked: number[]): number {
+  const paid = marked.reduce((sum, lane) => sum + (board[lane] ? worthOf(board[lane]) : 0), 0)
+  return Math.max(0, costOf(summoning) - paid)
+}
+
 /** The line under the table saying what the player can do next. */
-export function prompt(mustDraw: boolean, summoning: Unit | undefined): string {
+export function prompt(mustDraw: boolean, summoning: Unit | undefined, left = 0): string {
   if (mustDraw) return 'Draw a card to start your turn.'
-  if (summoning) return `Summoning ${card(summoning.card).name}: pick cards to sacrifice, then a lane.`
-  return 'Pick a card to play, or ring the bell.'
+  if (!summoning) return 'Pick a card to play, or ring the bell.'
+  const name = card(summoning.card).name
+  if (left > 0) return `Summoning ${name}: ${'◆'.repeat(left)} left to pay. Pick cards on the table to sacrifice.`
+  return `Summoning ${name}: paid. Pick a lane.`
 }
 
 export function GameOver({ result, className = '' }: { result: Finished; className?: string }) {
@@ -57,12 +66,20 @@ export function GameOver({ result, className = '' }: { result: Finished; classNa
   )
 }
 
-export function WalkAway({ forfeit, className = '' }: { forfeit: () => Promise<void>; className?: string }) {
+export function WalkAway({
+  forfeit,
+  className = '',
+  children = 'Walk away',
+}: {
+  forfeit: () => Promise<void>
+  className?: string
+  children?: ReactNode
+}) {
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
         <Button variant="ghost" className={`text-muted-foreground ${className}`}>
-          Walk away
+          {children}
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>

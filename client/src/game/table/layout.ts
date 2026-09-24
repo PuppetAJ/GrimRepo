@@ -2,29 +2,35 @@ import { LANES } from 'shared'
 
 export type Vec3 = [number, number, number]
 
-// World sizes and places, measured from the 2022 board, deck and bell models as the old game placed them.
+// World sizes and places. The board is built on this grid; the 2022 game's lanes were placed by hand.
 export const CARD = { width: 0.75, height: 1.26, depth: 0.012 }
 export const TABLE_Y = 7.0
-const LANE_X = [-3.18, -2.38, -1.58, -0.77]
-const ROW_Z = { board: -8.76, front: -10.22, back: -11.53 }
-export const BOARD_CENTER: Vec3 = [-1.975, TABLE_Y, -10.1]
-export const DECK: Vec3 = [0.5, TABLE_Y, -8.8]
-export const PILE: Vec3 = [1.5, TABLE_Y, -8.8]
-export const BELL: Vec3 = [-4.4, TABLE_Y, -8.8]
+const CENTER_X = -1.975
+export const LANE_GAP = 0.86
+const LANE_X = [...Array(LANES).keys()].map((lane) => CENTER_X + (lane - (LANES - 1) / 2) * LANE_GAP)
+export const ROW_Z = { board: -8.72, front: -10.3, back: -11.74 }
+export const BOARD_CENTER: Vec3 = [CENTER_X, TABLE_Y, ROW_Z.front]
+export const DECK: Vec3 = [0.55, TABLE_Y, -8.85]
+export const PILE: Vec3 = [1.55, TABLE_Y, -8.85]
+export const BELL: Vec3 = [-4.5, TABLE_Y, -8.85]
 /** Where P03's new cards come from: above its side of the table. */
-export const P03_HAND: Vec3 = [-1.975, TABLE_Y + 1.2, -13]
+export const P03_HAND: Vec3 = [CENTER_X, TABLE_Y + 1.2, -13]
 
 export type Row = keyof typeof ROW_Z
 
+/** How far the board's frames and marks stand off the table; cards lie just above them. */
+export const BOARD_DEPTH = 0.018
+
 /** A card lying face up in a lane, a hair above the board. */
 export function slot(row: Row, lane: number, lift = 0): Vec3 {
-  return [LANE_X[lane] ?? 0, TABLE_Y + CARD.depth + lift, ROW_Z[row]]
+  return [LANE_X[lane] ?? 0, TABLE_Y + BOARD_DEPTH + 0.004 + CARD.depth / 2 + lift, ROW_Z[row]]
 }
 
 export const lanes = [...Array(LANES).keys()]
 
 // The hand is held in front of the camera, in its own space: x right, y up, z towards the viewer.
-const HAND = { distance: 1.5, scale: 0.5, y: -0.86, spread: 1.4, gap: 0.42, raise: 0.2, hover: 0.07, stowed: -0.32 }
+// At rest a hand card shows down to its stats; hovering lifts it fully into view.
+const HAND = { distance: 1.5, scale: 0.44, y: -0.62, spread: 1.4, gap: 0.42, raise: 0.14, hover: 0.09, stowed: -0.5 }
 export const HAND_SCALE = HAND.scale
 
 /** A hand card's place and tilt, fanned about the middle of the hand. */
@@ -48,6 +54,7 @@ export type CameraView = 'table' | 'board'
 
 /** The two places the player can look from: their seat, and straight down over the board. */
 export const CAMERA: Record<CameraView, { position: Vec3; target: Vec3 }> = {
-  table: { position: [-1.975, 9.5, -5.2], target: [-1.975, 7.75, -10.6] },
-  board: { position: [-1.975, 12.1, -7.75], target: [-1.975, TABLE_Y, -10.35] },
+  // Solved for, not eyeballed: the player's row clears the hand and P03's screen stays in frame (at 16:9, 60°).
+  table: { position: [-1.975, 8.7, -4.4], target: [-1.975, 7.4, -10.6] },
+  board: { position: [-1.975, 11.4, -6.9], target: [-1.975, TABLE_Y, -9.05] },
 }

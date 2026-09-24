@@ -32,6 +32,7 @@ export function Card({
   spawn,
   lunge,
   leavingAt,
+  leavingHow = 'died',
   look = 'plain',
   assets,
   summoning,
@@ -43,6 +44,7 @@ export function Card({
   spawn?: Vec3
   lunge?: Lunge
   leavingAt?: number
+  leavingHow?: 'died' | 'sacrificed'
   look?: Look
   assets: Assets
   onClick?: (event: ThreeEvent<MouseEvent>) => void
@@ -86,14 +88,22 @@ export function Card({
       rotation.copy(camera.quaternion).multiply(roll.setFromAxisAngle(Z, angle))
       scale.setScalar(HAND_SCALE)
     } else {
-      position.set(...slot(place.at, place.lane, look === 'selected' ? 0.08 : 0))
+      // A card marked for sacrifice lifts and tilts off the table, so the choice is plain to see.
+      const lift = look === 'marked' ? 0.12 : hovered && onClick ? 0.04 : 0
+      position.set(...slot(place.at, place.lane, lift))
       rotation.copy(FLAT)
+      if (look === 'marked') rotation.multiply(roll.setFromAxisAngle(Z, 0.09))
       scale.setScalar(1)
     }
     if (lunge && now - lunge.at < LUNGE_MS)
       position.z += lunge.toward * 0.4 * Math.sin((Math.PI * (now - lunge.at)) / LUNGE_MS)
     const leaving = leavingAt === undefined ? 0 : Math.min(1, (now - leavingAt) / LEAVE_MS)
-    position.y -= leaving * 0.45
+    if (leavingHow === 'sacrificed') {
+      // Offered up: it rises, turns and shrinks away, where a death sinks into the table.
+      position.y += leaving * 0.9
+      rotation.multiply(roll.setFromAxisAngle(Z, leaving * 1.6))
+      scale.multiplyScalar(1 - leaving * 0.6)
+    } else position.y -= leaving * 0.45
 
     if (!placed.current) {
       card.position.copy(spawn ? new THREE.Vector3(...spawn) : position)

@@ -2,17 +2,15 @@ import { useAnimations, useGLTF } from '@react-three/drei'
 import { useFrame, type ThreeEvent } from '@react-three/fiber'
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
-import { backTexture, faceTexture, type loadCardAssets } from './faces.ts'
-import { BELL, CARD, DECK, PILE, type Vec3 } from './layout.ts'
-
-type Assets = Awaited<ReturnType<typeof loadCardAssets>>
+import { Nudge } from './Board.tsx'
+import { BELL, type Vec3 } from './layout.ts'
 
 // No model is compressed yet, so drei's Draco and meshopt decoders stay off; meshopt's WebAssembly breaks the CSP.
 const useModel = (url: string) => useGLTF(url, false, false)
 type Click = (event: ThreeEvent<MouseEvent>) => void
 
 // Hitboxes modelled in 2022 for the old raycaster; the table has its own now.
-const HITBOXES = /hitbox|^p[1-4]$/i
+const HITBOXES = /hitbox/i
 
 function hideHitboxes(root: THREE.Object3D) {
   root.traverse((object) => {
@@ -67,66 +65,6 @@ function screenFace(material: THREE.MeshStandardMaterial) {
   material.emissiveIntensity = 1.6
 }
 
-export function Board() {
-  const { scene } = useModel('/models/game_board.glb')
-  useLayoutEffect(() => hideHitboxes(scene), [scene])
-  return <primitive object={scene} position={[-1.6, 6.9785, -10]} rotation={[Math.PI, Math.PI, 0]} scale={0.02} />
-}
-
-/** The deck, thinning as it is drawn from. */
-export function Deck({
-  count,
-  total,
-  onClick,
-  active,
-}: {
-  count: number
-  total: number
-  onClick: Click
-  active: boolean
-}) {
-  const { scene } = useModel('/models/deck.glb')
-  const cards = useMemo(() => {
-    hideHitboxes(scene)
-    return scene.children.filter((child) => child.name.startsWith('card')).sort((a, b) => a.position.y - b.position.y)
-  }, [scene])
-  useEffect(() => {
-    const shown = count === 0 ? 0 : Math.max(1, Math.round((count / total) * cards.length))
-    cards.forEach((card, i) => (card.visible = i < shown))
-  }, [cards, count, total])
-  return (
-    <group position={DECK}>
-      <primitive object={scene} rotation={[-Math.PI, 0, -Math.PI]} scale={0.017} />
-      <Pickable size={[0.9, 0.35, 1.4]} onClick={onClick} active={active} label="deck" />
-    </group>
-  )
-}
-
-/** The Boilerplate pile: free fuel, like Inscryption's squirrels, and it never runs out. */
-export function Pile({ assets, onClick, active }: { assets: Assets; onClick: Click; active: boolean }) {
-  const top = useMemo(
-    () => faceTexture({ uid: 0, card: 'Boilerplate', attack: 0, health: 1, maxHealth: 1, sigils: [] }, assets),
-    [assets],
-  )
-  const back = useMemo(() => backTexture(assets), [assets])
-  const layers = 6
-  return (
-    <group position={PILE}>
-      {[...Array(layers).keys()].map((i) => (
-        <mesh key={i} position={[0, CARD.depth * (i + 0.5), 0]} rotation={[-Math.PI / 2, 0, (i % 3) * 0.02 - 0.02]}>
-          <boxGeometry args={[CARD.width, CARD.height, CARD.depth]} />
-          {[0, 1, 2, 3].map((side) => (
-            <meshStandardMaterial key={side} attach={`material-${side}`} color="#2b211c" />
-          ))}
-          <meshStandardMaterial attach="material-4" map={i === layers - 1 ? top : back} roughness={0.9} />
-          <meshStandardMaterial attach="material-5" map={back} roughness={0.9} />
-        </mesh>
-      ))}
-      <Pickable size={[0.85, 0.2, 1.35]} onClick={onClick} active={active} label="pile" />
-    </group>
-  )
-}
-
 export function Bell({ onClick, active, rung }: { onClick: Click; active: boolean; rung: number }) {
   const { scene } = useModel('/models/bell.glb')
   useLayoutEffect(() => hideHitboxes(scene), [scene])
@@ -142,30 +80,12 @@ export function Bell({ onClick, active, rung }: { onClick: Click; active: boolea
   })
   return (
     <group position={BELL}>
-      <group ref={bell}>
-        <primitive object={scene} rotation={[-Math.PI, 0, -Math.PI]} scale={0.01} />
-      </group>
-      <Pickable size={[0.9, 1.2, 0.9]} onClick={onClick} active={active} label="bell" />
+      <Nudge active={active} onClick={onClick} size={[0.9, 1.2, 0.9]} label="bell" lift={0.02}>
+        <group ref={bell}>
+          <primitive object={scene} rotation={[-Math.PI, 0, -Math.PI]} scale={0.01} />
+        </group>
+      </Nudge>
     </group>
-  )
-}
-
-/** An invisible box that takes clicks for a model, and shows a pointer only when clicking would do something. */
-function Pickable({ size, onClick, active, label }: { size: Vec3; onClick: Click; active: boolean; label: string }) {
-  return (
-    <mesh
-      name={label}
-      position={[0, size[1] / 2, 0]}
-      onClick={(event) => {
-        event.stopPropagation()
-        if (active) onClick(event)
-      }}
-      onPointerOver={() => active && (document.body.style.cursor = 'pointer')}
-      onPointerOut={() => (document.body.style.cursor = '')}
-    >
-      <boxGeometry args={size} />
-      <meshBasicMaterial visible={false} />
-    </mesh>
   )
 }
 
