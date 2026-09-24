@@ -49,10 +49,7 @@ export function reporter() {
   return { check, section, report, results }
 }
 
-/**
- * Clears the sign-in and sign-up counters, but only on a local or CI database, never a live one.
- * Against the live site each suite must stay inside the real limits: 5 sign-ups and 5 sign-ins a minute.
- */
+/** Clears the sign-in and sign-up counters on a local or CI database only; live runs must fit the real limits. */
 export async function resetRateLimits() {
   const local = /^http:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(BASE)
   if (!local || !process.env.DATABASE_URL) return
@@ -103,10 +100,7 @@ const selectorFor = (action) => {
   return `[data-action="${action.type}"]`
 }
 
-/**
- * Plays the open game through its buttons, keeping a copy of the engine in step to choose each click.
- * The game must be fresh, since the copy starts from the seed with no moves.
- */
+/** Plays a fresh game through its buttons, with a copy of the engine in step to choose each click. */
 export async function playWithBot(page, { stopAfterTurn = Infinity } = {}) {
   const root = page.locator('[data-seed]')
   await root.waitFor()
@@ -127,10 +121,7 @@ export async function playWithBot(page, { stopAfterTurn = Infinity } = {}) {
   return { state, actions }
 }
 
-/**
- * Deletes a player the suite made, so runs against the live site leave no test accounts on the leaderboard.
- * Needs the page signed in as that player; the password satisfies the deletion check.
- */
+/** Deletes a player the suite made, signed in as them, so live runs leave nothing on the leaderboard. */
 export async function deletePlayer(page, player) {
   const response = await page.request.post(`${BASE}/api/auth/delete-user`, {
     data: { password: player.password },

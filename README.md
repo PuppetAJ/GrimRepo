@@ -47,6 +47,8 @@ The client is at http://localhost:3000 and proxies `/api` and `/health` to the A
 | `pnpm db:migrate`             | Apply the migrations in `server/migrations`                                                                                              |
 | `pnpm db:seed`                | Wipe the database and reseed the demo state                                                                                              |
 | `pnpm db:seed:empty`          | Seed only if there are no players yet; Railway runs this on every boot                                                                   |
+| `pnpm db:cleanup`             | The nightly clean-up, by hand                                                                                                            |
+| `pnpm moderate`               | Rename, remove or list accounts; see Looking after the live site                                                                         |
 
 ## How the code is arranged
 
@@ -72,6 +74,24 @@ Imports run one way, and oxlint enforces it: the client and the server may use `
 | `GET /api/players/:username/stats` | A player's record: wins, losses, best score, recent games                                             |
 
 A score is never sent, only moves: the server replays them with the same rules engine the browser plays with, refuses any illegal one, and scores only a finished game. Every figure is computed from the stored games, and a player can only ever be shown under their own username. Sign-in attempts are rate limited by the client's real address and game submissions per player; the browser suite clears the counters first when it runs against a local database. The tests run against a real Postgres database whose name must end in `_test`.
+
+## Looking after the live site
+
+Names are filtered when they are chosen: profanity, including when it is split up with underscores or swapped for numbers, and names that would pass for the game or its staff. Anything that slips through is fixed from the command line. Locally:
+
+```sh
+pnpm moderate recent 7              # accounts made in the last 7 days
+pnpm moderate rename <username>     # rename to a neutral player_####, and lock the name
+pnpm moderate remove <username>     # delete the account and its games
+```
+
+Against the live site, the same commands run inside the app's container:
+
+```sh
+pnpm exec railway ssh --service GrimRepo -- pnpm moderate rename <username>
+```
+
+A clean-up runs every night at 04:00 UTC as its own Railway service. It clears the shared demo account's open game, drops games abandoned for a month, and sweeps expired sessions and old rate-limit rows. `pnpm db:cleanup` runs it by hand. Scores are kept: every one is a replayed game, so there is nothing to reset.
 
 ## Credits
 

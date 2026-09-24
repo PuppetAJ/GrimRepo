@@ -4,6 +4,7 @@ import { username } from 'better-auth/plugins'
 import { pool } from '../config/db.ts'
 import { env } from '../config/env.ts'
 import { demoAccount } from './demo.ts'
+import { isOffensive, isReserved, NAME_REFUSED } from './names.ts'
 
 export const USERNAME_PATTERN = /^[A-Za-z0-9_]{3,20}$/
 
@@ -34,7 +35,7 @@ export const authOptions = {
       minUsernameLength: 3,
       maxUsernameLength: 20,
       // Letters, digits and underscores only, so a name is safe in a URL and on the leaderboard.
-      usernameValidator: (value) => USERNAME_PATTERN.test(value),
+      usernameValidator: (value) => USERNAME_PATTERN.test(value) && !isOffensive(value),
       displayUsernameValidator: (value) => USERNAME_PATTERN.test(value),
       schema: { user: { fields: { displayUsername: 'display_username' } } },
     }),
@@ -50,8 +51,26 @@ export const authOptions = {
       }
       if (ctx.path !== '/sign-up/email' && ctx.path !== '/update-user') return
       const body = (ctx.body ?? {}) as Record<string, unknown>
+      const username = body['username']
+      if (typeof username === 'string') {
+        // Reserved names only bind requests from outside; the seed makes the demo account through the same API.
+        if (isOffensive(username) || (ctx.request && isReserved(username))) {
+          throw new APIError('BAD_REQUEST', { message: NAME_REFUSED })
+        }
+        if (ctx.path === '/update-user') {
+          const session = await getSessionFromCtx(ctx)
+          if ((session?.user as { nameLocked?: boolean } | undefined)?.nameLocked) {
+            throw new APIError('FORBIDDEN', { message: 'A moderator set this name, so it cannot be changed.' })
+          }
+        }
+      }
+      // The shown name, and Better Auth's unused name field, only ever follow the username.
       delete body['displayUsername']
-      if (typeof body['username'] === 'string') body['displayUsername'] = body['username']
+      delete body['name']
+      if (typeof username === 'string') {
+        body['displayUsername'] = username
+        body['name'] = username
+      }
     }),
   },
 
@@ -73,6 +92,10 @@ export const authOptions = {
   user: {
     modelName: 'users',
     fields: { emailVerified: 'email_verified', createdAt: 'created_at', updatedAt: 'updated_at' },
+    additionalFields: {
+      // input: false, or a player could unlock a name a moderator had set.
+      nameLocked: { type: 'boolean', fieldName: 'name_locked', required: false, input: false, defaultValue: false },
+    },
     // A player can remove themselves; their games go with them through the foreign key.
     deleteUser: { enabled: true },
   },

@@ -1,8 +1,4 @@
-/**
- * Resets the database to the demo state: the demo account, the three original players, and their games.
- *   pnpm db:seed              wipes and reseeds; refuses production without SEED_ALLOW_PRODUCTION=1
- *   pnpm db:seed --if-empty   seeds only a database with no players, so a fresh deploy is never empty
- */
+/** Resets to the demo state; `--if-empty` only seeds an empty database, and production needs SEED_ALLOW_PRODUCTION=1. */
 import { randomUUID } from 'node:crypto'
 import { scoreBattle, type Outcome } from 'shared'
 import { auth } from '../auth/auth.ts'

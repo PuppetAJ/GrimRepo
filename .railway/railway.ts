@@ -30,5 +30,23 @@ export default defineRailway(() => {
     },
   })
 
-  return project('grimrepo', { resources: [database, app] })
+  // Every night at 04:00 UTC: the demo account's open game, abandoned games, and expired auth records.
+  const cleanup = service('Cleanup', {
+    source: repository,
+    build: 'pnpm install --frozen-lockfile',
+    start: 'pnpm db:cleanup',
+    deploy: {
+      cronSchedule: '0 4 * * *',
+      // A failed run waits for the next schedule rather than looping.
+      restartPolicyType: 'NEVER',
+    },
+    env: {
+      NODE_ENV: 'production',
+      DATABASE_URL: '${{Postgres.DATABASE_URL}}',
+      // The clean-up loads the app's environment check, which will not start without it.
+      BETTER_AUTH_SECRET: '${{GrimRepo.BETTER_AUTH_SECRET}}',
+    },
+  })
+
+  return project('grimrepo', { resources: [database, app, cleanup] })
 })

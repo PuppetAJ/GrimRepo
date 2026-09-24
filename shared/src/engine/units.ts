@@ -17,7 +17,7 @@ export function makeUnit(state: GameState, id: string): Unit {
 
 export const costOf = (unit: Unit): number => card(unit.card).cost
 
-/** Blood a unit pays when sacrificed: its own cost, at least 1, or 3 with Technical Debt. */
+/** What a unit pays towards a summon when sacrificed: its own cost, at least 1, or 3 with Technical Debt. */
 export const worthOf = (unit: Unit): number => (unit.sigils.includes('technical_debt') ? 3 : Math.max(costOf(unit), 1))
 
 export const units = (row: Slot[]): Unit[] => row.filter((slot): slot is Unit => slot !== null)
