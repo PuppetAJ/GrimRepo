@@ -123,6 +123,9 @@ importers:
       helmet:
         specifier: ^8.3.0
         version: 8.3.0
+      naughty-words:
+        specifier: ^1.2.0
+        version: 1.2.0
       obscenity:
         specifier: ^0.4.6
         version: 0.4.6
@@ -2827,6 +2830,9 @@ packages:
   nanostores@1.5.3:
     resolution: {integrity: sha512-rQLB6eV4f2AW/n3L0JmwCROpaisYy9EDEADvEFSd1C/qG8hB6O5TPlh9A791JRbJr4CnMQBzptDcvD9OR1+6WA==}
     engines: {node: ^20.0.0 || >=22.0.0}
+
+  naughty-words@1.2.0:
+    resolution: {integrity: sha512-0iadX6fN+3NsfvIRtWmmpEX9VsoIQ6n9FwyIxmew9w5yzFNqMgs/Ky0eAC/z5xXSHtqlVoByiovdROikwH9SXQ==}
 
   negotiator@0.6.4:
     resolution: {integrity: sha512-myRT3DiWPHqho5PrJaIRyaMv2kgYf0mUVgBNOYMuCH5Ki1yEiQaf/ZJuQ62nvpc44wL5WDbTX7yGJi1Neevw8w==}
@@ -5936,6 +5942,8 @@ snapshots:
   nanoid@3.3.19: {}
 
   nanostores@1.5.3: {}
+
+  naughty-words@1.2.0: {}
 
   negotiator@0.6.4: {}
 

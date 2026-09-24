@@ -48,7 +48,7 @@ The client is at http://localhost:3000 and proxies `/api` and `/health` to the A
 | `pnpm db:seed`                | Wipe the database and reseed the demo state                                                                                              |
 | `pnpm db:seed:empty`          | Seed only if there are no players yet; Railway runs this on every boot                                                                   |
 | `pnpm db:cleanup`             | The nightly clean-up, by hand                                                                                                            |
-| `pnpm moderate`               | Rename, remove or list accounts; see Looking after the live site                                                                         |
+| `pnpm moderate`               | Rename, remove, list or scan accounts; see Looking after the live site                                                                   |
 
 ## How the code is arranged
 
@@ -77,12 +77,13 @@ A score is never sent, only moves: the server replays them with the same rules e
 
 ## Looking after the live site
 
-Names are filtered when they are chosen: profanity, including when it is split up with underscores or swapped for numbers, and names that would pass for the game or its staff. Anything that slips through is fixed from the command line. Locally:
+Names are filtered when they are chosen: profanity from the [obscenity](https://github.com/jo3-l/obscenity) dataset and the [List of Dirty, Naughty, Obscene and Otherwise Bad Words](https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words), playground words those lists leave out, and names that would pass for the game or its staff. It sees through underscores, camelCase, digits in place of letters and doubled letters. Anything that slips through is fixed from the command line. Locally:
 
 ```sh
 pnpm moderate recent 7              # accounts made in the last 7 days
 pnpm moderate rename <username>     # rename to a neutral player_####, and lock the name
 pnpm moderate remove <username>     # delete the account and its games
+pnpm moderate scan                  # existing names the filter would refuse today
 ```
 
 Against the live site, the same commands run inside the app's container:
@@ -103,6 +104,7 @@ The original team: Adrian Jimenez, Kenan McKenzie and Johan Herrera ([original r
 - **The board and the deck:** made by Adrian Jimenez, with Inscryption's textures on the deck.
 - **The candle:** [The lonely candle](https://discourse.threejs.org/t/the-lonely-candle/4097) by prisoner849, using noise from [The Book of Shaders](https://thebookofshaders.com/11/) and [Morgan McGuire](https://www.shadertoy.com/view/4dS3Wd) and a [heatmap gradient](https://www.shadertoy.com/view/4dsSzr) from Shadertoy.
 - **The loading screen:** adapted from a [three.js forum thread](https://discourse.threejs.org/t/basic-loading-screen/2332).
+- **The name filter:** word lists from [obscenity](https://github.com/jo3-l/obscenity) (MIT) and [LDNOOBW](https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words) (CC BY 4.0).
 - **The game** is a tribute to Inscryption by Daniel Mullins Games.
 
 ## License

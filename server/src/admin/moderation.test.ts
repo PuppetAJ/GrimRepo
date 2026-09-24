@@ -3,7 +3,7 @@ import { after, beforeEach, describe, it } from 'node:test'
 import { pool } from '../config/db.ts'
 import { insertGame, resetDatabase } from '../test/support.ts'
 import { newPlayer, startApp } from '../test/http.ts'
-import { recentAccounts, removeAccount, renameAccount } from './moderation.ts'
+import { flaggedAccounts, recentAccounts, removeAccount, renameAccount } from './moderation.ts'
 
 const app = await startApp()
 after(async () => {
@@ -52,6 +52,21 @@ describe('moderation', () => {
   it('leaves the demo account to the seed', async () => {
     await assert.rejects(() => renameAccount('demo'), /seed/)
     await assert.rejects(() => removeAccount('DEMO'), /seed/)
+  })
+
+  it('scans existing names with the filter as it is now, skipping ones a moderator set', async () => {
+    const [rude, locked, fine] = [await signUp(), await signUp(), await signUp()]
+    const word = 'f_u_c_k'.replaceAll('_', '')
+    const rename = (player: { username: string }, name: string, lock: boolean) =>
+      pool.query(
+        'UPDATE users SET username = lower($1), display_username = $1, name_locked = $2 WHERE username = lower($3)',
+        [name, lock, player.username],
+      )
+    await rename(rude, `Old_${word}`, false)
+    await rename(locked, `Kept_${word}`, true)
+    const flagged = await flaggedAccounts()
+    assert.deepEqual(flagged, [`Old_${word}`])
+    assert.ok(!flagged.includes(fine.username))
   })
 
   it('says so when nobody has the name', async () => {
