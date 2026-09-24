@@ -5,6 +5,16 @@ export type Vec3 = [number, number, number]
 // World sizes and places. The board is built on this grid; the 2022 game's lanes were placed by hand.
 export const CARD = { width: 0.75, height: 1.26, depth: 0.012 }
 export const TABLE_Y = 7.0
+
+/** The factory's card is a floppy disk: a plastic body with raised rims, and these recesses, as fractions of the face from its top-left. */
+export const DISK = { depth: 0.024, relief: 0.011, clip: 0.11 }
+export const RECESS = {
+  label: [0.08, 0.035, 0.92, 0.12],
+  screen: [0.06, 0.16, 0.94, 0.61],
+  sigils: [0.06, 0.64, 0.94, 0.8],
+  attack: [0.06, 0.84, 0.4, 0.955],
+  health: [0.6, 0.84, 0.94, 0.955],
+} as const satisfies Record<string, readonly [number, number, number, number]>
 const CENTER_X = -1.975
 export const LANE_GAP = 0.86
 const LANE_X = [...Array(LANES).keys()].map((lane) => CENTER_X + (lane - (LANES - 1) / 2) * LANE_GAP)
@@ -30,7 +40,7 @@ export const lanes = [...Array(LANES).keys()]
 
 // The hand is held in front of the camera, in its own space: x right, y up, z towards the viewer.
 // At rest a hand card shows down to its stats; hovering lifts it fully into view.
-const HAND = { distance: 1.5, scale: 0.44, y: -0.62, spread: 1.4, gap: 0.42, raise: 0.14, hover: 0.09, stowed: -0.5 }
+const HAND = { distance: 1.5, scale: 0.4, y: -0.59, spread: 1.4, gap: 0.4, raise: 0.14, hover: 0.09, stowed: -0.5 }
 export const HAND_SCALE = HAND.scale
 
 /** A hand card's place and tilt, fanned about the middle of the hand. */

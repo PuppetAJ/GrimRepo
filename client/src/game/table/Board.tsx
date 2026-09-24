@@ -3,7 +3,8 @@ import { easing } from 'maath'
 import { useMemo, useRef, useState, type ReactNode } from 'react'
 import * as THREE from 'three'
 import { backTexture, faceTexture, type CardStyle, type loadCardAssets } from './faces.ts'
-import { BOARD_DEPTH, CARD, DECK, lanes, PILE, ROW_Z, slot, TABLE_Y, type Row, type Vec3 } from './layout.ts'
+import { BACK_Z, DISK_MATERIALS, diskGeometry, FACE_Z } from './Disk.tsx'
+import { BOARD_DEPTH, CARD, DECK, DISK, lanes, PILE, ROW_Z, slot, TABLE_Y, type Row, type Vec3 } from './layout.ts'
 
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
 type Click = (event: ThreeEvent<MouseEvent>) => void
@@ -170,16 +171,55 @@ export function Nudge({
 
 const EDGE = new THREE.MeshStandardMaterial({ color: '#2b211c', roughness: 0.9 })
 const card = new THREE.BoxGeometry(CARD.width, CARD.height, CARD.depth)
+const sheet = new THREE.PlaneGeometry(CARD.width, CARD.height)
 
-/** A stack of cards, a little uneven, with the given face on top. */
-function Stack({ layers, top, back }: { layers: number; top: THREE.Texture; back: THREE.Texture }) {
+/** A stack of cards, a little uneven, with the given face on top; the factory's are disks. */
+function Stack({
+  layers,
+  top,
+  back,
+  style = 'cabin',
+}: {
+  layers: number
+  top: THREE.Texture
+  back: THREE.Texture
+  style?: CardStyle
+}) {
   const faces = useMemo(
     () => [
-      new THREE.MeshStandardMaterial({ map: top, roughness: 0.9 }),
-      new THREE.MeshStandardMaterial({ map: back, roughness: 0.9 }),
+      new THREE.MeshStandardMaterial({ map: top, roughness: 0.9, transparent: true }),
+      new THREE.MeshStandardMaterial({ map: back, roughness: 0.9, transparent: true }),
     ],
     [top, back],
   )
+  if (style === 'tech') {
+    const disk = diskGeometry()
+    const pitch = DISK.depth + DISK.relief * 2
+    // Only the top disk shows its relief and sheet; the rest are bodies, seen edge on.
+    return [...Array(layers).keys()].map((i) => {
+      const topmost = i === layers - 1
+      const faceUp = top !== back
+      return (
+        <group
+          key={i}
+          position={[((i * 7) % 5) * 0.004 - 0.008, pitch * (i + 0.5), ((i * 3) % 4) * 0.004 - 0.006]}
+          rotation={[faceUp ? -Math.PI / 2 : Math.PI / 2, 0, ((i * 5) % 7) * 0.006 - 0.018]}
+        >
+          <mesh geometry={disk.body} material={[DISK_MATERIALS.body, DISK_MATERIALS.edge]} />
+          {topmost ? <mesh geometry={disk.plastic} material={DISK_MATERIALS.plastic} /> : null}
+          {topmost ? <mesh geometry={disk.dark} material={DISK_MATERIALS.dark} /> : null}
+          {topmost ? (
+            <mesh
+              geometry={sheet}
+              material={faceUp ? faces[0] : faces[1]}
+              position={[0, 0, faceUp ? FACE_Z : BACK_Z]}
+              rotation={[0, faceUp ? 0 : Math.PI, 0]}
+            />
+          ) : null}
+        </group>
+      )
+    })
+  }
   return [...Array(layers).keys()].map((i) => (
     <mesh
       key={i}
@@ -212,7 +252,7 @@ export function Deck({
   return (
     <group position={DECK}>
       <Nudge active={active} onClick={onClick} size={[0.85, 0.3, 1.35]} label="deck">
-        <Stack layers={layers} top={back} back={back} />
+        <Stack layers={layers} top={back} back={back} style={style} />
       </Nudge>
     </group>
   )
@@ -238,7 +278,7 @@ export function Pile({
   return (
     <group position={PILE}>
       <Nudge active={active} onClick={onClick} size={[0.85, 0.2, 1.35]} label="pile">
-        <Stack layers={6} top={top} back={back} />
+        <Stack layers={6} top={top} back={back} style={style} />
       </Nudge>
     </group>
   )
