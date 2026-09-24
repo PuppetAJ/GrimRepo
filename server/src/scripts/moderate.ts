@@ -1,5 +1,5 @@
-/** Moderation from the command line: rename, remove, or list recent accounts. Usage is in the README. */
-import { ModerationError, recentAccounts, removeAccount, renameAccount } from '../admin/moderation.ts'
+/** Moderation from the command line: rename, remove, list recent accounts, or scan every name. Usage is in the README. */
+import { flaggedAccounts, ModerationError, recentAccounts, removeAccount, renameAccount } from '../admin/moderation.ts'
 import { pool } from '../config/db.ts'
 
 const [command, first, second] = process.argv.slice(2)
@@ -15,8 +15,12 @@ try {
     for (const account of accounts)
       console.log(`${account.joined.slice(0, 16)}  ${account.name}${account.locked ? '  (locked)' : ''}`)
     console.log(`${accounts.length} accounts.`)
+  } else if (command === 'scan') {
+    const flagged = await flaggedAccounts()
+    for (const name of flagged) console.log(name)
+    console.log(`${flagged.length} names the filter would refuse today.`)
   } else {
-    console.log('Usage: pnpm moderate rename <username> [new-name] | remove <username> | recent [days]')
+    console.log('Usage: pnpm moderate rename <username> [new-name] | remove <username> | recent [days] | scan')
     process.exitCode = 2
   }
 } catch (error) {

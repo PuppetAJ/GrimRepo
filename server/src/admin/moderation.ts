@@ -52,3 +52,11 @@ export async function recentAccounts(days = 7): Promise<{ name: string; joined: 
   )
   return rows.map((row) => ({ ...row, joined: row.joined.toISOString() }))
 }
+
+/** Existing names the filter would refuse today, such as ones made before a word was added to it. */
+export async function flaggedAccounts(): Promise<string[]> {
+  const { rows } = await pool.query<{ name: string }>(
+    'SELECT display_username AS name FROM users WHERE NOT name_locked ORDER BY created_at',
+  )
+  return rows.map((row) => row.name).filter(isOffensive)
+}

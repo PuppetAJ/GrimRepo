@@ -14,6 +14,28 @@ describe('the name filter', () => {
     }
   })
 
+  it('catches playground words, glued on, capitalised or numbered', () => {
+    const balls = rot13('onyyf')
+    const piles = rot13('urzbeeubvq')
+    const peepee = rot13('crrcrr')
+    const caca = rot13('pnpn')
+    const poop = rot13('cbbc')
+    const cap = (word: string) => word[0]?.toUpperCase() + word.slice(1)
+    for (const name of [
+      balls,
+      `Big_${cap(balls)}`,
+      `Big${cap(balls)}`,
+      `cool${piles}s`,
+      peepee,
+      `${cap(peepee.slice(0, 3))}${cap(peepee.slice(3))}`,
+      `${caca}99`,
+      caca.toUpperCase(),
+      `${poop}master`,
+    ]) {
+      assert.ok(isOffensive(name), `${name.length} characters got through`)
+    }
+  })
+
   it('leaves ordinary names alone, including the famous traps', () => {
     for (const name of [
       'JohanH',
@@ -26,6 +48,21 @@ describe('the name filter', () => {
       'grasshopper',
       'Dickens',
       'null_ptr',
+      'xX_Slayer_Xx',
+      'twinkle_toes',
+      'therapist',
+      'socialist',
+      'analyst',
+      'button_masher',
+      'peer_review',
+      'fireballs',
+      'cacao',
+      'poodle',
+      'turducken',
+      'farther',
+      'shiitake',
+      'domestic_cat',
+      'World_Domination',
     ]) {
       assert.ok(!isOffensive(name), name)
     }
