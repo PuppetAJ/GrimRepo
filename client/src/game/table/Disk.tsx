@@ -56,23 +56,44 @@ function build(kind: 'full' | 'compact') {
     back,
   )
 
-  const face = outline(height)
-  if (!compact) face.holes.push(...Object.values(RECESS).map(hole))
-  const rim = new THREE.ExtrudeGeometry(face, { depth: raised, bevelEnabled: false }).translate(0, 0, front)
-
   // Fractions along the height apply to whichever height this disk has.
+  const at = (fx: number, fy: number): [number, number] => [(fx - 0.5) * w, (0.5 - fy) * height]
   const box = (fx0: number, fy0: number, fx1: number, fy1: number, depth: number, z: number) =>
     boxAt(fx0, fy0, fx1, fy1, depth, z, height)
-  const at = (fx: number, fy: number): [number, number] => [(fx - 0.5) * w, (0.5 - fy) * height]
+  const cut = (fx0: number, fy0: number, fx1: number, fy1: number) => {
+    const [left, top] = at(fx0, fy0)
+    const [right, bottom] = at(fx1, fy1)
+    return new THREE.Path().moveTo(left, top).lineTo(left, bottom).lineTo(right, bottom).lineTo(right, top)
+  }
+
+  // The front rim, with the recesses cut out and a track along the top for the shutter to slide in.
+  const face = outline(height)
+  if (!compact) face.holes.push(...Object.values(RECESS).map(hole))
+  face.holes.push(cut(0.2, 0.004, 0.8, 0.045))
+  const rim = new THREE.ExtrudeGeometry(face, { depth: raised, bevelEnabled: false }).translate(0, 0, front)
 
   const plastic: THREE.BufferGeometry[] = [rim]
   const dark: THREE.BufferGeometry[] = []
   const metal: THREE.BufferGeometry[] = []
-  // The metal tab along the top edge, and the two square holes beside it.
-  metal.push(box(0.32, 0.004, 0.68, 0.03, raised * 1.6, front + raised * 0.8))
-  dark.push(box(0.55, 0.01, 0.63, 0.024, 0.004, front + raised * 1.6))
-  dark.push(box(0.1, 0.008, 0.15, 0.028, 0.004, front + raised))
-  dark.push(box(0.85, 0.008, 0.9, 0.028, 0.004, front + raised))
+  // The steel shutter in its track, with its window, and the two square holes beside the track.
+  metal.push(box(0.3, 0.006, 0.7, 0.043, raised * 1.2, front + raised * 0.6))
+  dark.push(box(0.57, 0.014, 0.66, 0.035, 0.004, front + raised * 1.2))
+  dark.push(box(0.09, 0.012, 0.15, 0.036, 0.004, front + raised))
+  dark.push(box(0.85, 0.012, 0.91, 0.036, 0.004, front + raised))
+  if (!compact) {
+    // Dark clips holding the screen at its four corners, on the rim either side of it.
+    for (const [x0, x1] of [
+      [0.03, 0.062],
+      [0.938, 0.97],
+    ])
+      for (const [y0, y1] of [
+        [0.19, 0.27],
+        [0.775, 0.855],
+      ])
+        dark.push(box(x0 as number, y0 as number, x1 as number, y1 as number, raised * 0.6, front + raised * 1.3))
+    // A steel band above the stat boxes.
+    metal.push(box(0.05, 0.862, 0.95, 0.88, raised * 0.5, front + raised * 1.2))
+  }
   // The grill between the two stat boxes.
   if (!compact)
     for (let i = 0; i < 6; i++)
