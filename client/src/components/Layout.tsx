@@ -33,7 +33,7 @@ export function Layout() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="flex items-center justify-between border-b bg-chrome px-4 py-3 sm:px-12">
+      <header className="flex items-center justify-between gap-3 border-b bg-chrome px-4 py-3 sm:px-12">
         <Logo />
         {session.isPending ? null : name ? (
           <DropdownMenu>
@@ -58,9 +58,14 @@ export function Layout() {
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <Button asChild>
-            <NavLink to="/login">Sign in</NavLink>
-          </Button>
+          <div className="flex gap-2">
+            <Button asChild variant="outline">
+              <NavLink to="/signup">Sign up</NavLink>
+            </Button>
+            <Button asChild>
+              <NavLink to="/login">Sign in</NavLink>
+            </Button>
+          </div>
         )}
       </header>
 

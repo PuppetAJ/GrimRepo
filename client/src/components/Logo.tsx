@@ -2,7 +2,7 @@ import { Link } from 'react-router'
 
 export function Logo() {
   return (
-    <Link to="/" className="flex items-center gap-3" aria-label="Grim Repo, home">
+    <Link to="/" className="flex items-center gap-2 whitespace-nowrap sm:gap-3" aria-label="Grim Repo, home">
       <svg
         width="26"
         height="26"
@@ -12,6 +12,7 @@ export function Logo() {
         strokeWidth="1.6"
         strokeLinecap="round"
         strokeLinejoin="round"
+        className="max-[22.5rem]:hidden"
         aria-hidden
       >
         <circle cx="12" cy="9" r="6" />
