@@ -67,8 +67,9 @@ function build(kind: 'full' | 'compact') {
 
   const plastic: THREE.BufferGeometry[] = [rim]
   const dark: THREE.BufferGeometry[] = []
-  // The write-protect tab along the top edge, and the two square holes beside it.
-  plastic.push(box(0.32, 0.004, 0.68, 0.03, raised * 1.6, front + raised * 0.8))
+  const metal: THREE.BufferGeometry[] = []
+  // The metal tab along the top edge, and the two square holes beside it.
+  metal.push(box(0.32, 0.004, 0.68, 0.03, raised * 1.6, front + raised * 0.8))
   dark.push(box(0.55, 0.01, 0.63, 0.024, 0.004, front + raised * 1.6))
   dark.push(box(0.1, 0.008, 0.15, 0.028, 0.004, front + raised))
   dark.push(box(0.85, 0.008, 0.9, 0.028, 0.004, front + raised))
@@ -77,17 +78,17 @@ function build(kind: 'full' | 'compact') {
     for (let i = 0; i < 6; i++)
       plastic.push(box(0.42, 0.895 + i * 0.013, 0.58, 0.901 + i * 0.013, raised * 0.7, front + raised * 0.35))
 
-  // The back: the shutter plate over the hub, the hub, two ribs and the bottom band.
-  plastic.push(box(0.28, 0.02, 0.72, 0.2, raised, back - raised / 2))
+  // The back: the steel shutter plate over the hub, the hub, two plastic ribs and the bottom band.
+  metal.push(box(0.28, 0.02, 0.72, 0.2, raised, back - raised / 2))
   dark.push(box(0.1, 0.03, 0.15, 0.05, 0.004, back - raised))
   dark.push(box(0.85, 0.03, 0.9, 0.05, 0.004, back - raised))
   const [hx, hy] = at(0.5, 0.34)
-  plastic.push(
+  metal.push(
     new THREE.CylinderGeometry(0.19 * w, 0.19 * w, raised, 28)
       .rotateX(Math.PI / 2)
       .translate(hx, hy, back - raised / 2),
   )
-  plastic.push(new THREE.TorusGeometry(0.27 * w, 0.012, 6, 36).translate(hx, hy, back - raised / 2))
+  metal.push(new THREE.TorusGeometry(0.27 * w, 0.012, 6, 36).translate(hx, hy, back - raised / 2))
   dark.push(
     new THREE.CylinderGeometry(0.03 * w, 0.03 * w, 0.004, 12).rotateX(Math.PI / 2).translate(hx, hy, back - raised),
   )
@@ -104,7 +105,7 @@ function build(kind: 'full' | 'compact') {
     for (const part of [...parts, ...flat]) part.dispose()
     return merged
   }
-  return { body, plastic: merge(plastic), dark: merge(dark) }
+  return { body, plastic: merge(plastic), dark: merge(dark), metal: merge(metal) }
 }
 
 const built: Partial<Record<'full' | 'compact', ReturnType<typeof build>>> = {}
@@ -125,28 +126,37 @@ function plasticMaps() {
     context.fillStyle = random() > 0.5 ? 'rgb(255 255 255 / 0.07)' : 'rgb(0 0 0 / 0.07)'
     context.fillRect(random() * size, random() * size, 1 + random() * 2, 1 + random() * 2)
   }
-  for (let i = 0; i < 40; i++) {
+  // Grime: dark blotches of several sizes, a few pale dusty ones, and a warm tint where fingers have been.
+  for (let i = 0; i < 70; i++) {
+    const x = random() * size
+    const y = random() * size
+    const r = 12 + random() * random() * 150
+    const pale = random() > 0.8
+    const smudge = context.createRadialGradient(x, y, 0, x, y, r)
+    smudge.addColorStop(0, pale ? 'rgb(255 250 230 / 0.16)' : `rgb(30 22 10 / ${0.18 + random() * 0.22})`)
+    smudge.addColorStop(0.6, pale ? 'rgb(255 250 230 / 0.05)' : `rgb(30 22 10 / ${0.06 + random() * 0.1})`)
+    smudge.addColorStop(1, 'rgb(0 0 0 / 0)')
+    context.fillStyle = smudge
+    context.fillRect(x - r, y - r, r * 2, r * 2)
+  }
+  for (let i = 0; i < 90; i++) {
     const x = random() * size
     const y = random() * size
     const angle = random() * Math.PI
-    const length = 20 + random() * 120
-    context.strokeStyle = random() > 0.4 ? 'rgb(255 255 255 / 0.18)' : 'rgb(0 0 0 / 0.16)'
-    context.lineWidth = 1
+    const length = 20 + random() * 140
+    context.strokeStyle = random() > 0.4 ? `rgb(255 255 255 / ${0.1 + random() * 0.15})` : 'rgb(0 0 0 / 0.2)'
+    context.lineWidth = random() > 0.7 ? 2 : 1
     context.beginPath()
     context.moveTo(x, y)
     context.lineTo(x + Math.cos(angle) * length, y + Math.sin(angle) * length)
     context.stroke()
   }
-  for (let i = 0; i < 24; i++) {
-    const x = random() * size
-    const y = random() * size
-    const r = 30 + random() * 90
-    const smudge = context.createRadialGradient(x, y, 0, x, y, r)
-    smudge.addColorStop(0, 'rgb(0 0 0 / 0.14)')
-    smudge.addColorStop(1, 'rgb(0 0 0 / 0)')
-    context.fillStyle = smudge
-    context.fillRect(x - r, y - r, r * 2, r * 2)
-  }
+  // Worn edges: the plastic is lighter and duller where it has been handled.
+  const edge = context.createRadialGradient(size / 2, size / 2, size * 0.3, size / 2, size / 2, size * 0.75)
+  edge.addColorStop(0, 'rgb(255 255 255 / 0)')
+  edge.addColorStop(1, 'rgb(255 255 255 / 0.12)')
+  context.fillStyle = edge
+  context.fillRect(0, 0, size, size)
   const map = new THREE.CanvasTexture(canvas)
   map.colorSpace = THREE.SRGBColorSpace
 
@@ -190,6 +200,18 @@ const plastics = (body: string, bodyGlow: string, edge: string, edgeGlow: string
     edge: new THREE.MeshStandardMaterial({ color: edge, emissive: edgeGlow, roughness: 0.7 }),
     plastic: new THREE.MeshStandardMaterial({ color: rim, emissive: rimGlow, metalness: 0.2, ...wear }),
     dark: new THREE.MeshStandardMaterial({ color: '#05090d', roughness: 0.9 }),
+    // The shutter, the hub and the tab: scratched steel.
+    metal: new THREE.MeshStandardMaterial({
+      color: '#d4dde3',
+      emissive: '#222a32',
+      // Not fully metallic: with nothing to reflect, pure steel renders black.
+      metalness: 0.7,
+      roughness: 0.35,
+      map: worn.map,
+      roughnessMap: worn.roughnessMap,
+      normalMap: worn.normalMap,
+      normalScale: new THREE.Vector2(0.35, 0.35),
+    }),
   }
 }
 type Plastics = ReturnType<typeof plastics>

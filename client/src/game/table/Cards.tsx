@@ -172,6 +172,7 @@ export function Card({
         <mesh geometry={disk.body} material={[plastics.body, plastics.edge]} />
         <mesh geometry={disk.plastic} material={plastics.plastic} />
         <mesh geometry={disk.dark} material={plastics.dark} />
+        <mesh geometry={disk.metal} material={plastics.metal} />
         <mesh geometry={sheet} material={front} position={[0, 0, FACE_Z]} />
         <mesh geometry={backSheet} material={rear} position={[0, 0, BACK_Z]} />
       </group>

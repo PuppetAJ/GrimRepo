@@ -219,6 +219,7 @@ function Stack({
           <mesh geometry={disk.body} material={[plastics.body, plastics.edge]} />
           {topmost ? <mesh geometry={disk.plastic} material={plastics.plastic} /> : null}
           {topmost ? <mesh geometry={disk.dark} material={plastics.dark} /> : null}
+          {topmost ? <mesh geometry={disk.metal} material={plastics.metal} /> : null}
           {topmost && faceUp ? (
             <mesh
               geometry={sheet}

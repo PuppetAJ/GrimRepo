@@ -170,15 +170,23 @@ function pixels(context: CanvasRenderingContext2D, grid: string[], x: number, y:
   )
 }
 
-/** The disk's outline on the canvas, with the clipped corner; outside it the canvas stays clear. */
-function diskPath(context: CanvasRenderingContext2D) {
+/** The disk's outline on the canvas, with the clipped corner; outside it the canvas stays clear. The back is seen mirrored, so its clip is on the left. */
+function diskPath(context: CanvasRenderingContext2D, mirrored = false) {
   const clip = DISK.clip * W
   context.beginPath()
-  context.moveTo(0, 0)
-  context.lineTo(W - clip, 0)
-  context.lineTo(W, clip)
-  context.lineTo(W, H)
-  context.lineTo(0, H)
+  if (mirrored) {
+    context.moveTo(clip, 0)
+    context.lineTo(W, 0)
+    context.lineTo(W, H)
+    context.lineTo(0, H)
+    context.lineTo(0, clip)
+  } else {
+    context.moveTo(0, 0)
+    context.lineTo(W - clip, 0)
+    context.lineTo(W, clip)
+    context.lineTo(W, H)
+    context.lineTo(0, H)
+  }
   context.closePath()
 }
 
@@ -319,7 +327,7 @@ function drawTechFace(context: CanvasRenderingContext2D, unit: Unit, loaded: Ass
 function drawTechBack(context: CanvasRenderingContext2D): void {
   context.clearRect(0, 0, W, H)
   context.fillStyle = COMMON.body
-  diskPath(context)
+  diskPath(context, true)
   context.fill()
   context.strokeStyle = 'rgb(62 243 255 / 0.12)'
   context.lineWidth = 3
