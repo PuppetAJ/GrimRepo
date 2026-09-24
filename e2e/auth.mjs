@@ -143,10 +143,14 @@ section('Changing an account')
   await page.getByLabel('New username').fill(renamed)
   await page.getByRole('button', { name: 'Rename' }).click()
   await page.getByText(`You are now ${renamed}`).waitFor()
-  check(
-    'a player can rename themselves',
-    (await page.getByRole('button', { name: 'Account menu' }).innerText()).includes(renamed),
-  )
+  // The header catches up a moment after the message on a slow connection, so wait for it rather than read it once.
+  const headerUpdated = await page
+    .getByRole('button', { name: 'Account menu' })
+    .filter({ hasText: renamed })
+    .waitFor()
+    .then(() => true)
+    .catch(() => false)
+  check('a player can rename themselves, and the header follows', headerUpdated)
   await page.goto(`${BASE}/players/${renamed}`)
   await page.getByRole('heading', { name: renamed }).waitFor()
   check('and their page moves with them', true)
