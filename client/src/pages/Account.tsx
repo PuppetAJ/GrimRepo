@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import {
   AlertDialog,
@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button.tsx'
 import { Input } from '@/components/ui/input.tsx'
 import { Label } from '@/components/ui/label.tsx'
 import { PasswordInput } from '../components/PasswordInput.tsx'
-import { authClient, authError } from '../lib/auth.ts'
+import { authClient, authError, DEMO } from '../lib/auth.ts'
 
 export function Account() {
   const session = authClient.useSession()
@@ -43,6 +43,8 @@ export function Account() {
     toast.success('Your account and its games are gone')
     navigate('/', { replace: true })
   }
+
+  if (user?.username === DEMO.username) return <DemoNotice />
 
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-10">
@@ -113,6 +115,28 @@ export function Account() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+      </section>
+    </div>
+  )
+}
+
+/** Shown to the demo account instead of the forms, which the server would refuse anyway. */
+function DemoNotice() {
+  return (
+    <div className="mx-auto flex w-full max-w-lg flex-col gap-4">
+      <h1 className="font-display text-5xl">Account</h1>
+      <section className="flex flex-col gap-3 rounded-lg border bg-card p-6">
+        <h2 className="text-xl font-semibold">You are using the demo account</h2>
+        <p className="text-muted-foreground">
+          Everyone trying Grim Repo shares this account, so its name and password are fixed and it cannot be deleted.
+          Its games and scores are shared too.
+        </p>
+        <p className="text-muted-foreground">
+          Make an account of your own to keep your games and your place on the leaderboard.
+        </p>
+        <Button asChild className="self-start">
+          <Link to="/signup">Create an account</Link>
+        </Button>
       </section>
     </div>
   )

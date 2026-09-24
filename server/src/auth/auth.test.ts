@@ -204,3 +204,36 @@ describe('changing an account', () => {
     assert.equal((await app.call('GET', '/api/me', { cookie })).status, 200)
   })
 })
+
+describe('the demo account', () => {
+  const demo = { name: 'Demo Player', username: 'demo', email: 'demo@grimrepo.test', password: 'demo-password' }
+
+  it('cannot be renamed, deleted or given a new password by the visitor using it', async () => {
+    const { cookie } = await signUp(demo)
+    const attempts = [
+      app.call('POST', '/api/auth/update-user', { cookie, body: { username: 'taken_over' } }),
+      app.call('POST', '/api/auth/delete-user', { cookie, body: { password: demo.password } }),
+      app.call('POST', '/api/auth/change-password', {
+        cookie,
+        body: { currentPassword: demo.password, newPassword: 'locked-everyone-out' },
+      }),
+    ]
+    for (const reply of await Promise.all(attempts)) {
+      assert.equal(reply.status, 403, JSON.stringify(reply.body))
+      assert.match(reply.body.message, /Everyone shares the demo account/)
+    }
+    const signIn = await app.call('POST', '/api/auth/sign-in/username', {
+      body: { username: 'demo', password: demo.password },
+    })
+    assert.equal(signIn.status, 200, 'the password still works for the next visitor')
+    assert.equal((await app.call('GET', '/api/players/demo/stats')).status, 200)
+  })
+
+  it('does not stop anyone else changing their own account', async () => {
+    const { cookie } = await signUp(newPlayer())
+    assert.equal(
+      (await app.call('POST', '/api/auth/update-user', { cookie, body: { username: 'free_to_rename' } })).status,
+      200,
+    )
+  })
+})
