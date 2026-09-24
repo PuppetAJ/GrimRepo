@@ -33,7 +33,9 @@
     "db:down": "docker compose down",
     "db:migrate": "pnpm --filter server db:migrate",
     "db:seed": "pnpm --filter server db:seed",
-    "db:seed:empty": "pnpm --filter server db:seed:empty"
+    "db:seed:empty": "pnpm --filter server db:seed:empty",
+    "db:cleanup": "pnpm --filter server db:cleanup",
+    "moderate": "pnpm --silent --filter server moderate"
   },
   "prettier": {
     "semi": false,
