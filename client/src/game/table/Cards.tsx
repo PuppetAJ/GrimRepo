@@ -3,7 +3,7 @@ import { easing } from 'maath'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Unit } from 'shared'
 import * as THREE from 'three'
-import { backTexture, faceTexture, type CardStyle, type loadCardAssets } from './faces.ts'
+import { backTexture, faceTexture, shutterTexture, TECH_SCREEN, type CardStyle, type loadCardAssets } from './faces.ts'
 import { CARD, HAND_SCALE, handPlace, slot, type Row, type Vec3 } from './layout.ts'
 import { LEAVE_MS, type Lunge } from './playback.ts'
 
@@ -16,6 +16,13 @@ export type Look = 'plain' | 'selected' | 'marked' | 'markable' | 'dim'
 const FLAT = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0))
 const geometry = new THREE.BoxGeometry(CARD.width, CARD.height, CARD.depth)
 const EDGE = new THREE.MeshStandardMaterial({ color: '#2b211c' })
+const TECH_EDGE = new THREE.MeshStandardMaterial({ color: '#0f1c28', metalness: 0.6, roughness: 0.5 })
+// The floppy's shutter, hung from the top of the screen so it can roll up out of the way.
+const SHUTTER = {
+  height: CARD.height * (TECH_SCREEN.bottom - TECH_SCREEN.top),
+  top: CARD.height * (0.5 - TECH_SCREEN.top),
+}
+const shutterGeometry = new THREE.PlaneGeometry(CARD.width, SHUTTER.height).translate(0, -SHUTTER.height / 2, 0)
 
 // Scratch objects, so the frame loop allocates nothing.
 const position = new THREE.Vector3()
@@ -52,6 +59,7 @@ export function Card({
   onClick?: (event: ThreeEvent<MouseEvent>) => void
 }) {
   const mesh = useRef<THREE.Mesh>(null)
+  const shutter = useRef<THREE.Mesh>(null)
   const [hovered, setHovered] = useState(false)
   const placed = useRef(false)
   const face = faceTexture(unit, assets, style)
@@ -76,6 +84,23 @@ export function Card({
   front.map = face
   front.emissiveMap = face
   rear.map = back
+  const tech = style === 'tech'
+  const shutterMaterial = useMemo(
+    // It glows a little of its own, since the hand sits far from the factory's lamps.
+    () =>
+      tech
+        ? new THREE.MeshStandardMaterial({
+            map: shutterTexture(),
+            emissiveMap: shutterTexture(),
+            emissive: '#ffffff',
+            emissiveIntensity: 0.55,
+            roughness: 0.55,
+            metalness: 0.5,
+          })
+        : null,
+    [tech],
+  )
+  useEffect(() => () => shutterMaterial?.dispose(), [shutterMaterial])
 
   useFrame(({ camera }, delta) => {
     const card = mesh.current
@@ -135,6 +160,12 @@ export function Card({
     front.emissive.set(look === 'marked' || look === 'markable' ? '#ff4040' : '#ffffff')
     front.color.setScalar(look === 'dim' ? 0.45 : 1)
     front.opacity = rear.opacity = 1 - leaving
+
+    // A disk in the hand stays shut; picking it up, or playing it, rolls the shutter up off the screen.
+    if (shutter.current) {
+      const open = place.at !== 'hand' || hovered || look === 'selected'
+      easing.damp(shutter.current.scale, 'y', open ? 0.04 : 1, 0.12, delta)
+    }
   })
 
   return (
@@ -142,7 +173,9 @@ export function Card({
       ref={mesh}
       name={`card-${unit.uid}`}
       geometry={geometry}
-      material={[EDGE, EDGE, EDGE, EDGE, front, rear]}
+      material={
+        tech ? [TECH_EDGE, TECH_EDGE, TECH_EDGE, TECH_EDGE, front, rear] : [EDGE, EDGE, EDGE, EDGE, front, rear]
+      }
       onClick={(event) => {
         event.stopPropagation()
         onClick?.(event)
@@ -156,7 +189,17 @@ export function Card({
         setHovered(false)
         document.body.style.cursor = ''
       }}
-    />
+    >
+      {shutterMaterial ? (
+        <mesh
+          ref={shutter}
+          geometry={shutterGeometry}
+          material={shutterMaterial}
+          position={[0, SHUTTER.top, CARD.depth / 2 + 0.002]}
+          raycast={() => null}
+        />
+      ) : null}
+    </mesh>
   )
 }
 

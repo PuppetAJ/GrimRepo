@@ -23,11 +23,14 @@ export function Room() {
   return <primitive object={scene} scale={20} />
 }
 
-/** P03, playing every clip it was animated with; `face`, when given, replaces the one on its screen, and `tint` colours it. */
-export function Robot({ face, tint = '#ffffff' }: { face?: THREE.Texture; tint?: string }) {
+/** P03, playing every clip it was animated with at `pace`; `face` replaces the one on its screen, and `tint` colours it. */
+export function Robot({ face, tint = '#ffffff', pace = 1 }: { face?: THREE.Texture; tint?: string; pace?: number }) {
   const group = useRef<THREE.Group>(null)
   const { scene, animations } = useModel('/models/robot.glb')
   const { actions } = useAnimations(animations, group)
+  useEffect(() => {
+    for (const action of Object.values(actions)) if (action) action.timeScale = pace
+  }, [actions, pace])
   useLayoutEffect(
     () =>
       scene.traverse((object) => {

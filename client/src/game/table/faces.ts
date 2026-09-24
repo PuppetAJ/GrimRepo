@@ -117,19 +117,23 @@ function drawFace(context: CanvasRenderingContext2D, unit: Unit, loaded: Assets)
   context.fillText(String(unit.health), W * 0.8, H * 0.8)
 }
 
-// The factory's cards: Act 3's look, drawn from scratch. A metal casing, a dark screen, a pixel-font plate.
+// The factory's cards: Act 3's floppy disks, drawn from scratch. A dark disk, a yellow label, a screen under a shutter.
 const TECH = {
-  casing: ['#2c3339', '#151a1f'],
-  rim: '#4a565f',
-  screen: '#031017',
+  body: ['#16283a', '#0b1622'],
+  rim: '#3aa7b8',
+  screen: '#04111a',
   line: '#3ef3ff',
-  plate: '#c6e86b',
+  plate: '#e6d24a',
   rarePlate: '#ff5ec4',
-  plateInk: '#15210a',
+  plateInk: '#1b1a0c',
   cost: '#ff9a2e',
   attack: '#ffb347',
   heart: '#ff4d5e',
+  shutter: ['#2c3f52', '#1a2836'],
 }
+
+/** Where the disk's screen sits on the face, as fractions of the height; the shutter covers exactly this. */
+export const TECH_SCREEN = { top: 0.15, bottom: 0.66 }
 
 const HEART = ['01100110', '11111111', '11111111', '01111110', '00111100', '00011000']
 const BOLT = ['000110', '001100', '011000', '111110', '001100', '011000', '110000']
@@ -141,31 +145,52 @@ function pixels(context: CanvasRenderingContext2D, grid: string[], x: number, y:
   )
 }
 
-function rounded(context: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+/** The disk's outline: rounded, with the floppy's clipped corner at the top right. */
+function disk(context: CanvasRenderingContext2D, inset: number) {
+  const r = 18
+  const clip = 34
   context.beginPath()
-  context.roundRect(x, y, w, h, r)
+  context.moveTo(inset + r, inset)
+  context.lineTo(W - inset - clip, inset)
+  context.lineTo(W - inset, inset + clip)
+  context.lineTo(W - inset, H - inset - r)
+  context.quadraticCurveTo(W - inset, H - inset, W - inset - r, H - inset)
+  context.lineTo(inset + r, H - inset)
+  context.quadraticCurveTo(inset, H - inset, inset, H - inset - r)
+  context.lineTo(inset, inset + r)
+  context.quadraticCurveTo(inset, inset, inset + r, inset)
+  context.closePath()
 }
 
-/** The casing and screen every tech card shares, front and back. */
-function techCasing(context: CanvasRenderingContext2D, screen: [number, number]) {
+/** The body every tech card shares, front and back. */
+function techBody(context: CanvasRenderingContext2D) {
   const gradient = context.createLinearGradient(0, 0, 0, H)
-  gradient.addColorStop(0, TECH.casing[0] as string)
-  gradient.addColorStop(1, TECH.casing[1] as string)
+  gradient.addColorStop(0, TECH.body[0] as string)
+  gradient.addColorStop(1, TECH.body[1] as string)
   context.fillStyle = gradient
-  rounded(context, 0, 0, W, H, 22)
+  disk(context, 0)
   context.fill()
   context.strokeStyle = TECH.rim
-  context.lineWidth = 6
-  rounded(context, 3, 3, W - 6, H - 6, 20)
+  context.lineWidth = 5
+  disk(context, 3)
   context.stroke()
+  // Rivets in the corners.
+  context.fillStyle = '#5b7a8c'
+  for (const [x, y] of [
+    [16, H - 16],
+    [W - 16, H - 16],
+    [16, 16],
+  ])
+    context.fillRect((x as number) - 4, (y as number) - 4, 8, 8)
+}
 
-  const [top, bottom] = screen
+function screen(context: CanvasRenderingContext2D, top: number, bottom: number) {
   context.fillStyle = TECH.screen
-  rounded(context, 14, H * top, W - 28, H * (bottom - top), 10)
+  context.beginPath()
+  context.roundRect(16, H * top, W - 32, H * (bottom - top), 8)
   context.fill()
-  // Scanlines, faint enough to read through.
   context.fillStyle = 'rgb(62 243 255 / 0.05)'
-  for (let y = H * top; y < H * bottom; y += 4) context.fillRect(14, y, W - 28, 1)
+  for (let y = H * top; y < H * bottom; y += 4) context.fillRect(16, y, W - 32, 1)
 }
 
 /** The 2022 art redrawn as glowing cyan lines, a hologram of the original. */
@@ -202,35 +227,44 @@ function hologram(
 
 function drawTechFace(context: CanvasRenderingContext2D, unit: Unit, loaded: Assets): void {
   const def = card(unit.card)
-  techCasing(context, [0.14, 0.66])
+  techBody(context)
   context.imageSmoothingEnabled = true
 
+  // The label, slightly askew like a sticker.
+  context.save()
+  context.translate(W / 2, H * 0.08)
+  context.rotate(-0.012)
   context.fillStyle = def.tier === 'S' ? TECH.rarePlate : TECH.plate
-  rounded(context, W * 0.05, H * 0.025, W * 0.9, H * 0.1, 6)
+  context.beginPath()
+  context.roundRect(-W * 0.44, -H * 0.045, W * 0.88, H * 0.09, 4)
   context.fill()
   context.fillStyle = TECH.plateInk
   context.textAlign = 'center'
   context.textBaseline = 'middle'
-  fitText(context, def.name.toUpperCase(), (size) => `${size}px VT323`, 46, W * 0.84)
-  context.fillText(def.name.toUpperCase(), W / 2, H * 0.078)
+  fitText(context, def.name.toUpperCase(), (size) => `${size}px VT323`, 44, W * 0.82)
+  context.fillText(def.name.toUpperCase(), 0, 2)
+  context.restore()
 
+  screen(context, TECH_SCREEN.top, TECH_SCREEN.bottom)
   const art = loaded.art.get(unit.card)
-  if (art) hologram(context, art, W * 0.08, H * 0.175, W * 0.84, H * 0.43)
+  if (art) hologram(context, art, W * 0.08, H * 0.185, W * 0.84, H * 0.42)
   else {
     context.save()
     context.shadowColor = TECH.line
     context.shadowBlur = 12
     context.fillStyle = TECH.line
     context.font = '46px VT323'
-    context.fillText('<div>', W / 2, H * 0.34)
-    context.fillText('</div>', W / 2, H * 0.44)
+    context.textAlign = 'center'
+    context.textBaseline = 'middle'
+    context.fillText('<div>', W / 2, H * 0.35)
+    context.fillText('</div>', W / 2, H * 0.45)
     context.restore()
   }
 
   // Cost as orange diamonds in the screen's corner, as P03's cards show theirs.
   for (let i = 0; i < def.cost; i++) {
     const cx = W * 0.86 - i * 26
-    const cy = H * 0.19
+    const cy = H * 0.2
     context.fillStyle = TECH.cost
     context.beginPath()
     context.moveTo(cx, cy - 11)
@@ -243,14 +277,14 @@ function drawTechFace(context: CanvasRenderingContext2D, unit: Unit, loaded: Ass
   if (unit.sigils.length) {
     const text = unit.sigils.map((sigil) => SIGILS[sigil].name.toUpperCase()).join(' · ')
     context.fillStyle = TECH.line
+    context.textAlign = 'center'
+    context.textBaseline = 'middle'
     fitText(context, text, (size) => `${size}px VT323`, 30, W * 0.84)
     context.fillText(text, W / 2, H * 0.625)
   }
 
-  context.fillStyle = TECH.screen
   // Stats sit high enough to show while the card is held low in the hand.
-  rounded(context, 14, H * 0.68, W - 28, H * 0.16, 10)
-  context.fill()
+  screen(context, 0.68, 0.84)
   context.textBaseline = 'middle'
   context.font = Math.max(unit.attack, unit.health) > 99 ? '44px VT323' : '72px VT323'
   pixels(context, BOLT, W * 0.1, H * 0.718, 6, TECH.attack)
@@ -262,7 +296,7 @@ function drawTechFace(context: CanvasRenderingContext2D, unit: Unit, loaded: Ass
   context.fillStyle = hurt ? TECH.heart : TECH.line
   context.fillText(String(unit.health), W * 0.72, H * 0.762)
 
-  // The cartridge's charge cells along the bottom, lit to the card's health.
+  // The disk's charge cells along the bottom, lit to the card's health.
   const cells = 8
   const lit = Math.max(0, Math.min(cells, Math.round((unit.health / Math.max(unit.maxHealth, 1)) * cells)))
   for (let i = 0; i < cells; i++) {
@@ -271,8 +305,37 @@ function drawTechFace(context: CanvasRenderingContext2D, unit: Unit, loaded: Ass
   }
 }
 
+/** The floppy's metal shutter over the screen: it slides up when the card is picked up or played. */
+function drawTechShutter(context: CanvasRenderingContext2D): void {
+  const h = H * (TECH_SCREEN.bottom - TECH_SCREEN.top)
+  const gradient = context.createLinearGradient(0, 0, 0, h)
+  gradient.addColorStop(0, TECH.shutter[0] as string)
+  gradient.addColorStop(1, TECH.shutter[1] as string)
+  context.fillStyle = gradient
+  context.beginPath()
+  context.roundRect(16, 0, W - 32, h, 8)
+  context.fill()
+  // The slot and its bars, and the hub.
+  context.fillStyle = '#0c161f'
+  context.beginPath()
+  context.roundRect(W * 0.2, h * 0.16, W * 0.6, h * 0.5, 6)
+  context.fill()
+  context.fillStyle = '#4a6478'
+  for (let i = 0; i < 5; i++) context.fillRect(W * 0.235 + i * W * 0.11, h * 0.2, W * 0.07, h * 0.42)
+  context.fillStyle = '#0c161f'
+  context.beginPath()
+  context.arc(W / 2, h * 0.84, h * 0.11, 0, Math.PI * 2)
+  context.fill()
+  context.strokeStyle = TECH.rim
+  context.lineWidth = 3
+  context.beginPath()
+  context.roundRect(17, 1, W - 34, h - 2, 8)
+  context.stroke()
+}
+
 function drawTechBack(context: CanvasRenderingContext2D): void {
-  techCasing(context, [0.06, 0.94])
+  techBody(context)
+  screen(context, 0.06, 0.94)
   // Circuit traces, the same on every back.
   context.strokeStyle = 'rgb(62 243 255 / 0.18)'
   context.lineWidth = 3
@@ -329,6 +392,20 @@ export function backTexture(loaded: Assets, style: CardStyle = 'cabin'): Texture
     else context.drawImage(loaded.back, 0, 0, W, H)
     found = texture(element)
     faces.set(`${style}:back`, found)
+  }
+  return found
+}
+
+/** The shutter that covers a tech card's screen, shared by every card. */
+export function shutterTexture(): Texture {
+  let found = faces.get('tech:shutter')
+  if (!found) {
+    const element = document.createElement('canvas')
+    element.width = W
+    element.height = Math.round(H * (TECH_SCREEN.bottom - TECH_SCREEN.top))
+    drawTechShutter(element.getContext('2d') as CanvasRenderingContext2D)
+    found = texture(element)
+    faces.set('tech:shutter', found)
   }
   return found
 }

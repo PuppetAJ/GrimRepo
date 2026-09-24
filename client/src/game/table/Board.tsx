@@ -61,26 +61,24 @@ function arrowGeometry(): THREE.ExtrudeGeometry {
   return new THREE.ExtrudeGeometry(shape, { depth: FRAME.depth, bevelEnabled: false })
 }
 
-function painted(colour: string, glow = 0.18) {
-  return new THREE.MeshStandardMaterial({ color: colour, emissive: colour, emissiveIntensity: glow, roughness: 0.7 })
+function painted(colour: string) {
+  return new THREE.MeshStandardMaterial({ color: colour, emissive: colour, emissiveIntensity: 0.18, roughness: 0.7 })
 }
 
 // Flat on the table, facing up; the shapes are drawn with +y pointing at P03.
 const FLAT: [number, number, number] = [-Math.PI / 2, 0, 0]
 
-/** The cabin's board is painted; the factory's glows red over dark screens, as P03's does. */
-export function Board({ style = 'cabin' }: { style?: CardStyle }) {
-  const tech = style === 'tech'
+/** The cabin's painted board; the factory draws its own in Factory.tsx. */
+export function Board() {
   const parts = useMemo(
     () => ({
       frame: frameGeometry(),
       hash: hashGeometry(),
       arrow: arrowGeometry(),
-      queue: tech ? painted('#ff2f45', 1.6) : painted(QUEUE),
-      set: tech ? painted('#c81e32', 0.9) : painted(SET),
-      plate: new THREE.MeshStandardMaterial({ color: '#05080b', roughness: 0.35, metalness: 0.6 }),
+      queue: painted(QUEUE),
+      set: painted(SET),
     }),
-    [tech],
+    [],
   )
   const rows: [Row, THREE.BufferGeometry, THREE.Material][] = [
     ['back', parts.arrow, parts.queue],
@@ -95,11 +93,6 @@ export function Board({ style = 'cabin' }: { style?: CardStyle }) {
           const [x, , z] = slot(row, lane)
           return (
             <group key={`${row}-${lane}`} position={[x, TABLE_Y, z]} rotation={FLAT}>
-              {tech ? (
-                <mesh material={parts.plate} position={[0, 0, 0.002]}>
-                  <planeGeometry args={[FRAME.width, FRAME.height]} />
-                </mesh>
-              ) : null}
               <mesh geometry={parts.frame} material={material} />
               <mesh geometry={mark} material={material} />
             </group>

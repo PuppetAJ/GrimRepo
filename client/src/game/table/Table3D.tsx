@@ -14,7 +14,7 @@ import { Card, Popup, type Look, type Place } from './Cards.tsx'
 import { disposeFaces, loadCardAssets } from './faces.ts'
 import { BELL, BOARD_DEPTH, CAMERA, CARD, DECK, lanes, PILE, slot, TABLE_Y, type CameraView } from './layout.ts'
 import { Board, Deck, Pile } from './Board.tsx'
-import { EndTurnButton, Factory, FactoryEffects, FactoryP03 } from './Factory.tsx'
+import { EndTurnButton, Factory, FactoryEffects, FactoryP03, TechBoard } from './Factory.tsx'
 import { chosenScene, type SceneName } from './scene.ts'
 import { Bell, Candle, Lights, Robot, Room } from './Scene.tsx'
 import { usePlayback } from './usePlayback.ts'
@@ -141,7 +141,7 @@ function Scene({
           </Suspense>
         </>
       )}
-      <Board style={style} />
+      {scene === 'factory' ? <TechBoard /> : <Board />}
       <Deck
         assets={assets}
         style={style}
@@ -502,6 +502,17 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
   const [rung, setRung] = useState(0)
   const fullScreen = useFullScreen()
   const [scene] = useState(chosenScene)
+  // W looks down at the board and D (or S) sits back up, unless a summon is holding the view.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey || (event.target as HTMLElement).tagName === 'INPUT') return
+      const key = event.key.toLowerCase()
+      if (key === 'w') setCamera('board')
+      else if (key === 'd' || key === 's') setCamera('table')
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
   useEffect(() => () => disposeFaces(), [])
 
   const act = (action: Action) => {
