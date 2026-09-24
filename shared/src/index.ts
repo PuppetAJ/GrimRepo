@@ -10,11 +10,12 @@ export {
   type SigilId,
   type Tier,
 } from './cards.ts'
-export { nextBotAction, playOut } from './engine/bot.ts'
+export { deadLane, nextBotAction, playOut, type Strategy } from './engine/bot.ts'
 export { apply, createGame, legalActions, replay, summary, type GameOptions, type Replay } from './engine/game.ts'
 export {
   HAND_LIMIT,
   LANES,
+  RULES_VERSION,
   STARTING_HEALTH,
   TURN_LIMIT,
   type Action,

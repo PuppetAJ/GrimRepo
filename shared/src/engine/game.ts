@@ -1,7 +1,7 @@
 import { BOILERPLATE, DEBUG_CARD, PLAYER_DECK } from '../cards.ts'
 import { Rng } from '../rng.ts'
 import { attack } from './combat.ts'
-import { queue, queueCountFor } from './opponent.ts'
+import { queue, queueCountFor, retireDeadCode } from './opponent.ts'
 import {
   HAND_LIMIT,
   LANES,
@@ -148,11 +148,12 @@ export function apply(current: GameState, action: Action): Result {
   return { ok: true, state, events }
 }
 
-/** The bell: the player's cards attack, then the opponent advances, attacks, and queues more. */
+/** The bell: the player's cards attack, then the opponent clears dead code, advances, attacks, and queues more. */
 function playTurn(state: GameState, rng: Rng, events: GameEvent[]): void {
   attack(state, 'player', events)
   if (state.opponent.health <= 0) return finish(state, 'win', events)
 
+  retireDeadCode(state, events)
   for (let lane = 0; lane < LANES; lane++) {
     const waiting = state.opponent.back[lane]
     if (waiting && !state.opponent.front[lane]) {

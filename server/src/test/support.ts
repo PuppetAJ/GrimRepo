@@ -17,3 +17,14 @@ export async function insertGame(username: string, outcome: 'win' | 'loss', turn
     [username, outcome, turns, scoreBattle(outcome, turns), daysAgo],
   )
 }
+
+/** An unfinished game begun under some earlier version of the rules. */
+export async function insertOldGame(username: string, rulesVersion: number): Promise<number> {
+  const { rows } = await pool.query<{ id: number }>(
+    `INSERT INTO games (user_id, seed, status, rules_version, actions)
+     SELECT id, 1234, 'playing', $2, '[{"type":"draw","from":"deck"}]'::jsonb FROM users WHERE username = lower($1)
+     RETURNING id`,
+    [username, rulesVersion],
+  )
+  return rows[0]?.id as number
+}

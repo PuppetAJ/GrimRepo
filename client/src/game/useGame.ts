@@ -30,6 +30,8 @@ function open(game: OpenGame): Table {
   const lines = rebuilt.lines.map((line) => `P03> ${line}`)
   // A resumed game with no moves is still a new deal, as when two requests race to start it.
   if (game.resumed && game.actions.length) lines.push(`P03> Welcome back. Turn ${rebuilt.state.turn}.`)
+  if (game.rulesChanged)
+    lines.unshift('P03> I rewrote the rules since your last game. It could not continue, so here is a new deal.')
   return { id: game.id, state: rebuilt.state, log: lines.slice(-LOG_LINES) }
 }
 
@@ -85,7 +87,11 @@ export function useGame(): Game {
       } catch (failure) {
         // Out of step with the server, most likely from another tab: its copy is the truth.
         if (failure instanceof ApiError && failure.status === 409) {
-          toast.warning('This game moved on in another tab. Picking it up from there.')
+          toast.warning(
+            failure.body['rulesChanged']
+              ? 'The rules changed since this game began, so it cannot continue. Dealing a new one.'
+              : 'This game moved on in another tab. Picking it up from there.',
+          )
           setReloads((n) => n + 1)
         } else {
           toast.error(`Could not save: ${failure instanceof Error ? failure.message : String(failure)}`)

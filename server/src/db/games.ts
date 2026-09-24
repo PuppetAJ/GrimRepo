@@ -1,5 +1,5 @@
 import { randomInt } from 'node:crypto'
-import { replay, scoreBattle, summary, type Action, type Outcome } from 'shared'
+import { replay, RULES_VERSION, scoreBattle, summary, type Action, type Outcome } from 'shared'
 import { pool } from '../config/db.ts'
 
 export type LeaderboardRow = { rank: number; username: string; bestScore: number; games: number; wins: number }
@@ -18,7 +18,7 @@ export type PlayerStats = {
   recent: { outcome: Outcome; turns: number; score: number; forfeited: boolean; playedAt: string }[]
 }
 
-export type OpenGame = { id: number; seed: number; actions: Action[]; resumed: boolean }
+export type OpenGame = { id: number; seed: number; actions: Action[]; resumed: boolean; rulesChanged: boolean }
 
 export type MovesResult =
   | { status: 'playing'; saved: number }
@@ -38,23 +38,29 @@ export class GameError extends Error {
 const MAX_ACTIONS = 5_000
 
 /** The player's unfinished game, or a new one with a seed only the server chose. */
-export async function startGame(userId: string): Promise<OpenGame> {
-  const open = await pool.query<{ id: number; seed: string; actions: Action[] }>(
-    `SELECT id, seed, actions FROM games WHERE user_id = $1 AND status = 'playing'`,
+export async function startGame(userId: string, rulesChanged = false): Promise<OpenGame> {
+  const open = await pool.query<{ id: number; seed: string; actions: Action[]; rules_version: number }>(
+    `SELECT id, seed, actions, rules_version FROM games WHERE user_id = $1 AND status = 'playing'`,
     [userId],
   )
   const existing = open.rows[0]
-  if (existing) return { id: existing.id, seed: Number(existing.seed), actions: existing.actions, resumed: true }
+  if (existing && existing.rules_version !== RULES_VERSION) {
+    // Begun under older rules, so it may no longer replay: dropped unscored, and a fresh deal takes its place.
+    await pool.query(`DELETE FROM games WHERE id = $1 AND status = 'playing'`, [existing.id])
+    return startGame(userId, true)
+  }
+  if (existing)
+    return { id: existing.id, seed: Number(existing.seed), actions: existing.actions, resumed: true, rulesChanged }
 
   const seed = randomInt(0, 2 ** 32)
   const created = await pool.query<{ id: number }>(
-    `INSERT INTO games (user_id, seed, status) VALUES ($1, $2, 'playing')
+    `INSERT INTO games (user_id, seed, status, rules_version) VALUES ($1, $2, 'playing', $3)
      ON CONFLICT (user_id) WHERE status = 'playing' DO NOTHING RETURNING id`,
-    [userId, seed],
+    [userId, seed, RULES_VERSION],
   )
   // Two tabs starting at once: the other one won, so resume its game.
-  if (!created.rows[0]) return startGame(userId)
-  return { id: created.rows[0].id, seed, actions: [], resumed: false }
+  if (!created.rows[0]) return startGame(userId, rulesChanged)
+  return { id: created.rows[0].id, seed, actions: [], resumed: false, rulesChanged }
 }
 
 /** Appends moves to an open game after replaying the whole record; scores it if the game is over. */
@@ -62,12 +68,14 @@ export async function recordMoves(userId: string, gameId: number, from: number, 
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
-    const found = await client.query<{ seed: string; actions: Action[] }>(
-      `SELECT seed, actions FROM games WHERE id = $1 AND user_id = $2 AND status = 'playing' FOR UPDATE`,
+    const found = await client.query<{ seed: string; actions: Action[]; rules_version: number }>(
+      `SELECT seed, actions, rules_version FROM games WHERE id = $1 AND user_id = $2 AND status = 'playing' FOR UPDATE`,
       [gameId, userId],
     )
     const game = found.rows[0]
     if (!game) throw new GameError(404, { error: 'No such game in progress' })
+    if (game.rules_version !== RULES_VERSION)
+      throw new GameError(409, { error: 'The rules changed', rulesChanged: true })
     // Moves only ever append, so a retried or stale request cannot rewrite what was already played.
     if (from !== game.actions.length) throw new GameError(409, { error: 'Out of step', expected: game.actions.length })
 

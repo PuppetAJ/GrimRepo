@@ -3,7 +3,7 @@ import { after, beforeEach, describe, it } from 'node:test'
 import { apply, createGame, playOut, scoreBattle, summary, type Action, type GameState } from 'shared'
 import { pool } from '../config/db.ts'
 import { newPlayer, startApp } from '../test/http.ts'
-import { insertGame, resetDatabase } from '../test/support.ts'
+import { insertGame, insertOldGame, resetDatabase } from '../test/support.ts'
 
 const app = await startApp()
 after(async () => {
@@ -177,6 +177,29 @@ describe('a game', () => {
     assert.equal(stats.body.recent[0].forfeited, true)
     const fresh = await start(player.cookie)
     assert.notEqual(fresh.id, game.id)
+  })
+
+  it('is dropped and dealt again when it began under older rules, never scored', async () => {
+    const player = await signedIn()
+    const old = await insertOldGame(player.username, 1)
+    const reply = await app.call('POST', '/api/games', { cookie: player.cookie })
+    assert.equal(reply.status, 201)
+    assert.notEqual(reply.body.id, old)
+    assert.equal(reply.body.rulesChanged, true)
+    assert.deepEqual(reply.body.actions, [])
+    const { rows } = await pool.query('SELECT 1 FROM games WHERE id = $1', [old])
+    assert.equal(rows.length, 0, 'the old record is gone, not scored')
+  })
+
+  it('refuses moves for a game from older rules, so the page can pick up the new deal', async () => {
+    const player = await signedIn()
+    const old = await insertOldGame(player.username, 1)
+    const reply = await app.call('POST', `/api/games/${old}/moves`, {
+      cookie: player.cookie,
+      body: { from: 1, actions: [] },
+    })
+    assert.equal(reply.status, 409)
+    assert.equal(reply.body.rulesChanged, true)
   })
 
   it('stays off the leaderboard until it is finished', async () => {
