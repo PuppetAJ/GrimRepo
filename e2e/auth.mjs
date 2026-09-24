@@ -94,22 +94,34 @@ section('The demo account and redirects')
 {
   const { context, page } = await freshPage(browser)
   await page.goto(`${BASE}/game`)
-  await page.waitForURL(/\/login\?next=/)
-  check('the table sends a signed-out visitor to sign in', page.url().includes('next=%2Fgame'), page.url())
+  await page.waitForURL(`${BASE}/login`)
+  check('the table sends a signed-out visitor to sign in', true)
   await page.getByRole('button', { name: 'Play as the demo account' }).click()
-  await page.waitForURL(`${BASE}/game`)
-  check(
-    'the demo account signs in and comes back to the table',
-    (await page.getByRole('button', { name: 'Account menu' }).innerText()).includes('demo'),
-  )
-  await context.close()
+  await page.getByRole('button', { name: 'Account menu' }).waitFor()
+  check('signing in always lands on the home page', page.url() === `${BASE}/`, page.url())
+  check('as the demo account', (await page.getByRole('button', { name: 'Account menu' }).innerText()).includes('demo'))
 
-  const hostile = await freshPage(browser)
-  await hostile.page.goto(`${BASE}/login?next=${encodeURIComponent('//evil.example/steal')}`)
-  await hostile.page.getByRole('button', { name: 'Play as the demo account' }).click()
-  await hostile.page.getByRole('button', { name: 'Account menu' }).waitFor()
-  check('a next= pointing off the site goes home instead', hostile.page.url() === `${BASE}/`, hostile.page.url())
-  await hostile.context.close()
+  await page.goto(`${BASE}/game`)
+  await page.getByRole('note').waitFor()
+  check(
+    'the table warns that the demo game is shared',
+    /shared demo account/.test(await page.getByRole('note').innerText()),
+  )
+
+  await page.goto(`${BASE}/account`)
+  await page.getByRole('heading', { name: 'You are using the demo account' }).waitFor()
+  check('its account page explains why it cannot be changed', (await page.getByLabel('New username').count()) === 0)
+  check(
+    'and offers an account of their own',
+    (await page.getByRole('link', { name: 'Create an account' }).count()) === 1,
+  )
+
+  const renamed = await page.request.post(`${BASE}/api/auth/update-user`, {
+    data: { username: 'taken_over' },
+    headers: { origin: BASE },
+  })
+  check('the server refuses to rename it, whatever the page shows', renamed.status() === 403, String(renamed.status()))
+  await context.close()
 }
 
 section('Changing an account')

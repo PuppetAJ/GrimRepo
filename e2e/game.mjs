@@ -83,6 +83,10 @@ section('Resuming')
   const seed = await page.locator('[data-seed]').getAttribute('data-seed')
   const { state } = await playWithBot(page, { stopAfterTurn: 2 })
   await page.getByText('saved', { exact: true }).waitFor()
+  const consoleRegion = page.getByRole('region', { name: "P03's console" })
+  const before = (await consoleRegion.innerText())
+    .split('\n')
+    .filter((line) => line.startsWith('P03>') && !line.includes('Welcome back'))
   await page.reload()
   await page.locator('[data-seed]').waitFor()
   check(
@@ -91,6 +95,12 @@ section('Resuming')
   )
   check('and picks it up at the same turn', (await visibleText(page)).includes(`Turn ${state.turn}`))
   check('P03 notices', /Welcome back/.test(await visibleText(page)))
+  const after = (await consoleRegion.innerText()).split('\n')
+  check(
+    'and the whole history is still in the console',
+    before.every((line) => after.includes(line)),
+    `${before.length} lines before`,
+  )
 
   section('Walking away')
   await page.getByRole('button', { name: 'Walk away' }).click()
