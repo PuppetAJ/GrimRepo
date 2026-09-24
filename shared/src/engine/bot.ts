@@ -5,14 +5,30 @@ import { costOf, units, worthOf } from './units.ts'
 
 const value = (unit: Unit): number => unit.attack * 2 + unit.health
 
-/** A lane worth filling: one facing an enemy, else any empty one. */
-function bestLane(state: GameState, allowed: number[]): number | undefined {
+export type Strategy = 'greedy' | 'lanes'
+
+/** A lane P03 has walled off from itself: a card of its own with no attack, and nothing able to move up. */
+export const deadLane = (state: GameState, lane: number): boolean => {
+  const wall = state.opponent.front[lane]
+  return Boolean(wall && wall.attack === 0)
+}
+
+/**
+ * Where to put a card. Greedy fills lanes facing an enemy first; 'lanes' plays the wall exploit,
+ * leaving P03's walled lanes alone and attacking through the others.
+ */
+function bestLane(state: GameState, allowed: number[], strategy: Strategy): number | undefined {
+  if (strategy === 'lanes') {
+    const open = allowed.filter((lane) => !deadLane(state, lane))
+    const facing = open.filter((lane) => !state.opponent.front[lane])
+    return facing[0] ?? open[0] ?? allowed[0]
+  }
   const threatened = allowed.filter((lane) => state.opponent.front[lane] || state.opponent.back[lane])
   return threatened[0] ?? allowed[0]
 }
 
-/** A plain, greedy player. Deterministic, so a seed and this bot always make the same game. */
-export function nextBotAction(state: GameState): Action {
+/** A plain player. Deterministic, so a seed and a strategy always make the same game. */
+export function nextBotAction(state: GameState, strategy: Strategy = 'greedy'): Action {
   const legal = legalActions(state)
   const allowed = (type: Action['type']) => legal.filter((action) => action.type === type)
 
@@ -32,6 +48,7 @@ export function nextBotAction(state: GameState): Action {
         lane: bestLane(
           state,
           places.map((p) => p.lane),
+          strategy,
         ) as number,
       }
     const marks = allowed('mark') as { type: 'mark'; lane: number }[]
@@ -68,11 +85,15 @@ export function nextBotAction(state: GameState): Action {
 }
 
 /** Plays a whole game with the bot, for tests and simulations; stops if it ever loops. */
-export function playOut(state: GameState, apply: (s: GameState, a: Action) => GameState, limit = 20_000) {
+export function playOut(
+  state: GameState,
+  apply: (s: GameState, a: Action) => GameState,
+  { limit = 20_000, strategy = 'greedy' }: { limit?: number; strategy?: Strategy } = {},
+) {
   const actions: Action[] = []
   let current = state
   while (current.status === 'playing' && actions.length < limit) {
-    const action = nextBotAction(current)
+    const action = nextBotAction(current, strategy)
     actions.push(action)
     current = apply(current, action)
   }

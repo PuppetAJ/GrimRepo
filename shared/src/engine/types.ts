@@ -1,5 +1,8 @@
 import type { SigilId } from '../cards.ts'
 
+/** Bumped whenever a change would make an old game replay differently; games record the version they began under. */
+export const RULES_VERSION = 2
+
 export const LANES = 4
 export const STARTING_HEALTH = 50
 export const HAND_LIMIT = 7
@@ -61,6 +64,7 @@ export type GameEvent =
   | { type: 'struckBack'; uid: number; amount: number }
   | { type: 'killed'; uid: number; side: Side; lane: number; row: 'front' | 'back' }
   | { type: 'hit'; side: Side; amount: number; health: number }
+  | { type: 'retired'; lane: number; uid: number }
   | { type: 'advanced'; lane: number; uid: number }
   | { type: 'queued'; lane: number; unit: Unit }
   | { type: 'healed'; uid: number; amount: number; health: number }

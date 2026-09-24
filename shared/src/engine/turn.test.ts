@@ -35,11 +35,14 @@ describe('a turn', () => {
   })
 
   it('moves queued cards up into empty lanes, and they attack straight away', () => {
-    const { state, events } = play(table({ back: ['GoogleFu', 'Loop'], front: [null, 'Bug'] }), { type: 'ringBell' })
+    const { state, events } = play(table({ back: ['GoogleFu', 'Loop'], front: [null, 'GrimRepo'] }), {
+      type: 'ringBell',
+    })
     assert.equal(state.opponent.front[0]?.card, 'GoogleFu')
-    assert.equal(state.opponent.front[1]?.card, 'Bug', 'a blocked card waits')
+    assert.equal(state.opponent.front[1]?.card, 'GrimRepo', 'a card that can attack still blocks its queue')
+    assert.equal(state.opponent.back[1]?.card, 'Loop')
     assert.ok(events.some((event) => event.type === 'advanced' && event.lane === 0))
-    assert.equal(state.player.health, 47)
+    assert.equal(state.player.health, 44, 'the new arrival and the blocker both hit an empty lane')
   })
 
   it('queues new cards only into empty back lanes, and only cheap ones early on', () => {

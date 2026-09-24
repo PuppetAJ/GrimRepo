@@ -41,6 +41,8 @@ export function narrate(before: GameState, events: GameEvent[]): string[] {
         return [`${event.amount} damage spilled into ${lane(event.lane)}'s queue.`]
       case 'struckBack':
         return [`${name(event.uid)} took ${event.amount} for its trouble.`]
+      case 'retired':
+        return [`My ${name(event.uid)} was guarding nothing. Deleted as dead code.`]
       case 'advanced':
         return [`My ${name(event.uid)} moved up to ${lane(event.lane)}.`]
       case 'queued':
