@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/alert-dialog.tsx'
 import { Button } from '@/components/ui/button.tsx'
 import { Failure, Loading } from '../components/States.tsx'
+import { authClient, DEMO } from '../lib/auth.ts'
 import { number } from '../lib/format.ts'
 import { useGame } from '../game/useGame.ts'
 
@@ -120,9 +121,33 @@ function Board({ state, legal, act }: { state: GameState; legal: Action[]; act: 
   )
 }
 
+/** Every sigil on the table or in hand, spelled out, since a card only has room for the name. */
+function Sigils({ state }: { state: GameState }) {
+  const { player, opponent } = state
+  const present = new Set(
+    [...player.hand, ...player.board, ...opponent.front, ...opponent.back].flatMap((unit) => unit?.sigils ?? []),
+  )
+  if (!present.size) return null
+  return (
+    <section aria-label="Sigils in play" className="flex flex-col gap-1 rounded border border-[#1f3a26] p-3 text-lg">
+      <h2 className="text-p03">Sigils in play</h2>
+      <dl className="flex flex-col gap-1">
+        {[...present].map((sigil) => (
+          <div key={sigil} className="flex flex-wrap gap-x-2">
+            <dt className="text-p03">{SIGILS[sigil].name}:</dt>
+            <dd>{SIGILS[sigil].text}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  )
+}
+
 export function Game() {
   const game = useGame()
   const navigate = useNavigate()
+  const user = authClient.useSession().data?.user as { username?: string } | undefined
+  const onDemo = user?.username === DEMO.username
 
   if (game.status === 'loading') return <Loading label="Dealing" />
   if (game.status === 'error') return <Failure title="The table is not ready" detail={game.message} />
@@ -147,6 +172,13 @@ export function Game() {
           {game.saving ? 'saving…' : game.unsaved ? `${game.unsaved} unsaved` : 'saved'}
         </span>
       </header>
+
+      {onDemo ? (
+        <p role="note" className="rounded border border-death/60 px-3 py-2 font-sans text-sm text-foreground">
+          You are on the shared demo account, so anyone else using it plays this same game. Make an account of your own
+          to play undisturbed.
+        </p>
+      ) : null}
 
       <section aria-label="The table" className="flex flex-col gap-2">
         <Row label="Queue" slots={state.opponent.back} faded />
@@ -253,6 +285,8 @@ export function Game() {
           </section>
         </>
       )}
+
+      <Sigils state={state} />
 
       <section aria-label="P03's console" className="flex flex-col gap-1 rounded border border-[#1f3a26] p-3 text-lg">
         <ol aria-live="polite" className="flex max-h-64 flex-col-reverse overflow-y-auto">
