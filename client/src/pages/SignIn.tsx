@@ -1,17 +1,14 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button.tsx'
 import { Input } from '@/components/ui/input.tsx'
 import { Label } from '@/components/ui/label.tsx'
 import { PasswordInput } from '../components/PasswordInput.tsx'
 import { authClient, authError, DEMO } from '../lib/auth.ts'
-import { safeNext } from '../lib/next.ts'
 
 export function SignIn() {
   const navigate = useNavigate()
-  const [params] = useSearchParams()
-  const next = safeNext(params.get('next'))
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -30,7 +27,7 @@ export function SignIn() {
           : authError(failed, 'That did not work'),
       )
     toast.success('Signed in')
-    navigate(next, { replace: true })
+    navigate('/', { replace: true })
   }
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -68,10 +65,7 @@ export function SignIn() {
       </div>
       <p className="text-sm text-muted-foreground">
         New here?{' '}
-        <Link
-          to={`/signup${next === '/' ? '' : `?next=${encodeURIComponent(next)}`}`}
-          className="text-primary hover:underline"
-        >
+        <Link to="/signup" className="text-primary hover:underline">
           Create an account
         </Link>
       </p>

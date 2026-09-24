@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button.tsx'
@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input.tsx'
 import { Label } from '@/components/ui/label.tsx'
 import { PasswordInput } from '../components/PasswordInput.tsx'
 import { authClient, authError } from '../lib/auth.ts'
-import { safeNext } from '../lib/next.ts'
 
 // The server checks all of this too; this only saves a round trip and explains the rule.
 const schema = z.object({
@@ -20,8 +19,6 @@ type Field = keyof z.infer<typeof schema>
 
 export function SignUp() {
   const navigate = useNavigate()
-  const [params] = useSearchParams()
-  const next = safeNext(params.get('next'))
   const [errors, setErrors] = useState<Partial<Record<Field | 'form', string>>>({})
   const [busy, setBusy] = useState(false)
 
@@ -49,7 +46,7 @@ export function SignUp() {
             : authError(error, 'That did not work'),
       })
     toast.success(`Welcome, ${parsed.data.username}`)
-    navigate(next, { replace: true })
+    navigate('/', { replace: true })
   }
 
   const field = (name: Field, label: string, input: React.ReactNode, hint?: string) => (
