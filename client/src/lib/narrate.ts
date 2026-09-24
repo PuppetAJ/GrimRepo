@@ -1,4 +1,4 @@
-import { card, type GameEvent, type GameState, type Unit } from 'shared'
+import { apply, card, createGame, type Action, type GameEvent, type GameState, type Unit } from 'shared'
 
 const lane = (index: number) => `lane ${index + 1}`
 
@@ -59,4 +59,25 @@ export function narrate(before: GameState, events: GameEvent[]): string[] {
         return []
     }
   })
+}
+
+/** What the table looks like before the first move: P03's opening queue. */
+export function opening(state: GameState): string[] {
+  const queued = state.opponent.back.flatMap((unit, index) =>
+    unit ? [`I queued ${card(unit.card).name} behind ${lane(index)}.`] : [],
+  )
+  return ['A new deal. Draw.', ...queued]
+}
+
+/** The whole console for a saved game, rebuilt move by move so a reload loses nothing. */
+export function history(seed: number, actions: readonly Action[]): { state: GameState; lines: string[] } | null {
+  let state = createGame({ seed })
+  const lines = opening(state)
+  for (const action of actions) {
+    const result = apply(state, action)
+    if (!result.ok) return null
+    lines.push(...narrate(state, result.events))
+    state = result.state
+  }
+  return { state, lines }
 }

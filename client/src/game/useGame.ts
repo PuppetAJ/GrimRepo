@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { apply, replay, type Action, type GameState } from 'shared'
+import { apply, type Action, type GameState } from 'shared'
 import { toast } from 'sonner'
 import { api, ApiError, type Finished, type OpenGame } from '../lib/api.ts'
-import { narrate } from '../lib/narrate.ts'
+import { history, narrate } from '../lib/narrate.ts'
 
 export type Game =
   | { status: 'loading' }
@@ -21,13 +21,16 @@ export type Game =
 
 type Table = { id: number; state: GameState; log: string[] }
 
-const LOG_LINES = 40
+// Enough for any real game, so the console always holds the whole story.
+const LOG_LINES = 2_000
 
 function open(game: OpenGame): Table {
-  const replayed = replay(game.seed, game.actions)
-  if (!replayed.ok) throw new Error('This game could not be replayed. Walk away from it to start another.')
-  const opening = game.resumed ? `P03> Welcome back. Turn ${replayed.state.turn}.` : 'P03> A new deal. Draw.'
-  return { id: game.id, state: replayed.state, log: [opening] }
+  const rebuilt = history(game.seed, game.actions)
+  if (!rebuilt) throw new Error('This game could not be replayed. Walk away from it to start another.')
+  const lines = rebuilt.lines.map((line) => `P03> ${line}`)
+  // A resumed game with no moves is still a new deal, as when two requests race to start it.
+  if (game.resumed && game.actions.length) lines.push(`P03> Welcome back. Turn ${rebuilt.state.turn}.`)
+  return { id: game.id, state: rebuilt.state, log: lines.slice(-LOG_LINES) }
 }
 
 /** The open game: played here move by move, saved to the server at every bell, and scored there. */
