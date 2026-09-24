@@ -23,8 +23,8 @@ export function Room() {
   return <primitive object={scene} scale={20} />
 }
 
-/** P03, playing every clip it was animated with. */
-export function Robot() {
+/** P03, playing every clip it was animated with; `face`, when given, replaces the one on its screen, and `tint` colours it. */
+export function Robot({ face, tint = '#ffffff' }: { face?: THREE.Texture; tint?: string }) {
   const group = useRef<THREE.Group>(null)
   const { scene, animations } = useModel('/models/robot.glb')
   const { actions } = useAnimations(animations, group)
@@ -32,9 +32,15 @@ export function Robot() {
     () =>
       scene.traverse((object) => {
         const material = (object as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined
-        if (material?.name === 'Screen' && material.emissiveMap) screenFace(material)
+        if (material?.name !== 'Screen' || !material.emissiveMap) return
+        // The model is cached across scenes, so its own face is kept aside the first time.
+        const own = (material.userData['own'] ??= screenFace(material.emissiveMap)) as THREE.Texture
+        material.emissiveMap = face ?? own
+        material.emissive.set(tint)
+        // Authored ten times brighter than three.js now honours.
+        material.emissiveIntensity = 1.6
       }),
-    [scene],
+    [scene, face, tint],
   )
   useEffect(() => {
     for (const action of Object.values(actions)) action?.reset().play()
@@ -47,8 +53,7 @@ export function Robot() {
 }
 
 /** P03's face is drawn in the texture's alpha over white, so it is redrawn onto black for the screen to glow. */
-function screenFace(material: THREE.MeshStandardMaterial) {
-  const face = material.emissiveMap as THREE.Texture
+function screenFace(face: THREE.Texture): THREE.Texture {
   const image = face.image as CanvasImageSource & { width: number; height: number }
   const canvas = document.createElement('canvas')
   canvas.width = image.width
@@ -60,9 +65,7 @@ function screenFace(material: THREE.MeshStandardMaterial) {
   lit.flipY = face.flipY
   lit.colorSpace = THREE.SRGBColorSpace
   lit.magFilter = THREE.NearestFilter
-  material.emissiveMap = lit
-  // Authored ten times brighter than three.js now honours.
-  material.emissiveIntensity = 1.6
+  return lit
 }
 
 export function Bell({ onClick, active, rung }: { onClick: Click; active: boolean; rung: number }) {

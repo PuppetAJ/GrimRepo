@@ -14,6 +14,8 @@ import { Card, Popup, type Look, type Place } from './Cards.tsx'
 import { disposeFaces, loadCardAssets } from './faces.ts'
 import { BELL, BOARD_DEPTH, CAMERA, CARD, DECK, lanes, PILE, slot, TABLE_Y, type CameraView } from './layout.ts'
 import { Board, Deck, Pile } from './Board.tsx'
+import { EndTurnButton, Factory, FactoryEffects, FactoryP03 } from './Factory.tsx'
+import { chosenScene, type SceneName } from './scene.ts'
 import { Bell, Candle, Lights, Robot, Room } from './Scene.tsx'
 import { usePlayback } from './usePlayback.ts'
 
@@ -35,13 +37,23 @@ function CameraRig({ view }: { view: CameraView }) {
 }
 
 /** Glows over the player's lanes that can take a click, and catches the click on empty ones. */
-function Lanes({ view, legal, act }: { view: View; legal: Action[]; act: (action: Action) => void }) {
+function Lanes({
+  view,
+  legal,
+  act,
+  play,
+}: {
+  view: View
+  legal: Action[]
+  act: (action: Action) => void
+  play: string
+}) {
   const [hovered, setHovered] = useState<number | null>(null)
   return lanes.map((lane) => {
     const action = laneAction(legal, lane)
     const marked = view.summon?.marked.includes(lane) ?? false
     const [x, , z] = slot('board', lane)
-    const colour = action?.type === 'place' ? '#7dff9a' : '#ff4a3d'
+    const colour = action?.type === 'place' ? play : '#ff4a3d'
     return (
       <mesh
         key={lane}
@@ -82,6 +94,7 @@ function Scene({
   skip,
   rung,
   camera,
+  scene,
 }: {
   game: Ready
   assets: Assets
@@ -91,8 +104,10 @@ function Scene({
   skip: () => void
   rung: number
   camera: CameraView
+  scene: SceneName
 }) {
   const { state, act } = game
+  const style = scene === 'factory' ? 'tech' : 'cabin'
   // Moves come from the real state, and wait while P03's turn plays out.
   const legal = busy || game.result ? [] : legalActions(state)
   const can = (match: Partial<Action>) => has(legal, match)
@@ -104,17 +119,32 @@ function Scene({
   return (
     <>
       <CameraRig view={camera} />
-      <Lights />
-      <Candle />
-      <Suspense fallback={null}>
-        <Room />
-      </Suspense>
-      <Suspense fallback={null}>
-        <Robot />
-      </Suspense>
-      <Board />
+      {scene === 'factory' ? (
+        <>
+          <Suspense fallback={null}>
+            <Factory view={view} log={game.log} />
+          </Suspense>
+          <Suspense fallback={null}>
+            <FactoryP03 view={view} busy={busy} outcome={busy ? undefined : game.result?.outcome} />
+          </Suspense>
+          <FactoryEffects />
+        </>
+      ) : (
+        <>
+          <Lights />
+          <Candle />
+          <Suspense fallback={null}>
+            <Room />
+          </Suspense>
+          <Suspense fallback={null}>
+            <Robot />
+          </Suspense>
+        </>
+      )}
+      <Board style={style} />
       <Deck
         assets={assets}
+        style={style}
         count={view.deck}
         total={PLAYER_DECK.length}
         active={can({ type: 'draw', from: 'deck' } as Partial<Action>)}
@@ -122,11 +152,16 @@ function Scene({
       />
       <Pile
         assets={assets}
+        style={style}
         active={can({ type: 'draw', from: 'boilerplate' } as Partial<Action>)}
         onClick={() => act({ type: 'draw', from: 'boilerplate' })}
       />
-      <Bell active={can({ type: 'ringBell' })} rung={rung} onClick={() => act({ type: 'ringBell' })} />
-      <Lanes view={view} legal={legal} act={act} />
+      {scene === 'factory' ? (
+        <EndTurnButton active={can({ type: 'ringBell' })} rung={rung} onClick={() => act({ type: 'ringBell' })} />
+      ) : (
+        <Bell active={can({ type: 'ringBell' })} rung={rung} onClick={() => act({ type: 'ringBell' })} />
+      )}
+      <Lanes view={view} legal={legal} act={act} play={scene === 'factory' ? '#3ef3ff' : '#7dff9a'} />
 
       {view.hand.map((unit, index) => {
         const selected = view.summon?.uid === unit.uid
@@ -140,6 +175,7 @@ function Scene({
             look={handLook(unit.uid)}
             summoning={Boolean(view.summon)}
             assets={assets}
+            style={style}
             onClick={
               selected
                 ? () => act({ type: 'cancel' })
@@ -165,6 +201,7 @@ function Scene({
               lunge={playback.lunges.get(unit.uid)}
               look={marked ? 'marked' : action?.type === 'mark' ? 'markable' : 'plain'}
               assets={assets}
+              style={style}
               onClick={action ? () => act(action) : undefined}
             />
           )
@@ -178,6 +215,7 @@ function Scene({
           leavingAt={gone.at}
           leavingHow={gone.how}
           assets={assets}
+          style={style}
         />
       ))}
       {playback.popups.map((popup) => (
@@ -463,6 +501,7 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
   const [ready, setReady] = useState(false)
   const [rung, setRung] = useState(0)
   const fullScreen = useFullScreen()
+  const [scene] = useState(chosenScene)
   useEffect(() => () => disposeFaces(), [])
 
   const act = (action: Action) => {
@@ -485,7 +524,7 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
         fallback={<NoWebGL onText={onText} />}
         aria-hidden
       >
-        <color attach="background" args={['#050403']} />
+        <color attach="background" args={[scene === 'factory' ? '#020203' : '#050403']} />
         <Suspense fallback={null}>
           <Scene
             game={playing}
@@ -496,6 +535,7 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
             skip={skip}
             rung={rung}
             camera={camera}
+            scene={scene}
           />
           <Loaded onLoad={setReady} />
         </Suspense>

@@ -68,6 +68,8 @@ The game is played on a 3D table by default: the 2022 room, P03 and board, rebui
 
 The same game can be played as text, which reads well on a phone held upright and works with a screen reader. The switch is on both tables and is remembered per browser; an upright phone is offered the text table rather than a sideways one. On a phone held sideways the 3D table takes the whole screen.
 
+The table can be set in Leshy's cabin or in P03's factory, after Inscryption's Act 3: `?scene=factory` or `?scene=cabin` picks one and the browser remembers it. The cabin is the default until the factory is finished. The factory is built in code around the P03 model, with tech cards drawn from the same data and the 2022 art redrawn as cyan holograms.
+
 In development, `window.__game` exposes the table's state and where things are on screen, which the `table` browser suite uses to click the models.
 
 ## The API
@@ -109,6 +111,8 @@ The original team: Adrian Jimenez, Kenan McKenzie and Johan Herrera ([original r
 
 - **The room:** [Fantasy interior items](https://sketchfab.com/3d-models/fantasy-interior-items-6542c39c66394888994d7343fd03fdef) by Tedium Interactive.
 - **The robot:** [P03](https://sketchfab.com/3d-models/p03-98b40954748447be81f2bb713f6b28b8) by Goober (CC BY 4.0), animated by Adrian Jimenez.
+- **P03's faces in the factory:** [Inscryption P03 faces](https://sketchfab.com/3d-models/inscryption-p03-faces-4318168b0c3e4c0a8a1ced18927332a8) by p03_real_account (CC BY 4.0).
+- **The factory's metal:** Metal029, DiamondPlate008C and CorrugatedSteel005 from [ambientCG](https://ambientcg.com) (CC0).
 - **The bell:** [Table bell](https://sketchfab.com/3d-models/table-bell-77f2ea17b4c84fe1a8d2aec02caa9de3) on Sketchfab, edited by Adrian Jimenez.
 - **The board and the deck:** made by Adrian Jimenez, with Inscryption's textures on the deck.
 - **The candle:** [The lonely candle](https://discourse.threejs.org/t/the-lonely-candle/4097) by prisoner849, using noise from [The Book of Shaders](https://thebookofshaders.com/11/) and [Morgan McGuire](https://www.shadertoy.com/view/4dS3Wd) and a [heatmap gradient](https://www.shadertoy.com/view/4dsSzr) from Shadertoy.

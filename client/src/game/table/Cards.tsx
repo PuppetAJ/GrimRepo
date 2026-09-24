@@ -3,7 +3,7 @@ import { easing } from 'maath'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Unit } from 'shared'
 import * as THREE from 'three'
-import { backTexture, faceTexture, type loadCardAssets } from './faces.ts'
+import { backTexture, faceTexture, type CardStyle, type loadCardAssets } from './faces.ts'
 import { CARD, HAND_SCALE, handPlace, slot, type Row, type Vec3 } from './layout.ts'
 import { LEAVE_MS, type Lunge } from './playback.ts'
 
@@ -35,10 +35,12 @@ export function Card({
   leavingHow = 'died',
   look = 'plain',
   assets,
+  style = 'cabin',
   summoning,
   onClick,
 }: {
   unit: Unit
+  style?: CardStyle
   summoning?: boolean
   place: Place
   spawn?: Vec3
@@ -52,8 +54,10 @@ export function Card({
   const mesh = useRef<THREE.Mesh>(null)
   const [hovered, setHovered] = useState(false)
   const placed = useRef(false)
-  const face = faceTexture(unit, assets)
-  const back = useMemo(() => backTexture(assets), [assets])
+  const face = faceTexture(unit, assets, style)
+  const back = useMemo(() => backTexture(assets, style), [assets, style])
+  // Tech cards are screens, so they give off more of their own light.
+  const rest = style === 'tech' ? 0.5 : 0.22
   // Each card owns its materials so it can glow or fade alone; the textures are shared.
   const [front, rear] = useMemo(
     () => [
@@ -119,14 +123,14 @@ export function Card({
     const pulse = look === 'markable' ? 0.2 + 0.15 * Math.sin(now / 160) : 0
     const glow =
       look === 'selected'
-        ? 0.55
+        ? rest + 0.3
         : look === 'marked'
           ? 0.4
           : look === 'markable'
             ? pulse
             : hovered && onClick
-              ? 0.4
-              : 0.22
+              ? rest + 0.18
+              : rest
     front.emissiveIntensity = glow
     front.emissive.set(look === 'marked' || look === 'markable' ? '#ff4040' : '#ffffff')
     front.color.setScalar(look === 'dim' ? 0.45 : 1)

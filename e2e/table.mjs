@@ -151,6 +151,31 @@ section('The 3D table')
   await context.close()
 }
 
+section("P03's factory")
+{
+  const { context, page } = await freshPage(browser)
+  const player = await signUp(page, newPlayer('Factory'))
+  const scene = () => page.evaluate(() => localStorage.getItem('grimrepo:scene'))
+  await page.goto(`${BASE}/game`)
+  await page.getByRole('button', { name: 'Look at the board' }).waitFor({ timeout: 60_000 })
+  check('the cabin is still the default', (await scene()) === null)
+  await page.goto(`${BASE}/game?scene=factory`)
+  await page.getByRole('button', { name: 'Look at the board' }).waitFor({ timeout: 60_000 })
+  check('the factory can be chosen, and the choice is kept', (await scene()) === 'factory')
+  await page.getByRole('button', { name: 'Draw from the deck' }).click()
+  await page.getByRole('button', { name: 'Ring the bell' }).click()
+  await page.getByRole('button', { name: 'Draw from the deck' }).waitFor({ timeout: 30_000 })
+  check('a turn plays there as it does in the cabin', true)
+  await page.goto(`${BASE}/game`)
+  await page.getByRole('button', { name: 'Look at the board' }).waitFor({ timeout: 60_000 })
+  check('and it is still the factory after leaving and coming back', (await scene()) === 'factory')
+  await page.goto(`${BASE}/game?scene=cabin`)
+  await page.getByRole('button', { name: 'Look at the board' }).waitFor({ timeout: 60_000 })
+  check('?scene=cabin goes back', (await scene()) === 'cabin')
+  check('and the test player is removed afterwards', await deletePlayer(page, player))
+  await context.close()
+}
+
 section('Phones')
 {
   const { context, page } = await freshPage(browser, { width: 390, height: 844 })
