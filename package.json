@@ -28,7 +28,7 @@
     "format": "prettier --write .",
     "typecheck": "pnpm --recursive typecheck",
     "test": "pnpm --recursive test",
-    "test:e2e": "node --env-file-if-exists=.env e2e/smoke.mjs",
+    "test:e2e": "node --env-file-if-exists=.env e2e/run.mjs",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:migrate": "pnpm --filter server db:migrate",
