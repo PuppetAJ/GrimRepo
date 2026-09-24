@@ -33,7 +33,7 @@ function open(game: OpenGame): Table {
   return { id: game.id, state: rebuilt.state, log: lines.slice(-LOG_LINES) }
 }
 
-/** The open game: played here move by move, saved to the server at every bell, and scored there. */
+/** The open game: played here, saved at every draw and bell, and scored on the server. */
 export function useGame(): Game {
   const [table, setTable] = useState<Table | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -110,7 +110,8 @@ export function useGame(): Game {
       setUnsaved(pending.current.length)
       const lines = narrate(table.state, outcome.events).map((line) => `P03> ${line}`)
       setTable({ ...table, state: outcome.state, log: [...table.log, ...lines].slice(-LOG_LINES) })
-      if (action.type === 'ringBell') void save()
+      // A draw shows the next card, so it is saved at once; otherwise a reload could peek and draw again.
+      if (action.type === 'ringBell' || action.type === 'draw') void save()
     },
     [table, result, save],
   )

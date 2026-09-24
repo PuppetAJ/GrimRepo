@@ -102,6 +102,18 @@ section('Resuming')
     `${before.length} lines before`,
   )
 
+  // A draw reveals the next card, so it must survive a reload; otherwise a player could peek and redraw.
+  const handBefore = await page.locator('[data-action="select"]').count()
+  await page.locator('[data-action="draw-deck"]').click()
+  await page.getByText('saved', { exact: true }).waitFor()
+  await page.reload()
+  await page.locator('[data-seed]').waitFor()
+  check(
+    'a draw cannot be taken back by reloading',
+    (await page.locator('[data-action="select"]').count()) === handBefore + 1 &&
+      (await page.locator('[data-action="draw-deck"]').count()) === 0,
+  )
+
   section('Walking away')
   await page.getByRole('button', { name: 'Walk away' }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Walk away' }).click()
