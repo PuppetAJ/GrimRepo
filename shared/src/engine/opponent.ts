@@ -59,11 +59,7 @@ function fitness(def: CardDef, facing: Slot): number {
   return kills + survives + def.attack + def.health * 0.5
 }
 
-/**
- * Queues cards in empty back-row lanes that will open next turn, each chosen for the card it will face:
- * attackers for open lanes, killers or blockers against attackers, heavy hitters against walls.
- * A card with no attack is only ever a blocker, and when no lane will open P03 holds its cards.
- */
+/** Queues cards where they can move up next turn, each suited to the player's card it will face, or holds them. */
 export function queue(state: GameState, rng: Rng, count: number, turn: number, events: GameEvent[]): void {
   const pool = OPPONENT_POOL.map(card).filter((def) => def.cost <= maxCostFor(turn))
   for (let placed = 0; placed < count; placed++) {
