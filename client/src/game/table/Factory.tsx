@@ -85,12 +85,12 @@ function Room() {
   )
 }
 
-/** The board, drawn onto the table: slot outlines with gears, and arrows on P03's queue, as in Act 3. */
+/** The board, drawn onto the table as in Act 3: an off-shade field, slots outlined in cyan with three gears each, and arrows on P03's queue. */
 export function TechBoard() {
-  const width = (lanes.length - 1) * LANE_GAP + CARD.width + 0.3
-  const depth = ROW_Z.board - ROW_Z.back + CARD.height + 0.3
-  const left = slot('board', 0)[0] - CARD.width / 2 - 0.15
-  const far = ROW_Z.back - CARD.height / 2 - 0.15
+  const width = (lanes.length - 1) * LANE_GAP + CARD.width + 0.5
+  const depth = ROW_Z.board - ROW_Z.back + CARD.height + 0.5
+  const left = slot('board', 0)[0] - CARD.width / 2 - 0.25
+  const far = ROW_Z.back - CARD.height / 2 - 0.25
   const texture = useMemo(() => {
     const canvas = document.createElement('canvas')
     const scale = 300
@@ -101,19 +101,37 @@ export function TechBoard() {
     const pz = (z: number) => (z - far) * scale
     const w = (CARD.width + 0.08) * scale
     const h = (CARD.height + 0.08) * scale
+    // The field: a shade lighter than the table, with a faint edge.
+    context.fillStyle = 'rgb(90 170 200 / 0.13)'
+    context.fillRect(0, 0, canvas.width, canvas.height)
+    context.strokeStyle = 'rgb(90 216 240 / 0.25)'
+    context.lineWidth = 4
+    context.strokeRect(2, 2, canvas.width - 4, canvas.height - 4)
     const gear = (cx: number, cy: number, r: number, teeth: number) => {
+      context.fillStyle = 'rgb(74 159 214 / 0.9)'
       context.beginPath()
       for (let i = 0; i < teeth * 2; i++) {
-        const angle = (i * Math.PI) / teeth
-        const radius = i % 2 ? r : r * 0.74
+        const angle = (i * Math.PI) / teeth + 0.2
+        const radius = i % 2 ? r : r * 0.76
         context.lineTo(cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius)
       }
       context.closePath()
-      context.moveTo(cx + r * 0.32, cy)
-      context.arc(cx, cy, r * 0.32, 0, Math.PI * 2, true)
-      context.fill('evenodd')
+      context.fill()
+      context.fillStyle = '#0b1a24'
+      context.beginPath()
+      context.arc(cx, cy, r * 0.42, 0, Math.PI * 2)
+      context.fill()
+      context.fillStyle = 'rgb(74 159 214 / 0.9)'
+      context.beginPath()
+      context.arc(cx, cy, r * 0.28, 0, Math.PI * 2)
+      context.fill()
+      context.fillStyle = '#0b1a24'
+      context.beginPath()
+      context.arc(cx, cy, r * 0.12, 0, Math.PI * 2)
+      context.fill()
     }
     const arrow = (cx: number, cy: number, size: number) => {
+      context.fillStyle = 'rgb(90 216 240 / 0.3)'
       context.beginPath()
       context.moveTo(cx - size * 0.28, cy - size)
       context.lineTo(cx + size * 0.28, cy - size)
@@ -125,36 +143,31 @@ export function TechBoard() {
       context.closePath()
       context.fill()
     }
-    const rows: [Row, 'arrow' | 'gear' | 'gears'][] = [
-      ['back', 'arrow'],
-      ['front', 'gear'],
-      ['board', 'gears'],
-    ]
-    for (const [row, mark] of rows) {
+    for (const row of ['back', 'front', 'board'] as Row[]) {
       for (const lane of lanes) {
         const [x, , z] = slot(row, lane)
         const cx = px(x)
         const cy = pz(z)
-        context.fillStyle = row === 'back' ? 'rgb(62 243 255 / 0.05)' : 'rgb(62 243 255 / 0.1)'
-        context.strokeStyle = row === 'back' ? 'rgb(62 243 255 / 0.35)' : 'rgb(62 243 255 / 0.75)'
-        context.lineWidth = 5
+        const queue = row === 'back'
+        context.fillStyle = queue ? 'rgb(10 26 36 / 0.5)' : 'rgb(10 26 36 / 0.75)'
+        context.strokeStyle = queue ? 'rgb(90 216 240 / 0.35)' : 'rgb(90 216 240 / 0.85)'
+        context.lineWidth = 6
         context.beginPath()
-        context.roundRect(cx - w / 2, cy - h / 2, w, h, 12)
+        context.roundRect(cx - w / 2, cy - h / 2, w, h, 8)
         context.fill()
         context.stroke()
-        context.fillStyle = row === 'back' ? 'rgb(62 243 255 / 0.28)' : 'rgb(62 243 255 / 0.5)'
-        if (mark === 'arrow') arrow(cx, cy, h * 0.16)
-        else if (mark === 'gear') gear(cx - w * 0.14, cy + h * 0.08, h * 0.16, 9)
+        if (queue) arrow(cx, cy, h * 0.16)
         else {
-          gear(cx - w * 0.16, cy + h * 0.12, h * 0.17, 9)
-          gear(cx + w * 0.2, cy - h * 0.14, h * 0.11, 7)
+          gear(cx + w * 0.05, cy - h * 0.2, h * 0.19, 8)
+          gear(cx - w * 0.22, cy + h * 0.2, h * 0.14, 8)
+          gear(cx + w * 0.2, cy + h * 0.24, h * 0.12, 8)
         }
       }
     }
     // The line between P03's side and the player's.
     const divide = pz((ROW_Z.board + ROW_Z.front) / 2)
-    context.fillStyle = 'rgb(62 243 255 / 0.6)'
-    context.fillRect(px(left + 0.05), divide - 3, canvas.width - 0.1 * scale, 6)
+    context.fillStyle = 'rgb(90 216 240 / 0.5)'
+    context.fillRect(0.12 * scale, divide - 3, canvas.width - 0.24 * scale, 6)
     const map = new THREE.CanvasTexture(canvas)
     map.colorSpace = THREE.SRGBColorSpace
     map.anisotropy = 8
@@ -164,7 +177,7 @@ export function TechBoard() {
   return (
     <mesh position={[left + width / 2, TABLE_Y + 0.004, far + depth / 2]} rotation={[-Math.PI / 2, 0, 0]}>
       <planeGeometry args={[width, depth]} />
-      <meshStandardMaterial map={texture} transparent emissive={CYAN} emissiveMap={texture} emissiveIntensity={0.9} />
+      <meshStandardMaterial map={texture} transparent emissive={CYAN} emissiveMap={texture} emissiveIntensity={0.5} />
     </mesh>
   )
 }

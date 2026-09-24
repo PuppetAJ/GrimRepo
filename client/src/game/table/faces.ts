@@ -1,4 +1,4 @@
-import { card, CARDS, SIGILS, type Unit } from 'shared'
+import { card, CARDS, SIGILS, type SigilId, type Unit } from 'shared'
 import { CanvasTexture, SRGBColorSpace, type Texture } from 'three'
 import { DISK, RECESS } from './layout.ts'
 
@@ -123,7 +123,7 @@ function drawFace(context: CanvasRenderingContext2D, unit: Unit, loaded: Assets)
 const TECH = {
   body: '#1f3044',
   screen: '#04111a',
-  line: '#3ef3ff',
+  line: '#5ad8f0',
   plate: '#e6d24a',
   rarePlate: '#ff5ec4',
   plateInk: '#1b1a0c',
@@ -132,8 +132,16 @@ const TECH = {
   heart: '#ff4d5e',
 }
 
-const HEART = ['01100110', '11111111', '11111111', '01111110', '00111100', '00011000']
-const BOLT = ['000110', '001100', '011000', '111110', '001100', '011000', '110000']
+// Small pixel icons for the sigils, drawn on the strip; the text table spells them out.
+const ICONS: Record<SigilId, string[]> = {
+  segfault: ['01111110', '11011011', '11111111', '11100111', '01111110', '00100100', '01100110', '01000010'],
+  bypass: ['00010000', '00111000', '01111100', '00010000', '00010000', '11111111', '10101011', '11111111'],
+  technical_debt: ['00011000', '00111100', '00011000', '01100110', '11111111', '01100110', '00011000', '00000000'],
+  try_catch: ['11111111', '10000001', '10111101', '10111101', '01011010', '00111100', '00011000', '00000000'],
+  rate_limiter: ['10010010', '01010100', '00111000', '11111110', '00111000', '01010100', '10010010', '00000000'],
+  fork: ['10000001', '11000011', '01100110', '00111100', '00011000', '00011000', '00011000', '00011000'],
+  hotfix: ['00111100', '00111100', '11111111', '11111111', '11111111', '00111100', '00111100', '00000000'],
+}
 
 function pixels(context: CanvasRenderingContext2D, grid: string[], x: number, y: number, size: number, colour: string) {
   context.fillStyle = colour
@@ -190,9 +198,10 @@ function hologram(
   paint.globalCompositeOperation = 'source-in'
   paint.fillStyle = TECH.line
   paint.fillRect(0, 0, w, h)
+  // A soft edge, not a glare: the card's own glow does the rest under the bloom.
   context.save()
   context.shadowColor = TECH.line
-  context.shadowBlur = 14
+  context.shadowBlur = 5
   context.drawImage(layer, x, y)
   context.restore()
 }
@@ -219,7 +228,7 @@ function drawTechFace(context: CanvasRenderingContext2D, unit: Unit, loaded: Ass
   const [sx, sy, sw, sh] = recess(RECESS.screen)
   screen(context, RECESS.screen)
   const art = loaded.art.get(unit.card)
-  if (art) hologram(context, art, sx + sw * 0.04, sy + sh * 0.16, sw * 0.92, sh * 0.66)
+  if (art) hologram(context, art, sx + sw * 0.05, sy + sh * 0.14, sw * 0.9, sh * 0.8)
   else {
     context.save()
     context.shadowColor = TECH.line
@@ -230,48 +239,39 @@ function drawTechFace(context: CanvasRenderingContext2D, unit: Unit, loaded: Ass
     context.fillText('</div>', sx + sw / 2, sy + sh * 0.6)
     context.restore()
   }
-  for (let i = 0; i < def.cost; i++) {
-    const cx = sx + 18 + i * 24
-    const cy = sy + 18
-    context.fillStyle = TECH.cost
-    context.beginPath()
-    context.moveTo(cx, cy - 10)
-    context.lineTo(cx + 8, cy)
-    context.lineTo(cx, cy + 10)
-    context.lineTo(cx - 8, cy)
-    context.fill()
-  }
-  const cells = 8
-  const lit = Math.max(0, Math.min(cells, Math.round((unit.health / Math.max(unit.maxHealth, 1)) * cells)))
+  const cells = 4
+  const cell = 12
   for (let i = 0; i < cells; i++) {
-    context.fillStyle = i < lit ? TECH.line : 'rgb(62 243 255 / 0.15)'
-    context.fillRect(sx + sw * 0.06 + i * ((sw * 0.88) / cells), sy + sh * 0.9, (sw * 0.88) / cells - 5, sh * 0.05)
+    context.fillStyle = i < def.cost ? TECH.cost : 'rgb(62 243 255 / 0.12)'
+    context.fillRect(sx + sw - 10 - (cells - i) * (cell + 4), sy + 10, cell, 22)
   }
 
-  // The strip: sigils, or the maker's mark when there are none.
+  // The strip: the sigils as icons, or the maker's mark when there are none.
   const [gx, gy, gw, gh] = recess(RECESS.sigils)
   screen(context, RECESS.sigils)
-  context.fillStyle = unit.sigils.length ? TECH.line : 'rgb(62 243 255 / 0.3)'
-  const strip = unit.sigils.length
-    ? unit.sigils.map((sigil) => SIGILS[sigil].name.toUpperCase()).join(' · ')
-    : '// P03 SYSTEMS'
-  fitText(context, strip, (size) => `${size}px VT323`, 30, gw * 0.92)
-  context.fillText(strip, gx + gw / 2, gy + gh / 2 + 1)
+  if (unit.sigils.length) {
+    const size = 5
+    const step = 8 * size + 18
+    const start = gx + gw / 2 - (unit.sigils.length * step - 18) / 2
+    unit.sigils.forEach((sigil, i) =>
+      pixels(context, ICONS[sigil], start + i * step, gy + gh / 2 - 4 * size, size, TECH.line),
+    )
+  } else {
+    context.fillStyle = 'rgb(62 243 255 / 0.3)'
+    context.font = '26px VT323'
+    context.fillText('// P03 SYSTEMS', gx + gw / 2, gy + gh / 2 + 1)
+  }
 
-  // Attack and health, each in its own box.
-  const [ax, ay, , ah] = recess(RECESS.attack)
-  const [hx, hy, , hh] = recess(RECESS.health)
+  // Attack and health as plain numerals, each in its own box, as on P03's cards.
+  const [ax, ay, aw, ah] = recess(RECESS.attack)
+  const [hx, hy, hw, hh] = recess(RECESS.health)
   screen(context, RECESS.attack)
   screen(context, RECESS.health)
-  const big = Math.max(unit.attack, unit.health) > 99
-  context.font = big ? '36px VT323' : '56px VT323'
-  context.textAlign = 'left'
-  pixels(context, BOLT, ax + 8, ay + ah / 2 - 17, 5, TECH.attack)
-  context.fillStyle = TECH.attack
-  context.fillText(String(unit.attack), ax + 44, ay + ah / 2 + 2)
-  pixels(context, HEART, hx + 8, hy + hh / 2 - 15, 5, TECH.heart)
+  context.font = Math.max(unit.attack, unit.health) > 99 ? '40px VT323' : '60px VT323'
+  context.fillStyle = TECH.line
+  context.fillText(String(unit.attack), ax + aw / 2, ay + ah / 2 + 3)
   context.fillStyle = unit.health < unit.maxHealth ? TECH.heart : TECH.line
-  context.fillText(String(unit.health), hx + 52, hy + hh / 2 + 2)
+  context.fillText(String(unit.health), hx + hw / 2, hy + hh / 2 + 3)
 }
 
 /** The back of the disk: plastic with faint traces; the hub and ribs are geometry on top. */

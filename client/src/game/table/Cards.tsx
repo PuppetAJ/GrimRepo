@@ -61,7 +61,7 @@ export function Card({
   const face = faceTexture(unit, assets, style)
   const back = useMemo(() => backTexture(assets, style), [assets, style])
   // Tech cards are screens, so they give off more of their own light.
-  const rest = style === 'tech' ? 0.5 : 0.22
+  const rest = style === 'tech' ? 0.3 : 0.22
   // Each card owns its materials so it can glow or fade alone; the textures are shared.
   const [front, rear] = useMemo(
     () => [

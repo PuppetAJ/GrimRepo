@@ -56,9 +56,6 @@ function build() {
   dark.push(box(0.55, 0.01, 0.63, 0.024, 0.004, front + raised * 1.6))
   dark.push(box(0.1, 0.008, 0.15, 0.028, 0.004, front + raised))
   dark.push(box(0.85, 0.008, 0.9, 0.028, 0.004, front + raised))
-  // A vent of six slots in the screen's top corner.
-  for (let i = 0; i < 6; i++)
-    plastic.push(box(0.71 + i * 0.038, 0.17, 0.732 + i * 0.038, 0.24, raised, front + raised / 2))
   // The grill between the two stat boxes.
   for (let i = 0; i < 6; i++)
     plastic.push(box(0.44, 0.85 + i * 0.019, 0.56, 0.858 + i * 0.019, raised * 0.7, front + raised * 0.35))
