@@ -19,7 +19,7 @@ const { check, section, report } = reporter()
 
 section('A whole game')
 {
-  const { context, page } = await freshPage(browser)
+  const { context, page } = await freshPage(browser, { table: 'text' })
   const player = await signUp(page, newPlayer('Game'))
   await page.goto(`${BASE}/game`)
   await page.locator('[data-seed]').waitFor()
@@ -77,7 +77,7 @@ section('A whole game')
 
 section('Resuming')
 {
-  const { context, page } = await freshPage(browser)
+  const { context, page } = await freshPage(browser, { table: 'text' })
   const resumer = await signUp(page, newPlayer('Resume'))
   await page.goto(`${BASE}/game`)
   const seed = await page.locator('[data-seed]').getAttribute('data-seed')

@@ -1,7 +1,7 @@
 // Runs the browser suites one after another; they share a database, so never in parallel.
 import { spawn } from 'node:child_process'
 
-const suites = ['smoke', 'auth', 'leaderboard', 'game']
+const suites = ['smoke', 'auth', 'leaderboard', 'game', 'table']
 const wanted = process.argv.slice(2)
 const unknown = wanted.filter((name) => !suites.includes(name))
 if (unknown.length) {

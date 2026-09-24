@@ -9,7 +9,8 @@ export const BASE = process.env.E2E_BASE_URL ?? 'http://localhost:3000'
 console.log(`against ${BASE}`)
 
 export async function launch({ width = 1280, height = 800 } = {}) {
-  const browser = await chromium.launch()
+  // Headless Chrome has no GPU and only draws WebGL in software when asked to, which the 3D table needs.
+  const browser = await chromium.launch({ args: ['--enable-unsafe-swiftshader'] })
   const context = await browser.newContext({ viewport: { width, height } })
   const page = await context.newPage()
   page.setDefaultTimeout(20_000)
@@ -59,9 +60,10 @@ export async function resetRateLimits() {
   await client.end()
 }
 
-/** A fresh context, so one check's cookies never leak into the next. */
-export async function freshPage(browser, { width = 1280, height = 900 } = {}) {
+/** A fresh context, so one check's cookies never leak into the next; `table` picks the text or 3D table up front. */
+export async function freshPage(browser, { width = 1280, height = 900, table } = {}) {
   const context = await browser.newContext({ viewport: { width, height } })
+  if (table) await context.addInitScript((mode) => localStorage.setItem('grimrepo:table', mode), table)
   const page = await context.newPage()
   page.setDefaultTimeout(20_000)
   return { context, page }
