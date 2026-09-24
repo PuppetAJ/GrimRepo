@@ -16,7 +16,7 @@ export type PlayerStats = {
   recent: { outcome: Outcome; turns: number; score: number; forfeited: boolean; playedAt: string }[]
 }
 
-export type OpenGame = { id: number; seed: number; actions: Action[]; resumed: boolean }
+export type OpenGame = { id: number; seed: number; actions: Action[]; resumed: boolean; rulesChanged: boolean }
 
 export type Finished = {
   status: 'finished'
