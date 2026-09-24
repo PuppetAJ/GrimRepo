@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict'
 import { after, beforeEach, describe, it } from 'node:test'
-import { scoreBattle } from 'shared'
+import { apply, createGame, playOut, scoreBattle, summary, type Action, type GameState } from 'shared'
 import { pool } from '../config/db.ts'
 import { newPlayer, startApp } from '../test/http.ts'
-import { resetDatabase } from '../test/support.ts'
+import { insertGame, resetDatabase } from '../test/support.ts'
 
 const app = await startApp()
 after(async () => {
@@ -19,58 +19,185 @@ async function signedIn(prefix?: string) {
   return { ...player, cookie: reply.cookie }
 }
 
-const play = (cookie: string, outcome: string, turns: number) =>
-  app.call('POST', '/api/games', { cookie, body: { outcome, turns } })
+const step = (state: GameState, action: Action) => {
+  const result = apply(state, action)
+  if (!result.ok) throw new Error(result.reason)
+  return result.state
+}
 
-describe('recording a game', () => {
-  it('refuses someone who is not signed in', async () => {
-    const reply = await app.call('POST', '/api/games', { body: { outcome: 'win', turns: 5 } })
-    assert.equal(reply.status, 401)
-    assert.equal((await pool.query('SELECT 1 FROM games')).rowCount, 0)
+/** The bot's whole game for a seed, cut into the per-bell saves the client makes. */
+function botGame(seed: number) {
+  const { state, actions } = playOut(createGame({ seed }), step)
+  const turns: Action[][] = []
+  let current: Action[] = []
+  for (const action of actions) {
+    current.push(action)
+    if (action.type === 'ringBell') {
+      turns.push(current)
+      current = []
+    }
+  }
+  if (current.length) turns.push(current)
+  return { state, actions, turns }
+}
+
+async function start(cookie: string) {
+  const reply = await app.call('POST', '/api/games', { cookie })
+  return reply.body as { id: number; seed: number; actions: Action[]; resumed: boolean }
+}
+
+async function submit(cookie: string, id: number, turns: Action[][]) {
+  let from = 0
+  let last
+  for (const actions of turns) {
+    last = await app.call('POST', `/api/games/${id}/moves`, { cookie, body: { from, actions } })
+    assert.equal(last.status, 200, JSON.stringify(last.body))
+    from += actions.length
+  }
+  return last
+}
+
+describe('a game', () => {
+  it('cannot be started by someone who is not signed in', async () => {
+    assert.equal((await app.call('POST', '/api/games')).status, 401)
   })
 
-  it('scores the game on the server', async () => {
+  it('starts with a seed the server chose and nothing played', async () => {
     const player = await signedIn()
-    const reply = await play(player.cookie, 'win', 8)
+    const reply = await app.call('POST', '/api/games', { cookie: player.cookie })
     assert.equal(reply.status, 201)
-    assert.equal(reply.body.score, scoreBattle('win', 8))
+    assert.ok(Number.isInteger(reply.body.seed) && reply.body.seed >= 0 && reply.body.seed < 2 ** 32)
+    assert.deepEqual(reply.body.actions, [])
   })
 
-  it('refuses a score sent by the client', async () => {
-    // The old app wrote whatever score the browser sent; this is the one-line exploit it had.
+  it('resumes rather than dealing again, so a bad hand cannot be thrown back', async () => {
     const player = await signedIn()
-    const reply = await app.call('POST', '/api/games', {
+    const first = await start(player.cookie)
+    const again = await app.call('POST', '/api/games', { cookie: player.cookie })
+    assert.equal(again.status, 200)
+    assert.equal(again.body.id, first.id)
+    assert.equal(again.body.seed, first.seed)
+    assert.equal(again.body.resumed, true)
+  })
+
+  it('keeps the moves already played for a resumed game', async () => {
+    const player = await signedIn()
+    const game = await start(player.cookie)
+    const { turns } = botGame(game.seed)
+    await submit(player.cookie, game.id, turns.slice(0, 2))
+    const resumed = await start(player.cookie)
+    assert.deepEqual(resumed.actions, turns.slice(0, 2).flat())
+  })
+
+  it('is scored by the server once its moves replay to a finished game', async () => {
+    const player = await signedIn()
+    const game = await start(player.cookie)
+    const { state, turns } = botGame(game.seed)
+    const last = await submit(player.cookie, game.id, turns)
+    const expected = summary(state)
+    assert.ok(expected)
+    assert.equal(last?.body.status, 'finished')
+    assert.equal(last?.body.outcome, expected.outcome)
+    assert.equal(last?.body.turns, expected.turns)
+    assert.equal(last?.body.score, scoreBattle(expected.outcome, expected.turns))
+
+    const stats = await app.call('GET', `/api/players/${player.username}/stats`)
+    assert.equal(stats.body.games, 1)
+    const more = await app.call('POST', `/api/games/${game.id}/moves`, {
       cookie: player.cookie,
-      body: { outcome: 'win', turns: 8, score: 1_000_000 },
+      body: { from: 0, actions: [] },
+    })
+    assert.equal(more.status, 404, 'a finished game takes no more moves')
+  })
+
+  it('refuses an illegal move and saves nothing from that request', async () => {
+    const player = await signedIn()
+    const game = await start(player.cookie)
+    const reply = await app.call('POST', `/api/games/${game.id}/moves`, {
+      cookie: player.cookie,
+      body: { from: 0, actions: [{ type: 'ringBell' }] },
     })
     assert.equal(reply.status, 400)
+    assert.equal(reply.body.error, 'Illegal move')
+    assert.deepEqual((await start(player.cookie)).actions, [])
   })
 
-  it('refuses a game no rules could produce', async () => {
+  it('refuses moves that do not follow on from what was saved', async () => {
     const player = await signedIn()
+    const game = await start(player.cookie)
+    const { turns } = botGame(game.seed)
+    await submit(player.cookie, game.id, turns.slice(0, 1))
+    const replayed = await app.call('POST', `/api/games/${game.id}/moves`, {
+      cookie: player.cookie,
+      body: { from: 0, actions: turns[0] },
+    })
+    assert.equal(replayed.status, 409)
+    assert.equal(replayed.body.expected, turns[0]?.length)
+  })
+
+  it('refuses a request carrying a score, or anything the engine does not know', async () => {
+    const player = await signedIn()
+    const game = await start(player.cookie)
     for (const body of [
-      { outcome: 'win', turns: 0 },
-      { outcome: 'win', turns: 201 },
-      { outcome: 'win', turns: 2.5 },
-      { outcome: 'draw', turns: 5 },
-      { outcome: 'win' },
-      {},
+      { from: 0, actions: [], score: 1_000_000 },
+      { from: 0, actions: [{ type: 'draw', from: 'deck', score: 5 }] },
+      { from: 0, actions: [{ type: 'win' }] },
+      { from: -1, actions: [] },
+      { outcome: 'win', turns: 3 },
     ]) {
-      const reply = await app.call('POST', '/api/games', { cookie: player.cookie, body })
+      const reply = await app.call('POST', `/api/games/${game.id}/moves`, { cookie: player.cookie, body })
       assert.equal(reply.status, 400, JSON.stringify(body))
     }
   })
 
+  it('belongs to its player alone', async () => {
+    const owner = await signedIn()
+    const game = await start(owner.cookie)
+    const other = await signedIn()
+    const reply = await app.call('POST', `/api/games/${game.id}/moves`, {
+      cookie: other.cookie,
+      body: { from: 0, actions: [{ type: 'draw', from: 'deck' }] },
+    })
+    assert.equal(reply.status, 404)
+    assert.equal((await app.call('POST', `/api/games/${game.id}/forfeit`, { cookie: other.cookie })).status, 404)
+  })
+
+  it('can be forfeited, which is a loss on the turn it reached, and frees a new deal', async () => {
+    const player = await signedIn()
+    const game = await start(player.cookie)
+    const { turns } = botGame(game.seed)
+    await submit(player.cookie, game.id, turns.slice(0, 2))
+
+    const forfeited = await app.call('POST', `/api/games/${game.id}/forfeit`, { cookie: player.cookie })
+    assert.equal(forfeited.status, 200)
+    assert.equal(forfeited.body.outcome, 'loss')
+    assert.equal(forfeited.body.turns, 3)
+
+    const stats = await app.call('GET', `/api/players/${player.username}/stats`)
+    assert.equal(stats.body.recent[0].forfeited, true)
+    const fresh = await start(player.cookie)
+    assert.notEqual(fresh.id, game.id)
+  })
+
+  it('stays off the leaderboard until it is finished', async () => {
+    const player = await signedIn()
+    const game = await start(player.cookie)
+    await submit(player.cookie, game.id, botGame(game.seed).turns.slice(0, 1))
+    assert.deepEqual((await app.call('GET', '/api/leaderboard')).body.players, [])
+  })
+
   it('answers malformed JSON with a 400, not a stack trace', async () => {
     const player = await signedIn()
-    const reply = await app.call('POST', '/api/games', { cookie: player.cookie, raw: '{"outcome": "win",' })
+    const game = await start(player.cookie)
+    const reply = await app.call('POST', `/api/games/${game.id}/moves`, { cookie: player.cookie, raw: '{"from": 0,' })
     assert.equal(reply.status, 400)
     assert.equal(reply.body.error, 'Malformed JSON')
   })
 
-  it('refuses a body far larger than any game', async () => {
+  it('refuses a body far larger than any turn', async () => {
     const player = await signedIn()
-    const reply = await app.call('POST', '/api/games', {
+    const game = await start(player.cookie)
+    const reply = await app.call('POST', `/api/games/${game.id}/moves`, {
       cookie: player.cookie,
       raw: JSON.stringify({ pad: 'x'.repeat(40_000) }),
     })
@@ -82,9 +209,8 @@ describe('the leaderboard', () => {
   it('ranks players by their best game', async () => {
     const slow = await signedIn('slow')
     const fast = await signedIn('fast')
-    await play(slow.cookie, 'win', 25)
-    await play(fast.cookie, 'win', 6)
-
+    await insertGame(slow.username, 'win', 25)
+    await insertGame(fast.username, 'win', 6)
     const { body } = await app.call('GET', '/api/leaderboard')
     assert.deepEqual(
       body.players.map((row: { username: string }) => row.username),
@@ -95,20 +221,18 @@ describe('the leaderboard', () => {
 
   it('keeps a best score when a worse game follows it', async () => {
     const player = await signedIn()
-    await play(player.cookie, 'win', 6)
-    const worse = await play(player.cookie, 'loss', 3)
-    assert.equal(worse.body.isBest, false)
-
+    await insertGame(player.username, 'win', 6)
+    await insertGame(player.username, 'loss', 3)
     const { body } = await app.call('GET', '/api/leaderboard')
     assert.equal(body.players[0].bestScore, scoreBattle('win', 6))
-    assert.equal(body.players[0].games, 2, 'the worse game still counts as a game')
+    assert.equal(body.players[0].games, 2)
   })
 
   it('gives tied players the same rank', async () => {
     const one = await signedIn('tied')
     const two = await signedIn('tied')
-    await play(one.cookie, 'win', 10)
-    await play(two.cookie, 'win', 10)
+    await insertGame(one.username, 'win', 10)
+    await insertGame(two.username, 'win', 10)
     const { body } = await app.call('GET', '/api/leaderboard')
     assert.deepEqual(
       body.players.map((row: { rank: number }) => row.rank),
@@ -118,13 +242,12 @@ describe('the leaderboard', () => {
 
   it('leaves out players who have never finished a game', async () => {
     await signedIn()
-    const { body } = await app.call('GET', '/api/leaderboard')
-    assert.deepEqual(body.players, [])
+    assert.deepEqual((await app.call('GET', '/api/leaderboard')).body.players, [])
   })
 
   it('never shows an email address', async () => {
     const player = await signedIn()
-    await play(player.cookie, 'win', 10)
+    await insertGame(player.username, 'win', 10)
     const { body } = await app.call('GET', '/api/leaderboard')
     assert.ok(!JSON.stringify(body).includes('@'), JSON.stringify(body))
   })
@@ -133,22 +256,18 @@ describe('the leaderboard', () => {
 describe('a player’s stats', () => {
   it('add up after a mix of wins and losses', async () => {
     const player = await signedIn('Mixed')
-    for (const [outcome, turns] of [
-      ['win', 12],
-      ['loss', 4],
-      ['win', 9],
-      ['loss', 20],
-    ] as const) {
-      await play(player.cookie, outcome, turns)
-    }
+    const games = [
+      ['win', 12, 4],
+      ['loss', 4, 3],
+      ['win', 9, 2],
+      ['loss', 20, 1],
+    ] as const
+    for (const [outcome, turns, daysAgo] of games) await insertGame(player.username, outcome, turns, daysAgo)
 
     const { status, body } = await app.call('GET', `/api/players/${player.username}/stats`)
     assert.equal(status, 200)
     assert.equal(body.username, player.username)
-    assert.equal(body.games, 4)
-    assert.equal(body.wins, 2)
-    assert.equal(body.losses, 2)
-    assert.equal(body.winRate, 0.5)
+    assert.deepEqual([body.games, body.wins, body.losses, body.winRate], [4, 2, 2, 0.5])
     assert.equal(body.bestScore, scoreBattle('win', 9))
     assert.equal(body.bestWinTurns, 9)
     assert.equal(body.averageTurns, 11.3)
@@ -159,9 +278,26 @@ describe('a player’s stats', () => {
     )
   })
 
+  it('count games per day for the activity grid', async () => {
+    const player = await signedIn()
+    await insertGame(player.username, 'win', 10, 3)
+    await insertGame(player.username, 'loss', 5, 3)
+    await insertGame(player.username, 'loss', 5, 1)
+    await insertGame(player.username, 'win', 10, 400)
+    const { body } = await app.call('GET', `/api/players/${player.username}/stats`)
+    assert.deepEqual(
+      body.days.map((day: { games: number; losses: number }) => [day.games, day.losses]),
+      [
+        [2, 1],
+        [1, 1],
+      ],
+      'a game from more than half a year ago is not in the grid',
+    )
+  })
+
   it('are public and found whatever the case of the name', async () => {
     const player = await signedIn('CaseSensitive')
-    await play(player.cookie, 'win', 10)
+    await insertGame(player.username, 'win', 10)
     const reply = await app.call('GET', `/api/players/${player.username.toLowerCase()}/stats`)
     assert.equal(reply.status, 200)
     assert.equal(reply.body.username, player.username)
@@ -182,7 +318,7 @@ describe('a player’s stats', () => {
 
   it('never include an email address', async () => {
     const player = await signedIn()
-    await play(player.cookie, 'win', 10)
+    await insertGame(player.username, 'win', 10)
     const { body } = await app.call('GET', `/api/players/${player.username}/stats`)
     assert.ok(!JSON.stringify(body).includes('@'))
   })

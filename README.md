@@ -34,19 +34,19 @@ The client is at http://localhost:3000 and proxies `/api` and `/health` to the A
 
 ## Scripts
 
-| Script                        | Does                                                                      |
-| ----------------------------- | ------------------------------------------------------------------------- |
-| `pnpm dev`                    | Client and API together, reloading on change                              |
-| `pnpm build`                  | Builds the client into `client/dist`                                      |
-| `pnpm start`                  | The API, serving the built client when `NODE_ENV=production`              |
-| `pnpm lint` / `pnpm format`   | oxlint / Prettier                                                         |
-| `pnpm typecheck`              | TypeScript across every package                                           |
-| `pnpm test`                   | Unit tests in every package                                               |
-| `pnpm test:e2e`               | The browser suite, against `E2E_BASE_URL` (default http://localhost:3000) |
-| `pnpm db:up` / `pnpm db:down` | Start and stop the local Postgres                                         |
-| `pnpm db:migrate`             | Apply the migrations in `server/migrations`                               |
-| `pnpm db:seed`                | Wipe the database and reseed the demo state                               |
-| `pnpm db:seed:empty`          | Seed only if there are no players yet; Railway runs this on every boot    |
+| Script                        | Does                                                                                                                                     |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm dev`                    | Client and API together, reloading on change                                                                                             |
+| `pnpm build`                  | Builds the client into `client/dist`                                                                                                     |
+| `pnpm start`                  | The API, serving the built client when `NODE_ENV=production`                                                                             |
+| `pnpm lint` / `pnpm format`   | oxlint / Prettier                                                                                                                        |
+| `pnpm typecheck`              | TypeScript across every package                                                                                                          |
+| `pnpm test`                   | Unit tests in every package                                                                                                              |
+| `pnpm test:e2e`               | The browser suites (smoke, auth, leaderboard, game) against `E2E_BASE_URL`, default http://localhost:3000; `pnpm test:e2e game` runs one |
+| `pnpm db:up` / `pnpm db:down` | Start and stop the local Postgres                                                                                                        |
+| `pnpm db:migrate`             | Apply the migrations in `server/migrations`                                                                                              |
+| `pnpm db:seed`                | Wipe the database and reseed the demo state                                                                                              |
+| `pnpm db:seed:empty`          | Seed only if there are no players yet; Railway runs this on every boot                                                                   |
 
 ## How the code is arranged
 
@@ -61,15 +61,17 @@ Imports run one way, and oxlint enforces it: the client and the server may use `
 
 ## The API
 
-| Route                              | Does                                                                                                |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `/api/auth/*`                      | Sign up, sign in by email or username, rename, delete the account, sign out; handled by Better Auth |
-| `GET /api/me`                      | The signed-in player, their best score and games played                                             |
-| `POST /api/games`                  | Records a finished game; the server works out the score                                             |
-| `GET /api/leaderboard`             | Players ranked by their best game                                                                   |
-| `GET /api/players/:username/stats` | A player's record: wins, losses, best score, recent games                                           |
+| Route                              | Does                                                                                                  |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `/api/auth/*`                      | Sign up, sign in by email or username, rename, delete the account, sign out; handled by Better Auth   |
+| `GET /api/me`                      | The signed-in player, their best score and games played                                               |
+| `POST /api/games`                  | Starts a game with a seed the server picks, or resumes the unfinished one                             |
+| `POST /api/games/:id/moves`        | Saves the moves since the last save; the server replays the whole game, and scores it once it is over |
+| `POST /api/games/:id/forfeit`      | Walks away: a loss on the turn reached                                                                |
+| `GET /api/leaderboard`             | Players ranked by their best game                                                                     |
+| `GET /api/players/:username/stats` | A player's record: wins, losses, best score, recent games                                             |
 
-Every figure is computed from the stored games, so nothing the browser sends can set a score, and a player can only ever be shown under their own username. Sign-in attempts are rate limited by the client's real address and game submissions per player; the browser suite clears the counters first when it runs against a local database. The tests run against a real Postgres database whose name must end in `_test`.
+A score is never sent, only moves: the server replays them with the same rules engine the browser plays with, refuses any illegal one, and scores only a finished game. Every figure is computed from the stored games, and a player can only ever be shown under their own username. Sign-in attempts are rate limited by the client's real address and game submissions per player; the browser suite clears the counters first when it runs against a local database. The tests run against a real Postgres database whose name must end in `_test`.
 
 ## Credits
 

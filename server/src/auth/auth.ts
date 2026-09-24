@@ -1,12 +1,19 @@
 import { betterAuth, type BetterAuthOptions } from 'better-auth'
-import { createAuthMiddleware } from 'better-auth/api'
+import { APIError, createAuthMiddleware, getSessionFromCtx } from 'better-auth/api'
 import { username } from 'better-auth/plugins'
 import { pool } from '../config/db.ts'
 import { env } from '../config/env.ts'
+import { demoAccount } from './demo.ts'
 
 export const USERNAME_PATTERN = /^[A-Za-z0-9_]{3,20}$/
 
 export const CLIENT_IP_HEADER = 'x-grimrepo-client-ip'
+
+export const DEMO_IS_READ_ONLY =
+  'Everyone shares the demo account, so it cannot be renamed, deleted or given a new password. Make an account of your own to change these.'
+
+// Anything that would change or remove the shared account for every other visitor.
+const DEMO_LOCKED = new Set(['/update-user', '/delete-user', '/change-password', '/change-email', '/set-password'])
 
 export const authOptions = {
   appName: 'Grim Repo',
@@ -36,6 +43,11 @@ export const authOptions = {
   hooks: {
     // The shown name is always the username as typed; otherwise a player could display as someone else.
     before: createAuthMiddleware(async (ctx) => {
+      if (DEMO_LOCKED.has(ctx.path)) {
+        const session = await getSessionFromCtx(ctx)
+        const user = session?.user as { username?: string } | undefined
+        if (user?.username === demoAccount.username) throw new APIError('FORBIDDEN', { message: DEMO_IS_READ_ONLY })
+      }
       if (ctx.path !== '/sign-up/email' && ctx.path !== '/update-user') return
       const body = (ctx.body ?? {}) as Record<string, unknown>
       delete body['displayUsername']
