@@ -2,7 +2,9 @@ import assert from 'node:assert/strict'
 import { after, before, beforeEach, describe, it } from 'node:test'
 import { pool } from '../config/db.ts'
 import { newPlayer, startApp } from '../test/http.ts'
+import { renameAccount } from '../admin/moderation.ts'
 import { insertGame, resetDatabase } from '../test/support.ts'
+import { auth } from './auth.ts'
 
 const app = await startApp()
 after(async () => {
@@ -209,7 +211,11 @@ describe('the demo account', () => {
   const demo = { name: 'Demo Player', username: 'demo', email: 'demo@grimrepo.test', password: 'demo-password' }
 
   it('cannot be renamed, deleted or given a new password by the visitor using it', async () => {
-    const { cookie } = await signUp(demo)
+    // Made the way the seed makes it: "demo" is reserved for anyone signing up from outside.
+    await auth.api.signUpEmail({ body: demo })
+    const { cookie } = await app.call('POST', '/api/auth/sign-in/username', {
+      body: { username: demo.username, password: demo.password },
+    })
     const attempts = [
       app.call('POST', '/api/auth/update-user', { cookie, body: { username: 'taken_over' } }),
       app.call('POST', '/api/auth/delete-user', { cookie, body: { password: demo.password } }),
@@ -235,5 +241,51 @@ describe('the demo account', () => {
       (await app.call('POST', '/api/auth/update-user', { cookie, body: { username: 'free_to_rename' } })).status,
       200,
     )
+  })
+})
+
+describe('names', () => {
+  const rot13 = (text: string) =>
+    text.replace(/[a-z]/g, (c) => String.fromCharCode(((c.charCodeAt(0) - 97 + 13) % 26) + 97))
+
+  it('refuses an offensive name at sign-up, and says so plainly', async () => {
+    const reply = await signUp({ ...newPlayer(), username: `${rot13('fuvg')}_lord` })
+    assert.equal(reply.status, 400)
+    assert.equal(reply.body.message, 'That name is not allowed. Pick another.')
+  })
+
+  it('refuses names that pass for the game or its staff', async () => {
+    for (const username of ['Admin', 'P03', 'grim_repo', 'demo']) {
+      assert.equal((await signUp({ ...newPlayer(), username })).status, 400, username)
+    }
+  })
+
+  it('refuses an offensive rename too', async () => {
+    const { cookie } = await signUp(newPlayer())
+    const reply = await app.call('POST', '/api/auth/update-user', {
+      cookie,
+      body: { username: rot13('shpx').split('').join('_') },
+    })
+    assert.equal(reply.status, 400)
+  })
+
+  it('keeps the hidden name field equal to the username, so nothing can hide there', async () => {
+    const player = newPlayer('Visible')
+    const { cookie } = await signUp({ ...player, name: 'anything at all' })
+    await app.call('POST', '/api/auth/update-user', { cookie, body: { name: 'something else' } })
+    const { rows } = await pool.query<{ name: string }>('SELECT name FROM users WHERE username = lower($1)', [
+      player.username,
+    ])
+    assert.equal(rows[0]?.name, player.username)
+  })
+
+  it('stops a player changing a name a moderator set', async () => {
+    const player = newPlayer('Needs_Fixing')
+    const { cookie } = await signUp(player)
+    const { to } = await renameAccount(player.username)
+    const reply = await app.call('POST', '/api/auth/update-user', { cookie, body: { username: 'back_again' } })
+    assert.equal(reply.status, 403)
+    assert.match(reply.body.message, /moderator/)
+    assert.equal((await app.call('GET', `/api/players/${to}/stats`)).status, 200)
   })
 })

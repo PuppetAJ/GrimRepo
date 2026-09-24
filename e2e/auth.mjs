@@ -35,6 +35,16 @@ section('Signing up')
     /3 to 20 letters, digits or underscores/.test(await visibleText(page)),
   )
 
+  await page.getByLabel('Username').fill('Grim_Repo')
+  await page.getByLabel('Email').fill(`reserved_${Date.now()}@grimrepo.test`)
+  await page.getByLabel('Password', { exact: true }).fill('a-long-enough-password')
+  await page.getByRole('button', { name: 'Create account' }).click()
+  await page.getByRole('alert').waitFor()
+  check(
+    'a name that passes for the site is refused, and the form says why',
+    /not allowed/.test(await page.getByRole('alert').innerText()),
+  )
+
   const player = await signUp(page, newPlayer('Signup'))
   check(
     'a new player lands signed in',
