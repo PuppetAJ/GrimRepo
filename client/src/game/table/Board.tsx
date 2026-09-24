@@ -205,9 +205,9 @@ function Stack({
           position={[((i * 7) % 5) * 0.004 - 0.008, pitch * (i + 0.5), ((i * 3) % 4) * 0.004 - 0.006]}
           rotation={[faceUp ? -Math.PI / 2 : Math.PI / 2, 0, ((i * 5) % 7) * 0.006 - 0.018]}
         >
-          <mesh geometry={disk.body} material={[DISK_MATERIALS.body, DISK_MATERIALS.edge]} />
-          {topmost ? <mesh geometry={disk.plastic} material={DISK_MATERIALS.plastic} /> : null}
-          {topmost ? <mesh geometry={disk.dark} material={DISK_MATERIALS.dark} /> : null}
+          <mesh geometry={disk.body} material={[DISK_MATERIALS.common.body, DISK_MATERIALS.common.edge]} />
+          {topmost ? <mesh geometry={disk.plastic} material={DISK_MATERIALS.common.plastic} /> : null}
+          {topmost ? <mesh geometry={disk.dark} material={DISK_MATERIALS.common.dark} /> : null}
           {topmost ? (
             <mesh
               geometry={sheet}

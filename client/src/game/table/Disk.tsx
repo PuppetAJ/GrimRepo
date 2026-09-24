@@ -58,7 +58,7 @@ function build() {
   dark.push(box(0.85, 0.008, 0.9, 0.028, 0.004, front + raised))
   // The grill between the two stat boxes.
   for (let i = 0; i < 6; i++)
-    plastic.push(box(0.44, 0.85 + i * 0.019, 0.56, 0.858 + i * 0.019, raised * 0.7, front + raised * 0.35))
+    plastic.push(box(0.42, 0.895 + i * 0.013, 0.58, 0.901 + i * 0.013, raised * 0.7, front + raised * 0.35))
 
   // The back: the shutter plate over the hub, the hub, two ribs and the bottom band.
   plastic.push(box(0.28, 0.02, 0.72, 0.2, raised, back - raised / 2))
@@ -96,11 +96,16 @@ let built: ReturnType<typeof build> | null = null
 export const diskGeometry = () => (built ??= build())
 
 // The plastic gives off a little of its own light, since the hand sits far from the factory's lamps.
-export const DISK_MATERIALS = {
-  body: new THREE.MeshStandardMaterial({ color: '#1f3044', emissive: '#0c1826', roughness: 0.62, metalness: 0.15 }),
-  edge: new THREE.MeshStandardMaterial({ color: '#15212f', emissive: '#08111a', roughness: 0.7 }),
-  plastic: new THREE.MeshStandardMaterial({ color: '#2c4661', emissive: '#12243a', roughness: 0.55, metalness: 0.2 }),
+const plastics = (body: string, bodyGlow: string, edge: string, edgeGlow: string, rim: string, rimGlow: string) => ({
+  body: new THREE.MeshStandardMaterial({ color: body, emissive: bodyGlow, roughness: 0.62, metalness: 0.15 }),
+  edge: new THREE.MeshStandardMaterial({ color: edge, emissive: edgeGlow, roughness: 0.7 }),
+  plastic: new THREE.MeshStandardMaterial({ color: rim, emissive: rimGlow, roughness: 0.55, metalness: 0.2 }),
   dark: new THREE.MeshStandardMaterial({ color: '#05090d', roughness: 0.9 }),
+})
+/** Blue disks for the deck, red for the rare card, as Act 3 has it. */
+export const DISK_MATERIALS = {
+  common: plastics('#1f3044', '#0c1826', '#15212f', '#08111a', '#2c4661', '#12243a'),
+  rare: plastics('#5a1622', '#2a0a10', '#3a0d14', '#1a0508', '#7a2030', '#3a0e16'),
 }
 
 /** Where the face and back planes sit: just off the body, under the raised rim. */

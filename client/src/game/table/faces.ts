@@ -1,6 +1,6 @@
 import { card, CARDS, SIGILS, type SigilId, type Unit } from 'shared'
 import { CanvasTexture, SRGBColorSpace, type Texture } from 'three'
-import { DISK, RECESS } from './layout.ts'
+import { DISK, RECESS, SCREEN_DIVIDER, SIGIL_BAND } from './layout.ts'
 
 // The face is drawn at the card's own shape, so nothing is stretched.
 const W = 300
@@ -119,17 +119,37 @@ function drawFace(context: CanvasRenderingContext2D, unit: Unit, loaded: Assets)
 }
 
 // The factory's cards: Act 3's floppy disks. The disk itself is geometry (Disk.tsx); this draws what shows in
-// its recesses: the label sticker, the screen, the sigil strip and the two stat boxes. The rest is hidden by the rim.
-const TECH = {
+// its recesses: the label sticker, the screen with the art, a divider and the sigils, and the two stat boxes.
+type Palette = {
+  body: string
+  screen: string
+  line: string
+  fill: string
+  plate: string
+  plateInk: string
+  cost: string
+  hurt: string
+}
+const COMMON: Palette = {
   body: '#1f3044',
-  screen: '#04111a',
-  line: '#5ad8f0',
-  plate: '#e6d24a',
-  rarePlate: '#ff5ec4',
+  screen: '#0a2430',
+  line: '#4fd9f2',
+  fill: '#1c6f84',
+  plate: '#d9bd3c',
   plateInk: '#1b1a0c',
   cost: '#ff9a2e',
-  attack: '#ffb347',
-  heart: '#ff4d5e',
+  hurt: '#ff4d5e',
+}
+// The rare card: a red disk, a white label, salmon light.
+const RARE: Palette = {
+  body: '#5a1622',
+  screen: '#2a0c16',
+  line: '#ff8f86',
+  fill: '#8a3038',
+  plate: '#e9e6e2',
+  plateInk: '#1a1214',
+  cost: '#ffb14a',
+  hurt: '#ffd3d0',
 }
 
 // Small pixel icons for the sigils, drawn on the strip; the text table spells them out.
@@ -165,15 +185,15 @@ function diskPath(context: CanvasRenderingContext2D) {
 const recess = ([x0, y0, x1, y1]: readonly [number, number, number, number]) =>
   [x0 * W, y0 * H, (x1 - x0) * W, (y1 - y0) * H] as const
 
-function screen(context: CanvasRenderingContext2D, area: readonly [number, number, number, number]) {
+function screen(context: CanvasRenderingContext2D, area: readonly [number, number, number, number], colour: string) {
   const [x, y, w, h] = recess(area)
-  context.fillStyle = TECH.screen
+  context.fillStyle = colour
   context.fillRect(x, y, w, h)
-  context.fillStyle = 'rgb(62 243 255 / 0.05)'
-  for (let line = y; line < y + h; line += 4) context.fillRect(x, line, w, 1)
+  context.fillStyle = 'rgb(0 0 0 / 0.22)'
+  for (let line = y; line < y + h; line += 3) context.fillRect(x, line, w, 1)
 }
 
-/** The 2022 art redrawn as glowing cyan lines, a hologram of the original. */
+/** The 2022 art redrawn as a hologram: a dim dithered fill with a bright edge, as the game draws its bots. */
 function hologram(
   context: CanvasRenderingContext2D,
   art: HTMLImageElement,
@@ -181,6 +201,7 @@ function hologram(
   y: number,
   w: number,
   h: number,
+  palette: Palette,
 ) {
   const layer = document.createElement('canvas')
   layer.width = Math.round(w)
@@ -196,11 +217,10 @@ function hologram(
   }
   paint.putImageData(image, 0, 0)
   paint.globalCompositeOperation = 'source-in'
-  paint.fillStyle = TECH.line
+  paint.fillStyle = palette.line
   paint.fillRect(0, 0, w, h)
-  // A soft edge, not a glare: the card's own glow does the rest under the bloom.
   context.save()
-  context.shadowColor = TECH.line
+  context.shadowColor = palette.line
   context.shadowBlur = 5
   context.drawImage(layer, x, y)
   context.restore()
@@ -208,76 +228,76 @@ function hologram(
 
 function drawTechFace(context: CanvasRenderingContext2D, unit: Unit, loaded: Assets): void {
   const def = card(unit.card)
+  const palette = def.tier === 'S' ? RARE : COMMON
   context.clearRect(0, 0, W, H)
-  context.fillStyle = TECH.body
+  context.fillStyle = palette.body
   diskPath(context)
   context.fill()
   context.imageSmoothingEnabled = true
   context.textAlign = 'center'
   context.textBaseline = 'middle'
 
-  // The label: a sticker in the top recess.
+  // The label: a worn sticker across the top.
   const [lx, ly, lw, lh] = recess(RECESS.label)
-  context.fillStyle = def.tier === 'S' ? TECH.rarePlate : TECH.plate
+  context.fillStyle = palette.plate
   context.fillRect(lx, ly, lw, lh)
-  context.fillStyle = TECH.plateInk
-  fitText(context, def.name.toUpperCase(), (size) => `${size}px VT323`, 40, lw * 0.92)
-  context.fillText(def.name.toUpperCase(), lx + lw / 2, ly + lh / 2 + 2)
+  context.fillStyle = 'rgb(0 0 0 / 0.08)'
+  for (let i = 0; i < 60; i++) context.fillRect(lx + ((i * 97) % lw), ly + ((i * 61) % lh), 3 + (i % 5), 2)
+  context.fillStyle = palette.plateInk
+  fitText(context, def.name.toUpperCase(), (size) => `bold ${size}px VT323`, 60, lw * 0.9)
+  context.fillText(def.name.toUpperCase(), lx + lw / 2, ly + lh / 2 + 3)
 
-  // The screen: the hologram, the cost in its top-left corner, and a health bar along its foot.
+  // The screen: the art above the divider, the sigils below it, the cost in the top-right corner.
   const [sx, sy, sw, sh] = recess(RECESS.screen)
-  screen(context, RECESS.screen)
+  screen(context, RECESS.screen, palette.screen)
+  const divider = SCREEN_DIVIDER * H
   const art = loaded.art.get(unit.card)
-  if (art) hologram(context, art, sx + sw * 0.05, sy + sh * 0.14, sw * 0.9, sh * 0.8)
+  if (art) hologram(context, art, sx + sw * 0.03, sy + sh * 0.08, sw * 0.94, divider - sy - sh * 0.1, palette)
   else {
     context.save()
-    context.shadowColor = TECH.line
-    context.shadowBlur = 12
-    context.fillStyle = TECH.line
+    context.shadowColor = palette.line
+    context.shadowBlur = 8
+    context.fillStyle = palette.line
     context.font = '46px VT323'
-    context.fillText('<div>', sx + sw / 2, sy + sh * 0.4)
-    context.fillText('</div>', sx + sw / 2, sy + sh * 0.6)
+    context.fillText('<div>', sx + sw / 2, sy + (divider - sy) * 0.42)
+    context.fillText('</div>', sx + sw / 2, sy + (divider - sy) * 0.62)
     context.restore()
   }
   const cells = 4
-  const cell = 12
+  const cell = 13
   for (let i = 0; i < cells; i++) {
-    context.fillStyle = i < def.cost ? TECH.cost : 'rgb(62 243 255 / 0.12)'
-    context.fillRect(sx + sw - 10 - (cells - i) * (cell + 4), sy + 10, cell, 22)
+    context.fillStyle = i < def.cost ? palette.cost : 'rgb(255 255 255 / 0.1)'
+    context.fillRect(sx + sw - 8 - (cells - i) * (cell + 3), sy + 7, cell, 24)
   }
-
-  // The strip: the sigils as icons, or the maker's mark when there are none.
-  const [gx, gy, gw, gh] = recess(RECESS.sigils)
-  screen(context, RECESS.sigils)
+  context.fillStyle = '#f4fbff'
+  context.fillRect(sx, divider - 2, sw, 3)
+  const [top, bottom] = SIGIL_BAND
   if (unit.sigils.length) {
-    const size = 5
-    const step = 8 * size + 18
-    const start = gx + gw / 2 - (unit.sigils.length * step - 18) / 2
+    const size = 7
+    const step = 8 * size + 30
+    const start = sx + sw / 2 - (unit.sigils.length * step - 30) / 2
+    const middle = ((top + bottom) / 2) * H
     unit.sigils.forEach((sigil, i) =>
-      pixels(context, ICONS[sigil], start + i * step, gy + gh / 2 - 4 * size, size, TECH.line),
+      pixels(context, ICONS[sigil], start + i * step, middle - 4 * size, size, palette.line),
     )
-  } else {
-    context.fillStyle = 'rgb(62 243 255 / 0.3)'
-    context.font = '26px VT323'
-    context.fillText('// P03 SYSTEMS', gx + gw / 2, gy + gh / 2 + 1)
   }
 
-  // Attack and health as plain numerals, each in its own box, as on P03's cards.
+  // Attack and health as plain numerals, each in its own box.
   const [ax, ay, aw, ah] = recess(RECESS.attack)
   const [hx, hy, hw, hh] = recess(RECESS.health)
-  screen(context, RECESS.attack)
-  screen(context, RECESS.health)
-  context.font = Math.max(unit.attack, unit.health) > 99 ? '40px VT323' : '60px VT323'
-  context.fillStyle = TECH.line
+  screen(context, RECESS.attack, palette.screen)
+  screen(context, RECESS.health, palette.screen)
+  context.font = Math.max(unit.attack, unit.health) > 99 ? '40px VT323' : '64px VT323'
+  context.fillStyle = palette.line
   context.fillText(String(unit.attack), ax + aw / 2, ay + ah / 2 + 3)
-  context.fillStyle = unit.health < unit.maxHealth ? TECH.heart : TECH.line
+  context.fillStyle = unit.health < unit.maxHealth ? palette.hurt : palette.line
   context.fillText(String(unit.health), hx + hw / 2, hy + hh / 2 + 3)
 }
 
 /** The back of the disk: plastic with faint traces; the hub and ribs are geometry on top. */
 function drawTechBack(context: CanvasRenderingContext2D): void {
   context.clearRect(0, 0, W, H)
-  context.fillStyle = TECH.body
+  context.fillStyle = COMMON.body
   diskPath(context)
   context.fill()
   context.strokeStyle = 'rgb(62 243 255 / 0.12)'

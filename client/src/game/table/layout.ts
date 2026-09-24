@@ -8,13 +8,16 @@ export const TABLE_Y = 7.0
 
 /** The factory's card is a floppy disk: a plastic body with raised rims, and these recesses, as fractions of the face from its top-left. */
 export const DISK = { depth: 0.024, relief: 0.011, clip: 0.11 }
+// Measured from Act 3's card: a full-width label, one tall screen holding the art, a divider and the sigils, and the stats along the foot.
 export const RECESS = {
-  label: [0.08, 0.035, 0.92, 0.12],
-  screen: [0.06, 0.16, 0.94, 0.61],
-  sigils: [0.06, 0.64, 0.94, 0.8],
-  attack: [0.06, 0.84, 0.4, 0.955],
-  health: [0.6, 0.84, 0.94, 0.955],
+  label: [0.06, 0.055, 0.94, 0.165],
+  screen: [0.05, 0.19, 0.95, 0.855],
+  attack: [0.05, 0.885, 0.36, 0.975],
+  health: [0.64, 0.885, 0.95, 0.975],
 } as const satisfies Record<string, readonly [number, number, number, number]>
+/** Where the divider crosses the screen, and where the sigils sit under it, as fractions of the face's height. */
+export const SCREEN_DIVIDER = 0.635
+export const SIGIL_BAND = [0.655, 0.84] as const
 const CENTER_X = -1.975
 export const LANE_GAP = 0.86
 const LANE_X = [...Array(LANES).keys()].map((lane) => CENTER_X + (lane - (LANES - 1) / 2) * LANE_GAP)

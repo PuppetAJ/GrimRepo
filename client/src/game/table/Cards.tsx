@@ -1,7 +1,7 @@
 import { useFrame, type ThreeEvent } from '@react-three/fiber'
 import { easing } from 'maath'
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
-import type { Unit } from 'shared'
+import { card, type Unit } from 'shared'
 import * as THREE from 'three'
 import { BACK_Z, DISK_MATERIALS, diskGeometry, FACE_Z } from './Disk.tsx'
 import { backTexture, faceTexture, type CardStyle, type loadCardAssets } from './faces.ts'
@@ -161,11 +161,12 @@ export function Card({
 
   if (tech) {
     const disk = diskGeometry()
+    const plastics = card(unit.card).tier === 'S' ? DISK_MATERIALS.rare : DISK_MATERIALS.common
     return (
       <group ref={mesh} name={`card-${unit.uid}`} {...handlers}>
-        <mesh geometry={disk.body} material={[DISK_MATERIALS.body, DISK_MATERIALS.edge]} />
-        <mesh geometry={disk.plastic} material={DISK_MATERIALS.plastic} />
-        <mesh geometry={disk.dark} material={DISK_MATERIALS.dark} />
+        <mesh geometry={disk.body} material={[plastics.body, plastics.edge]} />
+        <mesh geometry={disk.plastic} material={plastics.plastic} />
+        <mesh geometry={disk.dark} material={plastics.dark} />
         <mesh geometry={sheet} material={front} position={[0, 0, FACE_Z]} />
         <mesh geometry={backSheet} material={rear} position={[0, 0, BACK_Z]} />
       </group>
