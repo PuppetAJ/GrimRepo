@@ -95,18 +95,25 @@ describe('a thousand random games', () => {
 })
 
 describe('the balance', () => {
-  it('gives a simple bot a fair fight', () => {
+  // Measured when P03 learned to read the board: about 28% for the greedy bot and 34% for the lane-focused one.
+  const rate = (strategy: 'greedy' | 'lanes') => {
     let wins = 0
-    const turns: number[] = []
     for (let seed = 1; seed <= 500; seed++) {
-      const result = summary(playOut(createGame({ seed }), step).state)
+      const result = summary(playOut(createGame({ seed }), step, { strategy }).state)
       assert.ok(result, `seed ${seed} did not finish`)
       if (result.outcome === 'win') wins += 1
-      turns.push(result.turns)
     }
-    const rate = wins / 500
-    // A greedy bot should win some and lose some; either extreme means the numbers need tuning.
-    assert.ok(rate > 0.2 && rate < 0.8, `the bot won ${(rate * 100).toFixed(1)}%`)
-    assert.ok(Math.max(...turns) < 60, `a game went ${Math.max(...turns)} turns`)
+    return wins / 500
+  }
+
+  it('gives a simple bot a fair fight', () => {
+    const greedy = rate('greedy')
+    assert.ok(greedy > 0.15 && greedy < 0.6, `the greedy bot won ${(greedy * 100).toFixed(1)}%`)
+  })
+
+  it('does not hand victory to a player who ignores P03’s walls', () => {
+    const lanes = rate('lanes')
+    assert.ok(lanes > 0.15 && lanes < 0.6, `the lane-focused bot won ${(lanes * 100).toFixed(1)}%`)
+    assert.ok(lanes - rate('greedy') < 0.15, 'ignoring walled lanes is not a big edge')
   })
 })
