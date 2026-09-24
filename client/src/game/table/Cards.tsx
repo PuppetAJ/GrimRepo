@@ -11,7 +11,7 @@ type Assets = Awaited<ReturnType<typeof loadCardAssets>>
 
 export type Place = { at: 'hand'; index: number; count: number } | { at: Row; lane: number }
 
-export type Look = 'plain' | 'selected' | 'marked' | 'dim'
+export type Look = 'plain' | 'selected' | 'marked' | 'markable' | 'dim'
 
 const FLAT = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0))
 const geometry = new THREE.BoxGeometry(CARD.width, CARD.height, CARD.depth)
@@ -105,9 +105,20 @@ export function Card({
     easing.dampQ(card.quaternion, rotation, 0.1, delta)
     easing.damp3(card.scale, scale, 0.1, delta)
 
-    const glow = look === 'selected' ? 0.55 : look === 'marked' ? 0.35 : hovered && onClick ? 0.4 : 0.22
+    // A card that can be sacrificed pulses red; a marked one holds it.
+    const pulse = look === 'markable' ? 0.2 + 0.15 * Math.sin(now / 160) : 0
+    const glow =
+      look === 'selected'
+        ? 0.55
+        : look === 'marked'
+          ? 0.4
+          : look === 'markable'
+            ? pulse
+            : hovered && onClick
+              ? 0.4
+              : 0.22
     front.emissiveIntensity = glow
-    front.emissive.set(look === 'marked' ? '#ff4040' : '#ffffff')
+    front.emissive.set(look === 'marked' || look === 'markable' ? '#ff4040' : '#ffffff')
     front.color.setScalar(look === 'dim' ? 0.45 : 1)
     front.opacity = rear.opacity = 1 - leaving
   })

@@ -149,7 +149,7 @@ function Scene({
               place={place}
               spawn={playback.spawns.get(unit.uid)}
               lunge={playback.lunges.get(unit.uid)}
-              look={marked ? 'marked' : 'plain'}
+              look={marked ? 'marked' : action?.type === 'mark' ? 'markable' : 'plain'}
               assets={assets}
               onClick={action ? () => act(action) : undefined}
             />

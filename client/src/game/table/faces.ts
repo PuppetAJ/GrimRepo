@@ -94,15 +94,18 @@ function drawFace(context: CanvasRenderingContext2D, unit: Unit, loaded: Assets)
   if (def.cost) {
     context.fillStyle = BLOOD
     context.textAlign = 'right'
-    context.font = '30px "IBM Plex Mono"'
-    context.fillText('◆'.repeat(def.cost), W * 0.93, H * 0.19)
+    context.font = '36px "IBM Plex Mono"'
+    context.fillText('◆'.repeat(def.cost), W * 0.93, H * 0.195)
   }
   if (unit.sigils.length) {
+    // A pale band, so the sigils read over any art.
+    context.fillStyle = rare ? 'rgb(10 30 30 / 0.8)' : 'rgb(236 214 186 / 0.85)'
+    context.fillRect(W * 0.06, H * 0.625, W * 0.88, H * 0.075)
     context.fillStyle = rare ? ink : BLOOD
     context.textAlign = 'center'
     const text = unit.sigils.map((sigil) => SIGILS[sigil].name).join(' · ')
-    fitText(context, text, (size) => `${size}px "Pirata One"`, 32, W * 0.86)
-    context.fillText(text, W / 2, H * 0.665)
+    fitText(context, text, (size) => `${size}px "Pirata One"`, 36, W * 0.84)
+    context.fillText(text, W / 2, H * 0.664)
   }
 
   context.textAlign = 'center'
