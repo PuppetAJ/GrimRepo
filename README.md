@@ -112,6 +112,7 @@ The original team: Adrian Jimenez, Kenan McKenzie and Johan Herrera ([original r
 - **The room:** [Fantasy interior items](https://sketchfab.com/3d-models/fantasy-interior-items-6542c39c66394888994d7343fd03fdef) by Tedium Interactive.
 - **The robot:** [P03](https://sketchfab.com/3d-models/p03-98b40954748447be81f2bb713f6b28b8) by Goober (CC BY 4.0), animated by Adrian Jimenez.
 - **P03's faces in the factory:** [Inscryption P03 faces](https://sketchfab.com/3d-models/inscryption-p03-faces-4318168b0c3e4c0a8a1ced18927332a8) by p03_real_account (CC BY 4.0).
+- **The scale in the factory:** [Scales](https://sketchfab.com/3d-models/scales-2ed4e14bb69944078ef0bb862b256b2a) by FlukierJupiter (CC BY 4.0), split into a base and a beam so it can tip.
 - **The factory's metal:** Metal029, DiamondPlate008C and CorrugatedSteel005 from [ambientCG](https://ambientcg.com) (CC0).
 - **The bell:** [Table bell](https://sketchfab.com/3d-models/table-bell-77f2ea17b4c84fe1a8d2aec02caa9de3) on Sketchfab, edited by Adrian Jimenez.
 - **The board and the deck:** made by Adrian Jimenez, with Inscryption's textures on the deck.

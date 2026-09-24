@@ -1,4 +1,4 @@
-import { Sparkles, useTexture } from '@react-three/drei'
+import { Sparkles, useGLTF, useTexture } from '@react-three/drei'
 import { useFrame, type ThreeEvent } from '@react-three/fiber'
 import {
   Bloom,
@@ -11,7 +11,7 @@ import {
 } from '@react-three/postprocessing'
 import { easing } from 'maath'
 import { ToneMappingMode } from 'postprocessing'
-import { use, useEffect, useMemo, useRef, useState, type ReactElement } from 'react'
+import { Suspense, use, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactElement } from 'react'
 import * as THREE from 'three'
 import type { View } from '../view.ts'
 import { Nudge } from './Board.tsx'
@@ -216,6 +216,33 @@ function Monitor({ position, turn, lines }: { position: Vec3; turn: number; line
         <meshBasicMaterial map={texture} toneMapped={false} />
       </mesh>
       <pointLight color={CYAN} position={[0, 0, 0.8]} intensity={3} distance={5} decay={2} />
+    </group>
+  )
+}
+
+/** The scale by the table: it tips towards whoever is losing, that side's pan sinking under the damage taken. */
+function Scale({ view }: { view: View }) {
+  const { scene } = useGLTF('/models/scales.glb', false, false)
+  const beam = useMemo(() => scene.getObjectByName('Beam'), [scene])
+  useLayoutEffect(() => {
+    scene.traverse((object) => {
+      const material = (object as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined
+      if (!material) return
+      // Pure metal with nothing to reflect renders black, so it is toned down and given a little light of its own.
+      material.metalness = Math.min(material.metalness, 0.6)
+      material.emissive.set('#14202a')
+    })
+  }, [scene])
+  useFrame((_, delta) => {
+    if (!beam) return
+    // The player's pan is on the left, P03's on the right; the beam is a lever, so a small angle reads.
+    const lean = THREE.MathUtils.clamp((view.health.player - view.health.opponent) / 50, -1, 1)
+    easing.damp(beam.rotation, 'y', lean * 0.32, 0.5, delta)
+  })
+  return (
+    <group position={[X - 3.3, TABLE_Y, -11.6]} rotation={[0, 0.12, 0]} scale={0.046}>
+      <primitive object={scene} />
+      <pointLight color="#9fdcff" position={[0, 40, 30]} intensity={0.02} distance={4} decay={2} />
     </group>
   )
 }
@@ -465,6 +492,9 @@ export function Factory({ view, log }: { view: View; log: string[] }) {
       <Monitor position={[X - 4.3, 8.55, -14.2]} turn={0.3} lines={lines} />
       <Monitor position={[X + 4.3, 8.55, -14.2]} turn={-0.3} lines={status} />
       <Gems />
+      <Suspense fallback={null}>
+        <Scale view={view} />
+      </Suspense>
       {/* Dust drifting in the light. */}
       <Sparkles
         count={140}
