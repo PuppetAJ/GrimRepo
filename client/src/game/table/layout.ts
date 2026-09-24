@@ -7,7 +7,7 @@ export const CARD = { width: 0.75, height: 1.26, depth: 0.012 }
 export const TABLE_Y = 7.0
 
 /** The factory's card is a floppy disk: a plastic body with raised rims, and these recesses, as fractions of the face from its top-left. */
-export const DISK = { depth: 0.024, relief: 0.011, clip: 0.11 }
+export const DISK = { depth: 0.024, relief: 0.011, clip: 0.11, compact: 0.68 }
 // Measured from Act 3's card: a full-width label, one tall screen holding the art, a divider and the sigils, and the stats along the foot.
 export const RECESS = {
   label: [0.06, 0.055, 0.94, 0.165],

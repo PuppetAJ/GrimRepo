@@ -3,9 +3,9 @@ import { easing } from 'maath'
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { card, type Unit } from 'shared'
 import * as THREE from 'three'
-import { BACK_Z, DISK_MATERIALS, diskGeometry, FACE_Z } from './Disk.tsx'
-import { backTexture, faceTexture, type CardStyle, type loadCardAssets } from './faces.ts'
-import { CARD, HAND_SCALE, handPlace, slot, type Row, type Vec3 } from './layout.ts'
+import { BACK_Z, diskGeometry, diskMaterials, FACE_Z } from './Disk.tsx'
+import { backTexture, faceLights, faceTexture, type CardStyle, type loadCardAssets } from './faces.ts'
+import { CARD, DECK, DISK, HAND_SCALE, handPlace, slot, type Row, type Vec3 } from './layout.ts'
 import { LEAVE_MS, type Lunge } from './playback.ts'
 
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
@@ -60,13 +60,15 @@ export function Card({
   const placed = useRef(false)
   const face = faceTexture(unit, assets, style)
   const back = useMemo(() => backTexture(assets, style), [assets, style])
-  // Tech cards are screens, so they give off more of their own light.
-  const rest = style === 'tech' ? 0.3 : 0.22
-  // Each card owns its materials so it can glow or fade alone; the textures are shared.
+  const tech = style === 'tech'
+  // On a tech card only the screen and the numerals glow, from their own map; a cabin card glows faintly all over.
+  const rest = tech ? 1.1 : 0.22
+  // Each card owns its materials so it can glow or fade alone; the textures are shared. The alpha test keeps the
+  // clipped corner from writing depth where there is nothing to see.
   const [front, rear] = useMemo(
     () => [
-      new THREE.MeshStandardMaterial({ roughness: 0.85, emissive: '#ffffff', transparent: true }),
-      new THREE.MeshStandardMaterial({ roughness: 0.85, transparent: true }),
+      new THREE.MeshStandardMaterial({ roughness: 0.85, emissive: '#ffffff', transparent: true, alphaTest: 0.5 }),
+      new THREE.MeshStandardMaterial({ roughness: 0.85, transparent: true, alphaTest: 0.5 }),
     ],
     [],
   )
@@ -78,9 +80,10 @@ export function Card({
     [front, rear],
   )
   front.map = face
-  front.emissiveMap = face
+  front.emissiveMap = tech ? faceLights(unit, assets) : face
   rear.map = back
-  const tech = style === 'tech'
+  // A card drawn from the deck starts as the compact disk it lay as, and expands on the way to the hand.
+  const stretch = useRef(tech && spawn && spawn[0] === DECK[0] && spawn[2] === DECK[2] ? DISK.compact : 1)
 
   useFrame(({ camera }, delta) => {
     const card = mesh.current
@@ -115,6 +118,8 @@ export function Card({
       scale.multiplyScalar(1 - leaving * 0.6)
     } else position.y -= leaving * 0.45
 
+    stretch.current = THREE.MathUtils.damp(stretch.current, 1, 6, delta)
+    scale.y *= stretch.current
     if (!placed.current) {
       card.position.copy(spawn ? new THREE.Vector3(...spawn) : position)
       card.quaternion.copy(spawn ? FLAT : rotation)
@@ -129,13 +134,13 @@ export function Card({
     const pulse = look === 'markable' ? 0.2 + 0.15 * Math.sin(now / 160) : 0
     const glow =
       look === 'selected'
-        ? rest + 0.3
+        ? rest + 0.4
         : look === 'marked'
-          ? 0.4
+          ? rest + 0.2
           : look === 'markable'
-            ? pulse
+            ? rest + pulse
             : hovered && onClick
-              ? rest + 0.18
+              ? rest + 0.25
               : rest
     front.emissiveIntensity = glow
     front.emissive.set(look === 'marked' || look === 'markable' ? '#ff4040' : '#ffffff')
@@ -161,7 +166,7 @@ export function Card({
 
   if (tech) {
     const disk = diskGeometry()
-    const plastics = card(unit.card).tier === 'S' ? DISK_MATERIALS.rare : DISK_MATERIALS.common
+    const plastics = diskMaterials(card(unit.card).tier === 'S' ? 'rare' : 'common')
     return (
       <group ref={mesh} name={`card-${unit.uid}`} {...handlers}>
         <mesh geometry={disk.body} material={[plastics.body, plastics.edge]} />

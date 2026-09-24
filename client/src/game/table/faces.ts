@@ -182,6 +182,19 @@ function diskPath(context: CanvasRenderingContext2D) {
   context.closePath()
 }
 
+/** Text centred on its own ink, not the font's line box, which VT323 sets high. */
+function centred(context: CanvasRenderingContext2D, text: string, x: number, y: number) {
+  // The bounds are measured from the baseline in force, so it is set before measuring.
+  context.textAlign = 'left'
+  context.textBaseline = 'alphabetic'
+  const box = context.measureText(text)
+  const width = box.actualBoundingBoxRight - box.actualBoundingBoxLeft
+  const height = box.actualBoundingBoxAscent + box.actualBoundingBoxDescent
+  context.fillText(text, x - width / 2, y + height / 2 - box.actualBoundingBoxDescent)
+  context.textAlign = 'center'
+  context.textBaseline = 'middle'
+}
+
 const recess = ([x0, y0, x1, y1]: readonly [number, number, number, number]) =>
   [x0 * W, y0 * H, (x1 - x0) * W, (y1 - y0) * H] as const
 
@@ -226,11 +239,15 @@ function hologram(
   context.restore()
 }
 
-function drawTechFace(context: CanvasRenderingContext2D, unit: Unit, loaded: Assets): void {
+/**
+ * The face, or with `lights` only what glows on it (the screen's contents and the numerals) on black,
+ * for the emissive map, so the plastic and the sticker stay matte.
+ */
+function drawTechFace(context: CanvasRenderingContext2D, unit: Unit, loaded: Assets, lights = false): void {
   const def = card(unit.card)
   const palette = def.tier === 'S' ? RARE : COMMON
   context.clearRect(0, 0, W, H)
-  context.fillStyle = palette.body
+  context.fillStyle = lights ? '#000000' : palette.body
   diskPath(context)
   context.fill()
   context.imageSmoothingEnabled = true
@@ -239,17 +256,19 @@ function drawTechFace(context: CanvasRenderingContext2D, unit: Unit, loaded: Ass
 
   // The label: a worn sticker across the top.
   const [lx, ly, lw, lh] = recess(RECESS.label)
-  context.fillStyle = palette.plate
-  context.fillRect(lx, ly, lw, lh)
-  context.fillStyle = 'rgb(0 0 0 / 0.08)'
-  for (let i = 0; i < 60; i++) context.fillRect(lx + ((i * 97) % lw), ly + ((i * 61) % lh), 3 + (i % 5), 2)
-  context.fillStyle = palette.plateInk
-  fitText(context, def.name.toUpperCase(), (size) => `bold ${size}px VT323`, 60, lw * 0.9)
-  context.fillText(def.name.toUpperCase(), lx + lw / 2, ly + lh / 2 + 3)
+  if (!lights) {
+    context.fillStyle = palette.plate
+    context.fillRect(lx, ly, lw, lh)
+    context.fillStyle = 'rgb(0 0 0 / 0.08)'
+    for (let i = 0; i < 60; i++) context.fillRect(lx + ((i * 97) % lw), ly + ((i * 61) % lh), 3 + (i % 5), 2)
+    context.fillStyle = palette.plateInk
+    fitText(context, def.name.toUpperCase(), (size) => `bold ${size}px VT323`, 60, lw * 0.9)
+    centred(context, def.name.toUpperCase(), lx + lw / 2, ly + lh / 2)
+  }
 
   // The screen: the art above the divider, the sigils below it, the cost in the top-right corner.
   const [sx, sy, sw, sh] = recess(RECESS.screen)
-  screen(context, RECESS.screen, palette.screen)
+  if (!lights) screen(context, RECESS.screen, palette.screen)
   const divider = SCREEN_DIVIDER * H
   const art = loaded.art.get(unit.card)
   if (art) hologram(context, art, sx + sw * 0.03, sy + sh * 0.08, sw * 0.94, divider - sy - sh * 0.1, palette)
@@ -266,7 +285,7 @@ function drawTechFace(context: CanvasRenderingContext2D, unit: Unit, loaded: Ass
   const cells = 4
   const cell = 13
   for (let i = 0; i < cells; i++) {
-    context.fillStyle = i < def.cost ? palette.cost : 'rgb(255 255 255 / 0.1)'
+    context.fillStyle = i < def.cost ? palette.cost : lights ? '#000000' : 'rgb(255 255 255 / 0.1)'
     context.fillRect(sx + sw - 8 - (cells - i) * (cell + 3), sy + 7, cell, 24)
   }
   context.fillStyle = '#f4fbff'
@@ -282,16 +301,18 @@ function drawTechFace(context: CanvasRenderingContext2D, unit: Unit, loaded: Ass
     )
   }
 
-  // Attack and health as plain numerals, each in its own box.
+  // Attack and health as plain numerals, each centred in its own box.
   const [ax, ay, aw, ah] = recess(RECESS.attack)
   const [hx, hy, hw, hh] = recess(RECESS.health)
-  screen(context, RECESS.attack, palette.screen)
-  screen(context, RECESS.health, palette.screen)
+  if (!lights) {
+    screen(context, RECESS.attack, palette.screen)
+    screen(context, RECESS.health, palette.screen)
+  }
   context.font = Math.max(unit.attack, unit.health) > 99 ? '40px VT323' : '64px VT323'
   context.fillStyle = palette.line
-  context.fillText(String(unit.attack), ax + aw / 2, ay + ah / 2 + 3)
+  centred(context, String(unit.attack), ax + aw / 2, ay + ah / 2)
   context.fillStyle = unit.health < unit.maxHealth ? palette.hurt : palette.line
-  context.fillText(String(unit.health), hx + hw / 2, hy + hh / 2 + 3)
+  centred(context, String(unit.health), hx + hw / 2, hy + hh / 2)
 }
 
 /** The back of the disk: plastic with faint traces; the hub and ribs are geometry on top. */
@@ -337,6 +358,19 @@ export function faceTexture(unit: Unit, loaded: Assets, style: CardStyle = 'cabi
     const [element, context] = canvas()
     if (style === 'tech') drawTechFace(context, unit, loaded)
     else drawFace(context, unit, loaded)
+    found = texture(element)
+    faces.set(key, found)
+  }
+  return found
+}
+
+/** What glows on a tech card, for its emissive map; black where the plastic and the sticker are. */
+export function faceLights(unit: Unit, loaded: Assets): Texture {
+  const key = `lights:${unit.card}:${unit.attack}:${unit.health}:${unit.maxHealth}:${unit.sigils.join(',')}`
+  let found = faces.get(key)
+  if (!found) {
+    const [element, context] = canvas()
+    drawTechFace(context, unit, loaded, true)
     found = texture(element)
     faces.set(key, found)
   }

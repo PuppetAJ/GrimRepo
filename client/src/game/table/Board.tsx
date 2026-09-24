@@ -2,8 +2,8 @@ import { useFrame, type ThreeEvent } from '@react-three/fiber'
 import { easing } from 'maath'
 import { useMemo, useRef, useState, type ReactNode } from 'react'
 import * as THREE from 'three'
-import { backTexture, faceTexture, type CardStyle, type loadCardAssets } from './faces.ts'
-import { BACK_Z, DISK_MATERIALS, diskGeometry, FACE_Z } from './Disk.tsx'
+import { backTexture, faceLights, faceTexture, type CardStyle, type loadCardAssets } from './faces.ts'
+import { BACK_Z, diskGeometry, diskMaterials, FACE_Z } from './Disk.tsx'
 import { BOARD_DEPTH, CARD, DECK, DISK, lanes, PILE, ROW_Z, slot, TABLE_Y, type Row, type Vec3 } from './layout.ts'
 
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
@@ -178,37 +178,48 @@ function Stack({
   layers,
   top,
   back,
+  lights,
   style = 'cabin',
 }: {
   layers: number
   top: THREE.Texture
   back: THREE.Texture
+  lights?: THREE.Texture
   style?: CardStyle
 }) {
   const faces = useMemo(
     () => [
-      new THREE.MeshStandardMaterial({ map: top, roughness: 0.9, transparent: true }),
-      new THREE.MeshStandardMaterial({ map: back, roughness: 0.9, transparent: true }),
+      new THREE.MeshStandardMaterial({
+        map: top,
+        emissive: '#ffffff',
+        emissiveMap: lights ?? null,
+        emissiveIntensity: lights ? 1.1 : 0,
+        roughness: 0.9,
+        transparent: true,
+        alphaTest: 0.5,
+      }),
+      new THREE.MeshStandardMaterial({ map: back, roughness: 0.9, transparent: true, alphaTest: 0.5 }),
     ],
-    [top, back],
+    [top, back, lights],
   )
   if (style === 'tech') {
-    const disk = diskGeometry()
+    // Face down, the disks are the compact kind; face up they are full, and only the top one shows its relief and sheet.
+    const faceUp = top !== back
+    const disk = diskGeometry(faceUp ? 'full' : 'compact')
+    const plastics = diskMaterials('common')
     const pitch = DISK.depth + DISK.relief * 2
-    // Only the top disk shows its relief and sheet; the rest are bodies, seen edge on.
     return [...Array(layers).keys()].map((i) => {
       const topmost = i === layers - 1
-      const faceUp = top !== back
       return (
         <group
           key={i}
           position={[((i * 7) % 5) * 0.004 - 0.008, pitch * (i + 0.5), ((i * 3) % 4) * 0.004 - 0.006]}
           rotation={[faceUp ? -Math.PI / 2 : Math.PI / 2, 0, ((i * 5) % 7) * 0.006 - 0.018]}
         >
-          <mesh geometry={disk.body} material={[DISK_MATERIALS.common.body, DISK_MATERIALS.common.edge]} />
-          {topmost ? <mesh geometry={disk.plastic} material={DISK_MATERIALS.common.plastic} /> : null}
-          {topmost ? <mesh geometry={disk.dark} material={DISK_MATERIALS.common.dark} /> : null}
-          {topmost ? (
+          <mesh geometry={disk.body} material={[plastics.body, plastics.edge]} />
+          {topmost ? <mesh geometry={disk.plastic} material={plastics.plastic} /> : null}
+          {topmost ? <mesh geometry={disk.dark} material={plastics.dark} /> : null}
+          {topmost && faceUp ? (
             <mesh
               geometry={sheet}
               material={faceUp ? faces[0] : faces[1]}
@@ -258,6 +269,8 @@ export function Deck({
   )
 }
 
+const BOILERPLATE_UNIT = { uid: 0, card: 'Boilerplate', attack: 0, health: 1, maxHealth: 1, sigils: [] }
+
 /** The Boilerplate pile: free fuel, like Inscryption's squirrels, and it never runs out. */
 export function Pile({
   assets,
@@ -270,15 +283,13 @@ export function Pile({
   onClick: Click
   active: boolean
 }) {
-  const top = useMemo(
-    () => faceTexture({ uid: 0, card: 'Boilerplate', attack: 0, health: 1, maxHealth: 1, sigils: [] }, assets, style),
-    [assets, style],
-  )
+  const top = useMemo(() => faceTexture(BOILERPLATE_UNIT, assets, style), [assets, style])
+  const lights = useMemo(() => (style === 'tech' ? faceLights(BOILERPLATE_UNIT, assets) : undefined), [assets, style])
   const back = useMemo(() => backTexture(assets, style), [assets, style])
   return (
     <group position={PILE}>
       <Nudge active={active} onClick={onClick} size={[0.85, 0.2, 1.35]} label="pile">
-        <Stack layers={6} top={top} back={back} style={style} />
+        <Stack layers={6} top={top} back={back} lights={lights} style={style} />
       </Nudge>
     </group>
   )
