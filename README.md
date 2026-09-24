@@ -34,21 +34,22 @@ The client is at http://localhost:3000 and proxies `/api` and `/health` to the A
 
 ## Scripts
 
-| Script                        | Does                                                                                                                                     |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm dev`                    | Client and API together, reloading on change                                                                                             |
-| `pnpm build`                  | Builds the client into `client/dist`                                                                                                     |
-| `pnpm start`                  | The API, serving the built client when `NODE_ENV=production`                                                                             |
-| `pnpm lint` / `pnpm format`   | oxlint / Prettier                                                                                                                        |
-| `pnpm typecheck`              | TypeScript across every package                                                                                                          |
-| `pnpm test`                   | Unit tests in every package                                                                                                              |
-| `pnpm test:e2e`               | The browser suites (smoke, auth, leaderboard, game) against `E2E_BASE_URL`, default http://localhost:3000; `pnpm test:e2e game` runs one |
-| `pnpm db:up` / `pnpm db:down` | Start and stop the local Postgres                                                                                                        |
-| `pnpm db:migrate`             | Apply the migrations in `server/migrations`                                                                                              |
-| `pnpm db:seed`                | Wipe the database and reseed the demo state                                                                                              |
-| `pnpm db:seed:empty`          | Seed only if there are no players yet; Railway runs this on every boot                                                                   |
-| `pnpm db:cleanup`             | The nightly clean-up, by hand                                                                                                            |
-| `pnpm moderate`               | Rename, remove, list or scan accounts; see Looking after the live site                                                                   |
+| Script                              | Does                                                                                                                                            |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm dev`                          | Client and API together, reloading on change                                                                                                    |
+| `pnpm build`                        | Builds the client into `client/dist`                                                                                                            |
+| `pnpm start`                        | The API, serving the built client when `NODE_ENV=production`                                                                                    |
+| `pnpm lint` / `pnpm format`         | oxlint / Prettier                                                                                                                               |
+| `pnpm typecheck`                    | TypeScript across every package                                                                                                                 |
+| `pnpm test`                         | Unit tests in every package                                                                                                                     |
+| `pnpm test:e2e`                     | The browser suites (smoke, auth, leaderboard, game, table) against `E2E_BASE_URL`, default http://localhost:3000; `pnpm test:e2e game` runs one |
+| `pnpm db:up` / `pnpm db:down`       | Start and stop the local Postgres                                                                                                               |
+| `pnpm db:migrate`                   | Apply the migrations in `server/migrations`                                                                                                     |
+| `pnpm db:seed`                      | Wipe the database and reseed the demo state                                                                                                     |
+| `pnpm db:seed:empty`                | Seed only if there are no players yet; Railway runs this on every boot                                                                          |
+| `pnpm db:cleanup`                   | The nightly clean-up, by hand                                                                                                                   |
+| `pnpm moderate`                     | Rename, remove, list or scan accounts; see Looking after the live site                                                                          |
+| `pnpm --filter client render:cards` | Renders the art out of the 2022 card models into `client/public/cards`; run once, the images are committed                                      |
 
 ## How the code is arranged
 
@@ -60,6 +61,14 @@ e2e/      browser suites, plain Playwright scripts
 ```
 
 Imports run one way, and oxlint enforces it: the client and the server may use `shared`, `shared` uses neither, and neither imports the other.
+
+## The table
+
+The game is played on a 3D table by default: the 2022 room, P03 and board, rebuilt with React Three Fiber in `client/src/game/table`. Every card is one mesh whose face is drawn from the card data on a canvas, so a card's numbers change on the table as they change in the rules. The rules engine reports what each move did as a list of events, and the table plays them back one at a time, so a card lunges, a number rises off what it hit, and the dead sink away. A unit test folds the events of whole games and checks the table always lands on the rules' own state.
+
+The same game can be played as text, which reads well on a phone held upright and works with a screen reader. The switch is on both tables and is remembered per browser; an upright phone is offered the text table rather than a sideways one. On a phone held sideways the 3D table takes the whole screen.
+
+In development, `window.__game` exposes the table's state and where things are on screen, which the `table` browser suite uses to click the models.
 
 ## The API
 
@@ -103,7 +112,7 @@ The original team: Adrian Jimenez, Kenan McKenzie and Johan Herrera ([original r
 - **The bell:** [Table bell](https://sketchfab.com/3d-models/table-bell-77f2ea17b4c84fe1a8d2aec02caa9de3) on Sketchfab, edited by Adrian Jimenez.
 - **The board and the deck:** made by Adrian Jimenez, with Inscryption's textures on the deck.
 - **The candle:** [The lonely candle](https://discourse.threejs.org/t/the-lonely-candle/4097) by prisoner849, using noise from [The Book of Shaders](https://thebookofshaders.com/11/) and [Morgan McGuire](https://www.shadertoy.com/view/4dS3Wd) and a [heatmap gradient](https://www.shadertoy.com/view/4dsSzr) from Shadertoy.
-- **The loading screen:** adapted from a [three.js forum thread](https://discourse.threejs.org/t/basic-loading-screen/2332).
+- **The cards:** Adrian Jimenez's art from the 2022 card models, rendered out once, on Inscryption's card frame and back.
 - **The name filter:** word lists from [obscenity](https://github.com/jo3-l/obscenity) (MIT) and [LDNOOBW](https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words) (CC BY 4.0).
 - **The game** is a tribute to Inscryption by Daniel Mullins Games.
 
