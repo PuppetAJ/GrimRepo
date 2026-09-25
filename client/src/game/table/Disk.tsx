@@ -1,7 +1,7 @@
 import { forwardRef, useImperativeHandle, useLayoutEffect, useMemo, useRef, type RefObject } from 'react'
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
-import { CARD, DISK, RECESS, SECTIONS } from './layout.ts'
+import { CARD, CORNER_HOLES, DISK, RECESS, SECTIONS } from './layout.ts'
 
 // The floppy disk the factory's cards are made of, after the Act 3 card models. It is built in three sections,
 // the top (shutter sleeve, label, hub housing), the middle (screen, side rails) and the bottom (stats, bottom band),
@@ -31,25 +31,41 @@ const rect = ([x0, y0, x1, y1]: readonly [number, number, number, number]) =>
 
 const R = 0.03 * w
 const CLIP = DISK.clip * w
-// The two square holes at the top corners go right through the disk.
-const CORNER_HOLES: (readonly [number, number, number, number])[] = [
-  [0.09, 0.02, 0.15, 0.06],
-  [0.85, 0.02, 0.91, 0.06],
-]
 // The shutter's window, an indent in its plate on both faces, at the same x so they line up through the disk.
 const WINDOW = [0.57, 0.025, 0.66, 0.08] as const
 const RAILS = [0.27, 0.73]
 
-/** The top section's outline: the rounded top-left corner and the clipped top-right one, and the corner holes. */
-function topShape(): THREE.Shape {
+// The shutter's track, and the hub's housing on the back, which is squarer than the disk so a closed disk clears it.
+const TRACK = [0.2, 0.8] as const
+const HOUSING = { left: 0.25, right: 0.75, bottom: 0.48 } as const
+
+/**
+ * The top section's outline: the rounded top-left corner, the clipped top-right one and the corner holes. A
+ * `notch` is the track cut down from the top edge (a hole touching the edge would leave a zero-height face);
+ * `housing` carries the outline on down around the hub's housing, so the back's rim and housing are one piece.
+ */
+function topShape({ notch = 0, housing = false } = {}): THREE.Shape {
   const y = fy(MT)
   const shape = new THREE.Shape()
     .moveTo(-w / 2, y)
     .lineTo(-w / 2, h / 2 - R)
     .quadraticCurveTo(-w / 2, h / 2, -w / 2 + R, h / 2)
+  if (notch)
+    shape
+      .lineTo(fx(TRACK[0]), h / 2)
+      .lineTo(fx(TRACK[0]), fy(notch))
+      .lineTo(fx(TRACK[1]), fy(notch))
+      .lineTo(fx(TRACK[1]), h / 2)
+  shape
     .lineTo(w / 2 - CLIP, h / 2)
     .lineTo(w / 2, h / 2 - CLIP)
     .lineTo(w / 2, y)
+  if (housing)
+    shape
+      .lineTo(fx(HOUSING.right), y)
+      .lineTo(fx(HOUSING.right), fy(HOUSING.bottom))
+      .lineTo(fx(HOUSING.left), fy(HOUSING.bottom))
+      .lineTo(fx(HOUSING.left), y)
   shape.holes.push(...CORNER_HOLES.map(hole))
   return shape
 }
@@ -103,32 +119,27 @@ function build() {
   middle.plastic.push(extrude(middleShape(), DISK.depth, back))
   bottom.plastic.push(extrude(bottomShape(), DISK.depth, back))
 
-  // Top, front: the rim with the shutter's track and the label recess cut out.
-  const topFront = topShape()
-  topFront.holes.push(hole([0.2, 0, 0.8, 0.1]), hole(RECESS.label))
+  // Top, front: the rim with the shutter's track notched into it and the label recess cut out.
+  const topFront = topShape({ notch: 0.1 })
+  topFront.holes.push(hole(RECESS.label))
   top.plastic.push(extrude(topFront, raised, front))
   // The steel shutter sleeve: a plate on the front in the track, a plate on the back, and the bridge over the top
   // edge that joins them, so they read as one piece that slides.
   plate([0.25, 0.008, 0.75, 0.095], raised * 1.2, front, top)
   plate([0.25, 0.01, 0.75, 0.21], -raised * 1.2, rimBack, top)
   top.metal.push(box(0.25, -0.006, 0.75, 0.01, DISK.depth + raised * 3.4, -raised / 2))
-  // Top, back: the rim strip, the hub's housing at rim height, the hub with its ring and two indents, and the
-  // guides the rails run down from.
-  const topBack = topShape()
-  topBack.holes.push(hole([0.2, 0, 0.8, 0.22]))
-  top.plastic.push(extrude(topBack, -raised, rimBack + raised))
-  // The hub's housing, joined to the rim above it as one piece; the track is cut into it too.
-  const housing = rect([0.25, MT - 0.001, 0.75, 0.55])
-  housing.holes.push(hole([0.25, MT - 0.001, 0.75, 0.22]))
-  top.plastic.push(extrude(housing, -raised, rimBack + raised))
-  const [hx, hy] = [fx(0.5), fy(0.4)]
+  // Top, back: the rim and the hub's housing as one piece with the track notched into it, the hub with its ring
+  // and two indents, and the guides the rails run down from.
+  top.plastic.push(extrude(topShape({ notch: 0.21, housing: true }), -raised, rimBack + raised))
+  const [hx, hy] = [fx(0.5), fy(0.35)]
   const hub = new THREE.Shape().absarc(hx, hy, 0.16 * w, 0, Math.PI * 2, false)
-  hub.holes.push(hole([0.5, 0.36, 0.56, 0.4]), hole([0.46, 0.42, 0.5, 0.45]))
+  hub.holes.push(hole([0.5, 0.31, 0.56, 0.35]), hole([0.46, 0.37, 0.5, 0.4]))
   top.metal.push(extrude(hub, -raised * 0.6, rimBack))
-  top.dark.push(box(0.49, 0.35, 0.57, 0.41, 0.003, rimBack - 0.0025))
-  top.dark.push(box(0.45, 0.41, 0.51, 0.46, 0.003, rimBack - 0.0025))
+  top.dark.push(box(0.49, 0.3, 0.57, 0.36, 0.003, rimBack - 0.0025))
+  top.dark.push(box(0.45, 0.36, 0.51, 0.41, 0.003, rimBack - 0.0025))
   top.metal.push(new THREE.TorusGeometry(0.18 * w, 0.01, 6, 36).translate(hx, hy, rimBack - raised * 0.3))
-  for (const x of RAILS) top.plastic.push(box(x - 0.03, 0.44, x + 0.03, 0.48, raised, back - raised / 2))
+  for (const x of RAILS)
+    top.plastic.push(box(x - 0.03, HOUSING.bottom - 0.02, x + 0.03, HOUSING.bottom + 0.02, raised, back - raised / 2))
 
   // Middle: the rim's side strips on both faces, the steel strips on them, and the clips holding the screen.
   for (const [x0, x1] of [
@@ -368,7 +379,7 @@ export const Disk = forwardRef<
       middle.current?.scale.setY(Math.max(spare / (h * (MB - MT)), 0.001))
       bottom.current?.position.setY(-height / 2)
       // From the guides under the housing to the feet on the bottom section.
-      const guides = height / 2 - 0.48 * h
+      const guides = height / 2 - HOUSING.bottom * h
       const feet = -height / 2 + (1 - MB + 0.035) * h
       rails.current?.position.setY(guides)
       rails.current?.scale.setY(Math.max(guides - feet, 0.001))

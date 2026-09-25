@@ -8,6 +8,11 @@ export const TABLE_Y = 7.0
 
 /** The factory's card is a floppy disk: a plastic body with raised rims, and these recesses, as fractions of the face from its top-left. */
 export const DISK = { depth: 0.024, relief: 0.011, clip: 0.11, compact: 0.68 }
+/** The two square holes at the disk's top corners, right through it; the face drawings leave them clear. */
+export const CORNER_HOLES = [
+  [0.09, 0.02, 0.15, 0.06],
+  [0.85, 0.02, 0.91, 0.06],
+] as const
 /** The disk is three sections: the top with the shutter and label, the middle with the screen, and the bottom with the stats. Only the middle compresses. */
 export const SECTIONS = { middleTop: 0.215, middleBottom: 0.855 } as const
 // Measured from Act 3's card: the shutter, a full-width label, one tall screen holding the art, a divider and the sigils, and the stats along the foot.

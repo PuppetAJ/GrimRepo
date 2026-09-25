@@ -1,6 +1,6 @@
 import { card, CARDS, SIGILS, type SigilId, type Unit } from 'shared'
 import { CanvasTexture, SRGBColorSpace, type Texture } from 'three'
-import { DISK, RECESS, SCREEN_DIVIDER, SECTIONS, SIGIL_BAND } from './layout.ts'
+import { CORNER_HOLES, DISK, RECESS, SCREEN_DIVIDER, SECTIONS, SIGIL_BAND } from './layout.ts'
 
 // The face is drawn at the card's own shape, so nothing is stretched.
 const W = 300
@@ -203,6 +203,11 @@ function centred(context: CanvasRenderingContext2D, text: string, x: number, y: 
   context.textBaseline = 'middle'
 }
 
+/** The corner holes go right through the disk, so the sheets are clear there (the material discards clear pixels). */
+function clearHoles(context: CanvasRenderingContext2D) {
+  for (const [x0, y0, x1, y1] of CORNER_HOLES) context.clearRect(x0 * W, y0 * H, (x1 - x0) * W, (y1 - y0) * H)
+}
+
 const recess = ([x0, y0, x1, y1]: readonly [number, number, number, number]) =>
   [x0 * W, y0 * H, (x1 - x0) * W, (y1 - y0) * H] as const
 
@@ -262,6 +267,7 @@ function drawTechFace(context: CanvasRenderingContext2D, unit: Unit, loaded: Ass
   context.fillStyle = lights ? '#000000' : palette.body
   diskPath(context)
   context.fill()
+  clearHoles(context)
   context.imageSmoothingEnabled = true
   context.textAlign = 'center'
   context.textBaseline = 'middle'
@@ -333,6 +339,7 @@ function drawTechBack(context: CanvasRenderingContext2D): void {
   context.fillStyle = COMMON.body
   diskPath(context, true)
   context.fill()
+  clearHoles(context)
   context.fillStyle = 'rgb(0 0 0 / 0.35)'
   context.fillRect(W * 0.045, H * SECTIONS.middleTop, W * 0.91, H * (SECTIONS.middleBottom - SECTIONS.middleTop))
 }
