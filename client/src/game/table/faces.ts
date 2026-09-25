@@ -68,7 +68,7 @@ type Palette = {
   hurt: string
 }
 const COMMON: Palette = {
-  body: '#1f3044',
+  body: TINT.card.body,
   screen: TINT.card.screen,
   line: TINT.card.line,
   fill: TINT.card.fill,

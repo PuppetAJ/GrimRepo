@@ -19,5 +19,5 @@ export function remembered<T extends string>(name: string, options: readonly T[]
 /** The factory's gems while the two are compared: `?gems=module` for the drone's module, `?gems=built` for the ones built in code. */
 export const chosenGems = (): GemsName => remembered('gems', ['built', 'module'], 'built')
 
-/** The factory's light while the two are compared: `?palette=green` for P03's phosphor green, `?palette=cyan` for the first. */
-export const chosenPalette = (): PaletteName => remembered('palette', ['cyan', 'green'], 'cyan')
+/** The factory's light: P03's green, or `?palette=cyan` for the first, kept while the mood is compared. */
+export const chosenPalette = (): PaletteName => remembered('palette', ['cyan', 'green'], 'green')
