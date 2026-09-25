@@ -28,6 +28,7 @@ import {
 import { Deck, Pile } from './Piles.tsx'
 import { EndTurnButton, Factory, FactoryEffects, FactoryP03, TechBoard } from './Factory.tsx'
 import { TINT } from './palette.ts'
+import { CardBatch } from './Batch.tsx'
 import { Boot } from './Boot.tsx'
 import { usePlayback } from './usePlayback.ts'
 
@@ -182,7 +183,7 @@ function Scene({
     view.summon?.uid === uid ? 'selected' : can({ type: 'select', uid } as Partial<Action>) ? 'plain' : 'dim'
 
   return (
-    <>
+    <CardBatch assets={assets}>
       <CameraRig view={camera} />
       {/* One boundary, so the stand-in popup is drawn only once every light and the fog are in place. */}
       <Suspense fallback={null}>
@@ -272,7 +273,7 @@ function Scene({
       {import.meta.env.DEV || import.meta.env.VITE_TEST_HANDLE === '1' ? (
         <TestHandle game={game} view={view} busy={busy} skip={skip} />
       ) : null}
-    </>
+    </CardBatch>
   )
 }
 
@@ -607,6 +608,12 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
     return () => clearTimeout(add)
   }, [item])
   const [warmed, setWarmed] = useState(false)
+  const [settled, setSettled] = useState(false)
+  useEffect(() => {
+    if (!warmed) return
+    const wait = setTimeout(() => setSettled(true), 3000)
+    return () => clearTimeout(wait)
+  }, [warmed])
   const { playback, busy, skip } = usePlayback(game)
   const [chosen, setCamera] = useState<CameraView>('table')
   // Summoning is done looking down over the board, as in Inscryption.
@@ -664,12 +671,15 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
         aria-hidden
       >
         <color attach="background" args={['#020203']} />
-        <PerformanceMonitor
-          factor={1}
-          flipflops={3}
-          onChange={({ factor }) => setDpr(Math.round((1 + factor * (sharpest - 1)) * 4) / 4)}
-          onFallback={() => setDpr(1)}
-        />
+        {/* Only once loaded and settled: the first frames are slow, and would lower the resolution for good. */}
+        {settled ? (
+          <PerformanceMonitor
+            factor={1}
+            flipflops={3}
+            onChange={({ factor }) => setDpr(Math.round((1 + factor * (sharpest - 1)) * 4) / 4)}
+            onFallback={() => setDpr(1)}
+          />
+        ) : null}
         <Suspense fallback={null}>
           <Scene
             game={playing}

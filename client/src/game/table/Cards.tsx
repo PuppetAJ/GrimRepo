@@ -3,7 +3,8 @@ import { easing } from 'maath'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { card, type Unit } from 'shared'
 import * as THREE from 'three'
-import { Disk, type DiskHandle } from './Disk.tsx'
+import { useBatch } from './Batch.tsx'
+import { Disk, facePlanes, type DiskHandle } from './Disk.tsx'
 import { backTexture, faceContent, faceLights, faceTexture, type loadCardAssets } from './faces.ts'
 import { DECK, HAND_SCALE, handPlace, slot, type Row, type Vec3 } from './layout.ts'
 import { LEAVE_MS, type Lunge } from './playback.ts'
@@ -87,6 +88,20 @@ export function Card({
   // A card drawn from the deck starts closed, as it lay in the deck, and opens on the way to the hand.
   const fromDeck = Boolean(spawn && spawn[0] === DECK[0] && spawn[2] === DECK[2])
   const open = useRef(fromDeck ? 0 : 1)
+  // Once open and staying, the body is drawn with every other card's in one batch, and only the face is the card's own.
+  const batch = useBatch()
+  const kind = card(unit.card).tier === 'S' ? 'rare' : 'common'
+  const [settled, setSettled] = useState(!fromDeck)
+  const batched = Boolean(batch) && settled && leavingAt === undefined
+  const seat = useRef(-1)
+  useEffect(() => {
+    if (!batched || !batch) return
+    seat.current = batch.take(kind)
+    return () => {
+      batch.give(kind, seat.current)
+      seat.current = -1
+    }
+  }, [batched, batch, kind])
   const shook = useRef(-Infinity)
   useEffect(() => {
     if (shake) shook.current = performance.now()
@@ -142,6 +157,11 @@ export function Card({
     easing.damp3(card.position, position, 0.07, delta)
     easing.dampQ(card.quaternion, rotation, 0.07, delta)
     easing.damp3(card.scale, scale, 0.07, delta)
+    if (!settled && open.current > 0.995) setSettled(true)
+    if (batched && batch && seat.current >= 0) {
+      card.updateMatrix()
+      batch.place(kind, seat.current, card.matrix, look === 'dim' ? 0.45 : 1)
+    }
 
     // A card that can be sacrificed pulses red; a marked one holds it.
     const pulse = look === 'markable' ? 0.2 + 0.15 * Math.sin(now / 160) : 0
@@ -186,14 +206,11 @@ export function Card({
 
   return (
     <group ref={mesh} name={`card-${unit.uid}`} {...handlers}>
-      <Disk
-        ref={disk}
-        open={fromDeck ? 0 : 1}
-        kind={card(unit.card).tier === 'S' ? 'rare' : 'common'}
-        front={front}
-        content={content}
-        back={rear}
-      />
+      {batched ? (
+        <mesh geometry={facePlanes().content} material={content} />
+      ) : (
+        <Disk ref={disk} open={fromDeck ? 0 : 1} kind={kind} front={front} content={content} back={rear} />
+      )}
     </group>
   )
 }

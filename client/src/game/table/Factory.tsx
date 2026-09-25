@@ -15,6 +15,7 @@ import { ToneMappingMode } from 'postprocessing'
 import { memo, Suspense, use, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactElement } from 'react'
 import { TIP } from 'shared'
 import * as THREE from 'three'
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import type { View } from '../view.ts'
 import { Nudge } from './Piles.tsx'
 import { TINT } from './palette.ts'
@@ -328,12 +329,59 @@ export function Scale({ view }: { view: View }) {
 
 const RED = '#ff4a3d'
 
+/** A float copy of a geometry: loaded models store theirs quantized, which cannot be moved into place and merged. */
+function unpacked(geometry: THREE.BufferGeometry, names: string[]): THREE.BufferGeometry {
+  const copy = new THREE.BufferGeometry()
+  for (const name of names) {
+    const from = geometry.getAttribute(name)
+    const to = new Float32Array(from.count * from.itemSize)
+    for (let i = 0; i < from.count; i++)
+      for (let k = 0; k < from.itemSize; k++) to[i * from.itemSize + k] = from.getComponent(i, k)
+    copy.setAttribute(name, new THREE.BufferAttribute(to, from.itemSize))
+  }
+  if (geometry.index) copy.setIndex(geometry.index.clone())
+  return copy.toNonIndexed()
+}
+
+/** Merges a model's parts that never move into one mesh per material, once; the parts matching `keep` stay apart. */
+function mergeStill(root: THREE.Object3D, keep: RegExp): number {
+  if (root.userData['merged']) return 0
+  root.userData['merged'] = true
+  root.updateMatrixWorld(true)
+  const inverse = root.matrixWorld.clone().invert()
+  const groups = new Map<THREE.Material, THREE.Mesh[]>()
+  root.traverse((object) => {
+    const mesh = object as THREE.Mesh
+    if (!mesh.isMesh || keep.test(mesh.name) || Array.isArray(mesh.material)) return
+    groups.set(mesh.material, [...(groups.get(mesh.material) ?? []), mesh])
+  })
+  let merged = 0
+  for (const [material, meshes] of groups) {
+    if (meshes.length < 2) continue
+    const names = ['position', 'normal', 'uv'].filter((name) =>
+      meshes.every((mesh) => mesh.geometry.getAttribute(name)),
+    )
+    const parts = meshes.map((mesh) =>
+      unpacked(mesh.geometry, names).applyMatrix4(new THREE.Matrix4().multiplyMatrices(inverse, mesh.matrixWorld)),
+    )
+    const geometry = mergeGeometries(parts, false)
+    if (!geometry) continue
+    for (const part of parts) part.dispose()
+    for (const mesh of meshes) mesh.removeFromParent()
+    root.add(new THREE.Mesh(geometry, material))
+    merged += meshes.length
+  }
+  return merged
+}
+
 /** Act 3's battery, hovering by the table: the scale fills its cells from the leader's end, cyan for the player and red for P03. */
 function Battery({ view }: { view: View }) {
   const { scene } = useGLTF('/models/battery.glb', false, false)
   const drone = useRef<THREE.Group>(null)
-  const { cells, propellers } = useMemo(
-    () => ({
+  const { cells, propellers } = useMemo(() => {
+    // The frame never moves, so its pieces are drawn as one; the cells light and the propellers turn, so they stay apart.
+    mergeStill(scene, /^(Cell-\d|Left-Propeller|Right-Propeller)$/)
+    return {
       cells: [...Array(BATTERY_CELLS).keys()].map((i) => {
         const cell = scene.getObjectByName(`Cell-${i}`) as THREE.Mesh
         // Each cell gets its own material, once, so it can light alone.
@@ -342,9 +390,8 @@ function Battery({ view }: { view: View }) {
         return { material: cell.material as THREE.MeshStandardMaterial, glow: 0, since: 0, on: false }
       }),
       propellers: ['Left-Propeller', 'Right-Propeller'].map((name) => scene.getObjectByName(name) as THREE.Object3D),
-    }),
-    [scene],
-  )
+    }
+  }, [scene])
   const lit = leadCells(view.scale)
   useFrame(({ clock }, delta) => {
     const t = clock.getElapsedTime()
@@ -861,3 +908,14 @@ export function FactoryEffects() {
     </EffectComposer>
   )
 }
+
+// Fetched as soon as the table's code arrives, alongside the card art, rather than as each part first renders.
+for (const url of [
+  '/models/p03.glb',
+  '/models/battery.glb',
+  '/models/hammer.glb',
+  '/models/pliers.glb',
+  '/models/light.glb',
+])
+  useGLTF.preload(url, false, false)
+for (const name of ['table', 'floor', 'wall']) useTexture.preload(Object.values(surfaces(name)))

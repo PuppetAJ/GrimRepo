@@ -356,6 +356,16 @@ const sheetGeometries = () =>
 
 export type DiskHandle = { setOpen: (open: number) => void }
 
+let planes: Record<'front' | 'content' | 'back', THREE.BufferGeometry> | null = null
+
+/** An open disk's face, what shows on it, and its back, each as one plane: an open disk's three sheets line up into one. */
+export const facePlanes = () =>
+  (planes ??= {
+    front: new THREE.PlaneGeometry(w, h).translate(0, 0, FACE_Z),
+    content: new THREE.PlaneGeometry(w, h).translate(0, 0, FACE_Z + 0.0005),
+    back: new THREE.PlaneGeometry(w, h).rotateY(Math.PI).translate(0, 0, BACK_Z),
+  })
+
 /** Where each section sits, open (1) or closed (0): the top and bottom keep their size and the middle compresses between. */
 function poseAt(open: number) {
   const height = h * (DISK.compact + (1 - DISK.compact) * open)
