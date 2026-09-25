@@ -12,23 +12,25 @@ function move(state: GameState, action: Action): { state: GameState; events: Gam
 
 describe('playback', () => {
   it('sends every card that dies out from where it last stood, and nothing else', () => {
-    let state = createGame({ seed: 5 })
-    let playback: Playback = start(state)
     let deaths = 0
-    while (state.status === 'playing') {
-      const { state: after, events } = move(state, nextBotAction(state))
-      for (const event of events) {
-        const before = playback.leaving.length
-        playback = advance(playback, event, 0)
-        if (event.type === 'killed') {
-          deaths++
-          const gone = playback.leaving.at(-1)
-          assert.equal(playback.leaving.length, before + 1)
-          assert.equal(gone?.unit.uid, event.uid)
-          assert.equal(gone?.lane, event.lane)
+    for (const seed of [5, 6, 7, 8]) {
+      let state = createGame({ seed })
+      let playback: Playback = start(state)
+      while (state.status === 'playing') {
+        const { state: after, events } = move(state, nextBotAction(state))
+        for (const event of events) {
+          const before = playback.leaving.length
+          playback = advance(playback, event, 0)
+          if (event.type === 'killed') {
+            deaths++
+            const gone = playback.leaving.at(-1)
+            assert.equal(playback.leaving.length, before + 1)
+            assert.equal(gone?.unit.uid, event.uid)
+            assert.equal(gone?.lane, event.lane)
+          }
         }
+        state = after
       }
-      state = after
     }
     assert.ok(deaths > 5, `only ${deaths} deaths`)
   })

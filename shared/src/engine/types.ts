@@ -1,10 +1,11 @@
 import type { SigilId } from '../cards.ts'
 
 /** Bumped whenever a change would make an old game replay differently; games record the version they began under. */
-export const RULES_VERSION = 2
+export const RULES_VERSION = 3
 
 export const LANES = 4
-export const STARTING_HEALTH = 50
+/** The scale tips this far to win: each point of damage to a player moves it one step against them, as in Inscryption. */
+export const TIP = 24
 export const HAND_LIMIT = 7
 /** A game still going at this turn is lost, which also bounds what the server stores. */
 export const TURN_LIMIT = 200
@@ -30,8 +31,10 @@ export type GameState = {
   status: 'playing' | 'won' | 'lost'
   nextUid: number
   debug: boolean
-  player: { health: number; deck: string[]; hand: Unit[]; board: Slot[] }
-  opponent: { health: number; front: Slot[]; back: Slot[] }
+  /** The damage the player has dealt less the damage taken; at TIP one way or the other, the game is over. */
+  scale: number
+  player: { deck: string[]; hand: Unit[]; board: Slot[] }
+  opponent: { front: Slot[]; back: Slot[] }
   /** A costly card picked from the hand, and the lanes marked to pay for it. */
   summon: { uid: number; marked: number[] } | null
 }
@@ -63,7 +66,7 @@ export type GameEvent =
   | { type: 'overkill'; lane: number; amount: number }
   | { type: 'struckBack'; uid: number; amount: number }
   | { type: 'killed'; uid: number; side: Side; lane: number; row: 'front' | 'back' }
-  | { type: 'hit'; side: Side; amount: number; health: number }
+  | { type: 'hit'; side: Side; amount: number; scale: number }
   | { type: 'retired'; lane: number; uid: number }
   | { type: 'advanced'; lane: number; uid: number }
   | { type: 'queued'; lane: number; unit: Unit }

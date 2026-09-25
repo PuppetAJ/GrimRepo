@@ -1,7 +1,7 @@
 import { X } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router'
-import { card, costOf, SIGILS, worthOf, type Action, type Slot, type Unit } from 'shared'
+import { card, costOf, SIGILS, TIP, worthOf, type Action, type Slot, type Unit } from 'shared'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -135,6 +135,63 @@ export function DemoNote() {
       >
         <X className="size-4" />
       </button>
+    </div>
+  )
+}
+
+/** How the scale reads aloud and in words. */
+export function scaleWords(scale: number): string {
+  if (scale === 0) return 'The scale is level'
+  return scale > 0 ? `You lead by ${scale} of ${TIP}` : `P03 leads by ${-scale} of ${TIP}`
+}
+
+/** The scale as a tug of war: a knot pulled from the middle toward whoever leads; at either end, the game is over. */
+export function ScaleBar({ scale, className = '' }: { scale: number; className?: string }) {
+  const [shown, setShown] = useState({ scale, change: 0, key: 0 })
+  if (shown.scale !== scale) setShown({ scale, change: scale - shown.scale, key: shown.key + 1 })
+  const reach = (Math.min(TIP, Math.abs(scale)) / TIP) * 50
+  // The player's side is on the left, P03's on the right.
+  const knot = 50 - Math.sign(scale) * reach
+  return (
+    <div
+      role="meter"
+      aria-label="The scale"
+      aria-valuemin={-TIP}
+      aria-valuemax={TIP}
+      aria-valuenow={Math.max(-TIP, Math.min(TIP, scale))}
+      aria-valuetext={scaleWords(scale)}
+      className={`flex items-center gap-2 font-terminal ${className}`}
+    >
+      <span className="text-foreground">You</span>
+      <span className="relative h-3 w-32 rounded-sm border border-p03-dim/60 sm:w-44">
+        <span
+          aria-hidden
+          className={`absolute inset-y-0 transition-all duration-300 ${scale > 0 ? 'bg-foreground' : 'bg-death'}`}
+          style={{ left: `${Math.min(50, knot)}%`, width: `${reach}%` }}
+        />
+        <span aria-hidden className="absolute inset-y-[-3px] left-1/2 w-px bg-p03-dim" />
+        <span
+          aria-hidden
+          className="absolute inset-y-[-4px] w-1 -translate-x-1/2 rounded-sm bg-p03 transition-all duration-300"
+          style={{ left: `${knot}%` }}
+        />
+      </span>
+      <span className="text-p03">P03</span>
+      {/* How far the leader is ahead, in the leader's colour. */}
+      <span
+        className={`relative w-10 tabular-nums ${scale > 0 ? 'text-foreground' : scale < 0 ? 'text-death' : 'text-p03-dim'}`}
+      >
+        {Math.abs(scale)}
+        {shown.change ? (
+          <span
+            key={shown.key}
+            aria-hidden
+            className={`absolute top-full left-0 animate-[health-change_1.2s_ease-out_forwards] ${shown.change < 0 ? 'text-death' : 'text-foreground'}`}
+          >
+            {shown.change > 0 ? `+${shown.change}` : shown.change}
+          </span>
+        ) : null}
+      </span>
     </div>
   )
 }

@@ -12,6 +12,7 @@ import {
 import { easing } from 'maath'
 import { ToneMappingMode } from 'postprocessing'
 import { Suspense, use, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactElement } from 'react'
+import { TIP } from 'shared'
 import * as THREE from 'three'
 import type { View } from '../view.ts'
 import { Nudge } from './Piles.tsx'
@@ -308,7 +309,7 @@ export function Scale({ view }: { view: View }) {
     if (!beam) return
     // The player's pan is on the left, P03's on the right; the beam is a lever, so a small angle reads.
     // A lead of 25 tips the beam all the way; the pans hang from it, so the loser's sinks.
-    const lean = THREE.MathUtils.clamp((view.health.player - view.health.opponent) / 25, -1, 1)
+    const lean = THREE.MathUtils.clamp(view.scale / TIP, -1, 1)
     easing.damp(beam.rotation, 'y', lean * 0.45, 0.3, delta)
   })
   return (
@@ -321,7 +322,7 @@ export function Scale({ view }: { view: View }) {
 
 const RED = '#ff4a3d'
 
-/** Act 3's battery, hovering by the table: its cells light from the leader's end, cyan for the player and red for P03. */
+/** Act 3's battery, hovering by the table: the scale fills its cells from the leader's end, cyan for the player and red for P03. */
 function Battery({ view }: { view: View }) {
   const { scene } = useGLTF('/models/battery.glb', false, false)
   const drone = useRef<THREE.Group>(null)
@@ -338,11 +339,13 @@ function Battery({ view }: { view: View }) {
     }),
     [scene],
   )
-  const lit = leadCells(view.health.player, view.health.opponent)
+  const lit = leadCells(view.scale)
   useFrame(({ clock }, delta) => {
     const t = clock.getElapsedTime()
     cells.forEach((cell, i) => {
-      const on = lit > 0 ? i < lit : lit < 0 ? i >= BATTERY_CELLS + lit : false
+      // Counted from the leader's end: full cells burn, and the next glows as far as the scale has reached into it.
+      const fill = THREE.MathUtils.clamp(Math.abs(lit) - (lit > 0 ? i : BATTERY_CELLS - 1 - i), 0, 1)
+      const on = fill > 0
       if (on !== cell.on) {
         cell.on = on
         cell.since = t
@@ -350,7 +353,7 @@ function Battery({ view }: { view: View }) {
       if (on) cell.material.emissive.set(lit > 0 ? CYAN : RED)
       // A cell stutters as it comes on, like a tube catching.
       const catching = on && t - cell.since < 0.3 ? (Math.sin((t - cell.since) * 90) > 0 ? 1 : 0.15) : 1
-      cell.glow = THREE.MathUtils.damp(cell.glow, on ? 1 : 0, 10, delta)
+      cell.glow = THREE.MathUtils.damp(cell.glow, fill, 10, delta)
       cell.material.emissiveIntensity = cell.glow * catching * 1.6
       cell.material.color.setScalar(0.3 + cell.glow * 0.4)
     })
@@ -569,16 +572,16 @@ function loadFaces(): Promise<Record<Face, THREE.Texture>> {
 function useMood(view: View, busy: boolean, outcome: 'win' | 'loss' | undefined): Mood {
   const [choking, setChoking] = useState(false)
   const [impatient, setImpatient] = useState(false)
-  const health = view.health.opponent
-  const last = useRef(health)
+  const scale = view.scale
+  const last = useRef(scale)
   useEffect(() => {
-    const drop = last.current - health
-    last.current = health
-    if (drop < 4) return
+    const hit = scale - last.current
+    last.current = scale
+    if (hit < 4) return
     const start = setTimeout(() => setChoking(true), 0)
     setTimeout(() => setChoking(false), 1600)
     return () => clearTimeout(start)
-  }, [health])
+  }, [scale])
   useEffect(() => {
     const calm = setTimeout(() => setImpatient(false), 0)
     const waiting = busy ? undefined : setTimeout(() => setImpatient(true), 25_000)
@@ -590,7 +593,7 @@ function useMood(view: View, busy: boolean, outcome: 'win' | 'loss' | undefined)
   if (outcome === 'win') return 'whiteflag'
   if (outcome === 'loss') return 'happy'
   if (choking) return 'choking'
-  if (health <= 15) return 'dying'
+  if (scale >= TIP - 6) return 'dying'
   if (impatient) return 'impatient'
   return 'smug'
 }
@@ -658,6 +661,14 @@ export function FactoryP03({ view, busy, outcome }: { view: View; busy: boolean;
   )
 }
 
+/** The scale drawn in text for the status monitor: six marks a side, filling out from the middle toward the leader. */
+function scaleBar(scale: number): string {
+  const marks = Math.round((Math.min(TIP, Math.abs(scale)) / TIP) * 6)
+  const you = scale > 0 ? marks : 0
+  const p03 = scale < 0 ? marks : 0
+  return `YOU[${' '.repeat(6 - you)}${'#'.repeat(you)}|${'#'.repeat(p03)}${' '.repeat(6 - p03)}]P03`
+}
+
 /** Everything around the table: the room, the light, the screens and the props. */
 export function Factory({ view, log }: { view: View; log: string[] }) {
   // The left monitor is the battle log: the last eight lines of P03's console.
@@ -665,12 +676,13 @@ export function Factory({ view, log }: { view: View; log: string[] }) {
   const status = useMemo(
     () => [
       '// STATUS',
-      `YOU  ${String(view.health.player).padStart(3)} HP`,
-      `P03  ${String(view.health.opponent).padStart(3)} HP`,
+      `SCALE ${view.scale === 0 ? 'LEVEL' : `${view.scale > 0 ? '+' : ''}${view.scale} ${view.scale > 0 ? 'YOU' : 'P03'}`}`,
+      scaleBar(view.scale),
+      `TIP AT ${TIP}`,
       `TURN ${view.turn}`,
       `DECK ${view.deck}`,
     ],
-    [view.health.player, view.health.opponent, view.turn, view.deck],
+    [view.scale, view.turn, view.deck],
   )
   return (
     <>

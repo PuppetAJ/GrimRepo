@@ -7,7 +7,7 @@ import { Link } from 'react-router'
 import { legalActions, PLAYER_DECK, type Action, type GameState } from 'shared'
 import * as THREE from 'three'
 import { Button } from '@/components/ui/button.tsx'
-import { DemoNote, GameOver, has, laneAction, owed, prompt, WalkAway } from '../controls.tsx'
+import { DemoNote, GameOver, has, laneAction, owed, prompt, ScaleBar, WalkAway } from '../controls.tsx'
 import type { Ready } from '../useGame.ts'
 import type { View } from '../view.ts'
 import { Card, Popup, type Look, type Place } from './Cards.tsx'
@@ -296,39 +296,6 @@ function Loaded({ onLoad }: { onLoad: (loaded: boolean) => void }) {
 /** A control's words, hidden on a phone held sideways where the icon stands in; screen readers always get them. */
 const Label = ({ children }: { children: ReactNode }) => <span className="short:sr-only">{children}</span>
 
-/** A health readout that shows each change rising off it for a moment. */
-function Health({
-  label,
-  whose,
-  value,
-  className,
-}: {
-  label: string
-  whose: string
-  value: number
-  className: string
-}) {
-  const [shown, setShown] = useState({ value, change: 0, key: 0 })
-  if (shown.value !== value) setShown({ value, change: value - shown.value, key: shown.key + 1 })
-  return (
-    <span
-      aria-label={`${whose} health: ${value}`}
-      className={`relative font-terminal text-2xl sm:text-3xl ${className}`}
-    >
-      {label} <span className="text-death">♥</span> {value}
-      {shown.change ? (
-        <span
-          key={shown.key}
-          aria-hidden
-          className={`absolute top-full right-0 animate-[health-change_1.2s_ease-out_forwards] ${shown.change < 0 ? 'text-death' : 'text-p03'}`}
-        >
-          {shown.change > 0 ? `+${shown.change}` : shown.change}
-        </span>
-      ) : null}
-    </span>
-  )
-}
-
 function Hud({
   game,
   view,
@@ -361,14 +328,13 @@ function Hud({
   return (
     <>
       <div className="pointer-events-none absolute top-0 left-0 flex flex-col p-3 font-terminal sm:p-4">
-        <Health label="You" whose="Your" value={view.health.player} className="text-foreground" />
+        <ScaleBar scale={view.scale} className="text-xl sm:text-2xl" />
         <span className="text-lg text-p03-dim sm:text-xl">
           Turn {view.turn} · Deck {view.deck}
         </span>
       </div>
 
       <div className="absolute top-0 right-0 z-10 flex flex-col items-end gap-1 p-3 sm:p-4">
-        <Health label="P03" whose="P03's" value={view.health.opponent} className="text-p03" />
         {/* Words on a laptop; on a phone held sideways, icons, so the row stays off P03's face. */}
         <div className="flex flex-wrap justify-end">
           <Button

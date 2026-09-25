@@ -1,4 +1,4 @@
-import { LANES } from 'shared'
+import { LANES, TIP } from 'shared'
 
 export type Vec3 = [number, number, number]
 
@@ -81,8 +81,6 @@ export const CAMERA: Record<CameraView, { position: Vec3; target: Vec3 }> = {
 
 export const BATTERY_CELLS = 6
 
-/** The battery's lit cells, one for every 4 HP of lead: positive for the player's lead, negative for P03's. */
-export function leadCells(player: number, opponent: number): number {
-  const lead = player - opponent
-  return Math.sign(lead) * Math.min(BATTERY_CELLS, Math.ceil(Math.abs(lead) / 4))
-}
+/** How full the battery is, in cells: the scale shared out over them, so the last one fills as the scale tips. Positive for the player's lead. */
+export const leadCells = (scale: number): number =>
+  Math.sign(scale) * Math.min(BATTERY_CELLS, (Math.abs(scale) / TIP) * BATTERY_CELLS) || 0

@@ -2,7 +2,7 @@ import { Heart, Swords } from 'lucide-react'
 import { Link } from 'react-router'
 import { card, legalActions, SIGILS, type Action, type GameState, type Slot, type Unit } from 'shared'
 import { Button } from '@/components/ui/button.tsx'
-import { DemoNote, describe, GameOver, has, laneAction, owed, prompt, WalkAway } from './controls.tsx'
+import { DemoNote, describe, GameOver, has, laneAction, owed, prompt, ScaleBar, WalkAway } from './controls.tsx'
 import type { Ready } from './useGame.ts'
 
 function CardFace({ unit, faded = false }: { unit: Unit; faded?: boolean }) {
@@ -132,8 +132,7 @@ export function TextTable({ game, onDemo, on3d }: { game: Ready; onDemo: boolean
     >
       <header className="flex flex-wrap items-center gap-x-8 gap-y-2 text-2xl">
         <span className="text-p03">Turn {state.turn}</span>
-        <span aria-label={`Your health: ${state.player.health}`}>You ♥ {state.player.health}</span>
-        <span aria-label={`P03's health: ${state.opponent.health}`}>P03 ♥ {state.opponent.health}</span>
+        <ScaleBar scale={state.scale} />
         <span className="text-p03-dim">Deck {state.player.deck.length}</span>
         <span className="ml-auto text-base text-p03-dim" aria-live="polite">
           {game.saving ? 'saving…' : game.unsaved ? `${game.unsaved} unsaved` : 'saved'}

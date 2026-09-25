@@ -1,5 +1,5 @@
 // The 3D table: it draws, a first turn by clicking the models, a whole game to the end, the text switch, and phones.
-import { apply, card, nextBotAction, summary } from '../shared/src/index.ts'
+import { apply, card, nextBotAction, summary, TIP } from '../shared/src/index.ts'
 import { BASE, deletePlayer, freshPage, launch, newPlayer, reporter, resetRateLimits, signUp } from './lib.mjs'
 
 await resetRateLimits()
@@ -25,11 +25,8 @@ section('The 3D table')
     'it draws with WebGL',
     await page.evaluate(() => Boolean(document.querySelector('[data-table="3d"] canvas')?.getContext('webgl2'))),
   )
-  check(
-    'the health readouts start full',
-    (await page.getByLabel('Your health: 50').count()) === 1 &&
-      (await page.getByLabel("P03's health: 50").count()) === 1,
-  )
+  const scale = page.getByRole('meter', { name: 'The scale' })
+  check('the scale starts level', (await scale.getAttribute('aria-valuenow')) === '0')
 
   const dev = await page.evaluate(() => Boolean(window.__game))
   if (!dev) {
@@ -110,9 +107,9 @@ section('The 3D table')
       `${JSON.stringify(expected)} vs ${shown}`,
     )
     check(
-      'the readouts show the final health',
-      (await page.getByLabel(`Your health: ${state.player.health}`).count()) === 1 &&
-        (await page.getByLabel(`P03's health: ${state.opponent.health}`).count()) === 1,
+      'the scale shows where the game ended',
+      Number(await scale.getAttribute('aria-valuenow')) === Math.max(-TIP, Math.min(TIP, state.scale)),
+      await scale.getAttribute('aria-valuetext'),
     )
   }
 

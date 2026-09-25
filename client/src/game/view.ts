@@ -6,7 +6,8 @@ export type View = {
   drawn: boolean
   status: GameState['status']
   deck: number
-  health: { player: number; opponent: number }
+  /** The damage dealt less the damage taken; the game ends at TIP either way. */
+  scale: number
   hand: Unit[]
   board: Slot[]
   front: Slot[]
@@ -20,7 +21,7 @@ export function project(state: GameState): View {
     drawn: state.drawn,
     status: state.status,
     deck: state.player.deck.length,
-    health: { player: state.player.health, opponent: state.opponent.health },
+    scale: state.scale,
     hand: state.player.hand,
     board: state.player.board,
     front: state.opponent.front,
@@ -85,7 +86,7 @@ export function step(view: View, event: GameEvent): View {
       return { ...view, board, front, back }
     }
     case 'hit':
-      return { ...view, health: { ...view.health, [event.side]: event.health } }
+      return { ...view, scale: event.scale }
     case 'advanced': {
       const unit = view.back[event.lane] ?? null
       return { ...view, front: setAt(view.front, event.lane, unit), back: setAt(view.back, event.lane, null) }

@@ -16,7 +16,7 @@ export {
   HAND_LIMIT,
   LANES,
   RULES_VERSION,
-  STARTING_HEALTH,
+  TIP,
   TURN_LIMIT,
   type Action,
   type GameEvent,
