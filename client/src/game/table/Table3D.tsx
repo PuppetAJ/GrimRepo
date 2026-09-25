@@ -236,6 +236,7 @@ declare global {
       act: (action: Action) => void
       skip: () => void
       screen: (what: 'deck' | 'pile' | 'bell' | { lane: number } | { uid: number }) => { x: number; y: number } | null
+      stats: () => Promise<Record<string, number>>
     }
   }
 }
@@ -270,6 +271,37 @@ function TestHandle({ game, view, busy, skip }: { game: Ready; view: View; busy:
         const object = scene.getObjectByName(`card-${what.uid}`)
         return object ? onScreen(object.localToWorld(new THREE.Vector3(0, CARD.height * 0.36, 0))) : null
       },
+      // What one frame costs: counted over a single render, with post-processing's passes included.
+      stats: () =>
+        new Promise((resolve) => {
+          requestAnimationFrame(() => {
+            gl.info.autoReset = false
+            gl.info.reset()
+            requestAnimationFrame(() => {
+              const lights = { point: 0, spot: 0, other: 0 }
+              let meshes = 0
+              scene.traverseVisible((object) => {
+                if ((object as THREE.Mesh).isMesh) meshes++
+                if ((object as THREE.PointLight).isPointLight) lights.point++
+                else if ((object as THREE.SpotLight).isSpotLight) lights.spot++
+                else if ((object as THREE.Light).isLight) lights.other++
+              })
+              resolve({
+                calls: gl.info.render.calls,
+                triangles: gl.info.render.triangles,
+                meshes,
+                pointLights: lights.point,
+                spotLights: lights.spot,
+                otherLights: lights.other,
+                textures: gl.info.memory.textures,
+                geometries: gl.info.memory.geometries,
+                programs: gl.info.programs?.length ?? 0,
+                pixelRatio: gl.getPixelRatio(),
+              })
+              gl.info.autoReset = true
+            })
+          })
+        }),
     }
     return () => void delete window.__game
   }, [camera, gl, scene])

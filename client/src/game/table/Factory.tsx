@@ -15,6 +15,7 @@ import { Suspense, use, useEffect, useLayoutEffect, useMemo, useRef, useState, t
 import * as THREE from 'three'
 import type { View } from '../view.ts'
 import { Nudge } from './Board.tsx'
+import { chosenGems } from './scene.ts'
 import {
   BATTERY_CELLS,
   BELL,
@@ -369,10 +370,26 @@ function Battery({ view }: { view: View }) {
   )
 }
 
-/** The gem module from the same drone, sat where the gems are; `?gems=module` shows it, to compare with the ones built here. */
+/** The gem module from the same drone, sat where the gems are, tipped toward the player so its gems show through the glass. */
 function GemModule() {
   const { scene } = useGLTF('/models/gems.glb', false, false)
-  return <primitive object={scene} position={[2.25, TABLE_Y, -12.4]} scale={0.6} />
+  useLayoutEffect(
+    () =>
+      scene.traverse((object) => {
+        const material = (object as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined
+        if (!material) return
+        if (object.name.startsWith('Gem-')) {
+          material.emissive.set('#ffffff')
+          material.emissiveMap = material.map
+          material.emissiveIntensity = 1.4
+        } else if (object.name === 'Glass') {
+          material.transparent = true
+          material.opacity = 0.25
+        }
+      }),
+    [scene],
+  )
+  return <primitive object={scene} position={[2.25, TABLE_Y + 0.15, -12.4]} rotation={[0.6, -0.3, 0]} scale={0.9} />
 }
 
 /** The three Mox gems P03 keeps by the table, turning slowly on their bases. */
@@ -681,7 +698,7 @@ export function Factory({ view, log }: { view: View; log: string[] }) {
       <Monitor position={[X - 4.3, 9.5, -14.2]} turn={0.3} lines={lines} />
       <Monitor position={[X + 4.3, 9.5, -14.2]} turn={-0.3} lines={status} />
       <Suspense fallback={null}>
-        {new URLSearchParams(window.location.search).get('gems') === 'module' ? <GemModule /> : <Gems />}
+        {chosenGems() === 'module' ? <GemModule /> : <Gems />}
         <Battery view={view} />
       </Suspense>
       {/* Dust drifting in the light. */}
