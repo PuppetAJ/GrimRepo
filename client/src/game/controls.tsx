@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react'
+import { X } from 'lucide-react'
+import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router'
 import { card, costOf, SIGILS, worthOf, type Action, type Slot, type Unit } from 'shared'
 import {
@@ -100,11 +101,40 @@ export function WalkAway({
   )
 }
 
+const DEMO_NOTE = 'grimrepo:demo-note'
+
+/** The shared account's warning; once closed, it stays closed in this browser. */
 export function DemoNote() {
+  const [open, setOpen] = useState(() => {
+    try {
+      return localStorage.getItem(DEMO_NOTE) !== 'closed'
+    } catch {
+      return true
+    }
+  })
+  if (!open) return null
+  const close = () => {
+    setOpen(false)
+    try {
+      localStorage.setItem(DEMO_NOTE, 'closed')
+    } catch {
+      // Storage can be refused in a private window; it stays closed until the page reloads.
+    }
+  }
   return (
-    <p role="note" className="rounded border border-death/60 px-3 py-2 font-sans text-sm text-foreground">
-      You are on the shared demo account, so anyone else using it plays this same game. Make an account of your own to
-      play undisturbed.
-    </p>
+    <div role="note" className="flex items-start gap-2 rounded border border-death/60 py-2 pr-2 pl-3 font-sans text-sm">
+      <p className="text-foreground">
+        You are on the shared demo account, so anyone else using it plays this same game. Make an account of your own to
+        play undisturbed.
+      </p>
+      <button
+        type="button"
+        onClick={close}
+        aria-label="Close the note"
+        className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+      >
+        <X className="size-4" />
+      </button>
+    </div>
   )
 }
