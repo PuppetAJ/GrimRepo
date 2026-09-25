@@ -110,7 +110,7 @@ function Stack({
               map: lights.content,
               emissive: '#ffffff',
               emissiveMap: lights.lights,
-              emissiveIntensity: 1.1,
+              emissiveIntensity: 0.75,
               roughness: 0.9,
               transparent: true,
               alphaTest: 0.5,

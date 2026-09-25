@@ -53,7 +53,7 @@ const FACE: Record<'player' | 'opponent', Vec3> = {
   opponent: [-1.975, TABLE_Y + 0.9, -12.3],
 }
 
-export const LEAVE_MS = 800
+export const LEAVE_MS = 550
 export const POPUP_MS = 1000
 
 export function start(state: GameState): Playback {

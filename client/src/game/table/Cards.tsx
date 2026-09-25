@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { card, type Unit } from 'shared'
 import * as THREE from 'three'
 import { useBatch } from './Batch.tsx'
+import { tuning } from './tuning.ts'
 import { Disk, facePlanes, type DiskHandle } from './Disk.tsx'
 import { backTexture, faceContent, faceLights, faceTexture, type loadCardAssets } from './faces.ts'
 import { DECK, HAND_SCALE, handPlace, slot, type Row, type Vec3 } from './layout.ts'
@@ -61,8 +62,6 @@ export function Card({
   const placed = useRef(false)
   const face = faceTexture(unit, assets)
   const back = useMemo(() => backTexture(), [])
-  // Only the screen and the numerals glow, from their own map.
-  const rest = 1.1
   // Each card owns its materials so it can glow or fade alone; the textures are shared. The alpha test keeps the
   // clipped corner from writing depth where there is nothing to see.
   const [front, rear, content] = useMemo(
@@ -139,8 +138,8 @@ export function Card({
     const leaving = leavingAt === undefined ? 0 : Math.min(1, (now - leavingAt) / LEAVE_MS)
     // A card that goes first folds shut, its display going dark, and then goes: offered up, it rises, turns and
     // shrinks away; dead, it sinks into the table.
-    const fold = THREE.MathUtils.smoothstep(leaving, 0, 0.5)
-    const away = THREE.MathUtils.smoothstep(leaving, 0.5, 1)
+    const fold = THREE.MathUtils.smoothstep(leaving, 0, 0.45)
+    const away = THREE.MathUtils.smoothstep(leaving, 0.4, 1)
     if (leavingHow === 'sacrificed') {
       position.y += away * 0.9
       rotation.multiply(roll.setFromAxisAngle(Z, away * 1.6))
@@ -167,6 +166,8 @@ export function Card({
     }
 
     // A card that can be sacrificed pulses red; a marked one holds it.
+    // Only the screen and the numerals glow, from their own map, as brightly as the mood asks.
+    const rest = tuning().cardGlow
     const pulse = look === 'markable' ? 0.2 + 0.15 * Math.sin(now / 160) : 0
     const glow =
       look === 'selected'

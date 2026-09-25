@@ -19,6 +19,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import type { View } from '../view.ts'
 import { Nudge } from './Piles.tsx'
 import { TINT } from './palette.ts'
+import { tuning, useTuning } from './tuning.ts'
 import { chosenGems } from './scene.ts'
 import {
   BATTERY_CELLS,
@@ -103,8 +104,17 @@ function weathered(colour: THREE.Texture, seed: number, strength: number): THREE
   return map
 }
 
+// The console's top is 10.4 by 7.4, centred at z -9.9; its trim is four bars, each x, z, width and depth.
+const TRIM: [number, number, number, number][] = [
+  [X, -6.26, 10.52, 0.12],
+  [X, -13.54, 10.52, 0.12],
+  [X - 5.2, -9.9, 0.12, 7.4],
+  [X + 5.2, -9.9, 0.12, 7.4],
+]
+
 /** The console the game is played on, the floor and the walls. */
 function Room() {
+  const mood = useTuning()
   const clean = metal(useTexture(surfaces('table')), [4, 3])
   const floor = metal(useTexture(surfaces('floor')), [12, 12])
   const wall = metal(useTexture(surfaces('wall')), [8, 3])
@@ -132,6 +142,21 @@ function Room() {
         ))}
         <meshStandardMaterial attach="material-2" {...table} {...rough} color="#8a98a6" roughness={0.85} />
       </mesh>
+      {/* A steel trim round the table's edge, a shade brighter than the top, so it reads where the table ends. */}
+      {TRIM.map(([x, z, width, depth], i) => (
+        <mesh key={i} position={[x, TABLE_Y + 0.03, z]}>
+          <boxGeometry args={[width, 0.1, depth]} />
+          {/* Half metal and faintly lit from within: pure metal with nothing to reflect renders black. */}
+          <meshStandardMaterial
+            {...clean}
+            color="#c3ccd4"
+            metalness={0.45}
+            roughness={0.35}
+            emissive={TINT.fill}
+            emissiveIntensity={mood.trimGlow}
+          />
+        </mesh>
+      ))}
       {/* A thin lit edge along the console, the only line of light near the player. */}
       <mesh position={[X, TABLE_Y - 0.05, -6.18]}>
         <boxGeometry args={[10.4, 0.03, 0.03]} />
@@ -491,7 +516,7 @@ function Lamp() {
     const t = clock.getElapsedTime()
     // Steady, with a brief dip every few seconds.
     const flicker = 1 - 0.35 * Math.max(0, Math.sin(t * 9.7) * Math.sin(t * 0.37) - 0.85) * 6
-    if (light.current) light.current.intensity = 18 * flicker
+    if (light.current) light.current.intensity = tuning().lamp * flicker
     tube.emissive.copy(GLOW).multiplyScalar(0.6 * flicker)
   })
   return (
@@ -544,6 +569,7 @@ function DrumRack() {
 
 /** A rack on the right of the status screen with P03's hammer and pliers hung on it (not usable yet), and springs on the floor. */
 function Props() {
+  const mood = useTuning()
   const steel = { color: '#20262c', metalness: 0.85, roughness: 0.45 }
   const hammer = useGLTF('/models/hammer.glb', false, false).scene
   const pliers = useGLTF('/models/pliers.glb', false, false).scene
@@ -563,7 +589,7 @@ function Props() {
         {/* Hung by its head, handle down. */}
         <primitive object={hammer} position={[-0.5, 0.2, 0.26]} rotation={[0, 0, Math.PI / 2]} scale={0.7} />
         <primitive object={pliers} position={[0.5, 0.2, 0.26]} rotation={[0, Math.PI / 2, 0]} scale={0.7} />
-        <pointLight color={TINT.light} position={[0, 0.4, 1.2]} intensity={5} distance={4} decay={2} />
+        <pointLight color={TINT.light} position={[0, 0.4, 1.2]} intensity={mood.rackLight} distance={4} decay={2} />
       </group>
       {[
         [X - 6.8, 0.5, -7.5],
@@ -703,7 +729,8 @@ function P03({ mood }: { mood: Mood }) {
     head.rotation.z = rest(head).rotation.z + Math.sin(t * 0.6) * 0.03 + droop
     head.rotation.y = rest(head).rotation.y + Math.sin(t * 0.37) * 0.07 + shake
     headCrank.rotation.z = rest(headCrank).rotation.z + t * 0.8
-    armCrank.rotation.z = rest(armCrank).rotation.z - t * 0.5
+    // The arm's crank rocks rather than spins: a full turn swings its grip through the body.
+    armCrank.rotation.z = rest(armCrank).rotation.z + Math.sin(t * 0.7) * 0.35
     arm.rotation.z = rest(arm).rotation.z + Math.sin(t * 0.8) * 0.06
     const snap = Math.max(0, Math.sin(t * 1.3)) ** 8 * 0.35
     clawLeft.rotation.x = rest(clawLeft).rotation.x + snap
@@ -713,11 +740,12 @@ function P03({ mood }: { mood: Mood }) {
 }
 
 export function FactoryP03({ view, busy, outcome }: { view: View; busy: boolean; outcome?: 'win' | 'loss' }) {
+  const tuned = useTuning()
   const mood = useMood(view, busy, outcome)
   return (
     <>
       <P03 mood={mood} />
-      <pointLight color={TINT.light} position={[X, 10.4, -13.4]} intensity={10} distance={10} decay={1.6} />
+      <pointLight color={TINT.light} position={[X, 10.4, -13.4]} intensity={tuned.p03Light} distance={10} decay={1.6} />
     </>
   )
 }
@@ -732,6 +760,7 @@ function scaleBar(scale: number): string {
 
 /** Everything around the table: the room, the light, the screens and the props. */
 export function Factory({ view, log }: { view: View; log: string[] }) {
+  const mood = useTuning()
   // The left monitor is the battle log: the last eight lines of P03's console.
   const lines = useMemo(() => ['// P03 CONSOLE', ...log.slice(-8).map((line) => line.replace(/^P03> /, '> '))], [log])
   const status = useMemo(
@@ -747,12 +776,24 @@ export function Factory({ view, log }: { view: View; log: string[] }) {
   )
   return (
     <>
-      <fog attach="fog" args={[TINT.fog, 7, 34]} />
-      <ambientLight color={TINT.ambient} intensity={0.45} />
-      <hemisphereLight color={TINT.hemisphere} groundColor="#000000" intensity={0.8} />
+      <fog attach="fog" args={[TINT.fog, mood.fogNear, mood.fogFar]} />
+      <ambientLight color={TINT.ambient} intensity={mood.ambient} />
+      <hemisphereLight color={TINT.hemisphere} groundColor="#000000" intensity={mood.hemisphere} />
       {/* A little light over the deck and the pile, and over the player's hands. */}
-      <pointLight color={TINT.cool} position={[X + 3.3, TABLE_Y + 2.2, -8.6]} intensity={10} distance={7} decay={1.8} />
-      <pointLight color={TINT.fill} position={[X, TABLE_Y + 1.6, -5.2]} intensity={6} distance={6} decay={2} />
+      <pointLight
+        color={TINT.cool}
+        position={[X + 3.3, TABLE_Y + 2.2, -8.6]}
+        intensity={mood.deckLight}
+        distance={7}
+        decay={1.8}
+      />
+      <pointLight
+        color={TINT.fill}
+        position={[X, TABLE_Y + 1.6, -5.2]}
+        intensity={mood.handLight}
+        distance={6}
+        decay={2}
+      />
       {/* A cool lamp over the board, so the cards read. */}
       <spotLight
         color={TINT.spot}
@@ -760,7 +801,7 @@ export function Factory({ view, log }: { view: View; log: string[] }) {
         target-position={[X, TABLE_Y, -10.2]}
         angle={0.5}
         penumbra={0.6}
-        intensity={55}
+        intensity={mood.spot}
         decay={1.6}
         distance={20}
       />
@@ -779,6 +820,7 @@ const STATUS_AT: Vec3 = [X + 4.3, 9.5, -14.2]
 
 /** Everything in the room that no move changes, kept out of the re-render each move brings. */
 const Fixtures = memo(function Fixtures() {
+  const mood = useTuning()
   return (
     <>
       <Room />
@@ -788,13 +830,13 @@ const Fixtures = memo(function Fixtures() {
       <Suspense fallback={null}>{chosenGems() === 'module' ? <GemModule /> : <Gems />}</Suspense>
       {/* Dust drifting in the light. */}
       <Sparkles
-        count={140}
+        count={mood.dustCount}
         scale={[14, 7, 12]}
         position={[X, 8.5, -11]}
-        size={1.6}
-        speed={0.15}
+        size={mood.dustSize}
+        speed={mood.dustSpeed}
         color={TINT.cool}
-        opacity={0.3}
+        opacity={mood.dustOpacity}
       />
     </>
   )
@@ -893,15 +935,16 @@ export function EndTurnButton({
 
 /** Glow on the screens and lamps, a little grain and scanline, and dark corners. */
 export function FactoryEffects() {
+  const mood = useTuning()
   // A Retina screen's pixels are fine enough to need no smoothing; MSAA there cost two thirds of the frame.
   const sharp = useThree((state) => state.viewport.dpr) >= 1.5
   return (
     <EffectComposer multisampling={0}>
-      <Bloom mipmapBlur luminanceThreshold={0.85} intensity={1.0} radius={0.7} />
+      <Bloom mipmapBlur luminanceThreshold={mood.bloomThreshold} intensity={mood.bloom} radius={mood.bloomRadius} />
       <ChromaticAberration offset={[0.0006, 0.0006]} />
-      <Scanline density={1.4} opacity={0.05} />
-      <Noise opacity={0.04} />
-      <Vignette offset={0.28} darkness={0.7} />
+      <Scanline density={1.4} opacity={mood.scanline} />
+      <Noise opacity={mood.noise} />
+      <Vignette offset={0.28} darkness={mood.vignette} />
       <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
       {/* Below that, a cheap edge smoothing pass instead. */}
       {sharp ? null : <SMAA />}

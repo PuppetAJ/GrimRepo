@@ -181,6 +181,19 @@ function hologramOf(art: HTMLImageElement, w: number, h: number, colour: string)
   paint.globalCompositeOperation = 'source-in'
   paint.fillStyle = colour
   paint.fillRect(0, 0, w, h)
+  // Every stroke a pixel thicker, so fine line art survives being shrunk on a distant card.
+  const thin = document.createElement('canvas')
+  thin.width = layer.width
+  thin.height = layer.height
+  ;(thin.getContext('2d') as CanvasRenderingContext2D).drawImage(layer, 0, 0)
+  paint.globalCompositeOperation = 'source-over'
+  for (const [dx, dy] of [
+    [-1, 0],
+    [1, 0],
+    [0, -1],
+    [0, 1],
+  ] as const)
+    paint.drawImage(thin, dx, dy)
   // Scanlines through the hologram itself, so it reads as projected light.
   paint.globalCompositeOperation = 'destination-out'
   paint.fillStyle = 'rgb(0 0 0 / 0.45)'
@@ -309,7 +322,8 @@ function drawBack(context: CanvasRenderingContext2D): void {
 function texture(element: HTMLCanvasElement): Texture {
   const result = new CanvasTexture(element)
   result.colorSpace = SRGBColorSpace
-  result.anisotropy = 4
+  // Sharp at a glance along the table; the renderer caps it at what the GPU allows.
+  result.anisotropy = 16
   return result
 }
 

@@ -30,6 +30,8 @@ import { EndTurnButton, Factory, FactoryEffects, FactoryP03, TechBoard } from '.
 import { TINT } from './palette.ts'
 import { CardBatch } from './Batch.tsx'
 import { Boot } from './Boot.tsx'
+import { MoodPanel } from './MoodPanel.tsx'
+import { tuning } from './tuning.ts'
 import { usePlayback } from './usePlayback.ts'
 
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
@@ -315,6 +317,14 @@ function WarmUp({ onWarm }: { onWarm: () => void }) {
     }
   })
   return warm ? null : <sprite material={material} position={BOARD_CENTER} scale={0.01} />
+}
+
+/** The renderer's exposure, from the mood's tuning. */
+function Exposure() {
+  useFrame(({ gl }) => {
+    gl.toneMappingExposure = tuning().exposure
+  })
+  return null
 }
 
 declare global {
@@ -671,6 +681,7 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
         aria-hidden
       >
         <color attach="background" args={['#020203']} />
+        <Exposure />
         {/* Only once loaded and settled: the first frames are slow, and would lower the resolution for good. */}
         {settled ? (
           <PerformanceMonitor
@@ -701,6 +712,7 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
           <Loaded onLoad={setReady} />
         </Suspense>
       </Canvas>
+      {new URLSearchParams(window.location.search).has('mood') ? <MoodPanel /> : null}
       <Boot stage={warmed ? 'done' : active ? 'assets' : 'warming'} progress={progress} files={files} />
       {ready ? (
         <Hud
