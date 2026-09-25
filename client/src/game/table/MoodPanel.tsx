@@ -17,6 +17,7 @@ const GROUPS: [string, Control[]][] = [
       ['deckLight', 'Light over the deck', 0, 30, 0.5],
       ['handLight', 'Light on the hand', 0, 20, 0.5],
       ['rackLight', 'Light on the tools', 0, 15, 0.5],
+      ['lampTint', 'Lamps lean green', 0, 1, 0.05],
     ],
   ],
   [
@@ -39,6 +40,15 @@ const GROUPS: [string, Control[]][] = [
       ['vignette', 'Dark corners', 0, 1.2, 0.05],
       ['noise', 'Grain', 0, 0.2, 0.005],
       ['scanline', 'Scanlines', 0, 0.3, 0.005],
+    ],
+  ],
+  [
+    'Colour',
+    [
+      ['hue', 'Hue', -1, 1, 0.01],
+      ['saturation', 'Saturation', -1, 1, 0.02],
+      ['brightness', 'Brightness', -0.5, 0.5, 0.01],
+      ['contrast', 'Contrast', -0.5, 0.5, 0.01],
     ],
   ],
   [

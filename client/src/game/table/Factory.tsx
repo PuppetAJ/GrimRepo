@@ -2,8 +2,10 @@ import { Sparkles, useGLTF, useTexture } from '@react-three/drei'
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
 import {
   Bloom,
+  BrightnessContrast,
   ChromaticAberration,
   EffectComposer,
+  HueSaturation,
   Noise,
   Scanline,
   SMAA,
@@ -111,6 +113,14 @@ const TRIM: [number, number, number, number][] = [
   [X - 5.2, -9.9, 0.12, 7.4],
   [X + 5.2, -9.9, 0.12, 7.4],
 ]
+
+const WHITE = new THREE.Color()
+/** One of the white lamps' colours, leaned toward the palette's own by the mood's tint. */
+const lamp = (colour: string, tint: number) =>
+  '#' +
+  WHITE.set(colour)
+    .lerp(new THREE.Color(TINT.glow), tint * 0.6)
+    .getHexString()
 
 /** The console the game is played on, the floor and the walls. */
 function Room() {
@@ -505,6 +515,7 @@ function Gems() {
 
 /** The lamp on the player's left: a post, an arm, and a bar of light that flickers now and then. */
 function Lamp() {
+  const mood = useTuning()
   const light = useRef<THREE.PointLight>(null)
   // The weathered fluorescent light by Mark Peters (CC BY); its emissive map marks the tubes, which glow in the palette's light.
   const { scene: fixture } = useGLTF('/models/light.glb', false, false)
@@ -517,7 +528,7 @@ function Lamp() {
     // Steady, with a brief dip every few seconds.
     const flicker = 1 - 0.35 * Math.max(0, Math.sin(t * 9.7) * Math.sin(t * 0.37) - 0.85) * 6
     if (light.current) light.current.intensity = tuning().lamp * flicker
-    tube.emissive.copy(GLOW).multiplyScalar(0.6 * flicker)
+    tube.emissive.set(lamp(TINT.lamp, tuning().lampTint)).multiplyScalar(GLOW.g * 0.6 * flicker)
   })
   return (
     <group position={[X - 6.4, TABLE_Y, -10.6]}>
@@ -534,7 +545,14 @@ function Lamp() {
         <meshStandardMaterial color="#20262c" metalness={0.85} roughness={0.4} />
       </mesh>
       <primitive object={fixture} position={[1.85, 3.12, -0.2]} rotation={[0.35, 0, 0]} scale={1.05} />
-      <pointLight ref={light} color={TINT.lamp} position={[1.85, 2.6, 0.4]} intensity={18} distance={12} decay={1.8} />
+      <pointLight
+        ref={light}
+        color={lamp(TINT.lamp, mood.lampTint)}
+        position={[1.85, 2.6, 0.4]}
+        intensity={18}
+        distance={12}
+        decay={1.8}
+      />
     </group>
   )
 }
@@ -781,14 +799,14 @@ export function Factory({ view, log }: { view: View; log: string[] }) {
       <hemisphereLight color={TINT.hemisphere} groundColor="#000000" intensity={mood.hemisphere} />
       {/* A little light over the deck and the pile, and over the player's hands. */}
       <pointLight
-        color={TINT.cool}
+        color={lamp(TINT.cool, mood.lampTint)}
         position={[X + 3.3, TABLE_Y + 2.2, -8.6]}
         intensity={mood.deckLight}
         distance={7}
         decay={1.8}
       />
       <pointLight
-        color={TINT.fill}
+        color={lamp(TINT.fill, mood.lampTint)}
         position={[X, TABLE_Y + 1.6, -5.2]}
         intensity={mood.handLight}
         distance={6}
@@ -796,7 +814,7 @@ export function Factory({ view, log }: { view: View; log: string[] }) {
       />
       {/* A cool lamp over the board, so the cards read. */}
       <spotLight
-        color={TINT.spot}
+        color={lamp(TINT.spot, mood.lampTint)}
         position={[X, 13, -8.2]}
         target-position={[X, TABLE_Y, -10.2]}
         angle={0.5}
@@ -829,7 +847,9 @@ const Fixtures = memo(function Fixtures() {
       <Props />
       <Suspense fallback={null}>{chosenGems() === 'module' ? <GemModule /> : <Gems />}</Suspense>
       {/* Dust drifting in the light. */}
+      {/* Remade when the count changes, which it cannot take in place. */}
       <Sparkles
+        key={mood.dustCount}
         count={mood.dustCount}
         scale={[14, 7, 12]}
         position={[X, 8.5, -11]}
@@ -852,9 +872,16 @@ export function EndTurnButton({
   active: boolean
   rung: number
 }) {
-  const cap = useRef<THREE.Mesh>(null)
+  const cap = useRef<THREE.Group>(null)
   const lamp = useRef<THREE.Mesh>(null)
   const pressed = useRef(0)
+  // The PUSH cap from lorib2306's sci-fi button (CC BY), seated in the collar so its skirt is hidden.
+  const { scene: model } = useGLTF('/models/button.glb', false, false)
+  const glow = useMemo(() => {
+    const material = (model.getObjectByName('Cap') as THREE.Mesh).material as THREE.MeshStandardMaterial
+    material.emissive.set('#ff3344')
+    return material
+  }, [model])
   useEffect(() => {
     if (rung) pressed.current = 1
   }, [rung])
@@ -881,16 +908,15 @@ export function EndTurnButton({
   useFrame((_, delta) => {
     pressed.current = Math.max(0, pressed.current - delta * 5)
     if (!cap.current) return
-    easing.damp(cap.current.position, 'y', 0.3 - Math.sin(pressed.current * Math.PI) * 0.09, 0.03, delta)
-    const material = cap.current.material as THREE.MeshStandardMaterial
-    material.emissiveIntensity = active ? 0.9 + Math.sin(performance.now() / 300) * 0.25 : 0.12
+    easing.damp(cap.current.position, 'y', 0.02 - Math.sin(pressed.current * Math.PI) * 0.09, 0.03, delta)
+    glow.emissiveIntensity = active ? 0.55 + Math.sin(performance.now() / 300) * 0.2 : 0.06
     if (lamp.current) (lamp.current.material as THREE.MeshStandardMaterial).emissiveIntensity = active ? 2.5 : 0.1
   })
   const steel = { color: '#2a2f35', metalness: 0.85, roughness: 0.4 }
   return (
     <group position={BELL}>
       <Nudge active={active} onClick={onClick} size={[1.4, 0.7, 1.4]} label="bell" lift={0.02}>
-        {/* A bolted mounting plate, a collar the cap sits in, and the cap with a ring round its edge. */}
+        {/* A bolted mounting plate, a collar the cap sits in, and the cap. */}
         <mesh position={[0, 0.03, 0]}>
           <boxGeometry args={[1.4, 0.06, 1.4]} />
           <meshStandardMaterial color="#1d2227" metalness={0.8} roughness={0.5} />
@@ -907,18 +933,9 @@ export function EndTurnButton({
           <cylinderGeometry args={[0.56, 0.62, 0.16, 32]} />
           <meshStandardMaterial {...steel} />
         </mesh>
-        <mesh position={[0, 0.23, 0]}>
-          <torusGeometry args={[0.47, 0.035, 10, 40]} />
-          <meshStandardMaterial color="#9aa5ad" metalness={0.9} roughness={0.3} />
-        </mesh>
-        <mesh ref={cap} position={[0, 0.3, 0]}>
-          <cylinderGeometry args={[0.4, 0.44, 0.18, 32]} />
-          <meshStandardMaterial color="#7d1019" emissive="#ff2233" emissiveIntensity={0.9} roughness={0.35} />
-        </mesh>
-        <mesh position={[0, 0.395, 0]}>
-          <cylinderGeometry args={[0.32, 0.4, 0.02, 32]} />
-          <meshStandardMaterial color="#a4161f" roughness={0.3} />
-        </mesh>
+        <group ref={cap} position={[0, 0.02, 0]}>
+          <primitive object={model} scale={1.9} />
+        </group>
         {/* The ready lamp and the label on the plate's near edge. */}
         <mesh ref={lamp} position={[0.52, 0.09, 0.52]}>
           <sphereGeometry args={[0.045, 10, 10]} />
@@ -946,6 +963,8 @@ export function FactoryEffects() {
       <Noise opacity={mood.noise} />
       <Vignette offset={0.28} darkness={mood.vignette} />
       <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
+      <HueSaturation hue={mood.hue * Math.PI} saturation={mood.saturation} />
+      <BrightnessContrast brightness={mood.brightness} contrast={mood.contrast} />
       {/* Below that, a cheap edge smoothing pass instead. */}
       {sharp ? null : <SMAA />}
     </EffectComposer>
@@ -959,6 +978,7 @@ for (const url of [
   '/models/hammer.glb',
   '/models/pliers.glb',
   '/models/light.glb',
+  '/models/button.glb',
 ])
   useGLTF.preload(url, false, false)
 for (const name of ['table', 'floor', 'wall']) useTexture.preload(Object.values(surfaces(name)))
