@@ -74,15 +74,20 @@ function bottomShape(): THREE.Shape {
     .lineTo(w / 2, y)
 }
 
+/** A slab from z, `depth` thick, towards the front if depth is positive and the back if negative. */
 const extrude = (shape: THREE.Shape, depth: number, z: number) =>
-  new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false }).translate(0, 0, z)
+  new THREE.ExtrudeGeometry(shape, { depth: Math.abs(depth), bevelEnabled: false }).translate(
+    0,
+    0,
+    Math.min(z, z + depth),
+  )
 
 /** A plate with a window cut into it, and a dark floor under the window, so the window is an indent. */
 function plate(area: readonly [number, number, number, number], depth: number, z: number, into: Parts) {
   const shape = rect(area)
   shape.holes.push(hole(WINDOW))
   into.metal.push(extrude(shape, depth, z))
-  into.dark.push(box(...WINDOW, 0.002, z + (depth > 0 ? 0.001 : -0.001)))
+  into.dark.push(box(...WINDOW, 0.003, z + Math.sign(depth) * 0.0025))
 }
 
 type Parts = { plastic: THREE.BufferGeometry[]; dark: THREE.BufferGeometry[]; metal: THREE.BufferGeometry[] }
@@ -115,9 +120,8 @@ function build() {
   const hub = new THREE.Shape().absarc(hx, hy, 0.16 * w, 0, Math.PI * 2, false)
   hub.holes.push(hole([0.5, 0.36, 0.56, 0.4]), hole([0.46, 0.42, 0.5, 0.45]))
   top.metal.push(extrude(hub, -raised * 0.6, rimBack))
-  top.dark.push(
-    new THREE.CylinderGeometry(0.16 * w, 0.16 * w, 0.002, 28).rotateX(Math.PI / 2).translate(hx, hy, rimBack - 0.001),
-  )
+  top.dark.push(box(0.49, 0.35, 0.57, 0.41, 0.003, rimBack - 0.0025))
+  top.dark.push(box(0.45, 0.41, 0.51, 0.46, 0.003, rimBack - 0.0025))
   top.metal.push(new THREE.TorusGeometry(0.18 * w, 0.01, 6, 36).translate(hx, hy, rimBack - raised * 0.3))
   for (const x of RAILS) top.plastic.push(box(x - 0.03, 0.44, x + 0.03, 0.48, raised, back - raised / 2))
 
@@ -173,12 +177,21 @@ function build() {
   return { top: anchored(top, h / 2), middle: anchored(middle, fy(MT)), bottom: anchored(bottom, -h / 2), rail }
 }
 
-// One mesh per material: the pieces are unindexed first, or they cannot merge.
+// One mesh per material: the pieces are unindexed first, or they cannot merge. The UVs are then projected from
+// the disk's face, one tile per TILE units, so the worn texture runs across every piece without a seam.
+const TILE = 0.9
 function merge(parts: THREE.BufferGeometry[]) {
   const flat = parts.map((part) => (part.index ? part.toNonIndexed() : part))
   const merged = mergeGeometries(flat, false)
   if (!merged) throw new Error('The disk could not be built')
   for (const part of [...parts, ...flat]) part.dispose()
+  const position = merged.getAttribute('position') as THREE.BufferAttribute
+  const uv = new Float32Array(position.count * 2)
+  for (let i = 0; i < position.count; i++) {
+    uv[i * 2] = (position.getX(i) + w / 2) / TILE
+    uv[i * 2 + 1] = (position.getY(i) + h / 2) / TILE
+  }
+  merged.setAttribute('uv', new THREE.BufferAttribute(uv, 2))
   return merged
 }
 
@@ -196,6 +209,10 @@ function plasticMaps() {
   context.fillRect(0, 0, size, size)
   let seed = 7
   const random = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff
+  // Blotches and scratches are drawn nine times, a tile apart, so whatever crosses an edge continues on the other side.
+  const wrapped = (draw: (dx: number, dy: number) => void) => {
+    for (const dx of [-size, 0, size]) for (const dy of [-size, 0, size]) draw(dx, dy)
+  }
   for (let i = 0; i < 9000; i++) {
     context.fillStyle = random() > 0.5 ? 'rgb(255 255 255 / 0.07)' : 'rgb(0 0 0 / 0.07)'
     context.fillRect(random() * size, random() * size, 1 + random() * 2, 1 + random() * 2)
@@ -206,12 +223,16 @@ function plasticMaps() {
     const y = random() * size
     const r = 12 + random() * random() * 150
     const pale = random() > 0.8
-    const smudge = context.createRadialGradient(x, y, 0, x, y, r)
-    smudge.addColorStop(0, pale ? 'rgb(255 250 230 / 0.16)' : `rgb(30 22 10 / ${0.18 + random() * 0.22})`)
-    smudge.addColorStop(0.6, pale ? 'rgb(255 250 230 / 0.05)' : `rgb(30 22 10 / ${0.06 + random() * 0.1})`)
-    smudge.addColorStop(1, 'rgb(0 0 0 / 0)')
-    context.fillStyle = smudge
-    context.fillRect(x - r, y - r, r * 2, r * 2)
+    const depth = 0.18 + random() * 0.22
+    const mid = 0.06 + random() * 0.1
+    wrapped((dx, dy) => {
+      const smudge = context.createRadialGradient(x + dx, y + dy, 0, x + dx, y + dy, r)
+      smudge.addColorStop(0, pale ? 'rgb(255 250 230 / 0.16)' : `rgb(30 22 10 / ${depth})`)
+      smudge.addColorStop(0.6, pale ? 'rgb(255 250 230 / 0.05)' : `rgb(30 22 10 / ${mid})`)
+      smudge.addColorStop(1, 'rgb(0 0 0 / 0)')
+      context.fillStyle = smudge
+      context.fillRect(x + dx - r, y + dy - r, r * 2, r * 2)
+    })
   }
   for (let i = 0; i < 90; i++) {
     const x = random() * size
@@ -220,17 +241,13 @@ function plasticMaps() {
     const length = 20 + random() * 140
     context.strokeStyle = random() > 0.4 ? `rgb(255 255 255 / ${0.1 + random() * 0.15})` : 'rgb(0 0 0 / 0.2)'
     context.lineWidth = random() > 0.7 ? 2 : 1
-    context.beginPath()
-    context.moveTo(x, y)
-    context.lineTo(x + Math.cos(angle) * length, y + Math.sin(angle) * length)
-    context.stroke()
+    wrapped((dx, dy) => {
+      context.beginPath()
+      context.moveTo(x + dx, y + dy)
+      context.lineTo(x + dx + Math.cos(angle) * length, y + dy + Math.sin(angle) * length)
+      context.stroke()
+    })
   }
-  // Worn edges: the plastic is lighter and duller where it has been handled.
-  const edge = context.createRadialGradient(size / 2, size / 2, size * 0.3, size / 2, size / 2, size * 0.75)
-  edge.addColorStop(0, 'rgb(255 255 255 / 0)')
-  edge.addColorStop(1, 'rgb(255 255 255 / 0.12)')
-  context.fillStyle = edge
-  context.fillRect(0, 0, size, size)
   const map = new THREE.CanvasTexture(canvas)
   map.colorSpace = THREE.SRGBColorSpace
 
