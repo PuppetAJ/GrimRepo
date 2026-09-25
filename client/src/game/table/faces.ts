@@ -156,19 +156,18 @@ function screen(context: CanvasRenderingContext2D, area: readonly [number, numbe
 }
 
 /** The 2022 art redrawn as a hologram: a dim dithered fill with a bright edge, as the game draws its bots. */
-function hologram(
-  context: CanvasRenderingContext2D,
-  art: HTMLImageElement,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  palette: Palette,
-) {
-  const layer = document.createElement('canvas')
+const holograms = new Map<string, HTMLCanvasElement>()
+
+/** A card's art as projected light, made once per card and colour: reading pixels back is slow, and the art never changes. */
+function hologramOf(art: HTMLImageElement, w: number, h: number, colour: string): HTMLCanvasElement {
+  const key = `${art.src}:${colour}:${Math.round(w)}x${Math.round(h)}`
+  let layer = holograms.get(key)
+  if (layer) return layer
+  layer = document.createElement('canvas')
   layer.width = Math.round(w)
   layer.height = Math.round(h)
-  const paint = layer.getContext('2d') as CanvasRenderingContext2D
+  // Kept on the CPU, so reading its pixels back does not wait on the GPU.
+  const paint = layer.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D
   paint.drawImage(art, 0, 0, w, h)
   // Dark strokes stay solid and light fills fade, so coloured art keeps its detail instead of becoming a blob.
   const image = paint.getImageData(0, 0, layer.width, layer.height)
@@ -179,16 +178,29 @@ function hologram(
   }
   paint.putImageData(image, 0, 0)
   paint.globalCompositeOperation = 'source-in'
-  paint.fillStyle = palette.line
+  paint.fillStyle = colour
   paint.fillRect(0, 0, w, h)
   // Scanlines through the hologram itself, so it reads as projected light.
   paint.globalCompositeOperation = 'destination-out'
   paint.fillStyle = 'rgb(0 0 0 / 0.45)'
   for (let line = 1; line < h; line += 3) paint.fillRect(0, line, w, 1)
+  holograms.set(key, layer)
+  return layer
+}
+
+function hologram(
+  context: CanvasRenderingContext2D,
+  art: HTMLImageElement,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  palette: Palette,
+) {
   context.save()
   context.shadowColor = palette.line
   context.shadowBlur = 5
-  context.drawImage(layer, x, y)
+  context.drawImage(hologramOf(art, w, h, palette.line), x, y)
   context.restore()
 }
 
