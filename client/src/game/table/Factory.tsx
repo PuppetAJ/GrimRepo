@@ -168,6 +168,9 @@ export function TechBoard() {
     const divide = pz((ROW_Z.board + ROW_Z.front) / 2)
     context.fillStyle = 'rgb(90 216 240 / 0.5)'
     context.fillRect(0.12 * scale, divide - 3, canvas.width - 0.24 * scale, 6)
+    // Scanlines over the whole projection.
+    context.fillStyle = 'rgb(0 0 0 / 0.28)'
+    for (let y = 0; y < canvas.height; y += 6) context.fillRect(0, y, canvas.width, 2)
     const map = new THREE.CanvasTexture(canvas)
     map.colorSpace = THREE.SRGBColorSpace
     map.anisotropy = 8

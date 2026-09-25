@@ -1,6 +1,6 @@
 import { card, CARDS, SIGILS, type SigilId, type Unit } from 'shared'
 import { CanvasTexture, SRGBColorSpace, type Texture } from 'three'
-import { DISK, RECESS, SCREEN_DIVIDER, SIGIL_BAND } from './layout.ts'
+import { DISK, RECESS, SCREEN_DIVIDER, SECTIONS, SIGIL_BAND } from './layout.ts'
 
 // The face is drawn at the card's own shape, so nothing is stretched.
 const W = 300
@@ -240,6 +240,10 @@ function hologram(
   paint.globalCompositeOperation = 'source-in'
   paint.fillStyle = palette.line
   paint.fillRect(0, 0, w, h)
+  // Scanlines through the hologram itself, so it reads as projected light.
+  paint.globalCompositeOperation = 'destination-out'
+  paint.fillStyle = 'rgb(0 0 0 / 0.45)'
+  for (let line = 1; line < h; line += 3) paint.fillRect(0, line, w, 1)
   context.save()
   context.shadowColor = palette.line
   context.shadowBlur = 5
@@ -330,11 +334,7 @@ function drawTechBack(context: CanvasRenderingContext2D): void {
   diskPath(context, true)
   context.fill()
   context.fillStyle = 'rgb(0 0 0 / 0.35)'
-  context.fillRect(W * 0.045, H * 0.24, W * 0.91, H * 0.615)
-  context.fillStyle = 'rgb(0 0 0 / 0.3)'
-  context.beginPath()
-  context.arc(W / 2, H * 0.4, W * 0.42, 0, Math.PI * 2)
-  context.fill()
+  context.fillRect(W * 0.045, H * SECTIONS.middleTop, W * 0.91, H * (SECTIONS.middleBottom - SECTIONS.middleTop))
 }
 
 export type CardStyle = 'cabin' | 'tech'

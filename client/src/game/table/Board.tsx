@@ -3,7 +3,7 @@ import { easing } from 'maath'
 import { useMemo, useRef, useState, type ReactNode } from 'react'
 import * as THREE from 'three'
 import { backTexture, faceLights, faceTexture, type CardStyle, type loadCardAssets } from './faces.ts'
-import { BACK_RELIEF, BACK_Z, diskGeometry, diskMaterials, FACE_Z } from './Disk.tsx'
+import { BACK_RELIEF, Disk } from './Disk.tsx'
 import { BOARD_DEPTH, CARD, DECK, DISK, lanes, PILE, ROW_Z, slot, TABLE_Y, type Row, type Vec3 } from './layout.ts'
 
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
@@ -171,7 +171,6 @@ export function Nudge({
 
 const EDGE = new THREE.MeshStandardMaterial({ color: '#2b211c', roughness: 0.9 })
 const card = new THREE.BoxGeometry(CARD.width, CARD.height, CARD.depth)
-const sheet = new THREE.PlaneGeometry(CARD.width, CARD.height)
 
 /** A stack of cards, a little uneven, with the given face on top; the factory's are disks. */
 function Stack({
@@ -203,10 +202,8 @@ function Stack({
     [top, back, lights],
   )
   if (style === 'tech') {
-    // Face down, the disks are the compact kind; face up they are full, and only the top one shows its relief and sheet.
+    // Face down, the disks lie closed; face up they are open, and only the top one shows its face.
     const faceUp = top !== back
-    const disk = diskGeometry(faceUp ? 'full' : 'compact')
-    const plastics = diskMaterials('common')
     const pitch = DISK.depth + DISK.relief + BACK_RELIEF
     return [...Array(layers).keys()].map((i) => {
       const topmost = i === layers - 1
@@ -216,18 +213,7 @@ function Stack({
           position={[((i * 7) % 5) * 0.004 - 0.008, pitch * (i + 0.5), ((i * 3) % 4) * 0.004 - 0.006]}
           rotation={[faceUp ? -Math.PI / 2 : Math.PI / 2, 0, ((i * 5) % 7) * 0.006 - 0.018]}
         >
-          <mesh geometry={disk.body} material={[plastics.body, plastics.edge]} />
-          {topmost ? <mesh geometry={disk.plastic} material={plastics.plastic} /> : null}
-          {topmost ? <mesh geometry={disk.dark} material={plastics.dark} /> : null}
-          {topmost ? <mesh geometry={disk.metal} material={plastics.metal} /> : null}
-          {topmost && faceUp ? (
-            <mesh
-              geometry={sheet}
-              material={faceUp ? faces[0] : faces[1]}
-              position={[0, 0, faceUp ? FACE_Z : BACK_Z]}
-              rotation={[0, faceUp ? 0 : Math.PI, 0]}
-            />
-          ) : null}
+          <Disk open={faceUp ? 1 : 0} front={topmost && faceUp ? faces[0] : null} back={null} />
         </group>
       )
     })

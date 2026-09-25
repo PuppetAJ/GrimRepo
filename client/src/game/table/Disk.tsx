@@ -1,156 +1,192 @@
+import { forwardRef, useImperativeHandle, useLayoutEffect, useMemo, useRef, type RefObject } from 'react'
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
-import { CARD, DISK, RECESS } from './layout.ts'
+import { CARD, DISK, RECESS, SECTIONS } from './layout.ts'
 
-// The floppy disk the factory's cards are made of, after the Act 3 card models: a plastic body with the
-// recesses cut into its raised front, a vent and a grill, and on the back the hub, its shutter plate and ribs.
+// The floppy disk the factory's cards are made of, after the Act 3 card models. It is built in three sections,
+// the top (shutter sleeve, label, hub housing), the middle (screen, side rails) and the bottom (stats, bottom band),
+// so that a closed disk keeps its top and bottom whole and compresses only the middle, as the game's do.
 const { width: w, height: h } = CARD
-
-/** Card fractions from the top-left to local coordinates on the full disk, centred, y up. */
-const at = (fx: number, fy: number): [number, number] => [(fx - 0.5) * w, (0.5 - fy) * h]
-
-/** The disk's outline, with the clipped corner at the top right; `h` is the disk's height. */
-function outline(h: number): THREE.Shape {
-  const clip = DISK.clip * w
-  const r = 0.03 * w
-  const shape = new THREE.Shape()
-  shape.moveTo(-w / 2 + r, h / 2)
-  shape.lineTo(w / 2 - clip, h / 2)
-  shape.lineTo(w / 2, h / 2 - clip)
-  shape.lineTo(w / 2, -h / 2 + r)
-  shape.quadraticCurveTo(w / 2, -h / 2, w / 2 - r, -h / 2)
-  shape.lineTo(-w / 2 + r, -h / 2)
-  shape.quadraticCurveTo(-w / 2, -h / 2, -w / 2, -h / 2 + r)
-  shape.lineTo(-w / 2, h / 2 - r)
-  shape.quadraticCurveTo(-w / 2, h / 2, -w / 2 + r, h / 2)
-  return shape
-}
-
-function hole([x0, y0, x1, y1]: readonly [number, number, number, number]): THREE.Path {
-  const [left, top] = at(x0, y0)
-  const [right, bottom] = at(x1, y1)
-  return new THREE.Path().moveTo(left, top).lineTo(left, bottom).lineTo(right, bottom).lineTo(right, top)
-}
-
-const boxAt = (fx0: number, fy0: number, fx1: number, fy1: number, depth: number, z: number, height: number) => {
-  const place = (fx: number, fy: number): [number, number] => [(fx - 0.5) * w, (0.5 - fy) * height]
-  const [left, top] = place(fx0, fy0)
-  const [right, bottom] = place(fx1, fy1)
-  return new THREE.BoxGeometry(right - left, top - bottom, depth).translate((left + right) / 2, (top + bottom) / 2, z)
-}
+const { middleTop: MT, middleBottom: MB } = SECTIONS
 
 const front = DISK.depth / 2
 const back = -DISK.depth / 2
 const raised = DISK.relief
+const rimBack = back - raised
 
-/**
- * The full disk, or the compact one a card is when it lies face down in the deck: squarer, with no recesses,
- * since only its back and edges show; a drawn card expands from one to the other.
- */
-function build(kind: 'full' | 'compact') {
-  const compact = kind === 'compact'
-  const height = compact ? h * DISK.compact : h
-  const body = new THREE.ExtrudeGeometry(outline(height), { depth: DISK.depth, bevelEnabled: false }).translate(
-    0,
-    0,
-    back,
-  )
+/** A fraction of the height from the top edge, to local y with the disk centred. */
+const fy = (f: number) => (0.5 - f) * h
+const fx = (f: number) => (f - 0.5) * w
 
-  // Fractions along the height apply to whichever height this disk has.
-  const at = (fx: number, fy: number): [number, number] => [(fx - 0.5) * w, (0.5 - fy) * height]
-  const box = (fx0: number, fy0: number, fx1: number, fy1: number, depth: number, z: number) =>
-    boxAt(fx0, fy0, fx1, fy1, depth, z, height)
-  const cut = (fx0: number, fy0: number, fx1: number, fy1: number) => {
-    const [left, top] = at(fx0, fy0)
-    const [right, bottom] = at(fx1, fy1)
-    return new THREE.Path().moveTo(left, top).lineTo(left, bottom).lineTo(right, bottom).lineTo(right, top)
-  }
-
-  // The front rim, with the recesses cut out and a track along the top for the shutter to slide in.
-  const face = outline(height)
-  if (!compact) face.holes.push(...Object.values(RECESS).map(hole))
-  face.holes.push(cut(0.2, 0.004, 0.8, 0.045))
-  const rim = new THREE.ExtrudeGeometry(face, { depth: raised, bevelEnabled: false }).translate(0, 0, front)
-
-  const plastic: THREE.BufferGeometry[] = [rim]
-  const dark: THREE.BufferGeometry[] = []
-  const metal: THREE.BufferGeometry[] = []
-  // The steel shutter in its track, with its window, and the two square holes beside the track.
-  metal.push(box(0.3, 0.006, 0.7, 0.043, raised * 1.2, front + raised * 0.6))
-  dark.push(box(0.57, 0.014, 0.66, 0.035, 0.004, front + raised * 1.2))
-  dark.push(box(0.09, 0.012, 0.15, 0.036, 0.004, front + raised))
-  dark.push(box(0.85, 0.012, 0.91, 0.036, 0.004, front + raised))
-  if (!compact) {
-    // Dark clips holding the screen at its four corners, on the rim either side of it.
-    for (const [x0, x1] of [
-      [0.03, 0.062],
-      [0.938, 0.97],
-    ])
-      for (const [y0, y1] of [
-        [0.19, 0.27],
-        [0.775, 0.855],
-      ])
-        dark.push(box(x0 as number, y0 as number, x1 as number, y1 as number, raised * 0.6, front + raised * 1.3))
-    // A steel band above the stat boxes.
-    metal.push(box(0.05, 0.862, 0.95, 0.88, raised * 0.5, front + raised * 1.2))
-  }
-  // The grill between the two stat boxes.
-  if (!compact)
-    for (let i = 0; i < 6; i++)
-      plastic.push(box(0.42, 0.895 + i * 0.013, 0.58, 0.901 + i * 0.013, raised * 0.7, front + raised * 0.35))
-
-  // The back, after Act 3's card: a rim with the panel sunk inside it, the shutter's steel plate at the top lined up
-  // with the front's window, the hub in its housing, two rails the housing rides on down to the bottom band.
-  const backFace = outline(height)
-  backFace.holes.push(cut(0.045, 0.24, 0.955, 0.855))
-  plastic.push(
-    new THREE.ExtrudeGeometry(backFace, { depth: raised, bevelEnabled: false }).translate(0, 0, back - raised),
-  )
-  const sunk = back
-  const rimBack = back - raised
-  metal.push(box(0.25, 0.01, 0.75, 0.23, raised * 1.2, rimBack - raised * 0.6))
-  dark.push(box(0.57, 0.035, 0.66, 0.2, 0.004, rimBack - raised * 1.2))
-  dark.push(box(0.09, 0.012, 0.15, 0.036, 0.004, rimBack))
-  dark.push(box(0.85, 0.012, 0.91, 0.036, 0.004, rimBack))
-  // The hub's housing, up to rim height, with the hub and its ring on it.
-  plastic.push(box(0.25, 0.25, 0.75, 0.55, raised, sunk - raised / 2))
-  const [hx, hy] = at(0.5, 0.4)
-  metal.push(
-    new THREE.CylinderGeometry(0.16 * w, 0.16 * w, raised * 0.6, 28)
-      .rotateX(Math.PI / 2)
-      .translate(hx, hy, rimBack - raised * 0.3),
-  )
-  metal.push(new THREE.TorusGeometry(0.18 * w, 0.01, 6, 36).translate(hx, hy, rimBack - raised * 0.3))
-  dark.push(box(0.5, 0.36, 0.56, 0.4, 0.004, rimBack - raised * 0.6))
-  dark.push(box(0.46, 0.42, 0.5, 0.45, 0.004, rimBack - raised * 0.6))
-  // Rails from the housing to the bottom band, with a guide at each top and a foot at each bottom.
-  for (const x of [0.27, 0.73]) {
-    metal.push(box(x - 0.008, 0.47, x + 0.008, 0.85, raised * 0.7, sunk - raised * 0.35))
-    plastic.push(box(x - 0.03, 0.44, x + 0.03, 0.48, raised, sunk - raised / 2))
-    plastic.push(box(x - 0.04, 0.82, x + 0.04, 0.86, raised, sunk - raised / 2))
-  }
-  // The bottom band with its slot, and the dark blocks at the rim's foot.
-  plastic.push(box(0.05, 0.875, 0.95, 0.975, raised * 0.8, rimBack - raised * 0.4))
-  dark.push(box(0.09, 0.9, 0.91, 0.95, 0.004, rimBack - raised * 0.8))
-  dark.push(box(0.0, 0.8, 0.045, 0.86, 0.004, rimBack))
-  dark.push(box(0.955, 0.8, 1.0, 0.86, 0.004, rimBack))
-
-  // One mesh per material: the pieces are unindexed first, or they cannot merge.
-  const merge = (parts: THREE.BufferGeometry[]) => {
-    const flat = parts.map((part) => (part.index ? part.toNonIndexed() : part))
-    const merged = mergeGeometries(flat, false)
-    if (!merged) throw new Error('The disk could not be built')
-    for (const part of [...parts, ...flat]) part.dispose()
-    return merged
-  }
-  return { body, plastic: merge(plastic), dark: merge(dark), metal: merge(metal) }
+function box(x0: number, y0: number, x1: number, y1: number, depth: number, z: number) {
+  const [left, right, top, bottom] = [fx(x0), fx(x1), fy(y0), fy(y1)]
+  return new THREE.BoxGeometry(right - left, top - bottom, depth).translate((left + right) / 2, (top + bottom) / 2, z)
 }
 
-const built: Partial<Record<'full' | 'compact', ReturnType<typeof build>>> = {}
-/** The disk's geometry, built once per kind and shared by every card. */
-export const diskGeometry = (kind: 'full' | 'compact' = 'full') => (built[kind] ??= build(kind))
+const hole = ([x0, y0, x1, y1]: readonly [number, number, number, number]) =>
+  new THREE.Path().moveTo(fx(x0), fy(y0)).lineTo(fx(x0), fy(y1)).lineTo(fx(x1), fy(y1)).lineTo(fx(x1), fy(y0))
 
-/** Worn plastic, drawn once: grain, scratches and smudges as colour, roughness and a normal map. */
+const rect = ([x0, y0, x1, y1]: readonly [number, number, number, number]) =>
+  new THREE.Shape().moveTo(fx(x0), fy(y0)).lineTo(fx(x1), fy(y0)).lineTo(fx(x1), fy(y1)).lineTo(fx(x0), fy(y1))
+
+const R = 0.03 * w
+const CLIP = DISK.clip * w
+// The two square holes at the top corners go right through the disk.
+const CORNER_HOLES: (readonly [number, number, number, number])[] = [
+  [0.09, 0.02, 0.15, 0.06],
+  [0.85, 0.02, 0.91, 0.06],
+]
+// The shutter's window, an indent in its plate on both faces, at the same x so they line up through the disk.
+const WINDOW = [0.57, 0.025, 0.66, 0.08] as const
+const RAILS = [0.27, 0.73]
+
+/** The top section's outline: the rounded top-left corner and the clipped top-right one, and the corner holes. */
+function topShape(): THREE.Shape {
+  const y = fy(MT)
+  const shape = new THREE.Shape()
+    .moveTo(-w / 2, y)
+    .lineTo(-w / 2, h / 2 - R)
+    .quadraticCurveTo(-w / 2, h / 2, -w / 2 + R, h / 2)
+    .lineTo(w / 2 - CLIP, h / 2)
+    .lineTo(w / 2, h / 2 - CLIP)
+    .lineTo(w / 2, y)
+  shape.holes.push(...CORNER_HOLES.map(hole))
+  return shape
+}
+
+function middleShape(): THREE.Shape {
+  return new THREE.Shape()
+    .moveTo(-w / 2, fy(MT))
+    .lineTo(-w / 2, fy(MB))
+    .lineTo(w / 2, fy(MB))
+    .lineTo(w / 2, fy(MT))
+}
+
+/** The bottom section's outline, with the two rounded corners. */
+function bottomShape(): THREE.Shape {
+  const y = fy(MB)
+  return new THREE.Shape()
+    .moveTo(-w / 2, y)
+    .lineTo(-w / 2, -h / 2 + R)
+    .quadraticCurveTo(-w / 2, -h / 2, -w / 2 + R, -h / 2)
+    .lineTo(w / 2 - R, -h / 2)
+    .quadraticCurveTo(w / 2, -h / 2, w / 2, -h / 2 + R)
+    .lineTo(w / 2, y)
+}
+
+const extrude = (shape: THREE.Shape, depth: number, z: number) =>
+  new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false }).translate(0, 0, z)
+
+/** A plate with a window cut into it, and a dark floor under the window, so the window is an indent. */
+function plate(area: readonly [number, number, number, number], depth: number, z: number, into: Parts) {
+  const shape = rect(area)
+  shape.holes.push(hole(WINDOW))
+  into.metal.push(extrude(shape, depth, z))
+  into.dark.push(box(...WINDOW, 0.002, z + (depth > 0 ? 0.001 : -0.001)))
+}
+
+type Parts = { plastic: THREE.BufferGeometry[]; dark: THREE.BufferGeometry[]; metal: THREE.BufferGeometry[] }
+const parts = (): Parts => ({ plastic: [], dark: [], metal: [] })
+
+function build() {
+  const top = parts()
+  const middle = parts()
+  const bottom = parts()
+
+  // The body, a slab per section.
+  top.plastic.push(extrude(topShape(), DISK.depth, back))
+  middle.plastic.push(extrude(middleShape(), DISK.depth, back))
+  bottom.plastic.push(extrude(bottomShape(), DISK.depth, back))
+
+  // Top, front: the rim with the shutter's track and the label recess cut out.
+  const topFront = topShape()
+  topFront.holes.push(hole([0.2, 0, 0.8, 0.1]), hole(RECESS.label))
+  top.plastic.push(extrude(topFront, raised, front))
+  // The steel shutter sleeve: a plate on the front in the track, a plate on the back, and the bridge over the top
+  // edge that joins them, so they read as one piece that slides.
+  plate([0.25, 0.008, 0.75, 0.095], raised * 1.2, front, top)
+  plate([0.25, 0.01, 0.75, 0.21], -raised * 1.2, rimBack, top)
+  top.metal.push(box(0.25, -0.006, 0.75, 0.01, DISK.depth + raised * 3.4, -raised / 2))
+  // Top, back: the rim strip, the hub's housing at rim height, the hub with its ring and two indents, and the
+  // guides the rails run down from.
+  top.plastic.push(extrude(topShape(), -raised, rimBack + raised))
+  top.plastic.push(box(0.25, 0.25, 0.75, 0.55, raised, back - raised / 2))
+  const [hx, hy] = [fx(0.5), fy(0.4)]
+  const hub = new THREE.Shape().absarc(hx, hy, 0.16 * w, 0, Math.PI * 2, false)
+  hub.holes.push(hole([0.5, 0.36, 0.56, 0.4]), hole([0.46, 0.42, 0.5, 0.45]))
+  top.metal.push(extrude(hub, -raised * 0.6, rimBack))
+  top.dark.push(
+    new THREE.CylinderGeometry(0.16 * w, 0.16 * w, 0.002, 28).rotateX(Math.PI / 2).translate(hx, hy, rimBack - 0.001),
+  )
+  top.metal.push(new THREE.TorusGeometry(0.18 * w, 0.01, 6, 36).translate(hx, hy, rimBack - raised * 0.3))
+  for (const x of RAILS) top.plastic.push(box(x - 0.03, 0.44, x + 0.03, 0.48, raised, back - raised / 2))
+
+  // Middle: the rim's side strips on both faces, the steel strips on them, and the clips holding the screen.
+  for (const [x0, x1] of [
+    [0, 0.05],
+    [0.95, 1],
+  ] as const) {
+    middle.plastic.push(box(x0, MT, x1, MB, raised, front + raised / 2))
+    middle.plastic.push(box(x0, MT, x1, MB, raised, rimBack + raised / 2))
+  }
+  for (const [x0, x1] of [
+    [0.012, 0.038],
+    [0.962, 0.988],
+  ] as const) {
+    middle.metal.push(box(x0, 0.28, x1, 0.79, raised * 0.5, front + raised * 1.25))
+    middle.metal.push(box(x0, 0.26, x1, 0.8, raised * 0.5, rimBack - raised * 0.25))
+  }
+  for (const [x0, x1] of [
+    [0.03, 0.062],
+    [0.938, 0.97],
+  ] as const)
+    for (const [y0, y1] of [
+      [0.22, 0.27],
+      [0.8, 0.85],
+    ] as const)
+      middle.dark.push(box(x0, y0, x1, y1, raised * 0.6, front + raised * 1.3))
+
+  // Bottom, front: the rim with the stat boxes cut out, the grill between them and the steel band above.
+  const bottomFront = bottomShape()
+  bottomFront.holes.push(hole(RECESS.attack), hole(RECESS.health))
+  bottom.plastic.push(extrude(bottomFront, raised, front))
+  for (let i = 0; i < 6; i++)
+    bottom.plastic.push(box(0.42, 0.895 + i * 0.013, 0.58, 0.901 + i * 0.013, raised * 0.7, front + raised * 0.35))
+  bottom.metal.push(box(0.05, 0.862, 0.95, 0.88, raised * 0.5, front + raised * 1.2))
+  // Bottom, back: the rim strip, the band with its slot, the rails' feet and the dark blocks at the rim's foot.
+  bottom.plastic.push(extrude(bottomShape(), -raised, rimBack + raised))
+  const band = rect([0.05, 0.875, 0.95, 0.975])
+  band.holes.push(hole([0.09, 0.9, 0.91, 0.95]))
+  bottom.plastic.push(extrude(band, -raised * 0.8, rimBack))
+  for (const x of RAILS) bottom.plastic.push(box(x - 0.04, MB - 0.035, x + 0.04, MB + 0.005, raised, back - raised / 2))
+  bottom.dark.push(box(0, MB - 0.055, 0.045, MB, 0.004, rimBack))
+  bottom.dark.push(box(0.955, MB - 0.055, 1, MB, 0.004, rimBack))
+
+  // The rails, one unit tall from their origin downward; they are scaled to reach from the guides to the feet.
+  const rail = merge(RAILS.map((x) => box(x - 0.008, 0.5, x + 0.008, 0.5 + 1 / h, raised * 0.7, back - raised * 0.35)))
+
+  // Each section's origin is its anchor: the top edge, the middle's top, or the bottom edge.
+  const anchored = (section: Parts, y: number) =>
+    Object.fromEntries(
+      Object.entries(section).map(([name, list]) => [name, list.length ? merge(list).translate(0, -y, 0) : null]),
+    ) as Record<keyof Parts, THREE.BufferGeometry | null>
+  return { top: anchored(top, h / 2), middle: anchored(middle, fy(MT)), bottom: anchored(bottom, -h / 2), rail }
+}
+
+// One mesh per material: the pieces are unindexed first, or they cannot merge.
+function merge(parts: THREE.BufferGeometry[]) {
+  const flat = parts.map((part) => (part.index ? part.toNonIndexed() : part))
+  const merged = mergeGeometries(flat, false)
+  if (!merged) throw new Error('The disk could not be built')
+  for (const part of [...parts, ...flat]) part.dispose()
+  return merged
+}
+
+let built: ReturnType<typeof build> | null = null
+/** The disk's geometry, built once and shared by every card. */
+export const diskGeometry = () => (built ??= build())
+
+/** Worn plastic, drawn once: grain, scratches and grime as colour, roughness and a normal map. */
 function plasticMaps() {
   const size = 512
   const canvas = document.createElement('canvas')
@@ -230,19 +266,17 @@ function plasticMaps() {
 let worn: ReturnType<typeof plasticMaps> | null = null
 
 // The plastic gives off a little of its own light, since the hand sits far from the factory's lamps.
-const plastics = (body: string, bodyGlow: string, edge: string, edgeGlow: string, rim: string, rimGlow: string) => {
+const plastics = (body: string, bodyGlow: string) => {
   worn ??= plasticMaps()
   const wear = { ...worn, normalScale: new THREE.Vector2(0.7, 0.7) }
   return {
-    body: new THREE.MeshStandardMaterial({ color: body, emissive: bodyGlow, metalness: 0.15, ...wear }),
-    edge: new THREE.MeshStandardMaterial({ color: edge, emissive: edgeGlow, roughness: 0.7 }),
-    plastic: new THREE.MeshStandardMaterial({ color: rim, emissive: rimGlow, metalness: 0.2, ...wear }),
+    plastic: new THREE.MeshStandardMaterial({ color: body, emissive: bodyGlow, metalness: 0.15, ...wear }),
     dark: new THREE.MeshStandardMaterial({ color: '#05090d', roughness: 0.9 }),
-    // The shutter, the hub and the tab: scratched steel.
+    // The shutter sleeve, the hub, the rails and the side strips: scratched steel. Not fully metallic, since with
+    // nothing to reflect pure steel renders black.
     metal: new THREE.MeshStandardMaterial({
       color: '#d4dde3',
       emissive: '#222a32',
-      // Not fully metallic: with nothing to reflect, pure steel renders black.
       metalness: 0.7,
       roughness: 0.35,
       map: worn.map,
@@ -256,13 +290,88 @@ type Plastics = ReturnType<typeof plastics>
 const sets: Partial<Record<'common' | 'rare', Plastics>> = {}
 /** Blue disks for the deck, red for the rare card, as Act 3 has it; built on first use, since they draw canvases. */
 export const diskMaterials = (kind: 'common' | 'rare' = 'common'): Plastics =>
-  (sets[kind] ??=
-    kind === 'rare'
-      ? plastics('#7a2030', '#2a0a10', '#3a0d14', '#1a0508', '#9a2a3c', '#3a0e16')
-      : plastics('#2e4664', '#0c1826', '#15212f', '#08111a', '#3f5f84', '#12243a'))
+  (sets[kind] ??= kind === 'rare' ? plastics('#7a2030', '#2a0a10') : plastics('#2e4664', '#0c1826'))
 
 /** Where the face and back planes sit: just off the body, under the raised rims. */
 export const FACE_Z = front + 0.0008
 export const BACK_Z = back - 0.0008
 /** How far the back's rim and parts stand off the body, so a face-down stack can space its disks. */
 export const BACK_RELIEF = raised * 2.4
+
+/** A strip of the face or back for one section, with its UVs mapped to that strip of the drawn card. */
+function sheetGeometry(from: number, to: number, anchor: 'top' | 'bottom', mirrored: boolean) {
+  const height = (to - from) * h
+  const geometry = new THREE.PlaneGeometry(w, height).translate(0, anchor === 'top' ? -height / 2 : height / 2, 0)
+  const uv = geometry.getAttribute('uv') as THREE.BufferAttribute
+  for (let i = 0; i < uv.count; i++) uv.setY(i, 1 - from - (1 - uv.getY(i)) * (to - from))
+  if (mirrored) geometry.rotateY(Math.PI)
+  return geometry
+}
+
+type Sheets = [THREE.BufferGeometry, THREE.BufferGeometry, THREE.BufferGeometry]
+let sheets: Record<'front' | 'back', Sheets> | null = null
+const sheetGeometries = () =>
+  (sheets ??= {
+    front: [
+      sheetGeometry(0, MT, 'top', false),
+      sheetGeometry(MT, MB, 'top', false),
+      sheetGeometry(MB, 1, 'bottom', false),
+    ],
+    back: [sheetGeometry(0, MT, 'top', true), sheetGeometry(MT, MB, 'top', true), sheetGeometry(MB, 1, 'bottom', true)],
+  })
+
+export type DiskHandle = { setOpen: (open: number) => void }
+
+/**
+ * The disk, open (1) or closed (0) or on its way: the top and bottom sections keep their size and the middle
+ * compresses between them, with the rails spanning the gap. `setOpen` moves it without a render.
+ */
+export const Disk = forwardRef<
+  DiskHandle,
+  { open?: number; kind?: 'common' | 'rare'; front?: THREE.Material | null; back?: THREE.Material | null }
+>(function Disk({ open = 1, kind = 'common', front: frontMaterial = null, back: backMaterial = null }, ref) {
+  const geometry = diskGeometry()
+  const materials = diskMaterials(kind)
+  const faces = sheetGeometries()
+  const top = useRef<THREE.Group>(null)
+  const middle = useRef<THREE.Group>(null)
+  const bottom = useRef<THREE.Group>(null)
+  const rails = useRef<THREE.Group>(null)
+  const setOpen = useMemo(
+    () => (value: number) => {
+      const height = h * (DISK.compact + (1 - DISK.compact) * value)
+      const spare = height - h * (1 - MB + MT)
+      top.current?.position.setY(height / 2)
+      middle.current?.position.setY(height / 2 - MT * h)
+      middle.current?.scale.setY(Math.max(spare / (h * (MB - MT)), 0.001))
+      bottom.current?.position.setY(-height / 2)
+      // From the guides under the housing to the feet on the bottom section.
+      const guides = height / 2 - 0.48 * h
+      const feet = -height / 2 + (1 - MB + 0.035) * h
+      rails.current?.position.setY(guides)
+      rails.current?.scale.setY(Math.max(guides - feet, 0.001))
+    },
+    [],
+  )
+  useImperativeHandle(ref, () => ({ setOpen }), [setOpen])
+  useLayoutEffect(() => setOpen(open), [open, setOpen])
+  const section = (node: RefObject<THREE.Group | null>, part: (typeof geometry)['top'], index: 0 | 1 | 2) => (
+    <group ref={node}>
+      {part.plastic ? <mesh geometry={part.plastic} material={materials.plastic} /> : null}
+      {part.dark ? <mesh geometry={part.dark} material={materials.dark} /> : null}
+      {part.metal ? <mesh geometry={part.metal} material={materials.metal} /> : null}
+      {frontMaterial ? <mesh geometry={faces.front[index]} material={frontMaterial} position={[0, 0, FACE_Z]} /> : null}
+      {backMaterial ? <mesh geometry={faces.back[index]} material={backMaterial} position={[0, 0, BACK_Z]} /> : null}
+    </group>
+  )
+  return (
+    <>
+      {section(top, geometry.top, 0)}
+      {section(middle, geometry.middle, 1)}
+      {section(bottom, geometry.bottom, 2)}
+      <group ref={rails}>
+        <mesh geometry={geometry.rail} material={materials.metal} />
+      </group>
+    </>
+  )
+})

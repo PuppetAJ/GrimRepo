@@ -3,9 +3,9 @@ import { easing } from 'maath'
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { card, type Unit } from 'shared'
 import * as THREE from 'three'
-import { BACK_Z, diskGeometry, diskMaterials, FACE_Z } from './Disk.tsx'
+import { Disk, type DiskHandle } from './Disk.tsx'
 import { backTexture, faceLights, faceTexture, type CardStyle, type loadCardAssets } from './faces.ts'
-import { CARD, DECK, DISK, HAND_SCALE, handPlace, slot, type Row, type Vec3 } from './layout.ts'
+import { CARD, DECK, HAND_SCALE, handPlace, slot, type Row, type Vec3 } from './layout.ts'
 import { LEAVE_MS, type Lunge } from './playback.ts'
 
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
@@ -17,9 +17,6 @@ export type Look = 'plain' | 'selected' | 'marked' | 'markable' | 'dim'
 const FLAT = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0))
 const geometry = new THREE.BoxGeometry(CARD.width, CARD.height, CARD.depth)
 const EDGE = new THREE.MeshStandardMaterial({ color: '#2b211c' })
-// The face and back of a disk are planes just off its body, under the raised rim.
-const sheet = new THREE.PlaneGeometry(CARD.width, CARD.height)
-const backSheet = sheet.clone().rotateY(Math.PI)
 
 // Scratch objects, so the frame loop allocates nothing.
 const position = new THREE.Vector3()
@@ -56,6 +53,7 @@ export function Card({
   onClick?: (event: ThreeEvent<MouseEvent>) => void
 }) {
   const mesh = useRef<THREE.Object3D>(null)
+  const disk = useRef<DiskHandle>(null)
   const [hovered, setHovered] = useState(false)
   const placed = useRef(false)
   const face = faceTexture(unit, assets, style)
@@ -82,8 +80,9 @@ export function Card({
   front.map = face
   front.emissiveMap = tech ? faceLights(unit, assets) : face
   rear.map = back
-  // A card drawn from the deck starts as the compact disk it lay as, and expands on the way to the hand.
-  const stretch = useRef(tech && spawn && spawn[0] === DECK[0] && spawn[2] === DECK[2] ? DISK.compact : 1)
+  // A card drawn from the deck starts closed, as it lay in the deck, and opens on the way to the hand.
+  const fromDeck = Boolean(tech && spawn && spawn[0] === DECK[0] && spawn[2] === DECK[2])
+  const open = useRef(fromDeck ? 0 : 1)
 
   useFrame(({ camera }, delta) => {
     const card = mesh.current
@@ -118,8 +117,8 @@ export function Card({
       scale.multiplyScalar(1 - leaving * 0.6)
     } else position.y -= leaving * 0.45
 
-    stretch.current = THREE.MathUtils.damp(stretch.current, 1, 6, delta)
-    scale.y *= stretch.current
+    open.current = THREE.MathUtils.damp(open.current, 1, 6, delta)
+    disk.current?.setOpen(open.current)
     if (!placed.current) {
       card.position.copy(spawn ? new THREE.Vector3(...spawn) : position)
       card.quaternion.copy(spawn ? FLAT : rotation)
@@ -142,9 +141,11 @@ export function Card({
             : hovered && onClick
               ? rest + 0.25
               : rest
-    front.emissiveIntensity = glow
+    // A closing disk turns its display off: the screen's light goes first, then the drawing fades.
+    const lit = tech ? open.current * open.current : 1
+    front.emissiveIntensity = glow * lit
     front.emissive.set(look === 'marked' || look === 'markable' ? '#ff4040' : '#ffffff')
-    front.color.setScalar(look === 'dim' ? 0.45 : 1)
+    front.color.setScalar((look === 'dim' ? 0.45 : 1) * (tech ? 0.25 + 0.75 * open.current : 1))
     front.opacity = rear.opacity = 1 - leaving
   })
 
@@ -164,20 +165,18 @@ export function Card({
     },
   }
 
-  if (tech) {
-    const disk = diskGeometry()
-    const plastics = diskMaterials(card(unit.card).tier === 'S' ? 'rare' : 'common')
+  if (tech)
     return (
       <group ref={mesh} name={`card-${unit.uid}`} {...handlers}>
-        <mesh geometry={disk.body} material={[plastics.body, plastics.edge]} />
-        <mesh geometry={disk.plastic} material={plastics.plastic} />
-        <mesh geometry={disk.dark} material={plastics.dark} />
-        <mesh geometry={disk.metal} material={plastics.metal} />
-        <mesh geometry={sheet} material={front} position={[0, 0, FACE_Z]} />
-        <mesh geometry={backSheet} material={rear} position={[0, 0, BACK_Z]} />
+        <Disk
+          ref={disk}
+          open={fromDeck ? 0 : 1}
+          kind={card(unit.card).tier === 'S' ? 'rare' : 'common'}
+          front={front}
+          back={rear}
+        />
       </group>
     )
-  }
 
   return (
     <mesh
@@ -216,6 +215,9 @@ export function Popup({
     context.strokeText(text, 128, 50)
     context.fillStyle = tone === 'heal' ? '#7dff9a' : tone === 'note' ? '#f2c14e' : '#ff5a4f'
     context.fillText(text, 128, 50)
+    context.globalCompositeOperation = 'destination-out'
+    context.fillStyle = 'rgb(0 0 0 / 0.4)'
+    for (let line = 1; line < 96; line += 3) context.fillRect(0, line, 256, 1)
     const map = new THREE.CanvasTexture(element)
     map.colorSpace = THREE.SRGBColorSpace
     return new THREE.SpriteMaterial({ map, transparent: true, depthTest: false })
