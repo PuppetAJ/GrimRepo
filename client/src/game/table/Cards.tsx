@@ -1,11 +1,11 @@
 import { useFrame, type ThreeEvent } from '@react-three/fiber'
 import { easing } from 'maath'
-import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { card, type Unit } from 'shared'
 import * as THREE from 'three'
 import { Disk, type DiskHandle } from './Disk.tsx'
-import { backTexture, faceContent, faceLights, faceTexture, type CardStyle, type loadCardAssets } from './faces.ts'
-import { CARD, DECK, HAND_SCALE, handPlace, slot, type Row, type Vec3 } from './layout.ts'
+import { backTexture, faceContent, faceLights, faceTexture, type loadCardAssets } from './faces.ts'
+import { DECK, HAND_SCALE, handPlace, slot, type Row, type Vec3 } from './layout.ts'
 import { LEAVE_MS, type Lunge } from './playback.ts'
 
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
@@ -15,8 +15,6 @@ export type Place = { at: 'hand'; index: number; count: number } | { at: Row; la
 export type Look = 'plain' | 'selected' | 'marked' | 'markable' | 'dim'
 
 const FLAT = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0))
-const geometry = new THREE.BoxGeometry(CARD.width, CARD.height, CARD.depth)
-const EDGE = new THREE.MeshStandardMaterial({ color: '#2b211c' })
 
 // Scratch objects, so the frame loop allocates nothing.
 const position = new THREE.Vector3()
@@ -36,12 +34,10 @@ export function Card({
   leavingHow = 'died',
   look = 'plain',
   assets,
-  style = 'cabin',
   summoning,
   onClick,
 }: {
   unit: Unit
-  style?: CardStyle
   summoning?: boolean
   place: Place
   spawn?: Vec3
@@ -56,16 +52,15 @@ export function Card({
   const disk = useRef<DiskHandle>(null)
   const [hovered, setHovered] = useState(false)
   const placed = useRef(false)
-  const face = faceTexture(unit, assets, style)
-  const back = useMemo(() => backTexture(assets, style), [assets, style])
-  const tech = style === 'tech'
-  // On a tech card only the screen and the numerals glow, from their own map; a cabin card glows faintly all over.
-  const rest = tech ? 1.1 : 0.22
+  const face = faceTexture(unit, assets)
+  const back = useMemo(() => backTexture(), [])
+  // Only the screen and the numerals glow, from their own map.
+  const rest = 1.1
   // Each card owns its materials so it can glow or fade alone; the textures are shared. The alpha test keeps the
   // clipped corner from writing depth where there is nothing to see.
   const [front, rear, content] = useMemo(
     () => [
-      new THREE.MeshStandardMaterial({ roughness: 0.85, emissive: '#ffffff', transparent: true, alphaTest: 0.5 }),
+      new THREE.MeshStandardMaterial({ roughness: 0.85, transparent: true, alphaTest: 0.5 }),
       new THREE.MeshStandardMaterial({ roughness: 0.85, transparent: true, alphaTest: 0.5 }),
       new THREE.MeshStandardMaterial({ roughness: 0.85, emissive: '#ffffff', transparent: true, alphaTest: 0.5 }),
     ],
@@ -80,14 +75,11 @@ export function Card({
     [front, rear, content],
   )
   front.map = face
-  front.emissiveMap = tech ? null : face
   rear.map = back
-  if (tech) {
-    content.map = faceContent(unit, assets)
-    content.emissiveMap = faceLights(unit, assets)
-  }
+  content.map = faceContent(unit, assets)
+  content.emissiveMap = faceLights(unit, assets)
   // A card drawn from the deck starts closed, as it lay in the deck, and opens on the way to the hand.
-  const fromDeck = Boolean(tech && spawn && spawn[0] === DECK[0] && spawn[2] === DECK[2])
+  const fromDeck = Boolean(spawn && spawn[0] === DECK[0] && spawn[2] === DECK[2])
   const open = useRef(fromDeck ? 0 : 1)
 
   useFrame(({ camera }, delta) => {
@@ -104,7 +96,7 @@ export function Card({
       camera.localToWorld(position)
       rotation.copy(camera.quaternion).multiply(roll.setFromAxisAngle(Z, angle))
       // A disk grows in the hand when picked up, as Act 3's do.
-      scale.setScalar(HAND_SCALE * (tech && (hovered || look === 'selected') ? 1.25 : 1))
+      scale.setScalar(HAND_SCALE * (hovered || look === 'selected' ? 1.25 : 1))
     } else {
       // A card marked for sacrifice lifts and tilts off the table, so the choice is plain to see.
       const lift = look === 'marked' ? 0.12 : hovered && onClick ? 0.04 : 0
@@ -147,12 +139,9 @@ export function Card({
             : hovered && onClick
               ? rest + 0.25
               : rest
-    // A closing disk turns its display off: the screen's light goes first, then the drawing fades.
-    // On a tech card the sticker and screens stay as it closes; what they show fades out, its light first.
-    const shown = tech ? content : front
-    shown.emissiveIntensity = glow * (tech ? open.current * open.current : 1)
-    if (tech) front.emissiveIntensity = 0
-    shown.emissive.set(look === 'marked' || look === 'markable' ? '#ff4040' : '#ffffff')
+    // A closing disk turns its display off: the sticker and screens stay, and what they show fades out, its light first.
+    content.emissiveIntensity = glow * open.current * open.current
+    content.emissive.set(look === 'marked' || look === 'markable' ? '#ff4040' : '#ffffff')
     front.color.setScalar(look === 'dim' ? 0.45 : 1)
     content.color.setScalar(look === 'dim' ? 0.45 : 1)
     front.opacity = rear.opacity = 1 - leaving
@@ -177,28 +166,17 @@ export function Card({
     },
   }
 
-  if (tech)
-    return (
-      <group ref={mesh} name={`card-${unit.uid}`} {...handlers}>
-        <Disk
-          ref={disk}
-          open={fromDeck ? 0 : 1}
-          kind={card(unit.card).tier === 'S' ? 'rare' : 'common'}
-          front={front}
-          content={content}
-          back={rear}
-        />
-      </group>
-    )
-
   return (
-    <mesh
-      ref={mesh as RefObject<THREE.Mesh>}
-      name={`card-${unit.uid}`}
-      geometry={geometry}
-      material={[EDGE, EDGE, EDGE, EDGE, front, rear]}
-      {...handlers}
-    />
+    <group ref={mesh} name={`card-${unit.uid}`} {...handlers}>
+      <Disk
+        ref={disk}
+        open={fromDeck ? 0 : 1}
+        kind={card(unit.card).tier === 'S' ? 'rare' : 'common'}
+        front={front}
+        content={content}
+        back={rear}
+      />
+    </group>
   )
 }
 

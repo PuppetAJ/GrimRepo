@@ -1,19 +1,12 @@
-import { card, CARDS, SIGILS, type SigilId, type Unit } from 'shared'
+import { card, CARDS, type SigilId, type Unit } from 'shared'
 import { CanvasTexture, SRGBColorSpace, type Texture } from 'three'
 import { CORNER_HOLES, DISK, RECESS, SCREEN_DIVIDER, SECTIONS, SIGIL_BAND } from './layout.ts'
 
 // The face is drawn at the card's own shape, so nothing is stretched.
 const W = 300
 const H = 504
-const INK = '#1d1512'
-const BLOOD = '#a3172b'
 
-type Assets = {
-  frame: HTMLImageElement
-  rare: HTMLImageElement
-  back: HTMLImageElement
-  art: Map<string, HTMLImageElement>
-}
+type Assets = { art: Map<string, HTMLImageElement> }
 
 function image(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -26,25 +19,15 @@ function image(src: string): Promise<HTMLImageElement> {
 
 let assets: Promise<Assets> | null = null
 
-/** The frames, the art and the fonts every face needs, loaded once for the page. */
+/** The art and the font every face needs, loaded once for the page. */
 export function loadCardAssets(): Promise<Assets> {
   assets ??= (async () => {
     const withArt = Object.keys(CARDS).filter((id) => id !== 'Boilerplate')
-    const [frame, rare, back, ...art] = await Promise.all([
-      image('/cards/frame.png'),
-      image('/cards/frame-rare.png'),
-      image('/cards/back.png'),
-      ...withArt.map((id) => image(`/cards/${id}.png`)),
-      document.fonts.load('48px "Pirata One"'),
-      document.fonts.load('500 32px "IBM Plex Mono"'),
+    const [art] = await Promise.all([
+      Promise.all(withArt.map((id) => image(`/cards/${id}.png`))),
       document.fonts.load('48px VT323'),
     ])
-    return {
-      frame: frame as HTMLImageElement,
-      rare: rare as HTMLImageElement,
-      back: back as HTMLImageElement,
-      art: new Map(withArt.map((id, i) => [id, art[i] as HTMLImageElement])),
-    }
+    return { art: new Map(withArt.map((id, i) => [id, art[i] as HTMLImageElement])) }
   })()
   return assets
 }
@@ -66,59 +49,12 @@ function canvas(): [HTMLCanvasElement, CanvasRenderingContext2D] {
   element.width = W
   element.height = H
   const context = element.getContext('2d') as CanvasRenderingContext2D
-  // The frames are Inscryption's pixel art, so they are scaled up without blurring.
+  // The sigils are pixel art, so they are scaled up without blurring.
   context.imageSmoothingEnabled = false
   return [element, context]
 }
 
-function drawFace(context: CanvasRenderingContext2D, unit: Unit, loaded: Assets): void {
-  const def = card(unit.card)
-  const rare = def.tier === 'S'
-  context.drawImage(rare ? loaded.rare : loaded.frame, 0, 0, W, H)
-  const ink = rare ? '#8fe39a' : INK
-  context.fillStyle = ink
-  context.textAlign = 'center'
-  context.textBaseline = 'middle'
-
-  fitText(context, def.name, (size) => `${size}px "Pirata One"`, 46, W * 0.8)
-  context.fillText(def.name, W / 2, H * 0.085)
-
-  context.imageSmoothingEnabled = true
-  const art = loaded.art.get(unit.card)
-  if (art) context.drawImage(art, W * 0.03, H * 0.14, W * 0.94, H * 0.56)
-  else {
-    context.font = '500 34px "IBM Plex Mono"'
-    context.fillText('<div>', W / 2, H * 0.36)
-    context.fillText('</div>', W / 2, H * 0.46)
-  }
-  context.imageSmoothingEnabled = false
-
-  if (def.cost) {
-    context.fillStyle = BLOOD
-    context.textAlign = 'right'
-    context.font = '36px "IBM Plex Mono"'
-    context.fillText('◆'.repeat(def.cost), W * 0.93, H * 0.195)
-  }
-  if (unit.sigils.length) {
-    // A pale band, so the sigils read over any art.
-    context.fillStyle = rare ? 'rgb(10 30 30 / 0.8)' : 'rgb(236 214 186 / 0.85)'
-    context.fillRect(W * 0.06, H * 0.625, W * 0.88, H * 0.075)
-    context.fillStyle = rare ? ink : BLOOD
-    context.textAlign = 'center'
-    const text = unit.sigils.map((sigil) => SIGILS[sigil].name).join(' · ')
-    fitText(context, text, (size) => `${size}px "Pirata One"`, 36, W * 0.84)
-    context.fillText(text, W / 2, H * 0.664)
-  }
-
-  context.textAlign = 'center'
-  context.font = '68px "Pirata One"'
-  context.fillStyle = ink
-  context.fillText(String(unit.attack), W * 0.25, H * 0.8)
-  context.fillStyle = unit.health < unit.maxHealth ? BLOOD : ink
-  context.fillText(String(unit.health), W * 0.8, H * 0.8)
-}
-
-// The factory's cards: Act 3's floppy disks. The disk itself is geometry (Disk.tsx); this draws what shows in
+// The cards are Act 3's floppy disks. The disk itself is geometry (Disk.tsx); this draws what shows in
 // its recesses: the label sticker, the screen with the art, a divider and the sigils, and the two stat boxes.
 type Palette = {
   body: string
@@ -259,11 +195,11 @@ function hologram(
 type Layer = 'base' | 'content' | 'lights'
 
 /**
- * The tech face is drawn in layers: `base` is the plastic, the sticker and the dark screens, which stay when the disk
+ * The face is drawn in layers: `base` is the plastic, the sticker and the dark screens, which stay when the disk
  * closes; `content` is what shows on them (name, art, cost, sigils, numerals) on a clear ground, which fades out;
  * `lights` is the content on black, for the emissive map, so only the screens' contents glow.
  */
-function drawTechFace(context: CanvasRenderingContext2D, unit: Unit, loaded: Assets, layer: Layer): void {
+function drawFace(context: CanvasRenderingContext2D, unit: Unit, loaded: Assets, layer: Layer): void {
   const def = card(unit.card)
   const palette = def.tier === 'S' ? RARE : COMMON
   context.clearRect(0, 0, W, H)
@@ -347,7 +283,7 @@ function drawTechFace(context: CanvasRenderingContext2D, unit: Unit, loaded: Ass
 }
 
 /** The back of the disk: the sunken panel, darker than the rim, with the shadow of the hub's disc; the parts are geometry on top. */
-function drawTechBack(context: CanvasRenderingContext2D): void {
+function drawBack(context: CanvasRenderingContext2D): void {
   context.clearRect(0, 0, W, H)
   context.fillStyle = COMMON.body
   diskPath(context, true)
@@ -356,8 +292,6 @@ function drawTechBack(context: CanvasRenderingContext2D): void {
   context.fillStyle = 'rgb(0 0 0 / 0.35)'
   context.fillRect(W * 0.045, H * SECTIONS.middleTop, W * 0.91, H * (SECTIONS.middleBottom - SECTIONS.middleTop))
 }
-
-export type CardStyle = 'cabin' | 'tech'
 
 function texture(element: HTMLCanvasElement): Texture {
   const result = new CanvasTexture(element)
@@ -368,50 +302,38 @@ function texture(element: HTMLCanvasElement): Texture {
 
 const faces = new Map<string, Texture>()
 
-/** A face for this card as it stands now; cards with the same numbers share one texture. A tech card's is its base layer. */
-export function faceTexture(unit: Unit, loaded: Assets, style: CardStyle = 'cabin'): Texture {
-  if (style === 'tech') return techLayer(unit, loaded, 'base')
-  const key = `cabin:${unit.card}:${unit.attack}:${unit.health}:${unit.maxHealth}:${unit.sigils.join(',')}`
-  let found = faces.get(key)
-  if (!found) {
-    const [element, context] = canvas()
-    drawFace(context, unit, loaded)
-    found = texture(element)
-    faces.set(key, found)
-  }
-  return found
-}
-
-function techLayer(unit: Unit, loaded: Assets, layer: Layer): Texture {
+function drawn(unit: Unit, loaded: Assets, layer: Layer): Texture {
   // The base depends only on the card's kind; the other layers on everything shown.
   const key =
     layer === 'base'
-      ? `tech:base:${card(unit.card).tier === 'S' ? 'rare' : 'common'}`
-      : `tech:${layer}:${unit.card}:${unit.attack}:${unit.health}:${unit.maxHealth}:${unit.sigils.join(',')}`
+      ? `base:${card(unit.card).tier === 'S' ? 'rare' : 'common'}`
+      : `${layer}:${unit.card}:${unit.attack}:${unit.health}:${unit.maxHealth}:${unit.sigils.join(',')}`
   let found = faces.get(key)
   if (!found) {
     const [element, context] = canvas()
-    drawTechFace(context, unit, loaded, layer)
+    drawFace(context, unit, loaded, layer)
     found = texture(element)
     faces.set(key, found)
   }
   return found
 }
 
-/** What a tech card shows on its sticker and screens, on a clear ground; it fades out as the disk closes. */
-export const faceContent = (unit: Unit, loaded: Assets): Texture => techLayer(unit, loaded, 'content')
+/** A card's base layer, the plastic and the sticker; cards of the same kind share one texture. */
+export const faceTexture = (unit: Unit, loaded: Assets): Texture => drawn(unit, loaded, 'base')
 
-/** What glows on a tech card, for its emissive map; black where the plastic and the sticker are. */
-export const faceLights = (unit: Unit, loaded: Assets): Texture => techLayer(unit, loaded, 'lights')
+/** What a card shows on its sticker and screens, on a clear ground; it fades out as the disk closes. */
+export const faceContent = (unit: Unit, loaded: Assets): Texture => drawn(unit, loaded, 'content')
 
-export function backTexture(loaded: Assets, style: CardStyle = 'cabin'): Texture {
-  let found = faces.get(`${style}:back`)
+/** What glows on a card, for its emissive map; black where the plastic and the sticker are. */
+export const faceLights = (unit: Unit, loaded: Assets): Texture => drawn(unit, loaded, 'lights')
+
+export function backTexture(): Texture {
+  let found = faces.get('back')
   if (!found) {
     const [element, context] = canvas()
-    if (style === 'tech') drawTechBack(context)
-    else context.drawImage(loaded.back, 0, 0, W, H)
+    drawBack(context)
     found = texture(element)
-    faces.set(`${style}:back`, found)
+    faces.set('back', found)
   }
   return found
 }

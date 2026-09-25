@@ -13,10 +13,8 @@ import type { View } from '../view.ts'
 import { Card, Popup, type Look, type Place } from './Cards.tsx'
 import { disposeFaces, loadCardAssets } from './faces.ts'
 import { BELL, BOARD_DEPTH, CAMERA, CARD, DECK, lanes, PILE, slot, TABLE_Y, type CameraView } from './layout.ts'
-import { Board, Deck, Pile } from './Board.tsx'
+import { Deck, Pile } from './Piles.tsx'
 import { EndTurnButton, Factory, FactoryEffects, FactoryP03, TechBoard } from './Factory.tsx'
-import { chosenScene, type SceneName } from './scene.ts'
-import { Bell, Candle, Lights, Robot, Room } from './Scene.tsx'
 import { usePlayback } from './usePlayback.ts'
 
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
@@ -94,7 +92,6 @@ function Scene({
   skip,
   rung,
   camera,
-  scene,
 }: {
   game: Ready
   assets: Assets
@@ -104,10 +101,8 @@ function Scene({
   skip: () => void
   rung: number
   camera: CameraView
-  scene: SceneName
 }) {
   const { state, act } = game
-  const style = scene === 'factory' ? 'tech' : 'cabin'
   // Moves come from the real state, and wait while P03's turn plays out.
   const legal = busy || game.result ? [] : legalActions(state)
   const can = (match: Partial<Action>) => has(legal, match)
@@ -119,32 +114,15 @@ function Scene({
   return (
     <>
       <CameraRig view={camera} />
-      {scene === 'factory' ? (
-        <>
-          <Suspense fallback={null}>
-            <Factory view={view} log={game.log} />
-          </Suspense>
-          <Suspense fallback={null}>
-            <FactoryP03 view={view} busy={busy} outcome={busy ? undefined : game.result?.outcome} />
-          </Suspense>
-          <FactoryEffects />
-        </>
-      ) : (
-        <>
-          <Lights />
-          <Candle />
-          <Suspense fallback={null}>
-            <Room />
-          </Suspense>
-          <Suspense fallback={null}>
-            <Robot />
-          </Suspense>
-        </>
-      )}
-      {scene === 'factory' ? <TechBoard /> : <Board />}
+      <Suspense fallback={null}>
+        <Factory view={view} log={game.log} />
+      </Suspense>
+      <Suspense fallback={null}>
+        <FactoryP03 view={view} busy={busy} outcome={busy ? undefined : game.result?.outcome} />
+      </Suspense>
+      <FactoryEffects />
+      <TechBoard />
       <Deck
-        assets={assets}
-        style={style}
         count={view.deck}
         total={PLAYER_DECK.length}
         active={can({ type: 'draw', from: 'deck' } as Partial<Action>)}
@@ -152,16 +130,11 @@ function Scene({
       />
       <Pile
         assets={assets}
-        style={style}
         active={can({ type: 'draw', from: 'boilerplate' } as Partial<Action>)}
         onClick={() => act({ type: 'draw', from: 'boilerplate' })}
       />
-      {scene === 'factory' ? (
-        <EndTurnButton active={can({ type: 'ringBell' })} rung={rung} onClick={() => act({ type: 'ringBell' })} />
-      ) : (
-        <Bell active={can({ type: 'ringBell' })} rung={rung} onClick={() => act({ type: 'ringBell' })} />
-      )}
-      <Lanes view={view} legal={legal} act={act} play={scene === 'factory' ? '#3ef3ff' : '#7dff9a'} />
+      <EndTurnButton active={can({ type: 'ringBell' })} rung={rung} onClick={() => act({ type: 'ringBell' })} />
+      <Lanes view={view} legal={legal} act={act} play="#3ef3ff" />
 
       {view.hand.map((unit, index) => {
         const selected = view.summon?.uid === unit.uid
@@ -175,7 +148,6 @@ function Scene({
             look={handLook(unit.uid)}
             summoning={Boolean(view.summon)}
             assets={assets}
-            style={style}
             onClick={
               selected
                 ? () => act({ type: 'cancel' })
@@ -201,7 +173,6 @@ function Scene({
               lunge={playback.lunges.get(unit.uid)}
               look={marked ? 'marked' : action?.type === 'mark' ? 'markable' : 'plain'}
               assets={assets}
-              style={style}
               onClick={action ? () => act(action) : undefined}
             />
           )
@@ -215,7 +186,6 @@ function Scene({
           leavingAt={gone.at}
           leavingHow={gone.how}
           assets={assets}
-          style={style}
         />
       ))}
       {playback.popups.map((popup) => (
@@ -370,7 +340,6 @@ function Hud({
   onText,
   fullScreen,
   ring,
-  scene,
 }: {
   game: Ready
   view: View
@@ -382,7 +351,6 @@ function Hud({
   onText: () => void
   fullScreen: ReturnType<typeof useFullScreen>
   ring: () => void
-  scene: SceneName
 }) {
   const { state, act } = game
   const legal = busy || game.result ? [] : legalActions(state)
@@ -455,11 +423,8 @@ function Hud({
       ) : (
         <>
           <div className="pointer-events-none absolute bottom-0 left-0 flex w-[26%] flex-col gap-1 p-3 font-terminal sm:p-4">
-            {/* In the factory the monitor beside P03 is the log; in the cabin it sits here. */}
-            <ol
-              aria-live="polite"
-              className={`text-lg leading-tight text-p03-dim short:hidden ${scene === 'factory' ? 'sr-only' : 'hidden md:block'}`}
-            >
+            {/* The monitor beside P03 shows the log; this copy is for screen readers. */}
+            <ol aria-live="polite" className="sr-only">
               {last.map((line, index) => (
                 <li key={game.log.length - last.length + index}>{line}</li>
               ))}
@@ -539,7 +504,6 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
   const [ready, setReady] = useState(false)
   const [rung, setRung] = useState(0)
   const fullScreen = useFullScreen()
-  const [scene] = useState(chosenScene)
   // W looks down at the board and D (or S) sits back up, unless a summon is holding the view.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -573,7 +537,7 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
         fallback={<NoWebGL onText={onText} />}
         aria-hidden
       >
-        <color attach="background" args={[scene === 'factory' ? '#020203' : '#050403']} />
+        <color attach="background" args={['#020203']} />
         <Suspense fallback={null}>
           <Scene
             game={playing}
@@ -584,7 +548,6 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
             skip={skip}
             rung={rung}
             camera={camera}
-            scene={scene}
           />
           <Loaded onLoad={setReady} />
         </Suspense>
@@ -606,7 +569,6 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
           onDemo={onDemo}
           onText={onText}
           fullScreen={fullScreen}
-          scene={scene}
           ring={() => act({ type: 'ringBell' })}
         />
       ) : (

@@ -14,7 +14,7 @@ import { ToneMappingMode } from 'postprocessing'
 import { Suspense, use, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactElement } from 'react'
 import * as THREE from 'three'
 import type { View } from '../view.ts'
-import { Nudge } from './Board.tsx'
+import { Nudge } from './Piles.tsx'
 import { chosenGems } from './scene.ts'
 import {
   BATTERY_CELLS,
@@ -115,7 +115,7 @@ function Room() {
   const rough = { metalness: 0.55, normalScale: new THREE.Vector2(1.6, 1.6) }
   return (
     <>
-      {/* The console: its top is the table, at the height the cabin's table stood. */}
+      {/* The console: its top is the table. */}
       <mesh position={[X, TABLE_Y / 2, -9.9]}>
         <boxGeometry args={[10.4, TABLE_Y, 7.4]} />
         {[0, 1, 3, 4, 5].map((side) => (

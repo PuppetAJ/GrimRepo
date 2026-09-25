@@ -34,22 +34,21 @@ The client is at http://localhost:3000 and proxies `/api` and `/health` to the A
 
 ## Scripts
 
-| Script                              | Does                                                                                                                                            |
-| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm dev`                          | Client and API together, reloading on change                                                                                                    |
-| `pnpm build`                        | Builds the client into `client/dist`                                                                                                            |
-| `pnpm start`                        | The API, serving the built client when `NODE_ENV=production`                                                                                    |
-| `pnpm lint` / `pnpm format`         | oxlint / Prettier                                                                                                                               |
-| `pnpm typecheck`                    | TypeScript across every package                                                                                                                 |
-| `pnpm test`                         | Unit tests in every package                                                                                                                     |
-| `pnpm test:e2e`                     | The browser suites (smoke, auth, leaderboard, game, table) against `E2E_BASE_URL`, default http://localhost:3000; `pnpm test:e2e game` runs one |
-| `pnpm db:up` / `pnpm db:down`       | Start and stop the local Postgres                                                                                                               |
-| `pnpm db:migrate`                   | Apply the migrations in `server/migrations`                                                                                                     |
-| `pnpm db:seed`                      | Wipe the database and reseed the demo state                                                                                                     |
-| `pnpm db:seed:empty`                | Seed only if there are no players yet; Railway runs this on every boot                                                                          |
-| `pnpm db:cleanup`                   | The nightly clean-up, by hand                                                                                                                   |
-| `pnpm moderate`                     | Rename, remove, list or scan accounts; see Looking after the live site                                                                          |
-| `pnpm --filter client render:cards` | Renders the art out of the 2022 card models into `client/public/cards`; run once, the images are committed                                      |
+| Script                        | Does                                                                                                                                            |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm dev`                    | Client and API together, reloading on change                                                                                                    |
+| `pnpm build`                  | Builds the client into `client/dist`                                                                                                            |
+| `pnpm start`                  | The API, serving the built client when `NODE_ENV=production`                                                                                    |
+| `pnpm lint` / `pnpm format`   | oxlint / Prettier                                                                                                                               |
+| `pnpm typecheck`              | TypeScript across every package                                                                                                                 |
+| `pnpm test`                   | Unit tests in every package                                                                                                                     |
+| `pnpm test:e2e`               | The browser suites (smoke, auth, leaderboard, game, table) against `E2E_BASE_URL`, default http://localhost:3000; `pnpm test:e2e game` runs one |
+| `pnpm db:up` / `pnpm db:down` | Start and stop the local Postgres                                                                                                               |
+| `pnpm db:migrate`             | Apply the migrations in `server/migrations`                                                                                                     |
+| `pnpm db:seed`                | Wipe the database and reseed the demo state                                                                                                     |
+| `pnpm db:seed:empty`          | Seed only if there are no players yet; Railway runs this on every boot                                                                          |
+| `pnpm db:cleanup`             | The nightly clean-up, by hand                                                                                                                   |
+| `pnpm moderate`               | Rename, remove, list or scan accounts; see Looking after the live site                                                                          |
 
 ## How the code is arranged
 
@@ -64,11 +63,11 @@ Imports run one way, and oxlint enforces it: the client and the server may use `
 
 ## The table
 
-The game is played on a 3D table by default: the 2022 room, P03 and board, rebuilt with React Three Fiber in `client/src/game/table`. Every card is one mesh whose face is drawn from the card data on a canvas, so a card's numbers change on the table as they change in the rules. The rules engine reports what each move did as a list of events, and the table plays them back one at a time, so a card lunges, a number rises off what it hit, and the dead sink away. A unit test folds the events of whole games and checks the table always lands on the rules' own state.
+The game is played on a 3D table by default: P03's factory, after Inscryption's Act 3, built with React Three Fiber in `client/src/game/table`. Every card is a floppy disk modelled in code, its face drawn from the card data on a canvas with the 2022 art as a hologram, so a card's numbers change on the table as they change in the rules. The rules engine reports what each move did as a list of events, and the table plays them back one at a time, so a card lunges, a number rises off what it hit, and the dead sink away. A unit test folds the events of whole games and checks the table always lands on the rules' own state.
 
 The same game can be played as text, which reads well on a phone held upright and works with a screen reader. The switch is on both tables and is remembered per browser; an upright phone is offered the text table rather than a sideways one. On a phone held sideways the 3D table takes the whole screen.
 
-The table can be set in Leshy's cabin or in P03's factory, after Inscryption's Act 3: `?scene=factory` or `?scene=cabin` picks one and the browser remembers it. The cabin is the default until the factory is finished. The factory is built in code around the P03 model, with tech cards drawn from the same data and the 2022 art redrawn as cyan holograms.
+The 2022 game was set in Leshy's cabin; that scene, its models and the card models the art was rendered from are in the history before the factory replaced them.
 
 In development, `window.__game` exposes the table's state and where things are on screen, which the `table` browser suite uses to click the models.
 
@@ -109,18 +108,13 @@ A clean-up runs every night at 04:00 UTC as its own Railway service. It clears t
 
 The original team: Adrian Jimenez, Kenan McKenzie and Johan Herrera ([original repository](https://github.com/kwm0304/Boss-fight)). Kenan built the health overlay; Johan built the leaderboard and the first login page.
 
-- **The room:** [Fantasy interior items](https://sketchfab.com/3d-models/fantasy-interior-items-6542c39c66394888994d7343fd03fdef) by Tedium Interactive.
-- **The robot:** [P03](https://sketchfab.com/3d-models/p03-98b40954748447be81f2bb713f6b28b8) by Goober (CC BY 4.0), animated by Adrian Jimenez.
-- **P03 in the factory:** [Inscryption P03 V2](https://sketchfab.com/3d-models/inscryption-p03-v2-2c8ec018120544aca51b2790973fc484) by p03_real_account (CC BY 4.0), wearing the colour, metal and normal maps from Goober's P03 and rigged at the head and arm.
+- **P03:** [Inscryption P03 V2](https://sketchfab.com/3d-models/inscryption-p03-v2-2c8ec018120544aca51b2790973fc484) by p03_real_account (CC BY 4.0), wearing the colour, metal and normal maps from [P03](https://sketchfab.com/3d-models/p03-98b40954748447be81f2bb713f6b28b8) by Goober (CC BY 4.0), and rigged at the head and arm.
 - **P03's tools:** [Inscryption Hammer](https://sketchfab.com/3d-models/inscryption-hammer-902459fefad2475eaca4f018c4ec1f4a) and [Inscryption pliers](https://sketchfab.com/3d-models/inscryption-pliers-20a227573b4e4e9a83023f3f0daed0fd) by p03_real_account (CC BY 4.0).
-- **P03's faces in the factory:** [Inscryption P03 faces](https://sketchfab.com/3d-models/inscryption-p03-faces-4318168b0c3e4c0a8a1ced18927332a8) by p03_real_account (CC BY 4.0).
-- **The scale in the factory:** [Scales](https://sketchfab.com/3d-models/scales-2ed4e14bb69944078ef0bb862b256b2a) by FlukierJupiter (CC BY 4.0), split into a base and a beam so it can tip.
-- **The battery in the factory:** [Inscryption Act 3 battery and counter](https://sketchfab.com/3d-models/inscryption-act-3-battery-and-counter-9f65d14097f74a1b9885272b9d2b6a58) by p03_real_account (CC BY 4.0), split into the battery and the gem module.
+- **P03's faces:** [Inscryption P03 faces](https://sketchfab.com/3d-models/inscryption-p03-faces-4318168b0c3e4c0a8a1ced18927332a8) by p03_real_account (CC BY 4.0).
+- **The scale:** [Scales](https://sketchfab.com/3d-models/scales-2ed4e14bb69944078ef0bb862b256b2a) by FlukierJupiter (CC BY 4.0), split into a base and a beam so it can tip; set aside while the battery shows the lead.
+- **The battery:** [Inscryption Act 3 battery and counter](https://sketchfab.com/3d-models/inscryption-act-3-battery-and-counter-9f65d14097f74a1b9885272b9d2b6a58) by p03_real_account (CC BY 4.0), split into the battery and the gem module.
 - **The factory's metal:** Metal029, DiamondPlate008C and CorrugatedSteel005 from [ambientCG](https://ambientcg.com) (CC0).
-- **The bell:** [Table bell](https://sketchfab.com/3d-models/table-bell-77f2ea17b4c84fe1a8d2aec02caa9de3) on Sketchfab, edited by Adrian Jimenez.
-- **The board and the deck:** made by Adrian Jimenez, with Inscryption's textures on the deck.
-- **The candle:** [The lonely candle](https://discourse.threejs.org/t/the-lonely-candle/4097) by prisoner849, using noise from [The Book of Shaders](https://thebookofshaders.com/11/) and [Morgan McGuire](https://www.shadertoy.com/view/4dS3Wd) and a [heatmap gradient](https://www.shadertoy.com/view/4dsSzr) from Shadertoy.
-- **The cards:** Adrian Jimenez's art from the 2022 card models, rendered out once, on Inscryption's card frame and back.
+- **The cards:** Adrian Jimenez's art from the 2022 card models, rendered out once and shown on each disk's screen.
 - **The name filter:** word lists from [obscenity](https://github.com/jo3-l/obscenity) (MIT) and [LDNOOBW](https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words) (CC BY 4.0).
 - **The game** is a tribute to Inscryption by Daniel Mullins Games.
 
