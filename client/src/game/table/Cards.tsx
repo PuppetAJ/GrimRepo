@@ -112,8 +112,10 @@ export function Card({
       // Offered up: it rises, turns and shrinks away, where a death sinks into the table.
       position.y += leaving * 0.9
       rotation.multiply(roll.setFromAxisAngle(Z, leaving * 1.6))
-      scale.multiplyScalar(1 - leaving * 0.6)
+      scale.multiplyScalar(1 - leaving * 0.95)
     } else position.y -= leaving * 0.45
+    // A disk's plastic does not fade, so once it has gone it is hidden.
+    card.visible = leaving < 1
 
     open.current = THREE.MathUtils.damp(open.current, 1, 9, delta)
     disk.current?.setOpen(open.current)
@@ -211,7 +213,7 @@ export function Popup({
     for (let line = 1; line < 96; line += 3) context.fillRect(0, line, 256, 1)
     const map = new THREE.CanvasTexture(element)
     map.colorSpace = THREE.SRGBColorSpace
-    return new THREE.SpriteMaterial({ map, transparent: true, depthTest: false })
+    return new THREE.SpriteMaterial({ map, transparent: true, depthTest: false, fog: false })
   }, [text, tone])
   useEffect(
     () => () => {

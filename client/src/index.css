@@ -122,7 +122,7 @@
   }
 }
 
-/* A health change on the 3D table's readout, rising and fading; reduced motion keeps only the fade. */
+/* A change on the scale's readout, rising and fading; reduced motion keeps only the fade. */
 @keyframes health-change {
   from {
     opacity: 1;
@@ -134,7 +134,33 @@
   }
 }
 
+/* The prompt, shaken and reddened when the player tries something it does not allow yet; reduced motion keeps the red. */
+@keyframes nudge {
+  0%,
+  60% {
+    color: var(--death);
+  }
+  15% {
+    transform: translateX(-6px);
+  }
+  30% {
+    transform: translateX(5px);
+  }
+  45% {
+    transform: translateX(-3px);
+  }
+  60% {
+    transform: translateX(2px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  @keyframes nudge {
+    0%,
+    60% {
+      color: var(--death);
+    }
+  }
   @keyframes health-change {
     from {
       opacity: 1;

@@ -131,6 +131,15 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
   return next
 }
 
+/** Drops the popups and departing cards whose time is up, and nothing else, so it is safe mid-turn. */
+export function tidy(playback: Playback, now: number): Playback {
+  return {
+    ...playback,
+    popups: playback.popups.filter((popup) => now - popup.at < POPUP_MS),
+    leaving: playback.leaving.filter((card) => now - card.at < LEAVE_MS),
+  }
+}
+
 /** Once the queue is empty the view is the real state; the reducer is tested to agree, so this only tidies. */
 export function settle(playback: Playback, state: GameState, now: number): Playback {
   return {

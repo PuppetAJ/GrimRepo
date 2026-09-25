@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { GameEvent, GameState } from 'shared'
-import { advance, holdsTheTable, pace, settle, start, type Playback } from './playback.ts'
+import { advance, holdsTheTable, LEAVE_MS, pace, POPUP_MS, settle, start, tidy, type Playback } from './playback.ts'
 
 type Source = {
   state: GameState
@@ -35,6 +35,8 @@ export function usePlayback({ state, subscribe }: Source) {
       timer.current = null
       setBusy(false)
       setPlayback((current) => settle(current, latest.current, now))
+      // Nothing more is coming, so clear away what is still leaving once it has gone.
+      setTimeout(() => setPlayback((current) => tidy(current, performance.now())), Math.max(LEAVE_MS, POPUP_MS) + 50)
       return
     }
     setPlayback((current) => advance(current, event, now))

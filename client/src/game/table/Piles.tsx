@@ -1,6 +1,6 @@
 import { useFrame, type ThreeEvent } from '@react-three/fiber'
 import { easing } from 'maath'
-import { useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import * as THREE from 'three'
 import { faceContent, faceLights, faceTexture, type loadCardAssets } from './faces.ts'
 import { BACK_RELIEF, Disk } from './Disk.tsx'
@@ -19,6 +19,7 @@ export function Nudge({
   size,
   label,
   lift = 0.05,
+  hint = 0,
   children,
 }: {
   active: boolean
@@ -26,15 +27,22 @@ export function Nudge({
   size: Vec3
   label: string
   lift?: number
+  /** Counts up each time the player should be pointed here; each one jumps and wobbles it. */
+  hint?: number
   children: ReactNode
 }) {
   const group = useRef<THREE.Group>(null)
   const [hovered, setHovered] = useState(false)
   const since = useRef(0)
+  const pointed = useRef(-Infinity)
+  useEffect(() => {
+    if (!hint) return
+    since.current = pointed.current = performance.now()
+  }, [hint])
   useFrame((_, delta) => {
     const moving = group.current
     if (!moving) return
-    const on = hovered && active
+    const on = (hovered && active) || performance.now() - pointed.current < 600
     easing.damp(moving.position, 'y', on ? lift : 0, 0.05, delta)
     const t = (performance.now() - since.current) / 1000
     moving.rotation.z = on ? 0.04 * Math.sin(t * 38) * Math.exp(-t * 7) : 0
@@ -115,16 +123,18 @@ export function Deck({
   total,
   onClick,
   active,
+  hint,
 }: {
   count: number
   total: number
   onClick: Click
   active: boolean
+  hint?: number
 }) {
   const layers = count === 0 ? 0 : Math.max(1, Math.round((count / total) * 12))
   return (
     <group position={DECK}>
-      <Nudge active={active} onClick={onClick} size={[0.85, 0.3, 1.35]} label="deck">
+      <Nudge active={active} onClick={onClick} size={[0.85, 0.3, 1.35]} label="deck" hint={hint}>
         <Stack layers={layers} />
       </Nudge>
     </group>
@@ -134,7 +144,17 @@ export function Deck({
 const BOILERPLATE_UNIT = { uid: 0, card: 'Boilerplate', attack: 0, health: 1, maxHealth: 1, sigils: [] }
 
 /** The Boilerplate pile: free fuel, like Inscryption's squirrels, and it never runs out. */
-export function Pile({ assets, onClick, active }: { assets: Assets; onClick: Click; active: boolean }) {
+export function Pile({
+  assets,
+  onClick,
+  active,
+  hint,
+}: {
+  assets: Assets
+  onClick: Click
+  active: boolean
+  hint?: number
+}) {
   const top = useMemo(() => faceTexture(BOILERPLATE_UNIT, assets), [assets])
   const lights = useMemo(
     () => ({ content: faceContent(BOILERPLATE_UNIT, assets), lights: faceLights(BOILERPLATE_UNIT, assets) }),
@@ -142,7 +162,7 @@ export function Pile({ assets, onClick, active }: { assets: Assets; onClick: Cli
   )
   return (
     <group position={PILE}>
-      <Nudge active={active} onClick={onClick} size={[0.85, 0.2, 1.35]} label="pile">
+      <Nudge active={active} onClick={onClick} size={[0.85, 0.2, 1.35]} label="pile" hint={hint}>
         <Stack layers={6} top={top} lights={lights} />
       </Nudge>
     </group>

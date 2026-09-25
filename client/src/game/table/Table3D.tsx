@@ -2,7 +2,7 @@ import { useProgress } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { easing } from 'maath'
 import { Flag, LayoutGrid, LogOut, Maximize, Minimize, MoveUp, Type } from 'lucide-react'
-import { Suspense, use, useEffect, useRef, useState, type ReactNode } from 'react'
+import { Suspense, use, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { legalActions, PLAYER_DECK, type Action, type GameState } from 'shared'
 import * as THREE from 'three'
@@ -12,7 +12,19 @@ import type { Ready } from '../useGame.ts'
 import type { View } from '../view.ts'
 import { Card, Popup, type Look, type Place } from './Cards.tsx'
 import { disposeFaces, loadCardAssets } from './faces.ts'
-import { BELL, BOARD_DEPTH, CAMERA, CARD, DECK, lanes, PILE, slot, TABLE_Y, type CameraView } from './layout.ts'
+import {
+  BELL,
+  BOARD_CENTER,
+  BOARD_DEPTH,
+  CAMERA,
+  CARD,
+  DECK,
+  lanes,
+  PILE,
+  slot,
+  TABLE_Y,
+  type CameraView,
+} from './layout.ts'
 import { Deck, Pile } from './Piles.tsx'
 import { EndTurnButton, Factory, FactoryEffects, FactoryP03, TechBoard } from './Factory.tsx'
 import { usePlayback } from './usePlayback.ts'
@@ -92,6 +104,8 @@ function Scene({
   skip,
   rung,
   camera,
+  hint,
+  onHint,
 }: {
   game: Ready
   assets: Assets
@@ -101,6 +115,8 @@ function Scene({
   skip: () => void
   rung: number
   camera: CameraView
+  hint: number
+  onHint: () => void
 }) {
   const { state, act } = game
   // Moves come from the real state, and wait while P03's turn plays out.
@@ -114,11 +130,11 @@ function Scene({
   return (
     <>
       <CameraRig view={camera} />
+      {/* One boundary, so the stand-in popup is drawn only once every light and the fog are in place. */}
       <Suspense fallback={null}>
         <Factory view={view} log={game.log} />
-      </Suspense>
-      <Suspense fallback={null}>
         <FactoryP03 view={view} busy={busy} outcome={busy ? undefined : game.result?.outcome} />
+        <WarmUp />
       </Suspense>
       <FactoryEffects />
       <TechBoard />
@@ -127,11 +143,13 @@ function Scene({
         total={PLAYER_DECK.length}
         active={can({ type: 'draw', from: 'deck' } as Partial<Action>)}
         onClick={() => act({ type: 'draw', from: 'deck' })}
+        hint={hint}
       />
       <Pile
         assets={assets}
         active={can({ type: 'draw', from: 'boilerplate' } as Partial<Action>)}
         onClick={() => act({ type: 'draw', from: 'boilerplate' })}
+        hint={hint}
       />
       <EndTurnButton active={can({ type: 'ringBell' })} rung={rung} onClick={() => act({ type: 'ringBell' })} />
       <Lanes view={view} legal={legal} act={act} play="#3ef3ff" />
@@ -153,7 +171,9 @@ function Scene({
                 ? () => act({ type: 'cancel' })
                 : selectable
                   ? () => act({ type: 'select', uid: unit.uid })
-                  : undefined
+                  : can({ type: 'draw' })
+                    ? onHint
+                    : undefined
             }
           />
         )
@@ -194,6 +214,31 @@ function Scene({
       {import.meta.env.DEV ? <TestHandle game={game} view={view} busy={busy} skip={skip} /> : null}
     </>
   )
+}
+
+/** Draws a stand-in popup, unseen, for the table's first frames, so its shader is built while loading rather than mid-turn. */
+function WarmUp() {
+  const [warm, setWarm] = useState(false)
+  const frames = useRef(0)
+  const material = useMemo(() => {
+    const canvas = document.createElement('canvas')
+    canvas.width = canvas.height = 4
+    const map = new THREE.CanvasTexture(canvas)
+    map.colorSpace = THREE.SRGBColorSpace
+    // Made as Popup makes its own, so the shader built is the one it will use.
+    return new THREE.SpriteMaterial({ map, transparent: true, depthTest: false, fog: false, opacity: 0 })
+  }, [])
+  useEffect(
+    () => () => {
+      material.map?.dispose()
+      material.dispose()
+    },
+    [material],
+  )
+  useFrame(() => {
+    if (!warm && ++frames.current > 3) setWarm(true)
+  })
+  return warm ? null : <sprite material={material} position={BOARD_CENTER} scale={0.01} />
 }
 
 declare global {
@@ -307,6 +352,7 @@ function Hud({
   onText,
   fullScreen,
   ring,
+  hint,
 }: {
   game: Ready
   view: View
@@ -318,6 +364,7 @@ function Hud({
   onText: () => void
   fullScreen: ReturnType<typeof useFullScreen>
   ring: () => void
+  hint: number
 }) {
   const { state, act } = game
   const legal = busy || game.result ? [] : legalActions(state)
@@ -342,6 +389,7 @@ function Hud({
             variant="ghost"
             disabled={Boolean(view.summon)}
             onClick={() => setCamera(camera === 'table' ? 'board' : 'table')}
+            aria-keyshortcuts={camera === 'table' ? 'W' : 'S'}
           >
             {camera === 'table' ? <LayoutGrid aria-hidden /> : <MoveUp aria-hidden />}
             <Label>{camera === 'table' ? 'Look at the board' : 'Look up'}</Label>
@@ -395,7 +443,11 @@ function Hud({
                 <li key={game.log.length - last.length + index}>{line}</li>
               ))}
             </ol>
-            <p className="text-lg leading-tight text-p03 sm:text-xl">
+            {/* Remounted on each hint, so the shake plays again. */}
+            <p
+              key={hint}
+              className={`text-lg leading-tight text-p03 sm:text-xl ${hint ? 'animate-[nudge_0.6s_ease-out]' : ''}`}
+            >
               {busy
                 ? "P03's turn…"
                 : prompt(mustDraw, summoning, summoning ? owed(summoning, view.board, view.summon?.marked ?? []) : 0)}
@@ -427,8 +479,16 @@ function Hud({
                     Cancel
                   </Button>
                 ) : null}
-                <Button data-action="ringBell" disabled={!has(legal, { type: 'ringBell' })} onClick={ring}>
+                <Button
+                  data-action="ringBell"
+                  disabled={!has(legal, { type: 'ringBell' })}
+                  onClick={ring}
+                  aria-keyshortcuts="E"
+                >
                   Ring the bell
+                  <kbd aria-hidden className="rounded border border-current/40 px-1 font-mono text-xs opacity-70">
+                    E
+                  </kbd>
                 </Button>
               </>
             )}
@@ -469,7 +529,16 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
   const camera: CameraView = playback.view.summon ? 'board' : chosen
   const [ready, setReady] = useState(false)
   const [rung, setRung] = useState(0)
+  // Counts the times a card was tried before the draw, so the piles and the prompt can point at what comes first.
+  const [hint, setHint] = useState(0)
   const fullScreen = useFullScreen()
+  // E rings the bell, when it can be rung; kept current here so the key listener is set up once.
+  const ringKey = useRef(() => {})
+  useEffect(() => {
+    ringKey.current = () => {
+      if (!busy && !game.result && has(legalActions(game.state), { type: 'ringBell' })) act({ type: 'ringBell' })
+    }
+  })
   // W looks down at the board and D (or S) sits back up, unless a summon is holding the view.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -477,6 +546,7 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
       const key = event.key.toLowerCase()
       if (key === 'w') setCamera('board')
       else if (key === 'd' || key === 's') setCamera('table')
+      else if (key === 'e' && !event.repeat) ringKey.current()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -514,6 +584,8 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
             skip={skip}
             rung={rung}
             camera={camera}
+            hint={hint}
+            onHint={() => setHint((n) => n + 1)}
           />
           <Loaded onLoad={setReady} />
         </Suspense>
@@ -536,6 +608,7 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
           onText={onText}
           fullScreen={fullScreen}
           ring={() => act({ type: 'ringBell' })}
+          hint={hint}
         />
       ) : (
         <p role="status" className="absolute inset-0 grid place-items-center font-terminal text-2xl text-p03">

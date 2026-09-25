@@ -42,6 +42,14 @@ section('The 3D table')
     }
     const hand = () => page.evaluate(() => window.__game.state().player.hand.length)
     const before = await hand()
+    const first = await page.evaluate(() => window.__game.state().player.hand[0].uid)
+    await click({ uid: first })
+    await page.waitForTimeout(200)
+    check(
+      'a card tried before the draw stays put, and the prompt shakes toward the deck',
+      (await page.evaluate(() => window.__game.state().summon)) === null &&
+        /animate-\[nudge/.test(await page.getByText('Draw a card to start your turn.').getAttribute('class')),
+    )
     await click('deck')
     await until(page, (n) => window.__game.state().player.hand.length === n, before + 1)
     check('clicking the deck draws a card', true)
@@ -82,6 +90,38 @@ section('The 3D table')
         )
       }),
     )
+
+    section('Keys, and a sacrifice')
+    // A Boilerplate from the pile, played into an empty lane, is always there to offer up.
+    const act = (action) => page.evaluate((next) => window.__game.act(next), action)
+    await act({ type: 'draw', from: 'boilerplate' })
+    await until(page, () => !window.__game.busy() && window.__game.state().drawn)
+    const dealt = await page.evaluate(() => window.__game.state())
+    const fuel = dealt.player.hand.findLast((unit) => unit.card === 'Boilerplate')
+    const victim = dealt.player.board.findIndex((unit) => !unit)
+    const costly = dealt.player.hand.find((unit) => card(unit.card).cost === 1)
+    if (costly && fuel && victim >= 0) {
+      // Each move waits for the last to land, as a player's clicks would.
+      await act({ type: 'select', uid: fuel.uid })
+      await until(page, (uid) => window.__game.state().summon?.uid === uid, fuel.uid)
+      await act({ type: 'place', lane: victim })
+      await until(page, (uid) => window.__game.state().player.board.some((unit) => unit?.uid === uid), fuel.uid)
+      const gone = fuel.uid
+      await act({ type: 'select', uid: costly.uid })
+      await until(page, (uid) => window.__game.state().summon?.uid === uid, costly.uid)
+      await act({ type: 'mark', lane: victim })
+      await until(page, (lane) => window.__game.state().summon?.marked.includes(lane), victim)
+      await act({ type: 'place', lane: victim })
+      await until(page, (uid) => window.__game.state().player.board.some((unit) => unit?.uid === uid), costly.uid)
+      const cleared = await until(page, (uid) => window.__game.screen({ uid }) === null, gone, 5_000)
+        .then(() => true)
+        .catch(() => false)
+      check('a sacrificed card leaves nothing behind', cleared)
+    } else console.log('  (no one-cost card in this deal, so the sacrifice is skipped)')
+    await page.keyboard.press('e')
+    await page.getByText("P03's turn…").waitFor()
+    check('pressing E rings the bell', true)
+    await until(page, () => !window.__game.busy(), undefined, 30_000)
 
     section('To the end')
     // A copy of the engine picks each move and says what the page's state must become before the next.
