@@ -1,4 +1,4 @@
-import { PerformanceMonitor, useProgress } from '@react-three/drei'
+import { Line, PerformanceMonitor, useProgress } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { easing } from 'maath'
 import { Flag, LayoutGrid, LogOut, Maximize, Minimize, MoveUp, Type } from 'lucide-react'
@@ -28,6 +28,7 @@ import {
 import { Deck, Pile } from './Piles.tsx'
 import { EndTurnButton, Factory, FactoryEffects, FactoryP03, TechBoard } from './Factory.tsx'
 import { TINT } from './palette.ts'
+import { Boot } from './Boot.tsx'
 import { usePlayback } from './usePlayback.ts'
 
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
@@ -48,52 +49,97 @@ function CameraRig({ view }: { view: CameraView }) {
 }
 
 /** Glows over the player's lanes that can take a click, and catches the click on empty ones. */
+// Just outside the slot, so it still shows around a card lifted to be sacrificed.
+const OUTLINE_W = CARD.width * 1.24
+const OUTLINE_H = CARD.height * 1.16
+
+/** A dashed outline crawling round the slot the pointer is over, so the target is plain whatever sits in it. */
+function TargetOutline({ lane, colour }: { lane: number; colour: string }) {
+  const line = useRef<{ material: { dashOffset: number } }>(null)
+  const [x, , z] = slot('board', lane)
+  const [w, h] = [OUTLINE_W / 2, OUTLINE_H / 2]
+  useFrame((_, delta) => {
+    if (line.current) line.current.material.dashOffset -= delta * 0.25
+  })
+  return (
+    <Line
+      ref={line as never}
+      points={[
+        [x - w, 0, z - h],
+        [x + w, 0, z - h],
+        [x + w, 0, z + h],
+        [x - w, 0, z + h],
+        [x - w, 0, z - h],
+      ]}
+      position={[0, TABLE_Y + BOARD_DEPTH + 0.006, 0]}
+      color={colour}
+      lineWidth={4}
+      dashed
+      dashSize={0.07}
+      gapSize={0.045}
+      toneMapped={false}
+    />
+  )
+}
+
 function Lanes({
   view,
   legal,
   act,
   play,
+  aimed: hovered,
+  onAim: setHovered,
 }: {
   view: View
   legal: Action[]
   act: (action: Action) => void
   play: string
+  /** The lane the pointer is over, whether on the lane or on the card in it. */
+  aimed: number | null
+  onAim: (lane: number | null) => void
 }) {
-  const [hovered, setHovered] = useState<number | null>(null)
-  return lanes.map((lane) => {
-    const action = laneAction(legal, lane)
-    const marked = view.summon?.marked.includes(lane) ?? false
-    const [x, , z] = slot('board', lane)
-    const colour = action?.type === 'place' ? play : '#ff4a3d'
-    return (
-      <mesh
-        key={lane}
-        name={`lane-${lane}`}
-        position={[x, TABLE_Y + BOARD_DEPTH + 0.002, z]}
-        rotation={[-Math.PI / 2, 0, 0]}
-        onClick={(event) => {
-          event.stopPropagation()
-          if (action) act(action)
-        }}
-        onPointerOver={() => {
-          setHovered(lane)
-          if (action) document.body.style.cursor = 'pointer'
-        }}
-        onPointerOut={() => {
-          setHovered(null)
-          document.body.style.cursor = ''
-        }}
-      >
-        <planeGeometry args={[CARD.width * 1.12, CARD.height * 1.08]} />
-        <meshBasicMaterial
-          color={colour}
-          transparent
-          opacity={marked ? 0.5 : action ? (hovered === lane ? 0.65 : 0.4) : 0}
-          depthWrite={false}
-        />
-      </mesh>
-    )
-  })
+  const target = hovered === null ? null : laneAction(legal, hovered)
+  return (
+    <>
+      {target && hovered !== null ? (
+        <TargetOutline lane={hovered} colour={target.type === 'place' ? TINT.glow : '#ff4a3d'} />
+      ) : null}
+      {lanes.map((lane) => {
+        const action = laneAction(legal, lane)
+        const marked = view.summon?.marked.includes(lane) ?? false
+        const [x, , z] = slot('board', lane)
+        const colour = action?.type === 'place' ? play : '#ff4a3d'
+        return (
+          <mesh
+            key={lane}
+            name={`lane-${lane}`}
+            position={[x, TABLE_Y + BOARD_DEPTH + 0.002, z]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            onClick={(event) => {
+              event.stopPropagation()
+              if (action) act(action)
+            }}
+            onPointerOver={() => {
+              setHovered(lane)
+              if (action) document.body.style.cursor = 'pointer'
+            }}
+            onPointerOut={() => {
+              setHovered(null)
+              document.body.style.cursor = ''
+            }}
+          >
+            <planeGeometry args={[CARD.width * 1.12, CARD.height * 1.08]} />
+            <meshBasicMaterial
+              color={colour}
+              transparent
+              opacity={marked ? 0.5 : action ? (hovered === lane ? 0.65 : 0.4) : 0}
+              depthWrite={false}
+            />
+          </mesh>
+        )
+      })}
+    </>
+  )
 }
 
 function Scene({
@@ -108,6 +154,7 @@ function Scene({
   hint,
   hinted,
   onHint,
+  onWarm,
 }: {
   game: Ready
   assets: Assets
@@ -121,6 +168,8 @@ function Scene({
   /** The card last tried before the draw, which shakes. */
   hinted: number | null
   onHint: (uid: number) => void
+  /** Called once everything has loaded and every shader is built. */
+  onWarm: () => void
 }) {
   const { state, act } = game
   // Moves come from the real state, and wait while P03's turn plays out.
@@ -128,6 +177,7 @@ function Scene({
   const can = (match: Partial<Action>) => has(legal, match)
   const count = view.hand.length
 
+  const [aimed, setAimed] = useState<number | null>(null)
   const handLook = (uid: number): Look =>
     view.summon?.uid === uid ? 'selected' : can({ type: 'select', uid } as Partial<Action>) ? 'plain' : 'dim'
 
@@ -138,7 +188,7 @@ function Scene({
       <Suspense fallback={null}>
         <Factory view={view} log={game.log} />
         <FactoryP03 view={view} busy={busy} outcome={busy ? undefined : game.result?.outcome} />
-        <WarmUp />
+        <WarmUp onWarm={onWarm} />
       </Suspense>
       <FactoryEffects />
       <TechBoard />
@@ -156,7 +206,7 @@ function Scene({
         hint={hint}
       />
       <EndTurnButton active={can({ type: 'ringBell' })} rung={rung} onClick={() => act({ type: 'ringBell' })} />
-      <Lanes view={view} legal={legal} act={act} play={TINT.play} />
+      <Lanes view={view} legal={legal} act={act} play={TINT.play} aimed={aimed} onAim={setAimed} />
 
       {view.hand.map((unit, index) => {
         const selected = view.summon?.uid === unit.uid
@@ -199,6 +249,8 @@ function Scene({
               look={marked ? 'marked' : action?.type === 'mark' ? 'markable' : 'plain'}
               assets={assets}
               onClick={action ? () => act(action) : undefined}
+              // A card on the board covers its lane, so it passes the aim on to it.
+              onHover={row === 'board' ? (on) => setAimed(on ? lane : null) : undefined}
             />
           )
         }),
@@ -225,7 +277,7 @@ function Scene({
 }
 
 /** For the table's first frames, draws everything, off-screen too, and a stand-in popup, so no shader is built mid-turn. */
-function WarmUp() {
+function WarmUp({ onWarm }: { onWarm: () => void }) {
   const [warm, setWarm] = useState(false)
   const frames = useRef(0)
   const material = useMemo(() => {
@@ -258,6 +310,7 @@ function WarmUp() {
       for (const object of culled.current) object.frustumCulled = true
       culled.current = []
       setWarm(true)
+      onWarm()
     }
   })
   return warm ? null : <sprite material={material} position={BOARD_CENTER} scale={0.01} />
@@ -544,7 +597,16 @@ function useFullScreen() {
 /** The 3D table: the 2022 room and board, with every card drawn from data and every move played back. */
 export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo: boolean; onText: () => void }) {
   const assets = use(loadCardAssets())
-  const { active, progress } = useProgress()
+  const { active, progress, item } = useProgress()
+  // The files as they arrive, for the boot screen to list.
+  const [files, setFiles] = useState<string[]>([])
+  useEffect(() => {
+    if (!item) return
+    const name = item.split('/').slice(-2).join('/')
+    const add = setTimeout(() => setFiles((list) => (list.at(-1) === name ? list : [...list.slice(-4), name])), 0)
+    return () => clearTimeout(add)
+  }, [item])
+  const [warmed, setWarmed] = useState(false)
   const { playback, busy, skip } = usePlayback(game)
   const [chosen, setCamera] = useState<CameraView>('table')
   // Summoning is done looking down over the board, as in Inscryption.
@@ -620,6 +682,7 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
             camera={camera}
             hint={hint}
             hinted={hinted}
+            onWarm={() => setWarmed(true)}
             onHint={(uid) => {
               setHinted(uid)
               setHint((n) => n + 1)
@@ -628,12 +691,7 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
           <Loaded onLoad={setReady} />
         </Suspense>
       </Canvas>
-      {ready && active ? (
-        // The room and P03 are the heaviest models and arrive after the table is playable.
-        <p className="pointer-events-none absolute inset-x-0 top-3 text-center font-terminal text-lg text-p03-dim">
-          Loading the room… {Math.round(progress)}%
-        </p>
-      ) : null}
+      <Boot stage={warmed ? 'done' : active ? 'assets' : 'warming'} progress={progress} files={files} />
       {ready ? (
         <Hud
           game={playing}
@@ -648,11 +706,7 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
           ring={() => act({ type: 'ringBell' })}
           hint={hint}
         />
-      ) : (
-        <p role="status" className="absolute inset-0 grid place-items-center font-terminal text-2xl text-p03">
-          Setting the table… {Math.round(progress)}%
-        </p>
-      )}
+      ) : null}
     </div>
   )
 }

@@ -1,16 +1,26 @@
 // The 3D table: it draws, a first turn by clicking the models, a whole game to the end, the text switch, and phones.
 import { apply, card, nextBotAction, summary, TIP } from '../shared/src/index.ts'
-import { BASE, deletePlayer, freshPage, launch, newPlayer, reporter, resetRateLimits, signUp } from './lib.mjs'
+import {
+  BASE,
+  deletePlayer,
+  freshPage,
+  launch,
+  newPlayer,
+  reporter,
+  resetRateLimits,
+  signUp,
+  tableReady,
+} from './lib.mjs'
 
 await resetRateLimits()
 const { browser, pageErrors, close } = await launch()
 const { check, section, report } = reporter()
 
-// The room is 22 MB until the assets phase shrinks it, and software WebGL is slow, so the table gets time to load.
+// Software WebGL is slow and the table warms its shaders behind the boot screen, so it gets time to load.
 const openTable = async (page) => {
   await page.goto(`${BASE}/game`)
   await page.locator('[data-table="3d"]').waitFor({ timeout: 60_000 })
-  await page.getByRole('button', { name: 'Look at the board' }).waitFor({ timeout: 60_000 })
+  await tableReady(page)
 }
 
 const until = (page, test, arg, timeout = 15_000) => page.waitForFunction(test, arg, { timeout, polling: 100 })
@@ -195,20 +205,20 @@ section('The gems, while two are compared')
   const player = await signUp(page, newPlayer('Gems'))
   const gems = () => page.evaluate(() => localStorage.getItem('grimrepo:gems'))
   await page.goto(`${BASE}/game`)
-  await page.getByRole('button', { name: 'Look at the board' }).waitFor({ timeout: 60_000 })
+  await tableReady(page)
   check('the gems built in code are the default', (await gems()) === null)
   await page.goto(`${BASE}/game?gems=module`)
-  await page.getByRole('button', { name: 'Look at the board' }).waitFor({ timeout: 60_000 })
+  await tableReady(page)
   check('the gem module can be chosen, and the choice is kept', (await gems()) === 'module')
   await page.getByRole('button', { name: 'Draw from the deck' }).click()
   await page.getByRole('button', { name: 'Ring the bell' }).click()
   await page.getByRole('button', { name: 'Draw from the deck' }).waitFor({ timeout: 30_000 })
   check('a turn plays with it', true)
   await page.goto(`${BASE}/game`)
-  await page.getByRole('button', { name: 'Look at the board' }).waitFor({ timeout: 60_000 })
+  await tableReady(page)
   check('and it is still chosen after leaving and coming back', (await gems()) === 'module')
   await page.goto(`${BASE}/game?gems=built`)
-  await page.getByRole('button', { name: 'Look at the board' }).waitFor({ timeout: 60_000 })
+  await tableReady(page)
   check('?gems=built goes back', (await gems()) === 'built')
   check('and the test player is removed afterwards', await deletePlayer(page, player))
   await context.close()
@@ -230,7 +240,7 @@ section('Phones')
 
   await page.setViewportSize({ width: 844, height: 390 })
   await page.getByRole('button', { name: 'Play on the 3D table' }).click()
-  await page.getByRole('button', { name: 'Look at the board' }).waitFor({ timeout: 60_000 })
+  await tableReady(page)
   const fills = await page.evaluate(() => {
     const box = document.querySelector('[data-table="3d"]').getBoundingClientRect()
     return (

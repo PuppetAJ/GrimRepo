@@ -433,14 +433,19 @@ function Gems() {
 
 /** The lamp on the player's left: a post, an arm, and a bar of light that flickers now and then. */
 function Lamp() {
-  const bulb = useRef<THREE.Mesh>(null)
   const light = useRef<THREE.PointLight>(null)
+  // The weathered fluorescent light by Mark Peters (CC BY); its emissive map marks the tubes, which glow in the palette's light.
+  const { scene: fixture } = useGLTF('/models/light.glb', false, false)
+  const tube = useMemo(() => {
+    const mesh = fixture.getObjectByProperty('type', 'Mesh') as THREE.Mesh
+    return mesh.material as THREE.MeshStandardMaterial
+  }, [fixture])
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime()
     // Steady, with a brief dip every few seconds.
     const flicker = 1 - 0.35 * Math.max(0, Math.sin(t * 9.7) * Math.sin(t * 0.37) - 0.85) * 6
     if (light.current) light.current.intensity = 18 * flicker
-    if (bulb.current) (bulb.current.material as THREE.MeshBasicMaterial).color.copy(GLOW).multiplyScalar(flicker)
+    tube.emissive.copy(GLOW).multiplyScalar(0.6 * flicker)
   })
   return (
     <group position={[X - 6.4, TABLE_Y, -10.6]}>
@@ -456,14 +461,7 @@ function Lamp() {
         <cylinderGeometry args={[0.06, 0.06, 1.9, 10]} />
         <meshStandardMaterial color="#20262c" metalness={0.85} roughness={0.4} />
       </mesh>
-      <mesh position={[1.85, 3.05, -0.2]} rotation={[0.35, 0, 0]}>
-        <boxGeometry args={[1.5, 0.22, 0.5]} />
-        <meshStandardMaterial color="#171c21" metalness={0.8} roughness={0.5} />
-      </mesh>
-      <mesh ref={bulb} position={[1.85, 2.94, -0.05]} rotation={[0.35, 0, 0]}>
-        <boxGeometry args={[1.3, 0.05, 0.3]} />
-        <meshBasicMaterial color={GLOW} toneMapped={false} />
-      </mesh>
+      <primitive object={fixture} position={[1.85, 3.12, -0.2]} rotation={[0.35, 0, 0]} scale={1.05} />
       <pointLight ref={light} color={TINT.lamp} position={[1.85, 2.6, 0.4]} intensity={18} distance={12} decay={1.8} />
     </group>
   )

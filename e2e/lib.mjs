@@ -26,6 +26,12 @@ export async function launch({ width = 1280, height = 800 } = {}) {
   return { browser, context, page, pageErrors, close: () => browser.close() }
 }
 
+/** Waits until the 3D table can be played: its controls are up and P03's boot screen has faded away. */
+export async function tableReady(page, timeout = 60_000) {
+  await page.getByRole('button', { name: /Look at the board|Look up/ }).waitFor({ timeout })
+  await page.getByRole('status', { name: /^Setting the table/ }).waitFor({ state: 'detached', timeout })
+}
+
 export function reporter() {
   const results = []
 

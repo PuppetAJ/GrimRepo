@@ -2,6 +2,7 @@ import { RotateCw } from 'lucide-react'
 import { Component, lazy, Suspense, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button.tsx'
 import { Failure, Loading } from '../components/States.tsx'
+import { Boot } from '../game/table/Boot.tsx'
 import { TextTable } from '../game/TextTable.tsx'
 import { useGame } from '../game/useGame.ts'
 import { authClient, DEMO } from '../lib/auth.ts'
@@ -90,13 +91,7 @@ export function Game() {
         <TurnSideways onText={() => choose('text')} />
       ) : (
         <TableFailed onText={() => choose('text')}>
-          <Suspense
-            fallback={
-              <p role="status" className="grid h-full place-items-center font-terminal text-2xl text-p03">
-                Setting the table…
-              </p>
-            }
-          >
+          <Suspense fallback={<Boot stage="code" />}>
             {/* A new deal or a reload sets the table again from the state as it is. */}
             <Table3D key={game.generation} game={game} onDemo={onDemo} onText={() => choose('text')} />
           </Suspense>

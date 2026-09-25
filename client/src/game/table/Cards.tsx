@@ -37,6 +37,7 @@ export function Card({
   summoning,
   shake = 0,
   onClick,
+  onHover,
 }: {
   unit: Unit
   summoning?: boolean
@@ -50,6 +51,8 @@ export function Card({
   look?: Look
   assets: Assets
   onClick?: (event: ThreeEvent<MouseEvent>) => void
+  /** Told when the pointer arrives on the card and leaves it. */
+  onHover?: (on: boolean) => void
 }) {
   const mesh = useRef<THREE.Object3D>(null)
   const disk = useRef<DiskHandle>(null)
@@ -171,10 +174,12 @@ export function Card({
     onPointerOver: (event: ThreeEvent<PointerEvent>) => {
       event.stopPropagation()
       setHovered(true)
+      onHover?.(true)
       if (onClick) document.body.style.cursor = 'pointer'
     },
     onPointerOut: () => {
       setHovered(false)
+      onHover?.(false)
       document.body.style.cursor = ''
     },
   }
