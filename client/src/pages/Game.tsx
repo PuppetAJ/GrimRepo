@@ -3,6 +3,8 @@ import { Component, lazy, Suspense, useState, useSyncExternalStore, type ReactNo
 import { Button } from '@/components/ui/button.tsx'
 import { Failure, Loading } from '../components/States.tsx'
 import { Boot } from '../game/table/Boot.tsx'
+import { chooseText, chosenText } from '../game/table/scene.ts'
+import { TerminalTable } from '../game/TerminalTable.tsx'
 import { TextTable } from '../game/TextTable.tsx'
 import { useGame } from '../game/useGame.ts'
 import { authClient, DEMO } from '../lib/auth.ts'
@@ -22,15 +24,17 @@ function savedMode(): Mode {
 }
 
 const UPRIGHT_PHONE = '(orientation: portrait) and (max-width: 767px)'
+// The Act 2 layout needs three columns side by side; narrower screens keep the first text table.
+const WIDE = '(min-width: 1100px)'
 
-function useUprightPhone(): boolean {
+function useMedia(media: string): boolean {
   return useSyncExternalStore(
     (changed) => {
-      const query = window.matchMedia(UPRIGHT_PHONE)
+      const query = window.matchMedia(media)
       query.addEventListener('change', changed)
       return () => query.removeEventListener('change', changed)
     },
-    () => window.matchMedia(UPRIGHT_PHONE).matches,
+    () => window.matchMedia(media).matches,
   )
 }
 
@@ -68,7 +72,9 @@ export function Game() {
   const user = authClient.useSession().data?.user as { username?: string } | undefined
   const onDemo = user?.username === DEMO.username
   const [mode, setMode] = useState<Mode>(savedMode)
-  const upright = useUprightPhone()
+  const upright = useMedia(UPRIGHT_PHONE)
+  const wide = useMedia(WIDE)
+  const [text, setText] = useState(chosenText)
 
   const choose = (next: Mode) => {
     setMode(next)
@@ -82,7 +88,20 @@ export function Game() {
   if (game.status === 'loading') return <Loading label="Dealing" />
   if (game.status === 'error') return <Failure title="The table is not ready" detail={game.message} />
 
-  if (mode === 'text') return <TextTable game={game} onDemo={onDemo} on3d={() => choose('3d')} />
+  if (mode === 'text')
+    return text === 'act2' && wide ? (
+      <TerminalTable
+        game={game}
+        onDemo={onDemo}
+        on3d={() => choose('3d')}
+        onClassic={() => {
+          chooseText('classic')
+          setText('classic')
+        }}
+      />
+    ) : (
+      <TextTable game={game} onDemo={onDemo} on3d={() => choose('3d')} />
+    )
 
   return (
     // The table fills the page under the header, edge to edge, and the whole screen on a phone held sideways.

@@ -90,7 +90,7 @@ const RARE: Palette = {
 }
 
 // Small pixel icons for the sigils, drawn on the strip; the text table spells them out.
-const ICONS: Record<SigilId, string[]> = {
+export const ICONS: Record<SigilId, string[]> = {
   segfault: ['01111110', '11011011', '11111111', '11100111', '01111110', '00100100', '01100110', '01000010'],
   bypass: ['00010000', '00111000', '01111100', '00010000', '00010000', '11111111', '10101011', '11111111'],
   technical_debt: ['00011000', '00111100', '00011000', '01100110', '11111111', '01100110', '00011000', '00000000'],

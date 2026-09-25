@@ -25,7 +25,8 @@ section('A whole game')
   await page.locator('[data-seed]').waitFor()
   check(
     'a new game starts on turn 1, asking for a draw',
-    /Turn 1/.test(await visibleText(page)) && (await page.locator('[data-action="ringBell"]').count()) === 0,
+    /Turn 1/.test(await visibleText(page)) &&
+      (await page.locator('[data-action="ringBell"]:not(:disabled)').count()) === 0,
   )
 
   const { state } = await playWithBot(page)
@@ -111,7 +112,7 @@ section('Resuming')
   check(
     'a draw cannot be taken back by reloading',
     (await page.locator('[data-action="select"]').count()) === handBefore + 1 &&
-      (await page.locator('[data-action="draw-deck"]').count()) === 0,
+      (await page.locator('[data-action="draw-deck"]:not(:disabled)').count()) === 0,
   )
 
   section('Walking away')

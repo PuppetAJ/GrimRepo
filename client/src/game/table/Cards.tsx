@@ -123,7 +123,11 @@ export function Card({
     if (!card) return
     const now = performance.now()
     if (place.at === 'hand') {
-      const { position: local, roll: angle, scale: size } = handPlace(place.index, place.count, {
+      const {
+        position: local,
+        roll: angle,
+        scale: size,
+      } = handPlace(place.index, place.count, {
         selected: look === 'selected',
         hovered,
         summoning: summoning ?? false,
