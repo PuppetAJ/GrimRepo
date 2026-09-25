@@ -142,11 +142,14 @@ export function Card({
               ? rest + 0.25
               : rest
     // A closing disk turns its display off: the screen's light goes first, then the drawing fades.
-    const lit = tech ? open.current * open.current : 1
-    front.emissiveIntensity = glow * lit
+    // A closing disk's face fades out altogether, name and all, leaving plain plastic in its recesses.
+    front.emissiveIntensity = glow * (tech ? open.current * open.current : 1)
     front.emissive.set(look === 'marked' || look === 'markable' ? '#ff4040' : '#ffffff')
-    front.color.setScalar((look === 'dim' ? 0.45 : 1) * (tech ? 0.25 + 0.75 * open.current : 1))
-    front.opacity = rear.opacity = 1 - leaving
+    front.color.setScalar(look === 'dim' ? 0.45 : 1)
+    front.opacity = (1 - leaving) * (tech ? open.current : 1)
+    rear.opacity = 1 - leaving
+    // The alpha test discards the clear pixels (the corner holes) and, as the face fades, everything else too.
+    front.alphaTest = Math.max(0.001, front.opacity * 0.5)
   })
 
   const handlers = {
