@@ -1,11 +1,12 @@
 import { Sparkles, useGLTF, useTexture } from '@react-three/drei'
-import { useFrame, type ThreeEvent } from '@react-three/fiber'
+import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
 import {
   Bloom,
   ChromaticAberration,
   EffectComposer,
   Noise,
   Scanline,
+  SMAA,
   ToneMapping,
   Vignette,
 } from '@react-three/postprocessing'
@@ -16,6 +17,7 @@ import { TIP } from 'shared'
 import * as THREE from 'three'
 import type { View } from '../view.ts'
 import { Nudge } from './Piles.tsx'
+import { TINT } from './palette.ts'
 import { chosenGems } from './scene.ts'
 import {
   BATTERY_CELLS,
@@ -33,8 +35,9 @@ import {
 
 // P03's factory, after Inscryption's Act 3: dark metal in blue shadow, lit by cyan screens. Built here in code.
 const X = -1.975
-const CYAN = '#3ef3ff'
-const GLOW = new THREE.Color(0.8, 3, 3.4)
+// The light the factory is lit by: cyan or green, from the palette.
+const LIT = TINT.glow
+const GLOW = new THREE.Color(...TINT.glowHdr)
 
 function metal(maps: Record<'map' | 'normalMap' | 'roughnessMap', THREE.Texture>, repeat: [number, number]) {
   for (const texture of Object.values(maps)) {
@@ -171,13 +174,13 @@ export function TechBoard() {
     const w = (CARD.width + 0.08) * scale
     const h = (CARD.height + 0.08) * scale
     // The field: a shade lighter than the table, with a faint edge.
-    context.fillStyle = 'rgb(90 170 200 / 0.13)'
+    context.fillStyle = `rgb(${TINT.field} / 0.13)`
     context.fillRect(0, 0, canvas.width, canvas.height)
-    context.strokeStyle = 'rgb(90 216 240 / 0.25)'
+    context.strokeStyle = `rgb(${TINT.line} / 0.25)`
     context.lineWidth = 4
     context.strokeRect(2, 2, canvas.width - 4, canvas.height - 4)
     const gear = (cx: number, cy: number, r: number, teeth: number) => {
-      context.fillStyle = 'rgb(74 159 214 / 0.9)'
+      context.fillStyle = `rgb(${TINT.gear} / 0.9)`
       context.beginPath()
       for (let i = 0; i < teeth * 2; i++) {
         const angle = (i * Math.PI) / teeth + 0.2
@@ -186,21 +189,21 @@ export function TechBoard() {
       }
       context.closePath()
       context.fill()
-      context.fillStyle = '#0b1a24'
+      context.fillStyle = TINT.deep
       context.beginPath()
       context.arc(cx, cy, r * 0.42, 0, Math.PI * 2)
       context.fill()
-      context.fillStyle = 'rgb(74 159 214 / 0.9)'
+      context.fillStyle = `rgb(${TINT.gear} / 0.9)`
       context.beginPath()
       context.arc(cx, cy, r * 0.28, 0, Math.PI * 2)
       context.fill()
-      context.fillStyle = '#0b1a24'
+      context.fillStyle = TINT.deep
       context.beginPath()
       context.arc(cx, cy, r * 0.12, 0, Math.PI * 2)
       context.fill()
     }
     const arrow = (cx: number, cy: number, size: number) => {
-      context.fillStyle = 'rgb(90 216 240 / 0.3)'
+      context.fillStyle = `rgb(${TINT.line} / 0.3)`
       context.beginPath()
       context.moveTo(cx - size * 0.28, cy - size)
       context.lineTo(cx + size * 0.28, cy - size)
@@ -218,8 +221,8 @@ export function TechBoard() {
         const cx = px(x)
         const cy = pz(z)
         const queue = row === 'back'
-        context.fillStyle = queue ? 'rgb(10 26 36 / 0.5)' : 'rgb(10 26 36 / 0.75)'
-        context.strokeStyle = queue ? 'rgb(90 216 240 / 0.35)' : 'rgb(90 216 240 / 0.85)'
+        context.fillStyle = queue ? `rgb(${TINT.slot} / 0.5)` : `rgb(${TINT.slot} / 0.75)`
+        context.strokeStyle = queue ? `rgb(${TINT.line} / 0.35)` : `rgb(${TINT.line} / 0.85)`
         context.lineWidth = 6
         context.beginPath()
         context.roundRect(cx - w / 2, cy - h / 2, w, h, 8)
@@ -235,7 +238,7 @@ export function TechBoard() {
     }
     // The line between P03's side and the player's.
     const divide = pz((ROW_Z.board + ROW_Z.front) / 2)
-    context.fillStyle = 'rgb(90 216 240 / 0.5)'
+    context.fillStyle = `rgb(${TINT.line} / 0.5)`
     context.fillRect(0.12 * scale, divide - 3, canvas.width - 0.24 * scale, 6)
     // Scanlines over the whole projection.
     context.fillStyle = 'rgb(0 0 0 / 0.28)'
@@ -249,7 +252,7 @@ export function TechBoard() {
   return (
     <mesh position={[left + width / 2, TABLE_Y + 0.004, far + depth / 2]} rotation={[-Math.PI / 2, 0, 0]}>
       <planeGeometry args={[width, depth]} />
-      <meshStandardMaterial map={texture} transparent emissive={CYAN} emissiveMap={texture} emissiveIntensity={0.5} />
+      <meshStandardMaterial map={texture} transparent emissive={LIT} emissiveMap={texture} emissiveIntensity={0.5} />
     </mesh>
   )
 }
@@ -267,11 +270,11 @@ function Monitor({ position, turn, lines }: { position: Vec3; turn: number; line
   useEffect(() => () => texture.dispose(), [texture])
   useEffect(() => {
     const context = canvas.getContext('2d') as CanvasRenderingContext2D
-    context.fillStyle = '#03141c'
+    context.fillStyle = TINT.screenGround
     context.fillRect(0, 0, canvas.width, canvas.height)
-    context.fillStyle = 'rgb(62 243 255 / 0.06)'
+    context.fillStyle = `rgb(${TINT.line} / 0.06)`
     for (let y = 0; y < canvas.height; y += 4) context.fillRect(0, y, canvas.width, 1)
-    context.fillStyle = CYAN
+    context.fillStyle = LIT
     context.font = '30px VT323'
     context.textBaseline = 'top'
     lines.forEach((line, i) => context.fillText(line, 22, 16 + i * 33, canvas.width - 44))
@@ -287,7 +290,7 @@ function Monitor({ position, turn, lines }: { position: Vec3; turn: number; line
         <planeGeometry args={[2.66, 1.66]} />
         <meshBasicMaterial map={texture} toneMapped={false} />
       </mesh>
-      <pointLight color={CYAN} position={[0, 0, 0.8]} intensity={3} distance={5} decay={2} />
+      <pointLight color={LIT} position={[0, 0, 0.8]} intensity={3} distance={5} decay={2} />
     </group>
   )
 }
@@ -350,7 +353,7 @@ function Battery({ view }: { view: View }) {
         cell.on = on
         cell.since = t
       }
-      if (on) cell.material.emissive.set(lit > 0 ? CYAN : RED)
+      if (on) cell.material.emissive.set(lit > 0 ? TINT.you : RED)
       // A cell stutters as it comes on, like a tube catching.
       const catching = on && t - cell.since < 0.3 ? (Math.sin((t - cell.since) * 90) > 0 ? 1 : 0.15) : 1
       cell.glow = THREE.MathUtils.damp(cell.glow, fill, 10, delta)
@@ -373,7 +376,7 @@ function Battery({ view }: { view: View }) {
   )
 }
 
-/** The gem module from the same drone, sat where the gems are, tipped toward the player so its gems show through the glass. */
+/** The gem module from the same drone, where the gems are: its gems stand behind a glass front, turned to the player's seat. */
 function GemModule() {
   const { scene } = useGLTF('/models/gems.glb', false, false)
   useLayoutEffect(
@@ -392,7 +395,8 @@ function GemModule() {
       }),
     [scene],
   )
-  return <primitive object={scene} position={[2.25, TABLE_Y + 0.15, -12.4]} rotation={[0.6, -0.3, 0]} scale={0.9} />
+  // Turned to the seat, then tipped back a little, since the eye is just above it.
+  return <primitive object={scene} position={[2.25, TABLE_Y, -12.4]} rotation={[-0.17, -0.48, 0, 'YXZ']} scale={0.9} />
 }
 
 /** The three Mox gems P03 keeps by the table, turning slowly on their bases. */
@@ -457,7 +461,7 @@ function Lamp() {
         <boxGeometry args={[1.3, 0.05, 0.3]} />
         <meshBasicMaterial color={GLOW} toneMapped={false} />
       </mesh>
-      <pointLight ref={light} color="#bfefff" position={[1.85, 2.6, 0.4]} intensity={26} distance={12} decay={1.8} />
+      <pointLight ref={light} color={TINT.lamp} position={[1.85, 2.6, 0.4]} intensity={26} distance={12} decay={1.8} />
     </group>
   )
 }
@@ -486,7 +490,7 @@ function DrumRack() {
           </mesh>
         ))}
       </group>
-      <pointLight color={CYAN} position={[0, -0.6, 1]} intensity={4} distance={6} decay={2} />
+      <pointLight color={LIT} position={[0, -0.6, 1]} intensity={4} distance={6} decay={2} />
     </group>
   )
 }
@@ -498,7 +502,7 @@ function Props() {
   const pliers = useGLTF('/models/pliers.glb', false, false).scene
   return (
     <>
-      <group position={[X + 6.9, 8.5, -14.4]} rotation={[0, -0.3, 0]}>
+      <group position={[X + 7.7, 8.5, -14.4]} rotation={[0, -0.3, 0]}>
         <mesh>
           <boxGeometry args={[2.2, 2.6, 0.12]} />
           <meshStandardMaterial color="#171c21" metalness={0.8} roughness={0.5} />
@@ -512,7 +516,7 @@ function Props() {
         {/* Hung by its head, handle down. */}
         <primitive object={hammer} position={[-0.5, 0.2, 0.26]} rotation={[0, 0, Math.PI / 2]} scale={0.7} />
         <primitive object={pliers} position={[0.5, 0.2, 0.26]} rotation={[0, Math.PI / 2, 0]} scale={0.7} />
-        <pointLight color={CYAN} position={[0, 0.4, 1.2]} intensity={5} distance={4} decay={2} />
+        <pointLight color={LIT} position={[0, 0.4, 1.2]} intensity={5} distance={4} decay={2} />
       </group>
       {[
         [X - 6.8, 0.5, -7.5],
@@ -625,7 +629,7 @@ function P03({ mood }: { mood: Mood }) {
     screen.color.set('#000000')
     screen.alphaTest = 0
     screen.emissiveMap = textures[mood === 'smug' ? 'happy' : mood]
-    screen.emissive.set(mood === 'smug' ? CYAN : '#ffffff')
+    screen.emissive.set(mood === 'smug' ? LIT : '#ffffff')
     screen.emissiveIntensity = 1.6
     screen.needsUpdate = true
   }, [scene, textures, mood])
@@ -656,7 +660,7 @@ export function FactoryP03({ view, busy, outcome }: { view: View; busy: boolean;
   return (
     <>
       <P03 mood={mood} />
-      <pointLight color={CYAN} position={[X, 10.4, -13.4]} intensity={12} distance={10} decay={1.6} />
+      <pointLight color={LIT} position={[X, 10.4, -13.4]} intensity={12} distance={10} decay={1.6} />
     </>
   )
 }
@@ -686,15 +690,15 @@ export function Factory({ view, log }: { view: View; log: string[] }) {
   )
   return (
     <>
-      <fog attach="fog" args={['#02070c', 7, 34]} />
-      <ambientLight color="#1a3a4a" intensity={0.45} />
-      <hemisphereLight color="#123040" groundColor="#000000" intensity={0.8} />
+      <fog attach="fog" args={[TINT.fog, 7, 34]} />
+      <ambientLight color={TINT.ambient} intensity={0.45} />
+      <hemisphereLight color={TINT.hemisphere} groundColor="#000000" intensity={0.8} />
       {/* A little light over the deck and the pile, and over the player's hands. */}
-      <pointLight color="#9fdcff" position={[X + 3.3, TABLE_Y + 2.2, -8.6]} intensity={14} distance={7} decay={1.8} />
-      <pointLight color="#7fb8d0" position={[X, TABLE_Y + 1.6, -5.2]} intensity={8} distance={6} decay={2} />
+      <pointLight color={TINT.cool} position={[X + 3.3, TABLE_Y + 2.2, -8.6]} intensity={14} distance={7} decay={1.8} />
+      <pointLight color={TINT.fill} position={[X, TABLE_Y + 1.6, -5.2]} intensity={8} distance={6} decay={2} />
       {/* A cool lamp over the board, so the cards read. */}
       <spotLight
-        color="#d8f4ff"
+        color={TINT.spot}
         position={[X, 13, -8.2]}
         target-position={[X, TABLE_Y, -10.2]}
         angle={0.5}
@@ -720,7 +724,7 @@ export function Factory({ view, log }: { view: View; log: string[] }) {
         position={[X, 8.5, -11]}
         size={1.6}
         speed={0.15}
-        color="#9fdcff"
+        color={TINT.cool}
         opacity={0.3}
       />
     </>
@@ -753,7 +757,7 @@ export function EndTurnButton({
     context.strokeStyle = '#3a4650'
     context.lineWidth = 4
     context.strokeRect(6, 6, 244, 52)
-    context.fillStyle = CYAN
+    context.fillStyle = LIT
     context.font = '40px VT323'
     context.textAlign = 'center'
     context.textBaseline = 'middle'
@@ -820,14 +824,18 @@ export function EndTurnButton({
 
 /** Glow on the screens and lamps, a little grain and scanline, and dark corners. */
 export function FactoryEffects() {
+  // A Retina screen's pixels are fine enough to need no smoothing; MSAA there cost two thirds of the frame.
+  const sharp = useThree((state) => state.viewport.dpr) >= 1.5
   return (
-    <EffectComposer multisampling={4}>
+    <EffectComposer multisampling={0}>
       <Bloom mipmapBlur luminanceThreshold={0.85} intensity={1.0} radius={0.7} />
       <ChromaticAberration offset={[0.0006, 0.0006]} />
       <Scanline density={1.4} opacity={0.05} />
       <Noise opacity={0.04} />
       <Vignette offset={0.28} darkness={0.7} />
       <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
+      {/* Below that, a cheap edge smoothing pass instead. */}
+      {sharp ? null : <SMAA />}
     </EffectComposer>
   )
 }

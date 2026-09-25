@@ -1,4 +1,4 @@
-import { useProgress } from '@react-three/drei'
+import { PerformanceMonitor, useProgress } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { easing } from 'maath'
 import { Flag, LayoutGrid, LogOut, Maximize, Minimize, MoveUp, Type } from 'lucide-react'
@@ -27,6 +27,7 @@ import {
 } from './layout.ts'
 import { Deck, Pile } from './Piles.tsx'
 import { EndTurnButton, Factory, FactoryEffects, FactoryP03, TechBoard } from './Factory.tsx'
+import { TINT } from './palette.ts'
 import { usePlayback } from './usePlayback.ts'
 
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
@@ -105,6 +106,7 @@ function Scene({
   rung,
   camera,
   hint,
+  hinted,
   onHint,
 }: {
   game: Ready
@@ -116,7 +118,9 @@ function Scene({
   rung: number
   camera: CameraView
   hint: number
-  onHint: () => void
+  /** The card last tried before the draw, which shakes. */
+  hinted: number | null
+  onHint: (uid: number) => void
 }) {
   const { state, act } = game
   // Moves come from the real state, and wait while P03's turn plays out.
@@ -152,7 +156,7 @@ function Scene({
         hint={hint}
       />
       <EndTurnButton active={can({ type: 'ringBell' })} rung={rung} onClick={() => act({ type: 'ringBell' })} />
-      <Lanes view={view} legal={legal} act={act} play="#3ef3ff" />
+      <Lanes view={view} legal={legal} act={act} play={TINT.glow} />
 
       {view.hand.map((unit, index) => {
         const selected = view.summon?.uid === unit.uid
@@ -166,13 +170,14 @@ function Scene({
             look={handLook(unit.uid)}
             summoning={Boolean(view.summon)}
             assets={assets}
+            shake={hinted === unit.uid ? hint : 0}
             onClick={
               selected
                 ? () => act({ type: 'cancel' })
                 : selectable
                   ? () => act({ type: 'select', uid: unit.uid })
                   : can({ type: 'draw' })
-                    ? onHint
+                    ? () => onHint(unit.uid)
                     : undefined
             }
           />
@@ -529,8 +534,12 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
   const camera: CameraView = playback.view.summon ? 'board' : chosen
   const [ready, setReady] = useState(false)
   const [rung, setRung] = useState(0)
+  // The screen's own resolution to start, up to 2; lowered toward 1 while the frame rate cannot keep up, and raised again.
+  const sharpest = Math.min(2, window.devicePixelRatio || 1)
+  const [dpr, setDpr] = useState(sharpest)
   // Counts the times a card was tried before the draw, so the piles and the prompt can point at what comes first.
   const [hint, setHint] = useState(0)
+  const [hinted, setHinted] = useState<number | null>(null)
   const fullScreen = useFullScreen()
   // E rings the bell, when it can be rung; kept current here so the key listener is set up once.
   const ringKey = useRef(() => {})
@@ -567,13 +576,21 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
       className={fullScreen.on ? 'fixed inset-0 z-40 bg-[#050403]' : 'relative h-full w-full'}
     >
       <Canvas
-        dpr={[1, 2]}
+        dpr={dpr}
+        // Post-processing draws the frame, so the page's own buffer needs no antialiasing of its own.
+        gl={{ antialias: false }}
         camera={{ fov: 60, near: 0.05, far: 200, position: CAMERA.table.position }}
         onCreated={({ gl }) => (gl.toneMapping = THREE.ACESFilmicToneMapping)}
         fallback={<NoWebGL onText={onText} />}
         aria-hidden
       >
         <color attach="background" args={['#020203']} />
+        <PerformanceMonitor
+          factor={1}
+          flipflops={3}
+          onChange={({ factor }) => setDpr(Math.round((1 + factor * (sharpest - 1)) * 4) / 4)}
+          onFallback={() => setDpr(1)}
+        />
         <Suspense fallback={null}>
           <Scene
             game={playing}
@@ -585,7 +602,11 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
             rung={rung}
             camera={camera}
             hint={hint}
-            onHint={() => setHint((n) => n + 1)}
+            hinted={hinted}
+            onHint={(uid) => {
+              setHinted(uid)
+              setHint((n) => n + 1)
+            }}
           />
           <Loaded onLoad={setReady} />
         </Suspense>

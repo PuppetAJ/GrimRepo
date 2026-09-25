@@ -35,10 +35,13 @@ export function Card({
   look = 'plain',
   assets,
   summoning,
+  shake = 0,
   onClick,
 }: {
   unit: Unit
   summoning?: boolean
+  /** Counts up each time this card is tried when it cannot be played; each one shakes it. */
+  shake?: number
   place: Place
   spawn?: Vec3
   lunge?: Lunge
@@ -81,6 +84,10 @@ export function Card({
   // A card drawn from the deck starts closed, as it lay in the deck, and opens on the way to the hand.
   const fromDeck = Boolean(spawn && spawn[0] === DECK[0] && spawn[2] === DECK[2])
   const open = useRef(fromDeck ? 0 : 1)
+  const shook = useRef(-Infinity)
+  useEffect(() => {
+    if (shake) shook.current = performance.now()
+  }, [shake])
 
   useFrame(({ camera }, delta) => {
     const card = mesh.current
@@ -94,7 +101,11 @@ export function Card({
       })
       position.set(...local)
       camera.localToWorld(position)
-      rotation.copy(camera.quaternion).multiply(roll.setFromAxisAngle(Z, angle))
+      // A refused card shakes its head: a quick side-to-side roll that dies away.
+      const since = (now - shook.current) / 1000
+      // Slow and wide enough to survive the easing below.
+      const no = since < 0.7 ? 0.28 * Math.sin(since * 30) * Math.exp(-since * 5) : 0
+      rotation.copy(camera.quaternion).multiply(roll.setFromAxisAngle(Z, angle + no))
       // A disk grows in the hand when picked up, as Act 3's do.
       scale.setScalar(HAND_SCALE * (hovered || look === 'selected' ? 1.25 : 1))
     } else {

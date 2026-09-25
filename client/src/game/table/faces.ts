@@ -1,5 +1,6 @@
 import { card, CARDS, type SigilId, type Unit } from 'shared'
 import { CanvasTexture, SRGBColorSpace, type Texture } from 'three'
+import { TINT } from './palette.ts'
 import { CORNER_HOLES, DISK, RECESS, SCREEN_DIVIDER, SECTIONS, SIGIL_BAND } from './layout.ts'
 
 // The face is drawn at the card's own shape, so nothing is stretched.
@@ -68,9 +69,9 @@ type Palette = {
 }
 const COMMON: Palette = {
   body: '#1f3044',
-  screen: '#0a2430',
-  line: '#4fd9f2',
-  fill: '#1c6f84',
+  screen: TINT.card.screen,
+  line: TINT.card.line,
+  fill: TINT.card.fill,
   plate: '#d9bd3c',
   plateInk: '#1b1a0c',
   cost: '#ff9a2e',
