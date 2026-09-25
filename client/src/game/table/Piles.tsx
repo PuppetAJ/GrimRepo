@@ -1,9 +1,9 @@
 import { useFrame, type ThreeEvent } from '@react-three/fiber'
 import { easing } from 'maath'
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import * as THREE from 'three'
 import { faceContent, faceLights, faceTexture, type loadCardAssets } from './faces.ts'
-import { BACK_RELIEF, Disk } from './Disk.tsx'
+import { BACK_RELIEF, bakedDisk, Disk, diskMaterials } from './Disk.tsx'
 import { DECK, DISK, PILE, type Vec3 } from './layout.ts'
 
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
@@ -74,7 +74,24 @@ export function Nudge({
   )
 }
 
-/** A stack of disks, a little uneven: face down they lie closed; face up they are open, and only the top one shows its face. */
+const MOST = 12
+const pitch = DISK.depth + DISK.relief + BACK_RELIEF
+const layer = new THREE.Matrix4()
+const turn = new THREE.Quaternion()
+const tilt = new THREE.Euler()
+const ONE = new THREE.Vector3(1, 1, 1)
+
+/** Where the i-th disk of a stack lies: a little uneven, so the stack reads as a pile of real disks. */
+function place(i: number, faceUp: boolean, into: THREE.Matrix4): THREE.Matrix4 {
+  turn.setFromEuler(tilt.set(faceUp ? -Math.PI / 2 : Math.PI / 2, 0, ((i * 5) % 7) * 0.006 - 0.018))
+  const at = new THREE.Vector3(((i * 7) % 5) * 0.004 - 0.008, pitch * (i + 0.5), ((i * 3) % 4) * 0.004 - 0.006)
+  return into.compose(at, turn, ONE)
+}
+
+/**
+ * A stack of disks: face down they lie closed; face up they are open, and only the top one shows its face. The
+ * plain ones are drawn as instances, one draw a material for the whole stack, where each would otherwise be ten.
+ */
 function Stack({
   layers,
   top,
@@ -102,19 +119,39 @@ function Stack({
         : null,
     [top, lights],
   )
-  const pitch = DISK.depth + DISK.relief + BACK_RELIEF
-  return [...Array(layers).keys()].map((i) => {
-    const shown = i === layers - 1 ? faces : null
-    return (
-      <group
-        key={i}
-        position={[((i * 7) % 5) * 0.004 - 0.008, pitch * (i + 0.5), ((i * 3) % 4) * 0.004 - 0.006]}
-        rotation={[faces ? -Math.PI / 2 : Math.PI / 2, 0, ((i * 5) % 7) * 0.006 - 0.018]}
-      >
-        <Disk open={faces ? 1 : 0} front={shown?.[0] ?? null} content={shown?.[1] ?? null} back={null} />
-      </group>
-    )
-  })
+  const faceUp = Boolean(faces)
+  const shape = bakedDisk(faceUp ? 1 : 0)
+  const materials = diskMaterials('common')
+  const plain = Math.min(MOST, faceUp ? layers - 1 : layers)
+  const meshes = useRef<(THREE.InstancedMesh | null)[]>([])
+  useLayoutEffect(() => {
+    for (const mesh of meshes.current) {
+      if (!mesh) continue
+      for (let i = 0; i < plain; i++) mesh.setMatrixAt(i, place(i, faceUp, layer))
+      mesh.count = Math.max(plain, 0)
+      mesh.instanceMatrix.needsUpdate = true
+    }
+  }, [plain, faceUp])
+  const shown = faceUp && layers > 0 ? place(layers - 1, true, new THREE.Matrix4()) : null
+  return (
+    <>
+      {(['plastic', 'dark', 'metal'] as const).map((name, k) => (
+        <instancedMesh
+          key={name}
+          ref={(mesh) => {
+            meshes.current[k] = mesh
+          }}
+          args={[shape[name], materials[name], MOST]}
+          frustumCulled={false}
+        />
+      ))}
+      {shown && faces ? (
+        <group matrix={shown} matrixAutoUpdate={false}>
+          <Disk open={1} front={faces[0]} content={faces[1]} back={null} />
+        </group>
+      ) : null}
+    </>
+  )
 }
 
 /** The deck, face down and thinning as it is drawn from. */

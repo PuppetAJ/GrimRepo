@@ -2,6 +2,7 @@ import { forwardRef, useImperativeHandle, useLayoutEffect, useMemo, useRef, type
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import { CARD, CORNER_HOLES, DISK, RECESS, SECTIONS } from './layout.ts'
+import { TINT } from './palette.ts'
 
 // The floppy disk the factory's cards are made of, after the Act 3 card models. It is built in three sections,
 // the top (shutter sleeve, label, hub housing), the middle (screen, side rails) and the bottom (stats, bottom band),
@@ -321,9 +322,9 @@ const plastics = (body: string, bodyGlow: string) => {
 }
 type Plastics = ReturnType<typeof plastics>
 const sets: Partial<Record<'common' | 'rare', Plastics>> = {}
-/** Blue disks for the deck, red for the rare card, as Act 3 has it; built on first use, since they draw canvases. */
+/** The deck's disks in the palette's plastic, red for the rare card, as Act 3 has it; built on first use, since they draw canvases. */
 export const diskMaterials = (kind: 'common' | 'rare' = 'common'): Plastics =>
-  (sets[kind] ??= kind === 'rare' ? plastics('#7a2030', '#2a0a10') : plastics('#2e4664', '#0c1826'))
+  (sets[kind] ??= kind === 'rare' ? plastics('#7a2030', '#2a0a10') : plastics(TINT.disk.body, TINT.disk.glow))
 
 /** Where the face and back planes sit: just off the body, under the raised rims. */
 export const FACE_Z = front + 0.0008
@@ -355,6 +356,51 @@ const sheetGeometries = () =>
 
 export type DiskHandle = { setOpen: (open: number) => void }
 
+/** Where each section sits, open (1) or closed (0): the top and bottom keep their size and the middle compresses between. */
+function poseAt(open: number) {
+  const height = h * (DISK.compact + (1 - DISK.compact) * open)
+  const spare = height - h * (1 - MB + MT)
+  // The rails run from the guides under the housing to the feet on the bottom section.
+  const guides = height / 2 - HOUSING.bottom * h
+  const feet = -height / 2 + (1 - MB + 0.035) * h
+  return {
+    top: height / 2,
+    middle: height / 2 - MT * h,
+    middleScale: Math.max(spare / (h * (MB - MT)), 0.001),
+    bottom: -height / 2,
+    rails: guides,
+    railsScale: Math.max(guides - feet, 0.001),
+  }
+}
+
+type Baked = Record<'plastic' | 'dark' | 'metal', THREE.BufferGeometry>
+const baked = new Map<number, Baked>()
+
+/** A whole disk at rest, open or closed, merged into one geometry per material, for stacks drawn as instances. */
+export function bakedDisk(open: 0 | 1): Baked {
+  let found = baked.get(open)
+  if (found) return found
+  const { top, middle, bottom, rail } = diskGeometry()
+  const at = poseAt(open)
+  const placed = (geometry: THREE.BufferGeometry | null, y: number, scaleY = 1) =>
+    geometry ? [geometry.clone().applyMatrix4(new THREE.Matrix4().makeScale(1, scaleY, 1).setPosition(0, y, 0))] : []
+  const material = (name: keyof Baked) => {
+    const pieces = [
+      ...placed(top[name], at.top),
+      ...placed(middle[name], at.middle, at.middleScale),
+      ...placed(bottom[name], at.bottom),
+      ...(name === 'metal' ? placed(rail, at.rails, at.railsScale) : []),
+    ]
+    const merged = mergeGeometries(pieces, false)
+    if (!merged) throw new Error('The disk could not be baked')
+    for (const piece of pieces) piece.dispose()
+    return merged
+  }
+  found = { plastic: material('plastic'), dark: material('dark'), metal: material('metal') }
+  baked.set(open, found)
+  return found
+}
+
 /**
  * The disk, open (1) or closed (0) or on its way: the top and bottom sections keep their size and the middle
  * compresses between them, with the rails spanning the gap. `setOpen` moves it without a render.
@@ -382,17 +428,13 @@ export const Disk = forwardRef<
   const rails = useRef<THREE.Group>(null)
   const setOpen = useMemo(
     () => (value: number) => {
-      const height = h * (DISK.compact + (1 - DISK.compact) * value)
-      const spare = height - h * (1 - MB + MT)
-      top.current?.position.setY(height / 2)
-      middle.current?.position.setY(height / 2 - MT * h)
-      middle.current?.scale.setY(Math.max(spare / (h * (MB - MT)), 0.001))
-      bottom.current?.position.setY(-height / 2)
-      // From the guides under the housing to the feet on the bottom section.
-      const guides = height / 2 - HOUSING.bottom * h
-      const feet = -height / 2 + (1 - MB + 0.035) * h
-      rails.current?.position.setY(guides)
-      rails.current?.scale.setY(Math.max(guides - feet, 0.001))
+      const at = poseAt(value)
+      top.current?.position.setY(at.top)
+      middle.current?.position.setY(at.middle)
+      middle.current?.scale.setY(at.middleScale)
+      bottom.current?.position.setY(at.bottom)
+      rails.current?.position.setY(at.rails)
+      rails.current?.scale.setY(at.railsScale)
     },
     [],
   )

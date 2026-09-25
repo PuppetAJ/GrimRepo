@@ -290,7 +290,6 @@ function Monitor({ position, turn, lines }: { position: Vec3; turn: number; line
         <planeGeometry args={[2.66, 1.66]} />
         <meshBasicMaterial map={texture} toneMapped={false} />
       </mesh>
-      <pointLight color={LIT} position={[0, 0, 0.8]} intensity={3} distance={5} decay={2} />
     </group>
   )
 }
@@ -490,7 +489,6 @@ function DrumRack() {
           </mesh>
         ))}
       </group>
-      <pointLight color={LIT} position={[0, -0.6, 1]} intensity={4} distance={6} decay={2} />
     </group>
   )
 }
@@ -516,7 +514,7 @@ function Props() {
         {/* Hung by its head, handle down. */}
         <primitive object={hammer} position={[-0.5, 0.2, 0.26]} rotation={[0, 0, Math.PI / 2]} scale={0.7} />
         <primitive object={pliers} position={[0.5, 0.2, 0.26]} rotation={[0, Math.PI / 2, 0]} scale={0.7} />
-        <pointLight color={LIT} position={[0, 0.4, 1.2]} intensity={5} distance={4} decay={2} />
+        <pointLight color={TINT.light} position={[0, 0.4, 1.2]} intensity={5} distance={4} decay={2} />
       </group>
       {[
         [X - 6.8, 0.5, -7.5],
@@ -660,7 +658,7 @@ export function FactoryP03({ view, busy, outcome }: { view: View; busy: boolean;
   return (
     <>
       <P03 mood={mood} />
-      <pointLight color={LIT} position={[X, 10.4, -13.4]} intensity={12} distance={10} decay={1.6} />
+      <pointLight color={TINT.light} position={[X, 10.4, -13.4]} intensity={12} distance={10} decay={1.6} />
     </>
   )
 }
