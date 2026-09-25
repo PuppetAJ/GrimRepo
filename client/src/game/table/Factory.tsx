@@ -152,16 +152,16 @@ function Room() {
         ))}
         <meshStandardMaterial attach="material-2" {...table} {...rough} color="#8a98a6" roughness={0.85} />
       </mesh>
-      {/* A steel trim round the table's edge, a shade brighter than the top, so it reads where the table ends. */}
+      {/* A dark steel trim round the table's edge, raised off the top, so it reads where the table ends. */}
       {TRIM.map(([x, z, width, depth], i) => (
         <mesh key={i} position={[x, TABLE_Y + 0.03, z]}>
           <boxGeometry args={[width, 0.1, depth]} />
-          {/* Half metal and faintly lit from within: pure metal with nothing to reflect renders black. */}
+          {/* Dark steel, part metal and faintly lit: pure metal with nothing to reflect renders black. */}
           <meshStandardMaterial
             {...clean}
-            color="#c3ccd4"
-            metalness={0.45}
-            roughness={0.35}
+            color="#4a535b"
+            metalness={0.6}
+            roughness={0.38}
             emissive={TINT.fill}
             emissiveIntensity={mood.trimGlow}
           />
@@ -863,6 +863,9 @@ const Fixtures = memo(function Fixtures() {
 })
 
 /** The factory's bell: a big red button that says what it does. */
+// The cap's top stands 0.08 above the collar's rim at 0.22; the cap is 0.53 tall at its scale.
+const CAP_Y = 0.3 - 0.53
+
 export function EndTurnButton({
   onClick,
   active,
@@ -908,7 +911,8 @@ export function EndTurnButton({
   useFrame((_, delta) => {
     pressed.current = Math.max(0, pressed.current - delta * 5)
     if (!cap.current) return
-    easing.damp(cap.current.position, 'y', 0.02 - Math.sin(pressed.current * Math.PI) * 0.09, 0.03, delta)
+    // Sunk into the collar, standing just proud of it, and pressed a little further in.
+    easing.damp(cap.current.position, 'y', CAP_Y - Math.sin(pressed.current * Math.PI) * 0.06, 0.03, delta)
     glow.emissiveIntensity = active ? 0.55 + Math.sin(performance.now() / 300) * 0.2 : 0.06
     if (lamp.current) (lamp.current.material as THREE.MeshStandardMaterial).emissiveIntensity = active ? 2.5 : 0.1
   })
@@ -930,10 +934,10 @@ export function EndTurnButton({
           )),
         )}
         <mesh position={[0, 0.14, 0]}>
-          <cylinderGeometry args={[0.56, 0.62, 0.16, 32]} />
+          <cylinderGeometry args={[0.5, 0.56, 0.16, 32]} />
           <meshStandardMaterial {...steel} />
         </mesh>
-        <group ref={cap} position={[0, 0.02, 0]}>
+        <group ref={cap} position={[0, CAP_Y, 0]}>
           <primitive object={model} scale={1.9} />
         </group>
         {/* The ready lamp and the label on the plate's near edge. */}
