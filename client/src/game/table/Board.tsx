@@ -138,7 +138,7 @@ export function Nudge({
     const moving = group.current
     if (!moving) return
     const on = hovered && active
-    easing.damp(moving.position, 'y', on ? lift : 0, 0.08, delta)
+    easing.damp(moving.position, 'y', on ? lift : 0, 0.05, delta)
     const t = (performance.now() - since.current) / 1000
     moving.rotation.z = on ? 0.04 * Math.sin(t * 38) * Math.exp(-t * 7) : 0
   })
@@ -254,7 +254,7 @@ export function Deck({
   active: boolean
 }) {
   const back = useMemo(() => backTexture(assets, style), [assets, style])
-  const layers = count === 0 ? 0 : Math.max(1, Math.round((count / total) * 16))
+  const layers = count === 0 ? 0 : Math.max(1, Math.round((count / total) * 12))
   return (
     <group position={DECK}>
       <Nudge active={active} onClick={onClick} size={[0.85, 0.3, 1.35]} label="deck">

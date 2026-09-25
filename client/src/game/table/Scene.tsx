@@ -40,6 +40,9 @@ export function Robot({ face, tint = '#ffffff', pace = 1 }: { face?: THREE.Textu
         const own = (material.userData['own'] ??= screenFace(material.emissiveMap)) as THREE.Texture
         material.emissiveMap = face ?? own
         material.emissive.set(tint)
+        // Matte, or the lamp's reflection lights one half of the screen and splits the face.
+        material.roughness = 1
+        material.metalness = 0
         // Authored ten times brighter than three.js now honours.
         material.emissiveIntensity = 1.6
       }),

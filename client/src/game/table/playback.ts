@@ -18,25 +18,25 @@ export type Playback = {
 
 // How long each event holds the stage before the next one plays, in milliseconds.
 const PACE: Record<GameEvent['type'], number> = {
-  drew: 380,
-  reshuffled: 300,
+  drew: 285,
+  reshuffled: 225,
   selected: 0,
   marked: 0,
   unmarked: 0,
   cancelled: 0,
-  sacrificed: 320,
-  placed: 380,
-  wiped: 650,
-  attacked: 300,
-  damaged: 260,
-  overkill: 220,
-  struckBack: 240,
-  killed: 420,
-  hit: 320,
-  retired: 420,
-  advanced: 360,
-  queued: 300,
-  healed: 200,
+  sacrificed: 240,
+  placed: 285,
+  wiped: 488,
+  attacked: 225,
+  damaged: 195,
+  overkill: 165,
+  struckBack: 180,
+  killed: 315,
+  hit: 240,
+  retired: 315,
+  advanced: 270,
+  queued: 225,
+  healed: 150,
   turnStarted: 0,
   gameOver: 0,
 }
@@ -53,7 +53,7 @@ const FACE: Record<'player' | 'opponent', Vec3> = {
   opponent: [-1.975, TABLE_Y + 0.9, -12.3],
 }
 
-export const LEAVE_MS = 700
+export const LEAVE_MS = 550
 export const POPUP_MS = 1000
 
 export function start(state: GameState): Playback {

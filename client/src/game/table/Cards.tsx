@@ -25,7 +25,7 @@ const roll = new THREE.Quaternion()
 const scale = new THREE.Vector3()
 const Z = new THREE.Vector3(0, 0, 1)
 
-const LUNGE_MS = 300
+const LUNGE_MS = 240
 
 export function Card({
   unit,
@@ -123,7 +123,7 @@ export function Card({
       scale.multiplyScalar(1 - leaving * 0.6)
     } else position.y -= leaving * 0.45
 
-    open.current = THREE.MathUtils.damp(open.current, 1, 6, delta)
+    open.current = THREE.MathUtils.damp(open.current, 1, 9, delta)
     disk.current?.setOpen(open.current)
     if (!placed.current) {
       card.position.copy(spawn ? new THREE.Vector3(...spawn) : position)
@@ -131,9 +131,9 @@ export function Card({
       card.scale.copy(scale)
       placed.current = true
     }
-    easing.damp3(card.position, position, 0.1, delta)
-    easing.dampQ(card.quaternion, rotation, 0.1, delta)
-    easing.damp3(card.scale, scale, 0.1, delta)
+    easing.damp3(card.position, position, 0.07, delta)
+    easing.dampQ(card.quaternion, rotation, 0.07, delta)
+    easing.damp3(card.scale, scale, 0.07, delta)
 
     // A card that can be sacrificed pulses red; a marked one holds it.
     const pulse = look === 'markable' ? 0.2 + 0.15 * Math.sin(now / 160) : 0

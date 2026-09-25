@@ -29,8 +29,8 @@ function CameraRig({ view }: { view: CameraView }) {
   useFrame(({ camera, pointer }, delta) => {
     const [x, y, z] = CAMERA[view].position
     seat.set(x + pointer.x * 0.12, y + pointer.y * 0.06, z)
-    easing.damp3(camera.position, seat, 0.35, delta)
-    easing.damp3(target.current, CAMERA[view].target, 0.35, delta)
+    easing.damp3(camera.position, seat, 0.18, delta)
+    easing.damp3(target.current, CAMERA[view].target, 0.18, delta)
     camera.lookAt(target.current)
   })
   return null
@@ -338,6 +338,7 @@ function Hud({
   onText,
   fullScreen,
   ring,
+  scene,
 }: {
   game: Ready
   view: View
@@ -349,6 +350,7 @@ function Hud({
   onText: () => void
   fullScreen: ReturnType<typeof useFullScreen>
   ring: () => void
+  scene: SceneName
 }) {
   const { state, act } = game
   const legal = busy || game.result ? [] : legalActions(state)
@@ -421,7 +423,11 @@ function Hud({
       ) : (
         <>
           <div className="pointer-events-none absolute bottom-0 left-0 flex w-[26%] flex-col gap-1 p-3 font-terminal sm:p-4">
-            <ol aria-live="polite" className="hidden text-lg leading-tight text-p03-dim md:block short:hidden">
+            {/* In the factory the monitor beside P03 is the log; in the cabin it sits here. */}
+            <ol
+              aria-live="polite"
+              className={`text-lg leading-tight text-p03-dim short:hidden ${scene === 'factory' ? 'sr-only' : 'hidden md:block'}`}
+            >
               {last.map((line, index) => (
                 <li key={game.log.length - last.length + index}>{line}</li>
               ))}
@@ -568,6 +574,7 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
           onDemo={onDemo}
           onText={onText}
           fullScreen={fullScreen}
+          scene={scene}
           ring={() => act({ type: 'ringBell' })}
         />
       ) : (

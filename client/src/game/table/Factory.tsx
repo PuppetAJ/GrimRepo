@@ -39,11 +39,67 @@ const surfaces = (name: string) => ({
   roughnessMap: `/textures/${name}/roughness.webp`,
 })
 
+/** The texture's colour with grime painted over it: dark blotches, streaks and scuffs, drawn wrapped so it still tiles. */
+function weathered(colour: THREE.Texture, seed: number, strength: number): THREE.Texture {
+  const size = 1024
+  const canvas = document.createElement('canvas')
+  canvas.width = canvas.height = size
+  const context = canvas.getContext('2d') as CanvasRenderingContext2D
+  context.drawImage(colour.image as CanvasImageSource, 0, 0, size, size)
+  const random = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff
+  const wrapped = (draw: (dx: number, dy: number) => void) => {
+    for (const dx of [-size, 0, size]) for (const dy of [-size, 0, size]) draw(dx, dy)
+  }
+  for (let i = 0; i < 90; i++) {
+    const x = random() * size
+    const y = random() * size
+    const r = 20 + random() * random() * 260
+    const alpha = strength * (0.25 + random() * 0.4)
+    wrapped((dx, dy) => {
+      const blot = context.createRadialGradient(x + dx, y + dy, 0, x + dx, y + dy, r)
+      blot.addColorStop(0, `rgb(18 14 8 / ${alpha})`)
+      blot.addColorStop(0.7, `rgb(18 14 8 / ${alpha * 0.35})`)
+      blot.addColorStop(1, 'rgb(0 0 0 / 0)')
+      context.fillStyle = blot
+      context.fillRect(x + dx - r, y + dy - r, r * 2, r * 2)
+    })
+  }
+  for (let i = 0; i < 160; i++) {
+    const x = random() * size
+    const y = random() * size
+    const angle = random() * Math.PI
+    const length = 30 + random() * 220
+    context.strokeStyle = random() > 0.35 ? `rgb(0 0 0 / ${strength * 0.35})` : `rgb(255 255 255 / ${strength * 0.18})`
+    context.lineWidth = random() > 0.8 ? 3 : 1
+    wrapped((dx, dy) => {
+      context.beginPath()
+      context.moveTo(x + dx, y + dy)
+      context.lineTo(x + dx + Math.cos(angle) * length, y + dy + Math.sin(angle) * length)
+      context.stroke()
+    })
+  }
+  const map = new THREE.CanvasTexture(canvas)
+  map.colorSpace = THREE.SRGBColorSpace
+  map.wrapS = map.wrapT = THREE.RepeatWrapping
+  map.repeat.copy(colour.repeat)
+  map.anisotropy = 8
+  return map
+}
+
 /** The console the game is played on, the floor and the walls. */
 function Room() {
-  const table = metal(useTexture(surfaces('table')), [4, 3])
+  const clean = metal(useTexture(surfaces('table')), [4, 3])
   const floor = metal(useTexture(surfaces('floor')), [12, 12])
   const wall = metal(useTexture(surfaces('wall')), [8, 3])
+  const table = useMemo(() => ({ ...clean, map: weathered(clean.map, 11, 1) }), [clean])
+  const floorMap = useMemo(() => weathered(floor.map, 5, 0.7), [floor])
+  useEffect(
+    () => () => {
+      table.map.dispose()
+      floorMap.dispose()
+    },
+    [table, floorMap],
+  )
   const rough = { metalness: 0.55, normalScale: new THREE.Vector2(1.6, 1.6) }
   return (
     <>
@@ -62,7 +118,7 @@ function Room() {
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[X, 0, -10]}>
         <planeGeometry args={[60, 60]} />
-        <meshStandardMaterial {...floor} color="#3c444c" metalness={0.7} />
+        <meshStandardMaterial {...floor} map={floorMap} color="#3c444c" metalness={0.7} />
       </mesh>
       <mesh position={[X, 10, -22]}>
         <planeGeometry args={[40, 20]} />
@@ -203,9 +259,9 @@ function Monitor({ position, turn, lines }: { position: Vec3; turn: number; line
     context.fillStyle = 'rgb(62 243 255 / 0.06)'
     for (let y = 0; y < canvas.height; y += 4) context.fillRect(0, y, canvas.width, 1)
     context.fillStyle = CYAN
-    context.font = '34px VT323'
+    context.font = '30px VT323'
     context.textBaseline = 'top'
-    lines.forEach((line, i) => context.fillText(line, 22, 20 + i * 40, canvas.width - 44))
+    lines.forEach((line, i) => context.fillText(line, 22, 16 + i * 33, canvas.width - 44))
     texture.needsUpdate = true
   }, [canvas, texture, lines])
   return (
@@ -239,11 +295,12 @@ function Scale({ view }: { view: View }) {
   useFrame((_, delta) => {
     if (!beam) return
     // The player's pan is on the left, P03's on the right; the beam is a lever, so a small angle reads.
-    const lean = THREE.MathUtils.clamp((view.health.player - view.health.opponent) / 50, -1, 1)
-    easing.damp(beam.rotation, 'y', lean * 0.32, 0.5, delta)
+    // A lead of 25 tips the beam all the way; the pans hang from it, so the loser's sinks.
+    const lean = THREE.MathUtils.clamp((view.health.player - view.health.opponent) / 25, -1, 1)
+    easing.damp(beam.rotation, 'y', lean * 0.45, 0.3, delta)
   })
   return (
-    <group position={[X - 3.3, TABLE_Y, -11.6]} rotation={[0, 0.12, 0]} scale={0.046}>
+    <group position={[X - 4.7, TABLE_Y, -11.3]} rotation={[0, 0.2, 0]} scale={0.046}>
       <primitive object={scene} />
       <pointLight color="#9fdcff" position={[0, 40, 30]} intensity={0.02} distance={4} decay={2} />
     </group>
@@ -346,20 +403,29 @@ function DrumRack() {
   )
 }
 
-/** A canister on the right with a lit window, and coiled springs on the floor. */
+/** A rack on the right of the status screen where P03's tools will hang (the models are still to come), and springs on the floor. */
 function Props() {
+  const steel = { color: '#20262c', metalness: 0.85, roughness: 0.45 }
   return (
     <>
-      <group position={[X + 5.6, TABLE_Y, -12.9]}>
-        <mesh position={[0, 0.75, 0]}>
-          <cylinderGeometry args={[0.62, 0.66, 1.5, 18]} />
-          <meshStandardMaterial color="#232a30" metalness={0.8} roughness={0.5} />
+      <group position={[X + 7.6, 9.4, -14.4]} rotation={[0, -0.3, 0]}>
+        <mesh>
+          <boxGeometry args={[2.2, 2.6, 0.12]} />
+          <meshStandardMaterial color="#171c21" metalness={0.8} roughness={0.5} />
         </mesh>
-        <mesh position={[0, 0.72, 0.6]}>
-          <boxGeometry args={[0.55, 0.42, 0.1]} />
-          <meshBasicMaterial color={GLOW} toneMapped={false} />
-        </mesh>
-        <pointLight color={CYAN} position={[0, 0.8, 1]} intensity={6} distance={5} decay={2} />
+        {[-0.7, 0, 0.7].map((x) => (
+          <group key={x} position={[x, 0.9, 0.12]}>
+            <mesh rotation={[Math.PI / 2, 0, 0]}>
+              <cylinderGeometry args={[0.035, 0.035, 0.24, 8]} />
+              <meshStandardMaterial {...steel} />
+            </mesh>
+            <mesh position={[0, 0.06, 0.12]}>
+              <sphereGeometry args={[0.05, 8, 8]} />
+              <meshStandardMaterial {...steel} />
+            </mesh>
+          </group>
+        ))}
+        <pointLight color={CYAN} position={[0, 0.4, 1.2]} intensity={3} distance={4} decay={2} />
       </group>
       {[
         [X - 6.8, 0.5, -7.5],
@@ -458,7 +524,8 @@ export function FactoryP03({ view, busy, outcome }: { view: View; busy: boolean;
 
 /** Everything around the table: the room, the light, the screens and the props. */
 export function Factory({ view, log }: { view: View; log: string[] }) {
-  const lines = useMemo(() => ['// P03 CONSOLE', ...log.slice(-6).map((line) => line.replace(/^P03> /, '> '))], [log])
+  // The left monitor is the battle log: the last eight lines of P03's console.
+  const lines = useMemo(() => ['// P03 CONSOLE', ...log.slice(-8).map((line) => line.replace(/^P03> /, '> '))], [log])
   const status = useMemo(
     () => [
       '// STATUS',
@@ -492,8 +559,8 @@ export function Factory({ view, log }: { view: View; log: string[] }) {
       <Lamp />
       <DrumRack />
       <Props />
-      <Monitor position={[X - 4.3, 8.55, -14.2]} turn={0.3} lines={lines} />
-      <Monitor position={[X + 4.3, 8.55, -14.2]} turn={-0.3} lines={status} />
+      <Monitor position={[X - 4.3, 9.5, -14.2]} turn={0.3} lines={lines} />
+      <Monitor position={[X + 4.3, 9.5, -14.2]} turn={-0.3} lines={status} />
       <Gems />
       <Suspense fallback={null}>
         <Scale view={view} />
@@ -523,6 +590,7 @@ export function EndTurnButton({
   rung: number
 }) {
   const cap = useRef<THREE.Mesh>(null)
+  const lamp = useRef<THREE.Mesh>(null)
   const pressed = useRef(0)
   useEffect(() => {
     if (rung) pressed.current = 1
@@ -534,35 +602,66 @@ export function EndTurnButton({
     const context = canvas.getContext('2d') as CanvasRenderingContext2D
     context.fillStyle = '#0b0e11'
     context.fillRect(0, 0, 256, 64)
+    context.strokeStyle = '#3a4650'
+    context.lineWidth = 4
+    context.strokeRect(6, 6, 244, 52)
     context.fillStyle = CYAN
-    context.font = '44px VT323'
+    context.font = '40px VT323'
     context.textAlign = 'center'
     context.textBaseline = 'middle'
-    context.fillText('EXECUTE', 128, 34)
+    context.fillText('EXECUTE', 128, 33)
     const map = new THREE.CanvasTexture(canvas)
     map.colorSpace = THREE.SRGBColorSpace
     return map
   }, [])
   useEffect(() => () => label.dispose(), [label])
   useFrame((_, delta) => {
-    pressed.current = Math.max(0, pressed.current - delta * 4)
+    pressed.current = Math.max(0, pressed.current - delta * 5)
     if (!cap.current) return
-    easing.damp(cap.current.position, 'y', 0.24 - Math.sin(pressed.current * Math.PI) * 0.08, 0.04, delta)
+    easing.damp(cap.current.position, 'y', 0.3 - Math.sin(pressed.current * Math.PI) * 0.09, 0.03, delta)
     const material = cap.current.material as THREE.MeshStandardMaterial
-    material.emissiveIntensity = active ? 1.1 + Math.sin(performance.now() / 300) * 0.3 : 0.15
+    material.emissiveIntensity = active ? 0.9 + Math.sin(performance.now() / 300) * 0.25 : 0.12
+    if (lamp.current) (lamp.current.material as THREE.MeshStandardMaterial).emissiveIntensity = active ? 2.5 : 0.1
   })
+  const steel = { color: '#2a2f35', metalness: 0.85, roughness: 0.4 }
   return (
     <group position={BELL}>
-      <Nudge active={active} onClick={onClick} size={[1.1, 0.6, 1.1]} label="bell" lift={0.02}>
-        <mesh position={[0, 0.08, 0]}>
-          <cylinderGeometry args={[0.52, 0.58, 0.16, 32]} />
-          <meshStandardMaterial color="#2a2f35" metalness={0.8} roughness={0.35} />
+      <Nudge active={active} onClick={onClick} size={[1.4, 0.7, 1.4]} label="bell" lift={0.02}>
+        {/* A bolted mounting plate, a collar the cap sits in, and the cap with a ring round its edge. */}
+        <mesh position={[0, 0.03, 0]}>
+          <boxGeometry args={[1.4, 0.06, 1.4]} />
+          <meshStandardMaterial color="#1d2227" metalness={0.8} roughness={0.5} />
         </mesh>
-        <mesh ref={cap} position={[0, 0.24, 0]}>
-          <cylinderGeometry args={[0.36, 0.36, 0.16, 32]} />
-          <meshStandardMaterial color="#8e1220" emissive="#ff1a2a" emissiveIntensity={1.1} roughness={0.3} />
+        {[-0.58, 0.58].flatMap((x) =>
+          [-0.58, 0.58].map((z) => (
+            <mesh key={`${x},${z}`} position={[x, 0.075, z]}>
+              <cylinderGeometry args={[0.05, 0.05, 0.03, 6]} />
+              <meshStandardMaterial {...steel} />
+            </mesh>
+          )),
+        )}
+        <mesh position={[0, 0.14, 0]}>
+          <cylinderGeometry args={[0.56, 0.62, 0.16, 32]} />
+          <meshStandardMaterial {...steel} />
         </mesh>
-        <mesh position={[0, 0.02, 0.62]} rotation={[-Math.PI / 2, 0, 0]}>
+        <mesh position={[0, 0.23, 0]}>
+          <torusGeometry args={[0.47, 0.035, 10, 40]} />
+          <meshStandardMaterial color="#9aa5ad" metalness={0.9} roughness={0.3} />
+        </mesh>
+        <mesh ref={cap} position={[0, 0.3, 0]}>
+          <cylinderGeometry args={[0.4, 0.44, 0.18, 32]} />
+          <meshStandardMaterial color="#7d1019" emissive="#ff2233" emissiveIntensity={0.9} roughness={0.35} />
+        </mesh>
+        <mesh position={[0, 0.395, 0]}>
+          <cylinderGeometry args={[0.32, 0.4, 0.02, 32]} />
+          <meshStandardMaterial color="#a4161f" roughness={0.3} />
+        </mesh>
+        {/* The ready lamp and the label on the plate's near edge. */}
+        <mesh ref={lamp} position={[0.52, 0.09, 0.52]}>
+          <sphereGeometry args={[0.045, 10, 10]} />
+          <meshStandardMaterial color="#0a3a20" emissive="#7dff9a" emissiveIntensity={2.5} />
+        </mesh>
+        <mesh position={[0, 0.062, 0.62]} rotation={[-Math.PI / 2, 0, 0]}>
           <planeGeometry args={[0.8, 0.2]} />
           <meshBasicMaterial map={label} toneMapped={false} />
         </mesh>
