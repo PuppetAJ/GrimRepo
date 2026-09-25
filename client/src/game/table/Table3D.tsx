@@ -217,7 +217,7 @@ function Scene({
         <Popup key={popup.id} text={popup.text} tone={popup.tone} position={popup.position} born={popup.at} />
       ))}
       {/* In development, or in a build made with VITE_TEST_HANDLE=1 for measuring and testing it. */}
-      {import.meta.env.DEV || import.meta.env['VITE_TEST_HANDLE'] === '1' ? (
+      {import.meta.env.DEV || import.meta.env.VITE_TEST_HANDLE === '1' ? (
         <TestHandle game={game} view={view} busy={busy} skip={skip} />
       ) : null}
     </>
