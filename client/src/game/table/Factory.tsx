@@ -8,6 +8,7 @@ import {
   HueSaturation,
   Noise,
   Scanline,
+  SelectiveBloom,
   SMAA,
   ToneMapping,
   Vignette,
@@ -45,6 +46,8 @@ const GLOW = new THREE.Color(...TINT.glowHdr)
 // Glow is kept for what is brighter than white, so no lamp can make a lit card glow; these are pushed past it.
 const SCREEN_HDR = new THREE.Color(1.7, 1.7, 1.7)
 const DUST = new THREE.Color(TINT.cool).multiplyScalar(2)
+// The cards' glow comes from what their faces give off, not from lamps, so its pass is lit by nothing.
+const SELECTED_LIGHT = new THREE.AmbientLight('#000000', 0)
 
 function metal(maps: Record<'map' | 'normalMap' | 'roughnessMap', THREE.Texture>, repeat: [number, number]) {
   for (const texture of Object.values(maps)) {
@@ -964,6 +967,19 @@ export function FactoryEffects() {
       <Scanline density={1.4} opacity={mood.scanline} />
       <Noise opacity={mood.noise} />
       <Vignette offset={0.28} darkness={mood.vignette} />
+      {/* The face-up cards' own soft glow, from the tagged faces alone, so no lamp can add to it. */}
+      {mood.cardBloom > 0 ? (
+        <SelectiveBloom
+          lights={[SELECTED_LIGHT]}
+          mipmapBlur
+          luminanceThreshold={0.25}
+          // A soft halo needs no detail, so it is worked out at half size, and a quarter on fine screens.
+          resolutionScale={sharp ? 0.25 : 0.5}
+          levels={4}
+          intensity={mood.cardBloom}
+          radius={0.55}
+        />
+      ) : null}
       <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
       <HueSaturation hue={mood.hue * Math.PI} saturation={mood.saturation} />
       <BrightnessContrast brightness={mood.brightness} contrast={mood.contrast} />

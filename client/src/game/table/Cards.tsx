@@ -1,9 +1,11 @@
 import { useFrame, type ThreeEvent } from '@react-three/fiber'
+import { Select } from '@react-three/postprocessing'
 import { easing } from 'maath'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { card, type Unit } from 'shared'
 import * as THREE from 'three'
 import { useBatch } from './Batch.tsx'
+import { claimCursor, releaseCursor } from './cursor.ts'
 import { tuning } from './tuning.ts'
 import { Disk, facePlanes, type DiskHandle } from './Disk.tsx'
 import { backTexture, faceContent, faceLights, faceTexture, type loadCardAssets } from './faces.ts'
@@ -59,6 +61,13 @@ export function Card({
   const mesh = useRef<THREE.Object3D>(null)
   const disk = useRef<DiskHandle>(null)
   const [hovered, setHovered] = useState(false)
+  const self = useRef({})
+  const clickable = Boolean(onClick)
+  useEffect(() => {
+    if (hovered && clickable) claimCursor(self.current, 'point')
+    else releaseCursor(self.current)
+  }, [hovered, clickable])
+  useEffect(() => () => releaseCursor(self.current), [])
   const placed = useRef(false)
   const face = faceTexture(unit, assets)
   const back = useMemo(() => backTexture(), [])
@@ -210,19 +219,22 @@ export function Card({
       event.stopPropagation()
       setHovered(true)
       onHover?.(true)
-      if (onClick) document.body.style.cursor = 'pointer'
     },
     onPointerOut: () => {
       setHovered(false)
       onHover?.(false)
-      document.body.style.cursor = ''
     },
+    // Stopped here too, or what lies behind the card is hovered again on the next move.
+    onPointerMove: (event: ThreeEvent<PointerEvent>) => event.stopPropagation(),
   }
 
   return (
     <group ref={mesh} name={`card-${unit.uid}`} {...handlers}>
       {batched ? (
-        <mesh geometry={facePlanes().content} material={content} />
+        // Tagged for the cards' own soft glow; a card on the move is untagged until it settles.
+        <Select enabled>
+          <mesh geometry={facePlanes().content} material={content} />
+        </Select>
       ) : (
         <Disk ref={disk} open={fromDeck ? 0 : 1} kind={kind} front={front} content={content} back={rear} />
       )}

@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode }
 import * as THREE from 'three'
 import { faceContent, faceLights, faceTexture, type loadCardAssets } from './faces.ts'
 import { BACK_RELIEF, bakedDisk, Disk, diskMaterials } from './Disk.tsx'
+import { claimCursor, releaseCursor } from './cursor.ts'
 import { DECK, DISK, PILE, type Vec3 } from './layout.ts'
 
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
@@ -41,6 +42,13 @@ export function Nudge({
   const [hovered, setHovered] = useState(false)
   const since = useRef(0)
   const pointed = useRef(-Infinity)
+  // The cursor follows whether this can be clicked now, not only when the pointer arrives.
+  const self = useRef({})
+  useEffect(() => {
+    if (hovered && active) claimCursor(self.current, cursor ?? 'point')
+    else releaseCursor(self.current)
+  }, [hovered, active, cursor])
+  useEffect(() => () => releaseCursor(self.current), [])
   useEffect(() => {
     if (!hint) return
     since.current = pointed.current = performance.now()
@@ -63,15 +71,14 @@ export function Nudge({
           event.stopPropagation()
           if (active) onClick(event)
         }}
-        onPointerOver={() => {
+        // Only the nearest thing under the pointer is hovered: the pile and the deck overlap from the seat.
+        onPointerOver={(event) => {
+          event.stopPropagation()
           setHovered(true)
           since.current = performance.now()
-          if (active) document.body.style.cursor = cursor ? `url(/cursors/${cursor}.svg) 2 2, pointer` : 'pointer'
         }}
-        onPointerOut={() => {
-          setHovered(false)
-          document.body.style.cursor = ''
-        }}
+        onPointerMove={(event) => event.stopPropagation()}
+        onPointerOut={() => setHovered(false)}
       >
         <boxGeometry args={size} />
         <meshBasicMaterial visible={false} />

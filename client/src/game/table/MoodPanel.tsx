@@ -55,6 +55,7 @@ const GROUPS: [string, Control[]][] = [
     'Things',
     [
       ['cardGlow', 'Card art glow', 0, 2, 0.05],
+      ['cardBloom', 'Card halo', 0, 2, 0.05],
       ['trimGlow', 'Table trim glow', 0, 1, 0.02],
     ],
   ],

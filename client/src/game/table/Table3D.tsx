@@ -1,4 +1,5 @@
 import { Line, PerformanceMonitor, useProgress } from '@react-three/drei'
+import { Selection } from '@react-three/postprocessing'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { easing } from 'maath'
 import { Flag, LayoutGrid, LogOut, Maximize, Minimize, MoveUp, Type } from 'lucide-react'
@@ -30,6 +31,7 @@ import { EndTurnButton, Factory, FactoryEffects, FactoryP03, TechBoard } from '.
 import { TINT } from './palette.ts'
 import { CardBatch } from './Batch.tsx'
 import { Boot } from './Boot.tsx'
+import { claimCursor, cursorCss, onCursor, releaseCursor } from './cursor.ts'
 import { MoodPanel } from './MoodPanel.tsx'
 import { tuning } from './tuning.ts'
 import { usePlayback } from './usePlayback.ts'
@@ -102,6 +104,12 @@ function Lanes({
   onAim: (lane: number | null) => void
 }) {
   const target = hovered === null ? null : laneAction(legal, hovered)
+  const self = useRef({})
+  const aiming = Boolean(target)
+  useEffect(() => {
+    if (aiming) claimCursor(self.current, 'point')
+    else releaseCursor(self.current)
+  }, [aiming])
   return (
     <>
       {target && hovered !== null ? (
@@ -122,14 +130,8 @@ function Lanes({
               event.stopPropagation()
               if (action) act(action)
             }}
-            onPointerOver={() => {
-              setHovered(lane)
-              if (action) document.body.style.cursor = 'pointer'
-            }}
-            onPointerOut={() => {
-              setHovered(null)
-              document.body.style.cursor = ''
-            }}
+            onPointerOver={() => setHovered(lane)}
+            onPointerOut={() => setHovered(null)}
           >
             <planeGeometry args={[CARD.width * 1.12, CARD.height * 1.08]} />
             <meshBasicMaterial
@@ -186,95 +188,97 @@ function Scene({
 
   return (
     <CardBatch assets={assets}>
-      <CameraRig view={camera} />
-      {/* One boundary, so the stand-in popup is drawn only once every light and the fog are in place. */}
-      <Suspense fallback={null}>
-        <Factory view={view} log={game.log} />
-        <FactoryP03 view={view} busy={busy} outcome={busy ? undefined : game.result?.outcome} />
-        <WarmUp onWarm={onWarm} />
-      </Suspense>
-      <FactoryEffects />
-      <TechBoard />
-      <Deck
-        count={view.deck}
-        total={PLAYER_DECK.length}
-        active={can({ type: 'draw', from: 'deck' } as Partial<Action>)}
-        onClick={() => act({ type: 'draw', from: 'deck' })}
-        hint={hint}
-      />
-      <Pile
-        assets={assets}
-        active={can({ type: 'draw', from: 'boilerplate' } as Partial<Action>)}
-        onClick={() => act({ type: 'draw', from: 'boilerplate' })}
-        hint={hint}
-      />
-      <EndTurnButton active={can({ type: 'ringBell' })} rung={rung} onClick={() => act({ type: 'ringBell' })} />
-      <Lanes view={view} legal={legal} act={act} play={TINT.play} aimed={aimed} onAim={setAimed} />
+      <Selection>
+        <CameraRig view={camera} />
+        {/* One boundary, so the stand-in popup is drawn only once every light and the fog are in place. */}
+        <Suspense fallback={null}>
+          <Factory view={view} log={game.log} />
+          <FactoryP03 view={view} busy={busy} outcome={busy ? undefined : game.result?.outcome} />
+          <WarmUp onWarm={onWarm} />
+        </Suspense>
+        <FactoryEffects />
+        <TechBoard />
+        <Deck
+          count={view.deck}
+          total={PLAYER_DECK.length}
+          active={can({ type: 'draw', from: 'deck' } as Partial<Action>)}
+          onClick={() => act({ type: 'draw', from: 'deck' })}
+          hint={hint}
+        />
+        <Pile
+          assets={assets}
+          active={can({ type: 'draw', from: 'boilerplate' } as Partial<Action>)}
+          onClick={() => act({ type: 'draw', from: 'boilerplate' })}
+          hint={hint}
+        />
+        <EndTurnButton active={can({ type: 'ringBell' })} rung={rung} onClick={() => act({ type: 'ringBell' })} />
+        <Lanes view={view} legal={legal} act={act} play={TINT.play} aimed={aimed} onAim={setAimed} />
 
-      {view.hand.map((unit, index) => {
-        const selected = view.summon?.uid === unit.uid
-        const selectable = can({ type: 'select', uid: unit.uid } as Partial<Action>)
-        return (
-          <Card
-            key={unit.uid}
-            unit={unit}
-            place={{ at: 'hand', index, count }}
-            spawn={playback.spawns.get(unit.uid)}
-            look={handLook(unit.uid)}
-            summoning={Boolean(view.summon)}
-            assets={assets}
-            shake={hinted === unit.uid ? hint : 0}
-            onClick={
-              selected
-                ? () => act({ type: 'cancel' })
-                : selectable
-                  ? () => act({ type: 'select', uid: unit.uid })
-                  : can({ type: 'draw' })
-                    ? () => onHint(unit.uid)
-                    : undefined
-            }
-          />
-        )
-      })}
-      {(['board', 'front', 'back'] as const).flatMap((row) =>
-        view[row].map((unit, lane) => {
-          if (!unit) return null
-          const action = row === 'board' ? laneAction(legal, lane) : null
-          const marked = row === 'board' && (view.summon?.marked.includes(lane) ?? false)
-          const place: Place = { at: row, lane }
+        {view.hand.map((unit, index) => {
+          const selected = view.summon?.uid === unit.uid
+          const selectable = can({ type: 'select', uid: unit.uid } as Partial<Action>)
           return (
             <Card
               key={unit.uid}
               unit={unit}
-              place={place}
+              place={{ at: 'hand', index, count }}
               spawn={playback.spawns.get(unit.uid)}
-              lunge={playback.lunges.get(unit.uid)}
-              look={marked ? 'marked' : action?.type === 'mark' ? 'markable' : 'plain'}
+              look={handLook(unit.uid)}
+              summoning={Boolean(view.summon)}
               assets={assets}
-              onClick={action ? () => act(action) : undefined}
-              // A card on the board covers its lane, so it passes the aim on to it.
-              onHover={row === 'board' ? (on) => setAimed(on ? lane : null) : undefined}
+              shake={hinted === unit.uid ? hint : 0}
+              onClick={
+                selected
+                  ? () => act({ type: 'cancel' })
+                  : selectable
+                    ? () => act({ type: 'select', uid: unit.uid })
+                    : can({ type: 'draw' })
+                      ? () => onHint(unit.uid)
+                      : undefined
+              }
             />
           )
-        }),
-      )}
-      {playback.leaving.map((gone) => (
-        <Card
-          key={`gone-${gone.unit.uid}`}
-          unit={gone.unit}
-          place={{ at: gone.row, lane: gone.lane }}
-          leavingAt={gone.at}
-          leavingHow={gone.how}
-          assets={assets}
-        />
-      ))}
-      {playback.popups.map((popup) => (
-        <Popup key={popup.id} text={popup.text} tone={popup.tone} position={popup.position} born={popup.at} />
-      ))}
-      {/* In development, or in a build made with VITE_TEST_HANDLE=1 for measuring and testing it. */}
-      {import.meta.env.DEV || import.meta.env.VITE_TEST_HANDLE === '1' ? (
-        <TestHandle game={game} view={view} busy={busy} skip={skip} />
-      ) : null}
+        })}
+        {(['board', 'front', 'back'] as const).flatMap((row) =>
+          view[row].map((unit, lane) => {
+            if (!unit) return null
+            const action = row === 'board' ? laneAction(legal, lane) : null
+            const marked = row === 'board' && (view.summon?.marked.includes(lane) ?? false)
+            const place: Place = { at: row, lane }
+            return (
+              <Card
+                key={unit.uid}
+                unit={unit}
+                place={place}
+                spawn={playback.spawns.get(unit.uid)}
+                lunge={playback.lunges.get(unit.uid)}
+                look={marked ? 'marked' : action?.type === 'mark' ? 'markable' : 'plain'}
+                assets={assets}
+                onClick={action ? () => act(action) : undefined}
+                // A card on the board covers its lane, so it passes the aim on to it.
+                onHover={row === 'board' ? (on) => setAimed(on ? lane : null) : undefined}
+              />
+            )
+          }),
+        )}
+        {playback.leaving.map((gone) => (
+          <Card
+            key={`gone-${gone.unit.uid}`}
+            unit={gone.unit}
+            place={{ at: gone.row, lane: gone.lane }}
+            leavingAt={gone.at}
+            leavingHow={gone.how}
+            assets={assets}
+          />
+        ))}
+        {playback.popups.map((popup) => (
+          <Popup key={popup.id} text={popup.text} tone={popup.tone} position={popup.position} born={popup.at} />
+        ))}
+        {/* In development, or in a build made with VITE_TEST_HANDLE=1 for measuring and testing it. */}
+        {import.meta.env.DEV || import.meta.env.VITE_TEST_HANDLE === '1' ? (
+          <TestHandle game={game} view={view} busy={busy} skip={skip} />
+        ) : null}
+      </Selection>
     </CardBatch>
   )
 }
@@ -317,6 +321,24 @@ function WarmUp({ onWarm }: { onWarm: () => void }) {
     }
   })
   return warm ? null : <sprite material={material} position={BOARD_CENTER} scale={0.01} />
+}
+
+/** Shows the cursor the hovered thing asks for, and looks again on coming back to the tab, where the pointer never left. */
+function CursorSync() {
+  const { gl, events } = useThree()
+  useEffect(() => {
+    const stop = onCursor((kind) => (gl.domElement.style.cursor = cursorCss(kind)))
+    const again = () => events.update?.()
+    const shown = () => document.visibilityState === 'visible' && again()
+    window.addEventListener('focus', again)
+    document.addEventListener('visibilitychange', shown)
+    return () => {
+      stop()
+      window.removeEventListener('focus', again)
+      document.removeEventListener('visibilitychange', shown)
+    }
+  }, [gl, events])
+  return null
 }
 
 /** The renderer's exposure, from the mood's tuning. */
@@ -682,6 +704,7 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
       >
         <color attach="background" args={['#020203']} />
         <Exposure />
+        <CursorSync />
         {/* Only once loaded and settled: the first frames are slow, and would lower the resolution for good. */}
         {settled ? (
           <PerformanceMonitor

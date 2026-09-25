@@ -170,3 +170,15 @@
     }
   }
 }
+
+/* Inside the table's frame, 3D or text, the pointer is P03's green; what can be clicked gets a badge. */
+[data-table] {
+  cursor:
+    url(/cursors/arrow.svg) 2 2,
+    default;
+}
+[data-table] :is(button:not(:disabled), a, summary, label, [role='button']) {
+  cursor:
+    url(/cursors/point.svg) 2 2,
+    pointer;
+}

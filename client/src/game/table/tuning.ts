@@ -31,6 +31,7 @@ export const TUNING = {
   dustOpacity: 0.2,
   dustSpeed: 0.2,
   cardGlow: 0.65,
+  cardBloom: 0.5,
   trimGlow: 0.04,
 }
 
