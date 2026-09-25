@@ -89,7 +89,7 @@ export function Layout() {
       </main>
 
       <footer className="border-t px-4 py-6 text-sm text-muted-foreground sm:px-12">
-        A tribute to Inscryption. Built by Adrian Jimenez, from a 2022 project with Kenan McKenzie and Johan Herrera.
+        A tribute to Inscryption. Built by Adrian Jimenez.
       </footer>
     </div>
   )
