@@ -35,7 +35,7 @@ const GROUPS: [string, Control[]][] = [
     'Screen',
     [
       ['bloom', 'Glow', 0, 3, 0.05],
-      ['bloomThreshold', 'Glow starts at', 0, 1.5, 0.01],
+      ['bloomThreshold', 'Glow starts at', 0, 2.5, 0.01],
       ['bloomRadius', 'Glow spread', 0, 1, 0.05],
       ['vignette', 'Dark corners', 0, 1.2, 0.05],
       ['noise', 'Grain', 0, 0.2, 0.005],

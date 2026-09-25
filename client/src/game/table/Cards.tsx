@@ -179,16 +179,16 @@ export function Card({
     // A card that can be sacrificed pulses red; a marked one holds it.
     // Only the screen and the numerals glow, from their own map, as brightly as the mood asks.
     const rest = tuning().cardGlow
-    const pulse = look === 'markable' ? 0.2 + 0.15 * Math.sin(now / 160) : 0
+    const pulse = look === 'markable' ? 0.12 + 0.1 * Math.sin(now / 160) : 0
     const glow =
       look === 'selected'
-        ? rest + 0.4
+        ? rest + 0.25
         : look === 'marked'
-          ? rest + 0.2
+          ? rest + 0.15
           : look === 'markable'
             ? rest + pulse
             : hovered && onClick
-              ? rest + 0.25
+              ? rest + 0.15
               : rest
     // A closing disk turns its display off: the sticker and screens stay, and what they show fades out, its light first.
     content.emissiveIntensity = glow * open.current * open.current

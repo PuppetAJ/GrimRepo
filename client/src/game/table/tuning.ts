@@ -16,7 +16,8 @@ export const TUNING = {
   fogNear: 6.5,
   fogFar: 34,
   bloom: 1.4,
-  bloomThreshold: 0.85,
+  // Only what is brighter than white glows, so the lamps never make a card glow.
+  bloomThreshold: 1,
   bloomRadius: 0.45,
   vignette: 0.75,
   noise: 0.05,

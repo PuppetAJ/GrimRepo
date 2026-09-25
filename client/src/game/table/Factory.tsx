@@ -42,6 +42,9 @@ const X = -1.975
 // The light the factory is lit by: cyan or green, from the palette.
 const LIT = TINT.glow
 const GLOW = new THREE.Color(...TINT.glowHdr)
+// Glow is kept for what is brighter than white, so no lamp can make a lit card glow; these are pushed past it.
+const SCREEN_HDR = new THREE.Color(1.7, 1.7, 1.7)
+const DUST = new THREE.Color(TINT.cool).multiplyScalar(2)
 
 function metal(maps: Record<'map' | 'normalMap' | 'roughnessMap', THREE.Texture>, repeat: [number, number]) {
   for (const texture of Object.values(maps)) {
@@ -328,7 +331,8 @@ const Monitor = memo(function Monitor({ position, turn, lines }: { position: Vec
       </mesh>
       <mesh position={[0, 0, 0.115]}>
         <planeGeometry args={[2.66, 1.66]} />
-        <meshBasicMaterial map={texture} toneMapped={false} />
+        {/* Past white, so its text glows: only what is brighter than white glows. */}
+        <meshBasicMaterial map={texture} color={SCREEN_HDR} toneMapped={false} />
       </mesh>
     </group>
   )
@@ -505,7 +509,7 @@ function Gems() {
         {gems.map(([colour, shape], i) => (
           <mesh key={colour} position={[i * 0.42 - 0.42, 0, 0]}>
             {shape}
-            <meshStandardMaterial color={colour} emissive={colour} emissiveIntensity={1.2} flatShading />
+            <meshStandardMaterial color={colour} emissive={colour} emissiveIntensity={2.2} flatShading />
           </mesh>
         ))}
       </group>
@@ -855,7 +859,7 @@ const Fixtures = memo(function Fixtures() {
         position={[X, 8.5, -11]}
         size={mood.dustSize}
         speed={mood.dustSpeed}
-        color={TINT.cool}
+        color={DUST}
         opacity={mood.dustOpacity}
       />
     </>
