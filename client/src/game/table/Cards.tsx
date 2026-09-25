@@ -137,16 +137,19 @@ export function Card({
     if (lunge && now - lunge.at < LUNGE_MS)
       position.z += lunge.toward * 0.4 * Math.sin((Math.PI * (now - lunge.at)) / LUNGE_MS)
     const leaving = leavingAt === undefined ? 0 : Math.min(1, (now - leavingAt) / LEAVE_MS)
+    // A card that goes first folds shut, its display going dark, and then goes: offered up, it rises, turns and
+    // shrinks away; dead, it sinks into the table.
+    const fold = THREE.MathUtils.smoothstep(leaving, 0, 0.5)
+    const away = THREE.MathUtils.smoothstep(leaving, 0.5, 1)
     if (leavingHow === 'sacrificed') {
-      // Offered up: it rises, turns and shrinks away, where a death sinks into the table.
-      position.y += leaving * 0.9
-      rotation.multiply(roll.setFromAxisAngle(Z, leaving * 1.6))
-      scale.multiplyScalar(1 - leaving * 0.95)
-    } else position.y -= leaving * 0.45
+      position.y += away * 0.9
+      rotation.multiply(roll.setFromAxisAngle(Z, away * 1.6))
+    } else position.y -= away * 0.45
+    scale.multiplyScalar(1 - away * 0.95)
     // A disk's plastic does not fade, so once it has gone it is hidden.
     card.visible = leaving < 1
 
-    open.current = THREE.MathUtils.damp(open.current, 1, 9, delta)
+    open.current = leavingAt === undefined ? THREE.MathUtils.damp(open.current, 1, 9, delta) : 1 - fold
     disk.current?.setOpen(open.current)
     if (!placed.current) {
       card.position.copy(spawn ? new THREE.Vector3(...spawn) : position)
@@ -180,8 +183,8 @@ export function Card({
     content.emissive.set(look === 'marked' || look === 'markable' ? '#ff4040' : '#ffffff')
     front.color.setScalar(look === 'dim' ? 0.45 : 1)
     content.color.setScalar(look === 'dim' ? 0.45 : 1)
-    front.opacity = rear.opacity = 1 - leaving
-    content.opacity = (1 - leaving) * open.current
+    front.opacity = rear.opacity = 1 - away
+    content.opacity = (1 - away) * open.current
     // The alpha test discards the clear ground and, as the content fades, everything else too.
     content.alphaTest = Math.max(0.001, content.opacity * 0.5)
   })
