@@ -30,8 +30,8 @@ export const LANE_GAP = 0.86
 const LANE_X = [...Array(LANES).keys()].map((lane) => CENTER_X + (lane - (LANES - 1) / 2) * LANE_GAP)
 export const ROW_Z = { board: -8.72, front: -10.3, back: -11.74 }
 export const BOARD_CENTER: Vec3 = [CENTER_X, TABLE_Y, ROW_Z.front]
-export const DECK: Vec3 = [0.85, TABLE_Y, -9.6]
-export const PILE: Vec3 = [1.75, TABLE_Y, -9.6]
+export const DECK: Vec3 = [0.65, TABLE_Y, -8.25]
+export const PILE: Vec3 = [1.6, TABLE_Y, -8.25]
 export const BELL: Vec3 = [-4.5, TABLE_Y, -8.85]
 /** Where P03's new cards come from: above its side of the table. */
 export const P03_HAND: Vec3 = [CENTER_X, TABLE_Y + 1.2, -13]

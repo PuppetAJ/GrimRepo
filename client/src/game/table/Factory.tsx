@@ -16,7 +16,6 @@ import * as THREE from 'three'
 import type { View } from '../view.ts'
 import { Nudge } from './Board.tsx'
 import { BELL, CARD, LANE_GAP, lanes, ROW_Z, slot, TABLE_Y, type Row, type Vec3 } from './layout.ts'
-import { Robot } from './Scene.tsx'
 
 // P03's factory, after Inscryption's Act 3: dark metal in blue shadow, lit by cyan screens. Built here in code.
 const X = -1.975
@@ -403,29 +402,28 @@ function DrumRack() {
   )
 }
 
-/** A rack on the right of the status screen where P03's tools will hang (the models are still to come), and springs on the floor. */
+/** A rack on the right of the status screen with P03's hammer and pliers hung on it (not usable yet), and springs on the floor. */
 function Props() {
   const steel = { color: '#20262c', metalness: 0.85, roughness: 0.45 }
+  const hammer = useGLTF('/models/hammer.glb', false, false).scene
+  const pliers = useGLTF('/models/pliers.glb', false, false).scene
   return (
     <>
-      <group position={[X + 7.6, 9.4, -14.4]} rotation={[0, -0.3, 0]}>
+      <group position={[X + 6.9, 8.5, -14.4]} rotation={[0, -0.3, 0]}>
         <mesh>
           <boxGeometry args={[2.2, 2.6, 0.12]} />
           <meshStandardMaterial color="#171c21" metalness={0.8} roughness={0.5} />
         </mesh>
-        {[-0.7, 0, 0.7].map((x) => (
-          <group key={x} position={[x, 0.9, 0.12]}>
-            <mesh rotation={[Math.PI / 2, 0, 0]}>
-              <cylinderGeometry args={[0.035, 0.035, 0.24, 8]} />
-              <meshStandardMaterial {...steel} />
-            </mesh>
-            <mesh position={[0, 0.06, 0.12]}>
-              <sphereGeometry args={[0.05, 8, 8]} />
-              <meshStandardMaterial {...steel} />
-            </mesh>
-          </group>
+        {[-0.5, 0.5].map((x) => (
+          <mesh key={x} position={[x, 0.95, 0.18]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.035, 0.035, 0.36, 8]} />
+            <meshStandardMaterial {...steel} />
+          </mesh>
         ))}
-        <pointLight color={CYAN} position={[0, 0.4, 1.2]} intensity={3} distance={4} decay={2} />
+        {/* Hung by its head, handle down. */}
+        <primitive object={hammer} position={[-0.5, 0.2, 0.26]} rotation={[0, 0, Math.PI / 2]} scale={0.7} />
+        <primitive object={pliers} position={[0.5, 0.2, 0.26]} rotation={[0, Math.PI / 2, 0]} scale={0.7} />
+        <pointLight color={CYAN} position={[0, 0.4, 1.2]} intensity={5} distance={4} decay={2} />
       </group>
       {[
         [X - 6.8, 0.5, -7.5],
@@ -441,18 +439,19 @@ function Props() {
   )
 }
 
-// Smug is the model's own face; the rest are from the faces pack.
+// Smug is the happy face in cyan; the faces are from the faces pack.
 type Mood = 'smug' | 'happy' | 'impatient' | 'choking' | 'dying' | 'whiteflag'
 const MOODS = ['happy', 'impatient', 'choking', 'dying', 'whiteflag'] as const
+type Face = (typeof MOODS)[number]
 
-let faces: Promise<Record<Exclude<Mood, 'smug'>, THREE.Texture>> | null = null
+let faces: Promise<Record<Face, THREE.Texture>> | null = null
 
-/** P03's faces from the faces pack, each drawn onto black at the size of the screen's own texture. */
-function loadFaces(): Promise<Record<Exclude<Mood, 'smug'>, THREE.Texture>> {
+/** P03's faces, each drawn onto black at the size of its screen. */
+function loadFaces(): Promise<Record<Face, THREE.Texture>> {
   faces ??= Promise.all(
     MOODS.map(
       (mood) =>
-        new Promise<[Exclude<Mood, 'smug'>, THREE.Texture]>((resolve, reject) => {
+        new Promise<[Face, THREE.Texture]>((resolve, reject) => {
           const image = new Image()
           image.onload = () => {
             const canvas = document.createElement('canvas')
@@ -466,7 +465,7 @@ function loadFaces(): Promise<Record<Exclude<Mood, 'smug'>, THREE.Texture>> {
             const h = image.height * scale
             context.drawImage(image, (90 - w) / 2, (65 - h) / 2, w, h)
             const texture = new THREE.CanvasTexture(canvas)
-            // The model's own face is stored upside down for its UVs; these are drawn upright, so they flip.
+            // The pack's faces are stored upside down, as the game's textures were.
             texture.flipY = true
             texture.colorSpace = THREE.SRGBColorSpace
             texture.magFilter = THREE.NearestFilter
@@ -476,7 +475,7 @@ function loadFaces(): Promise<Record<Exclude<Mood, 'smug'>, THREE.Texture>> {
           image.src = `/p03/${mood}.png`
         }),
     ),
-  ).then((entries) => Object.fromEntries(entries) as Record<Exclude<Mood, 'smug'>, THREE.Texture>)
+  ).then((entries) => Object.fromEntries(entries) as Record<Face, THREE.Texture>)
   return faces
 }
 
@@ -510,13 +509,64 @@ function useMood(view: View, busy: boolean, outcome: 'win' | 'loss' | undefined)
   return 'smug'
 }
 
-export function FactoryP03({ view, busy, outcome }: { view: View; busy: boolean; outcome?: 'win' | 'loss' }) {
+/** P03 V2 by p03_real_account, with no clips of its own, so it idles here: its head bobs, its cranks turn and its claw snaps. */
+function P03({ mood }: { mood: Mood }) {
+  const { scene } = useGLTF('/models/p03.glb', false, false)
   const textures = use(loadFaces())
+  const parts = useMemo(() => {
+    const part = (name: string) => {
+      const object = scene.getObjectByName(name) as THREE.Object3D
+      object.userData['rest'] ??= { position: object.position.clone(), rotation: object.rotation.clone() }
+      return object
+    }
+    return {
+      head: part('HeadRig'),
+      arm: part('ArmRig'),
+      headCrank: part('Head-Crank'),
+      armCrank: part('ArmLeft-Crank'),
+      clawLeft: part('ArmRight-ClawLeft'),
+      clawRight: part('ArmRight-ClawRight'),
+    }
+  }, [scene])
+  useLayoutEffect(() => {
+    const screen = (scene.getObjectByName('Head-RenderTargetPlane') as THREE.Mesh)
+      .material as THREE.MeshStandardMaterial
+    // Light only, on a flat plane of its own, so nothing in the room can shade half of the face.
+    screen.map = null
+    screen.color.set('#000000')
+    screen.alphaTest = 0
+    screen.emissiveMap = textures[mood === 'smug' ? 'happy' : mood]
+    screen.emissive.set(mood === 'smug' ? CYAN : '#ffffff')
+    screen.emissiveIntensity = 1.6
+    screen.needsUpdate = true
+  }, [scene, textures, mood])
+  useFrame(({ clock }) => {
+    const t = clock.getElapsedTime()
+    const rest = (object: THREE.Object3D) =>
+      object.userData['rest'] as { position: THREE.Vector3; rotation: THREE.Euler }
+    const { head, arm, headCrank, armCrank, clawLeft, clawRight } = parts
+    // The model faces +x, so it nods about z and turns about y.
+    const droop = mood === 'dying' || mood === 'whiteflag' ? -0.14 : 0
+    const shake = mood === 'choking' ? Math.sin(t * 42) * 0.05 : 0
+    const bounce = mood === 'happy' ? Math.abs(Math.sin(t * 7)) * 0.08 : 0
+    head.position.y = rest(head).position.y + Math.sin(t * 1.1) * 0.04 + bounce
+    head.rotation.z = rest(head).rotation.z + Math.sin(t * 0.6) * 0.03 + droop
+    head.rotation.y = rest(head).rotation.y + Math.sin(t * 0.37) * 0.07 + shake
+    headCrank.rotation.z = rest(headCrank).rotation.z + t * 0.8
+    armCrank.rotation.z = rest(armCrank).rotation.z - t * 0.5
+    arm.rotation.z = rest(arm).rotation.z + Math.sin(t * 0.8) * 0.06
+    const snap = Math.max(0, Math.sin(t * 1.3)) ** 8 * 0.35
+    clawLeft.rotation.x = rest(clawLeft).rotation.x + snap
+    clawRight.rotation.x = rest(clawRight).rotation.x - snap
+  })
+  return <primitive object={scene} position={[X, 9.06, -16]} rotation={[0, -Math.PI / 2, 0]} />
+}
+
+export function FactoryP03({ view, busy, outcome }: { view: View; busy: boolean; outcome?: 'win' | 'loss' }) {
   const mood = useMood(view, busy, outcome)
   return (
     <>
-      {/* Slower than in the cabin: P03 sits and considers, rather than fidgets. */}
-      <Robot face={mood === 'smug' ? undefined : textures[mood]} tint={mood === 'smug' ? CYAN : '#ffffff'} pace={0.3} />
+      <P03 mood={mood} />
       <pointLight color={CYAN} position={[X, 10.4, -13.4]} intensity={12} distance={10} decay={1.6} />
     </>
   )

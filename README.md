@@ -111,6 +111,8 @@ The original team: Adrian Jimenez, Kenan McKenzie and Johan Herrera ([original r
 
 - **The room:** [Fantasy interior items](https://sketchfab.com/3d-models/fantasy-interior-items-6542c39c66394888994d7343fd03fdef) by Tedium Interactive.
 - **The robot:** [P03](https://sketchfab.com/3d-models/p03-98b40954748447be81f2bb713f6b28b8) by Goober (CC BY 4.0), animated by Adrian Jimenez.
+- **P03 in the factory:** [Inscryption P03 V2](https://sketchfab.com/3d-models/inscryption-p03-v2-2c8ec018120544aca51b2790973fc484) by p03_real_account (CC BY 4.0), wearing the colour, metal and normal maps from Goober's P03 and rigged at the head and arm.
+- **P03's tools:** [Inscryption Hammer](https://sketchfab.com/3d-models/inscryption-hammer-902459fefad2475eaca4f018c4ec1f4a) and [Inscryption pliers](https://sketchfab.com/3d-models/inscryption-pliers-20a227573b4e4e9a83023f3f0daed0fd) by p03_real_account (CC BY 4.0).
 - **P03's faces in the factory:** [Inscryption P03 faces](https://sketchfab.com/3d-models/inscryption-p03-faces-4318168b0c3e4c0a8a1ced18927332a8) by p03_real_account (CC BY 4.0).
 - **The scale in the factory:** [Scales](https://sketchfab.com/3d-models/scales-2ed4e14bb69944078ef0bb862b256b2a) by FlukierJupiter (CC BY 4.0), split into a base and a beam so it can tip.
 - **The factory's metal:** Metal029, DiamondPlate008C and CorrugatedSteel005 from [ambientCG](https://ambientcg.com) (CC0).
