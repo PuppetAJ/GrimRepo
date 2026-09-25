@@ -78,3 +78,11 @@ export const CAMERA: Record<CameraView, { position: Vec3; target: Vec3 }> = {
   table: { position: [-1.975, 8.7, -4.4], target: [-1.975, 7.4, -10.6] },
   board: { position: [-1.975, 11.4, -6.9], target: [-1.975, TABLE_Y, -9.05] },
 }
+
+export const BATTERY_CELLS = 6
+
+/** The battery's lit cells, one for every 4 HP of lead: positive for the player's lead, negative for P03's. */
+export function leadCells(player: number, opponent: number): number {
+  const lead = player - opponent
+  return Math.sign(lead) * Math.min(BATTERY_CELLS, Math.ceil(Math.abs(lead) / 4))
+}

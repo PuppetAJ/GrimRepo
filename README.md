@@ -115,6 +115,7 @@ The original team: Adrian Jimenez, Kenan McKenzie and Johan Herrera ([original r
 - **P03's tools:** [Inscryption Hammer](https://sketchfab.com/3d-models/inscryption-hammer-902459fefad2475eaca4f018c4ec1f4a) and [Inscryption pliers](https://sketchfab.com/3d-models/inscryption-pliers-20a227573b4e4e9a83023f3f0daed0fd) by p03_real_account (CC BY 4.0).
 - **P03's faces in the factory:** [Inscryption P03 faces](https://sketchfab.com/3d-models/inscryption-p03-faces-4318168b0c3e4c0a8a1ced18927332a8) by p03_real_account (CC BY 4.0).
 - **The scale in the factory:** [Scales](https://sketchfab.com/3d-models/scales-2ed4e14bb69944078ef0bb862b256b2a) by FlukierJupiter (CC BY 4.0), split into a base and a beam so it can tip.
+- **The battery in the factory:** [Inscryption Act 3 battery and counter](https://sketchfab.com/3d-models/inscryption-act-3-battery-and-counter-9f65d14097f74a1b9885272b9d2b6a58) by p03_real_account (CC BY 4.0), split into the battery and the gem module.
 - **The factory's metal:** Metal029, DiamondPlate008C and CorrugatedSteel005 from [ambientCG](https://ambientcg.com) (CC0).
 - **The bell:** [Table bell](https://sketchfab.com/3d-models/table-bell-77f2ea17b4c84fe1a8d2aec02caa9de3) on Sketchfab, edited by Adrian Jimenez.
 - **The board and the deck:** made by Adrian Jimenez, with Inscryption's textures on the deck.

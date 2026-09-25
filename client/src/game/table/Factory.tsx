@@ -15,7 +15,19 @@ import { Suspense, use, useEffect, useLayoutEffect, useMemo, useRef, useState, t
 import * as THREE from 'three'
 import type { View } from '../view.ts'
 import { Nudge } from './Board.tsx'
-import { BELL, CARD, LANE_GAP, lanes, ROW_Z, slot, TABLE_Y, type Row, type Vec3 } from './layout.ts'
+import {
+  BATTERY_CELLS,
+  BELL,
+  CARD,
+  LANE_GAP,
+  lanes,
+  leadCells,
+  ROW_Z,
+  slot,
+  TABLE_Y,
+  type Row,
+  type Vec3,
+} from './layout.ts'
 
 // P03's factory, after Inscryption's Act 3: dark metal in blue shadow, lit by cyan screens. Built here in code.
 const X = -1.975
@@ -278,8 +290,8 @@ function Monitor({ position, turn, lines }: { position: Vec3; turn: number; line
   )
 }
 
-/** The scale by the table: it tips towards whoever is losing, that side's pan sinking under the damage taken. */
-function Scale({ view }: { view: View }) {
+/** The scale by the table: it tips towards whoever is losing. Set aside while the battery shows the lead. */
+export function Scale({ view }: { view: View }) {
   const { scene } = useGLTF('/models/scales.glb', false, false)
   const beam = useMemo(() => scene.getObjectByName('Beam'), [scene])
   useLayoutEffect(() => {
@@ -304,6 +316,63 @@ function Scale({ view }: { view: View }) {
       <pointLight color="#9fdcff" position={[0, 40, 30]} intensity={0.02} distance={4} decay={2} />
     </group>
   )
+}
+
+const RED = '#ff4a3d'
+
+/** Act 3's battery, hovering by the table: its cells light from the leader's end, cyan for the player and red for P03. */
+function Battery({ view }: { view: View }) {
+  const { scene } = useGLTF('/models/battery.glb', false, false)
+  const drone = useRef<THREE.Group>(null)
+  const { cells, propellers } = useMemo(
+    () => ({
+      cells: [...Array(BATTERY_CELLS).keys()].map((i) => {
+        const cell = scene.getObjectByName(`Cell-${i}`) as THREE.Mesh
+        // Each cell gets its own material, once, so it can light alone.
+        cell.userData['own'] ??= (cell.material as THREE.MeshStandardMaterial).clone()
+        cell.material = cell.userData['own'] as THREE.MeshStandardMaterial
+        return { material: cell.material as THREE.MeshStandardMaterial, glow: 0, since: 0, on: false }
+      }),
+      propellers: ['Left-Propeller', 'Right-Propeller'].map((name) => scene.getObjectByName(name) as THREE.Object3D),
+    }),
+    [scene],
+  )
+  const lit = leadCells(view.health.player, view.health.opponent)
+  useFrame(({ clock }, delta) => {
+    const t = clock.getElapsedTime()
+    cells.forEach((cell, i) => {
+      const on = lit > 0 ? i < lit : lit < 0 ? i >= BATTERY_CELLS + lit : false
+      if (on !== cell.on) {
+        cell.on = on
+        cell.since = t
+      }
+      if (on) cell.material.emissive.set(lit > 0 ? CYAN : RED)
+      // A cell stutters as it comes on, like a tube catching.
+      const catching = on && t - cell.since < 0.3 ? (Math.sin((t - cell.since) * 90) > 0 ? 1 : 0.15) : 1
+      cell.glow = THREE.MathUtils.damp(cell.glow, on ? 1 : 0, 10, delta)
+      cell.material.emissiveIntensity = cell.glow * catching * 1.6
+      cell.material.color.setScalar(0.3 + cell.glow * 0.4)
+    })
+    // The propellers spin up with the lead, whoever holds it.
+    for (const propeller of propellers) propeller.rotateZ(delta * (8 + Math.abs(lit) * 2))
+    if (drone.current) {
+      drone.current.position.y = Math.sin(t * 1.4) * 0.05
+      drone.current.rotation.z = Math.sin(t * 0.9) * 0.025
+    }
+  })
+  return (
+    <group position={[X - 4.8, TABLE_Y + 0.9, -11.3]} rotation={[0, 0.55, 0]}>
+      <group ref={drone} scale={0.7}>
+        <primitive object={scene} />
+      </group>
+    </group>
+  )
+}
+
+/** The gem module from the same drone, sat where the gems are; `?gems=module` shows it, to compare with the ones built here. */
+function GemModule() {
+  const { scene } = useGLTF('/models/gems.glb', false, false)
+  return <primitive object={scene} position={[2.25, TABLE_Y, -12.4]} scale={0.6} />
 }
 
 /** The three Mox gems P03 keeps by the table, turning slowly on their bases. */
@@ -611,9 +680,9 @@ export function Factory({ view, log }: { view: View; log: string[] }) {
       <Props />
       <Monitor position={[X - 4.3, 9.5, -14.2]} turn={0.3} lines={lines} />
       <Monitor position={[X + 4.3, 9.5, -14.2]} turn={-0.3} lines={status} />
-      <Gems />
       <Suspense fallback={null}>
-        <Scale view={view} />
+        {new URLSearchParams(window.location.search).get('gems') === 'module' ? <GemModule /> : <Gems />}
+        <Battery view={view} />
       </Suspense>
       {/* Dust drifting in the light. */}
       <Sparkles
