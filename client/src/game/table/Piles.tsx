@@ -94,6 +94,9 @@ const turn = new THREE.Quaternion()
 const tilt = new THREE.Euler()
 const ONE = new THREE.Vector3(1, 1, 1)
 
+/** How tall a stack of this many disks stands, with a little over for the pointer. */
+const stackHeight = (layers: number) => Math.max(1, layers) * pitch + 0.04
+
 /** Where the i-th disk of a stack lies: a little uneven, so the stack reads as a pile of real disks. */
 function place(i: number, faceUp: boolean, into: THREE.Matrix4): THREE.Matrix4 {
   turn.setFromEuler(tilt.set(faceUp ? -Math.PI / 2 : Math.PI / 2, 0, ((i * 5) % 7) * 0.006 - 0.018))
@@ -184,7 +187,15 @@ export function Deck({
   const layers = count === 0 ? 0 : Math.max(1, Math.round((count / total) * 12))
   return (
     <group position={DECK}>
-      <Nudge active={active} onClick={onClick} size={[0.85, 0.3, 1.35]} label="deck" hint={hint} cursor="draw">
+      {/* One box round the whole stack, as tall as it stands. */}
+      <Nudge
+        active={active}
+        onClick={onClick}
+        size={[0.8, stackHeight(layers), 1.32]}
+        label="deck"
+        hint={hint}
+        cursor="draw"
+      >
         <Stack layers={layers} />
       </Nudge>
     </group>
@@ -212,7 +223,14 @@ export function Pile({
   )
   return (
     <group position={PILE}>
-      <Nudge active={active} onClick={onClick} size={[0.85, 0.2, 1.35]} label="pile" hint={hint} cursor="boilerplate">
+      <Nudge
+        active={active}
+        onClick={onClick}
+        size={[0.8, stackHeight(6), 1.32]}
+        label="pile"
+        hint={hint}
+        cursor="boilerplate"
+      >
         <Stack layers={6} top={top} lights={lights} />
       </Nudge>
     </group>

@@ -182,3 +182,24 @@
     url(/cursors/point.svg) 2 2,
     pointer;
 }
+/* The same icons the 3D table shows, on the buttons that do the same things. */
+[data-table] [data-action='draw-deck']:not(:disabled) {
+  cursor:
+    url(/cursors/draw.svg) 2 2,
+    pointer;
+}
+[data-table] [data-action='draw-boilerplate']:not(:disabled) {
+  cursor:
+    url(/cursors/boilerplate.svg) 2 2,
+    pointer;
+}
+[data-table] [data-action='ringBell']:not(:disabled) {
+  cursor:
+    url(/cursors/press.svg) 2 2,
+    pointer;
+}
+[data-table] :is([data-action='mark'], [data-action='unmark']):not(:disabled) {
+  cursor:
+    url(/cursors/mark.svg) 2 2,
+    pointer;
+}

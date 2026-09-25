@@ -5,11 +5,11 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { card, type Unit } from 'shared'
 import * as THREE from 'three'
 import { useBatch } from './Batch.tsx'
-import { claimCursor, releaseCursor } from './cursor.ts'
+import { claimCursor, releaseCursor, type CursorKind } from './cursor.ts'
 import { tuning } from './tuning.ts'
 import { Disk, facePlanes, type DiskHandle } from './Disk.tsx'
 import { backTexture, faceContent, faceLights, faceTexture, type loadCardAssets } from './faces.ts'
-import { DECK, HAND_SCALE, handPlace, slot, type Row, type Vec3 } from './layout.ts'
+import { DECK, handPlace, slot, type Row, type Vec3 } from './layout.ts'
 import { LEAVE_MS, type Lunge } from './playback.ts'
 
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
@@ -42,6 +42,7 @@ export function Card({
   shake = 0,
   onClick,
   onHover,
+  cursor = 'point',
 }: {
   unit: Unit
   summoning?: boolean
@@ -57,6 +58,8 @@ export function Card({
   onClick?: (event: ThreeEvent<MouseEvent>) => void
   /** Told when the pointer arrives on the card and leaves it. */
   onHover?: (on: boolean) => void
+  /** How the pointer looks over the card when it can be clicked. */
+  cursor?: CursorKind
 }) {
   const mesh = useRef<THREE.Object3D>(null)
   const disk = useRef<DiskHandle>(null)
@@ -64,9 +67,9 @@ export function Card({
   const self = useRef({})
   const clickable = Boolean(onClick)
   useEffect(() => {
-    if (hovered && clickable) claimCursor(self.current, 'point')
+    if (hovered && clickable) claimCursor(self.current, cursor)
     else releaseCursor(self.current)
-  }, [hovered, clickable])
+  }, [hovered, clickable, cursor])
   useEffect(() => () => releaseCursor(self.current), [])
   const placed = useRef(false)
   const face = faceTexture(unit, assets)
@@ -120,7 +123,7 @@ export function Card({
     if (!card) return
     const now = performance.now()
     if (place.at === 'hand') {
-      const { position: local, roll: angle } = handPlace(place.index, place.count, {
+      const { position: local, roll: angle, scale: size } = handPlace(place.index, place.count, {
         selected: look === 'selected',
         hovered,
         summoning: summoning ?? false,
@@ -133,7 +136,7 @@ export function Card({
       const no = since < 0.7 ? 0.28 * Math.sin(since * 30) * Math.exp(-since * 5) : 0
       rotation.copy(camera.quaternion).multiply(roll.setFromAxisAngle(Z, angle + no))
       // A disk grows in the hand when picked up, as Act 3's do.
-      scale.setScalar(HAND_SCALE * (hovered || look === 'selected' ? 1.25 : 1))
+      scale.setScalar(size * (hovered || look === 'selected' ? 1.25 : 1))
     } else {
       // A card marked for sacrifice lifts and tilts off the table, so the choice is plain to see.
       const lift = look === 'marked' ? 0.12 : hovered && onClick ? 0.04 : 0

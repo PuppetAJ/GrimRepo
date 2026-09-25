@@ -105,9 +105,9 @@ function Lanes({
 }) {
   const target = hovered === null ? null : laneAction(legal, hovered)
   const self = useRef({})
-  const aiming = Boolean(target)
+  const aiming = target ? (target.type === 'place' ? 'point' : 'mark') : null
   useEffect(() => {
-    if (aiming) claimCursor(self.current, 'point')
+    if (aiming) claimCursor(self.current, aiming)
     else releaseCursor(self.current)
   }, [aiming])
   return (
@@ -255,6 +255,7 @@ function Scene({
                 look={marked ? 'marked' : action?.type === 'mark' ? 'markable' : 'plain'}
                 assets={assets}
                 onClick={action ? () => act(action) : undefined}
+                cursor={action?.type === 'mark' || action?.type === 'unmark' ? 'mark' : 'point'}
                 // A card on the board covers its lane, so it passes the aim on to it.
                 onHover={row === 'board' ? (on) => setAimed(on ? lane : null) : undefined}
               />

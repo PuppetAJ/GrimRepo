@@ -50,7 +50,7 @@ export const lanes = [...Array(LANES).keys()]
 
 // The hand is held in front of the camera, in its own space: x right, y up, z towards the viewer.
 // At rest a hand card shows down to its stats; hovering lifts it fully into view.
-const HAND = { distance: 1.5, scale: 0.4, y: -0.59, spread: 1.4, gap: 0.4, raise: 0.14, hover: 0.09, stowed: -0.5 }
+const HAND = { distance: 1.5, scale: 0.4, y: -0.47, spread: 1.4, gap: 0.4, raise: 0.14, hover: 0.09, stowed: -0.5 }
 export const HAND_SCALE = HAND.scale
 
 /** A hand card's place and tilt, fanned about the middle of the hand. */
@@ -58,16 +58,19 @@ export function handPlace(
   index: number,
   count: number,
   { selected = false, hovered = false, summoning = false } = {},
-): { position: Vec3; roll: number } {
+): { position: Vec3; roll: number; scale: number } {
   const gap = count > 1 ? Math.min(HAND.gap, HAND.spread / (count - 1)) : 0
   // The card being summoned moves to the middle, under the board.
   const offset = summoning && selected ? 0 : index - (count - 1) / 2
   // While a card is being summoned the rest of the hand drops away, and it rises only a little, clear of the lanes.
   const raise = summoning ? (selected ? 0.04 : HAND.stowed) : selected ? HAND.raise : hovered ? HAND.hover : 0
-  const lift = raise - Math.abs(offset) * 0.025
+  // The ends droop only a little, so a full hand's numbers stay above the screen's edge.
+  const lift = raise - Math.abs(offset) * 0.012
   // Later cards sit a little nearer, so neighbours overlap the way a held hand does; a card being looked at comes forward.
   const near = index * 0.002 + (hovered || selected ? 0.03 : 0)
-  return { position: [offset * gap, HAND.y + lift, -HAND.distance + near], roll: -offset * 0.04 }
+  // A full hand holds its cards a little smaller, so it stays clear of the board and the screen's edge.
+  const scale = HAND.scale * (count > 5 ? 1 - (count - 5) * 0.05 : 1)
+  return { position: [offset * gap, HAND.y + lift, -HAND.distance + near], roll: -offset * 0.04, scale }
 }
 
 export type CameraView = 'table' | 'board'
