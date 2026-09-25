@@ -1,16 +1,20 @@
 /** Shared setup for the browser suites. Mirrors the ones in Chunkd and Wicken. */
 import pg from 'pg'
-import { chromium } from 'playwright'
+import { chromium, firefox } from 'playwright'
 import { apply, createGame, nextBotAction } from '../shared/src/index.ts'
 
 export const BASE = process.env.E2E_BASE_URL ?? 'http://localhost:3000'
 
+/** The engine the suites drive: Chromium, or Firefox's Gecko (which Zen runs on) with `E2E_BROWSER=firefox`. */
+export const ENGINE = process.env.E2E_BROWSER === 'firefox' ? 'firefox' : 'chromium'
+
 // Printed because the default is the dev server, and a suite run against the wrong one fails oddly.
-console.log(`against ${BASE}`)
+console.log(`against ${BASE} in ${ENGINE}`)
 
 export async function launch({ width = 1280, height = 800 } = {}) {
   // Headless Chrome has no GPU and only draws WebGL in software when asked to, which the 3D table needs.
-  const browser = await chromium.launch({ args: ['--enable-unsafe-swiftshader'] })
+  const browser =
+    ENGINE === 'firefox' ? await firefox.launch() : await chromium.launch({ args: ['--enable-unsafe-swiftshader'] })
   const context = await browser.newContext({ viewport: { width, height } })
   const page = await context.newPage()
   page.setDefaultTimeout(20_000)
