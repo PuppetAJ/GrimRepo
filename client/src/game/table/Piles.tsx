@@ -20,6 +20,8 @@ export function Nudge({
   label,
   lift = 0.05,
   hint = 0,
+  still = false,
+  cursor,
   children,
 }: {
   active: boolean
@@ -29,6 +31,10 @@ export function Nudge({
   lift?: number
   /** Counts up each time the player should be pointed here; each one jumps and wobbles it. */
   hint?: number
+  /** Stays put when pointed at, as a thing bolted down does. */
+  still?: boolean
+  /** The pointer's own look over it, from /cursors/, when it can be clicked. */
+  cursor?: 'draw' | 'boilerplate' | 'press'
   children: ReactNode
 }) {
   const group = useRef<THREE.Group>(null)
@@ -42,7 +48,7 @@ export function Nudge({
   useFrame((_, delta) => {
     const moving = group.current
     if (!moving) return
-    const on = (hovered && active) || performance.now() - pointed.current < 600
+    const on = !still && ((hovered && active) || performance.now() - pointed.current < 600)
     easing.damp(moving.position, 'y', on ? lift : 0, 0.05, delta)
     const t = (performance.now() - since.current) / 1000
     moving.rotation.z = on ? 0.04 * Math.sin(t * 38) * Math.exp(-t * 7) : 0
@@ -60,7 +66,7 @@ export function Nudge({
         onPointerOver={() => {
           setHovered(true)
           since.current = performance.now()
-          if (active) document.body.style.cursor = 'pointer'
+          if (active) document.body.style.cursor = cursor ? `url(/cursors/${cursor}.svg) 2 2, pointer` : 'pointer'
         }}
         onPointerOut={() => {
           setHovered(false)
@@ -171,7 +177,7 @@ export function Deck({
   const layers = count === 0 ? 0 : Math.max(1, Math.round((count / total) * 12))
   return (
     <group position={DECK}>
-      <Nudge active={active} onClick={onClick} size={[0.85, 0.3, 1.35]} label="deck" hint={hint}>
+      <Nudge active={active} onClick={onClick} size={[0.85, 0.3, 1.35]} label="deck" hint={hint} cursor="draw">
         <Stack layers={layers} />
       </Nudge>
     </group>
@@ -199,7 +205,7 @@ export function Pile({
   )
   return (
     <group position={PILE}>
-      <Nudge active={active} onClick={onClick} size={[0.85, 0.2, 1.35]} label="pile" hint={hint}>
+      <Nudge active={active} onClick={onClick} size={[0.85, 0.2, 1.35]} label="pile" hint={hint} cursor="boilerplate">
         <Stack layers={6} top={top} lights={lights} />
       </Nudge>
     </group>

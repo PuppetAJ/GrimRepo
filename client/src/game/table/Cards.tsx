@@ -143,12 +143,23 @@ export function Card({
     if (leavingHow === 'sacrificed') {
       position.y += away * 0.9
       rotation.multiply(roll.setFromAxisAngle(Z, away * 1.6))
-    } else position.y -= away * 0.45
-    scale.multiplyScalar(1 - away * 0.95)
+      scale.multiplyScalar(1 - away * 0.95)
+    } else {
+      // Dead, it slides off the board toward whoever played it, the player's way or P03's, shrinking as it goes.
+      position.z += away * 1.6 * (place.at === 'board' ? 1 : -1)
+      position.y += Math.sin(away * Math.PI) * 0.12
+      scale.multiplyScalar(1 - THREE.MathUtils.smoothstep(away, 0.5, 1) * 0.95)
+    }
     // A disk's plastic does not fade, so once it has gone it is hidden.
     card.visible = leaving < 1
 
     open.current = leavingAt === undefined ? THREE.MathUtils.damp(open.current, 1, 9, delta) : 1 - fold
+    // Drawn from the deck, it lifts toward the player in an arc as it opens, a little larger at the top of it.
+    if (fromDeck && leavingAt === undefined && open.current < 0.995) {
+      const arc = Math.sin(open.current * Math.PI)
+      position.y += arc * 0.3
+      scale.multiplyScalar(1 + arc * 0.12)
+    }
     disk.current?.setOpen(open.current)
     if (!placed.current) {
       card.position.copy(spawn ? new THREE.Vector3(...spawn) : position)

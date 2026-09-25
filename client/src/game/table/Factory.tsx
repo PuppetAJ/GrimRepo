@@ -863,8 +863,8 @@ const Fixtures = memo(function Fixtures() {
 })
 
 /** The factory's bell: a big red button that says what it does. */
-// The cap's top stands 0.08 above the collar's rim at 0.22; the cap is 0.53 tall at its scale.
-const CAP_Y = 0.3 - 0.53
+// The cap's top stands 0.11 above the collar's rim at 0.22; the cap is 0.53 tall at its scale.
+const CAP_Y = 0.33 - 0.53
 
 export function EndTurnButton({
   onClick,
@@ -876,7 +876,6 @@ export function EndTurnButton({
   rung: number
 }) {
   const cap = useRef<THREE.Group>(null)
-  const lamp = useRef<THREE.Mesh>(null)
   const pressed = useRef(0)
   // The PUSH cap from lorib2306's sci-fi button (CC BY), seated in the collar so its skirt is hidden.
   const { scene: model } = useGLTF('/models/button.glb', false, false)
@@ -914,12 +913,11 @@ export function EndTurnButton({
     // Sunk into the collar, standing just proud of it, and pressed a little further in.
     easing.damp(cap.current.position, 'y', CAP_Y - Math.sin(pressed.current * Math.PI) * 0.06, 0.03, delta)
     glow.emissiveIntensity = active ? 0.55 + Math.sin(performance.now() / 300) * 0.2 : 0.06
-    if (lamp.current) (lamp.current.material as THREE.MeshStandardMaterial).emissiveIntensity = active ? 2.5 : 0.1
   })
   const steel = { color: '#2a2f35', metalness: 0.85, roughness: 0.4 }
   return (
     <group position={BELL}>
-      <Nudge active={active} onClick={onClick} size={[1.4, 0.7, 1.4]} label="bell" lift={0.02}>
+      <Nudge active={active} onClick={onClick} size={[1.4, 0.7, 1.4]} label="bell" still cursor="press">
         {/* A bolted mounting plate, a collar the cap sits in, and the cap. */}
         <mesh position={[0, 0.03, 0]}>
           <boxGeometry args={[1.4, 0.06, 1.4]} />
@@ -940,11 +938,7 @@ export function EndTurnButton({
         <group ref={cap} position={[0, CAP_Y, 0]}>
           <primitive object={model} scale={1.9} />
         </group>
-        {/* The ready lamp and the label on the plate's near edge. */}
-        <mesh ref={lamp} position={[0.52, 0.09, 0.52]}>
-          <sphereGeometry args={[0.045, 10, 10]} />
-          <meshStandardMaterial color="#0a3a20" emissive="#7dff9a" emissiveIntensity={2.5} />
-        </mesh>
+        {/* The label on the plate's near edge. */}
         <mesh position={[0, 0.062, 0.62]} rotation={[-Math.PI / 2, 0, 0]}>
           <planeGeometry args={[0.8, 0.2]} />
           <meshBasicMaterial map={label} toneMapped={false} />
