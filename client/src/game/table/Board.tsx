@@ -2,7 +2,7 @@ import { useFrame, type ThreeEvent } from '@react-three/fiber'
 import { easing } from 'maath'
 import { useMemo, useRef, useState, type ReactNode } from 'react'
 import * as THREE from 'three'
-import { backTexture, faceLights, faceTexture, type CardStyle, type loadCardAssets } from './faces.ts'
+import { backTexture, faceContent, faceLights, faceTexture, type CardStyle, type loadCardAssets } from './faces.ts'
 import { BACK_RELIEF, Disk } from './Disk.tsx'
 import { BOARD_DEPTH, CARD, DECK, DISK, lanes, PILE, ROW_Z, slot, TABLE_Y, type Row, type Vec3 } from './layout.ts'
 
@@ -183,21 +183,24 @@ function Stack({
   layers: number
   top: THREE.Texture
   back: THREE.Texture
-  lights?: THREE.Texture
+  lights?: { content: THREE.Texture; lights: THREE.Texture }
   style?: CardStyle
 }) {
   const faces = useMemo(
     () => [
-      new THREE.MeshStandardMaterial({
-        map: top,
-        emissive: '#ffffff',
-        emissiveMap: lights ?? null,
-        emissiveIntensity: lights ? 1.1 : 0,
-        roughness: 0.9,
-        transparent: true,
-        alphaTest: 0.5,
-      }),
+      new THREE.MeshStandardMaterial({ map: top, roughness: 0.9, transparent: true, alphaTest: 0.5 }),
       new THREE.MeshStandardMaterial({ map: back, roughness: 0.9, transparent: true, alphaTest: 0.5 }),
+      lights
+        ? new THREE.MeshStandardMaterial({
+            map: lights.content,
+            emissive: '#ffffff',
+            emissiveMap: lights.lights,
+            emissiveIntensity: 1.1,
+            roughness: 0.9,
+            transparent: true,
+            alphaTest: 0.5,
+          })
+        : null,
     ],
     [top, back, lights],
   )
@@ -213,7 +216,12 @@ function Stack({
           position={[((i * 7) % 5) * 0.004 - 0.008, pitch * (i + 0.5), ((i * 3) % 4) * 0.004 - 0.006]}
           rotation={[faceUp ? -Math.PI / 2 : Math.PI / 2, 0, ((i * 5) % 7) * 0.006 - 0.018]}
         >
-          <Disk open={faceUp ? 1 : 0} front={topmost && faceUp ? faces[0] : null} back={null} />
+          <Disk
+            open={faceUp ? 1 : 0}
+            front={topmost && faceUp ? faces[0] : null}
+            content={topmost && faceUp ? faces[2] : null}
+            back={null}
+          />
         </group>
       )
     })
@@ -271,7 +279,13 @@ export function Pile({
   active: boolean
 }) {
   const top = useMemo(() => faceTexture(BOILERPLATE_UNIT, assets, style), [assets, style])
-  const lights = useMemo(() => (style === 'tech' ? faceLights(BOILERPLATE_UNIT, assets) : undefined), [assets, style])
+  const lights = useMemo(
+    () =>
+      style === 'tech'
+        ? { content: faceContent(BOILERPLATE_UNIT, assets), lights: faceLights(BOILERPLATE_UNIT, assets) }
+        : undefined,
+    [assets, style],
+  )
   const back = useMemo(() => backTexture(assets, style), [assets, style])
   return (
     <group position={PILE}>

@@ -361,8 +361,18 @@ export type DiskHandle = { setOpen: (open: number) => void }
  */
 export const Disk = forwardRef<
   DiskHandle,
-  { open?: number; kind?: 'common' | 'rare'; front?: THREE.Material | null; back?: THREE.Material | null }
->(function Disk({ open = 1, kind = 'common', front: frontMaterial = null, back: backMaterial = null }, ref) {
+  {
+    open?: number
+    kind?: 'common' | 'rare'
+    front?: THREE.Material | null
+    /** What the face shows, on a sheet over the front; the card fades it as the disk closes. */
+    content?: THREE.Material | null
+    back?: THREE.Material | null
+  }
+>(function Disk(
+  { open = 1, kind = 'common', front: frontMaterial = null, content = null, back: backMaterial = null },
+  ref,
+) {
   const geometry = diskGeometry()
   const materials = diskMaterials(kind)
   const faces = sheetGeometries()
@@ -394,6 +404,7 @@ export const Disk = forwardRef<
       {part.dark ? <mesh geometry={part.dark} material={materials.dark} /> : null}
       {part.metal ? <mesh geometry={part.metal} material={materials.metal} /> : null}
       {frontMaterial ? <mesh geometry={faces.front[index]} material={frontMaterial} position={[0, 0, FACE_Z]} /> : null}
+      {content ? <mesh geometry={faces.front[index]} material={content} position={[0, 0, FACE_Z + 0.0005]} /> : null}
       {backMaterial ? <mesh geometry={faces.back[index]} material={backMaterial} position={[0, 0, BACK_Z]} /> : null}
     </group>
   )

@@ -256,37 +256,57 @@ function hologram(
   context.restore()
 }
 
+type Layer = 'base' | 'content' | 'lights'
+
 /**
- * The face, or with `lights` only what glows on it (the screen's contents and the numerals) on black,
- * for the emissive map, so the plastic and the sticker stay matte.
+ * The tech face is drawn in layers: `base` is the plastic, the sticker and the dark screens, which stay when the disk
+ * closes; `content` is what shows on them (name, art, cost, sigils, numerals) on a clear ground, which fades out;
+ * `lights` is the content on black, for the emissive map, so only the screens' contents glow.
  */
-function drawTechFace(context: CanvasRenderingContext2D, unit: Unit, loaded: Assets, lights = false): void {
+function drawTechFace(context: CanvasRenderingContext2D, unit: Unit, loaded: Assets, layer: Layer): void {
   const def = card(unit.card)
   const palette = def.tier === 'S' ? RARE : COMMON
   context.clearRect(0, 0, W, H)
-  context.fillStyle = lights ? '#000000' : palette.body
-  diskPath(context)
-  context.fill()
-  clearHoles(context)
+  if (layer !== 'content') {
+    context.fillStyle = layer === 'lights' ? '#000000' : palette.body
+    diskPath(context)
+    context.fill()
+    clearHoles(context)
+  }
   context.imageSmoothingEnabled = true
   context.textAlign = 'center'
   context.textBaseline = 'middle'
 
-  // The label: a worn sticker across the top.
+  // The label: a worn sticker across the top, and the name on it.
   const [lx, ly, lw, lh] = recess(RECESS.label)
-  if (!lights) {
+  if (layer === 'base') {
     context.fillStyle = palette.plate
     context.fillRect(lx, ly, lw, lh)
     context.fillStyle = 'rgb(0 0 0 / 0.08)'
     for (let i = 0; i < 60; i++) context.fillRect(lx + ((i * 97) % lw), ly + ((i * 61) % lh), 3 + (i % 5), 2)
+  }
+  if (layer === 'content') {
     context.fillStyle = palette.plateInk
     fitText(context, def.name.toUpperCase(), (size) => `bold ${size}px VT323`, 60, lw * 0.9)
     centred(context, def.name.toUpperCase(), lx + lw / 2, ly + lh / 2)
   }
 
-  // The screen: the art above the divider, the sigils below it, the cost in the top-right corner.
+  // The screens: the dark grounds on the base, and what they show on the content.
   const [sx, sy, sw, sh] = recess(RECESS.screen)
-  if (!lights) screen(context, RECESS.screen, palette.screen)
+  const [ax, ay, aw, ah] = recess(RECESS.attack)
+  const [hx, hy, hw, hh] = recess(RECESS.health)
+  if (layer === 'base') {
+    screen(context, RECESS.screen, palette.screen)
+    screen(context, RECESS.attack, palette.screen)
+    screen(context, RECESS.health, palette.screen)
+    const cells = 4
+    const cell = 13
+    context.fillStyle = 'rgb(255 255 255 / 0.1)'
+    for (let i = 0; i < cells; i++) context.fillRect(sx + sw - 8 - (cells - i) * (cell + 3), sy + 7, cell, 24)
+    return
+  }
+
+  // The art above the divider, the sigils below it, the cost in the top-right corner.
   const divider = SCREEN_DIVIDER * H
   const art = loaded.art.get(unit.card)
   if (art) hologram(context, art, sx + sw * 0.03, sy + sh * 0.08, sw * 0.94, divider - sy - sh * 0.1, palette)
@@ -302,10 +322,9 @@ function drawTechFace(context: CanvasRenderingContext2D, unit: Unit, loaded: Ass
   }
   const cells = 4
   const cell = 13
-  for (let i = 0; i < cells; i++) {
-    context.fillStyle = i < def.cost ? palette.cost : lights ? '#000000' : 'rgb(255 255 255 / 0.1)'
+  context.fillStyle = palette.cost
+  for (let i = cells - def.cost; i < cells; i++)
     context.fillRect(sx + sw - 8 - (cells - i) * (cell + 3), sy + 7, cell, 24)
-  }
   context.fillStyle = '#f4fbff'
   context.fillRect(sx, divider - 2, sw, 3)
   const [top, bottom] = SIGIL_BAND
@@ -320,12 +339,6 @@ function drawTechFace(context: CanvasRenderingContext2D, unit: Unit, loaded: Ass
   }
 
   // Attack and health as plain numerals, each centred in its own box.
-  const [ax, ay, aw, ah] = recess(RECESS.attack)
-  const [hx, hy, hw, hh] = recess(RECESS.health)
-  if (!lights) {
-    screen(context, RECESS.attack, palette.screen)
-    screen(context, RECESS.health, palette.screen)
-  }
   context.font = Math.max(unit.attack, unit.health) > 99 ? '40px VT323' : '64px VT323'
   context.fillStyle = palette.line
   centred(context, String(unit.attack), ax + aw / 2, ay + ah / 2)
@@ -355,32 +368,41 @@ function texture(element: HTMLCanvasElement): Texture {
 
 const faces = new Map<string, Texture>()
 
-/** A face for this card as it stands now; cards with the same numbers share one texture. */
+/** A face for this card as it stands now; cards with the same numbers share one texture. A tech card's is its base layer. */
 export function faceTexture(unit: Unit, loaded: Assets, style: CardStyle = 'cabin'): Texture {
-  const key = `${style}:${unit.card}:${unit.attack}:${unit.health}:${unit.maxHealth}:${unit.sigils.join(',')}`
+  if (style === 'tech') return techLayer(unit, loaded, 'base')
+  const key = `cabin:${unit.card}:${unit.attack}:${unit.health}:${unit.maxHealth}:${unit.sigils.join(',')}`
   let found = faces.get(key)
   if (!found) {
     const [element, context] = canvas()
-    if (style === 'tech') drawTechFace(context, unit, loaded)
-    else drawFace(context, unit, loaded)
+    drawFace(context, unit, loaded)
     found = texture(element)
     faces.set(key, found)
   }
   return found
 }
 
-/** What glows on a tech card, for its emissive map; black where the plastic and the sticker are. */
-export function faceLights(unit: Unit, loaded: Assets): Texture {
-  const key = `lights:${unit.card}:${unit.attack}:${unit.health}:${unit.maxHealth}:${unit.sigils.join(',')}`
+function techLayer(unit: Unit, loaded: Assets, layer: Layer): Texture {
+  // The base depends only on the card's kind; the other layers on everything shown.
+  const key =
+    layer === 'base'
+      ? `tech:base:${card(unit.card).tier === 'S' ? 'rare' : 'common'}`
+      : `tech:${layer}:${unit.card}:${unit.attack}:${unit.health}:${unit.maxHealth}:${unit.sigils.join(',')}`
   let found = faces.get(key)
   if (!found) {
     const [element, context] = canvas()
-    drawTechFace(context, unit, loaded, true)
+    drawTechFace(context, unit, loaded, layer)
     found = texture(element)
     faces.set(key, found)
   }
   return found
 }
+
+/** What a tech card shows on its sticker and screens, on a clear ground; it fades out as the disk closes. */
+export const faceContent = (unit: Unit, loaded: Assets): Texture => techLayer(unit, loaded, 'content')
+
+/** What glows on a tech card, for its emissive map; black where the plastic and the sticker are. */
+export const faceLights = (unit: Unit, loaded: Assets): Texture => techLayer(unit, loaded, 'lights')
 
 export function backTexture(loaded: Assets, style: CardStyle = 'cabin'): Texture {
   let found = faces.get(`${style}:back`)

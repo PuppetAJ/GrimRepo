@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { card, type Unit } from 'shared'
 import * as THREE from 'three'
 import { Disk, type DiskHandle } from './Disk.tsx'
-import { backTexture, faceLights, faceTexture, type CardStyle, type loadCardAssets } from './faces.ts'
+import { backTexture, faceContent, faceLights, faceTexture, type CardStyle, type loadCardAssets } from './faces.ts'
 import { CARD, DECK, HAND_SCALE, handPlace, slot, type Row, type Vec3 } from './layout.ts'
 import { LEAVE_MS, type Lunge } from './playback.ts'
 
@@ -63,10 +63,11 @@ export function Card({
   const rest = tech ? 1.1 : 0.22
   // Each card owns its materials so it can glow or fade alone; the textures are shared. The alpha test keeps the
   // clipped corner from writing depth where there is nothing to see.
-  const [front, rear] = useMemo(
+  const [front, rear, content] = useMemo(
     () => [
       new THREE.MeshStandardMaterial({ roughness: 0.85, emissive: '#ffffff', transparent: true, alphaTest: 0.5 }),
       new THREE.MeshStandardMaterial({ roughness: 0.85, transparent: true, alphaTest: 0.5 }),
+      new THREE.MeshStandardMaterial({ roughness: 0.85, emissive: '#ffffff', transparent: true, alphaTest: 0.5 }),
     ],
     [],
   )
@@ -74,12 +75,17 @@ export function Card({
     () => () => {
       front.dispose()
       rear.dispose()
+      content.dispose()
     },
-    [front, rear],
+    [front, rear, content],
   )
   front.map = face
-  front.emissiveMap = tech ? faceLights(unit, assets) : face
+  front.emissiveMap = tech ? null : face
   rear.map = back
+  if (tech) {
+    content.map = faceContent(unit, assets)
+    content.emissiveMap = faceLights(unit, assets)
+  }
   // A card drawn from the deck starts closed, as it lay in the deck, and opens on the way to the hand.
   const fromDeck = Boolean(tech && spawn && spawn[0] === DECK[0] && spawn[2] === DECK[2])
   const open = useRef(fromDeck ? 0 : 1)
@@ -142,14 +148,17 @@ export function Card({
               ? rest + 0.25
               : rest
     // A closing disk turns its display off: the screen's light goes first, then the drawing fades.
-    // A closing disk's face fades out altogether, name and all, leaving plain plastic in its recesses.
-    front.emissiveIntensity = glow * (tech ? open.current * open.current : 1)
-    front.emissive.set(look === 'marked' || look === 'markable' ? '#ff4040' : '#ffffff')
+    // On a tech card the sticker and screens stay as it closes; what they show fades out, its light first.
+    const shown = tech ? content : front
+    shown.emissiveIntensity = glow * (tech ? open.current * open.current : 1)
+    if (tech) front.emissiveIntensity = 0
+    shown.emissive.set(look === 'marked' || look === 'markable' ? '#ff4040' : '#ffffff')
     front.color.setScalar(look === 'dim' ? 0.45 : 1)
-    front.opacity = (1 - leaving) * (tech ? open.current : 1)
-    rear.opacity = 1 - leaving
-    // The alpha test discards the clear pixels (the corner holes) and, as the face fades, everything else too.
-    front.alphaTest = Math.max(0.001, front.opacity * 0.5)
+    content.color.setScalar(look === 'dim' ? 0.45 : 1)
+    front.opacity = rear.opacity = 1 - leaving
+    content.opacity = (1 - leaving) * open.current
+    // The alpha test discards the clear ground and, as the content fades, everything else too.
+    content.alphaTest = Math.max(0.001, content.opacity * 0.5)
   })
 
   const handlers = {
@@ -176,6 +185,7 @@ export function Card({
           open={fromDeck ? 0 : 1}
           kind={card(unit.card).tier === 'S' ? 'rare' : 'common'}
           front={front}
+          content={content}
           back={rear}
         />
       </group>
