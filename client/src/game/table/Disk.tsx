@@ -114,8 +114,13 @@ function build() {
   top.metal.push(box(0.25, -0.006, 0.75, 0.01, DISK.depth + raised * 3.4, -raised / 2))
   // Top, back: the rim strip, the hub's housing at rim height, the hub with its ring and two indents, and the
   // guides the rails run down from.
-  top.plastic.push(extrude(topShape(), -raised, rimBack + raised))
-  top.plastic.push(box(0.25, 0.25, 0.75, 0.55, raised, back - raised / 2))
+  const topBack = topShape()
+  topBack.holes.push(hole([0.2, 0, 0.8, 0.22]))
+  top.plastic.push(extrude(topBack, -raised, rimBack + raised))
+  // The hub's housing, joined to the rim above it as one piece; the track is cut into it too.
+  const housing = rect([0.25, MT - 0.001, 0.75, 0.55])
+  housing.holes.push(hole([0.25, MT - 0.001, 0.75, 0.22]))
+  top.plastic.push(extrude(housing, -raised, rimBack + raised))
   const [hx, hy] = [fx(0.5), fy(0.4)]
   const hub = new THREE.Shape().absarc(hx, hy, 0.16 * w, 0, Math.PI * 2, false)
   hub.holes.push(hole([0.5, 0.36, 0.56, 0.4]), hole([0.46, 0.42, 0.5, 0.45]))
