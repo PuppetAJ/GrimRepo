@@ -323,28 +323,18 @@ function drawTechFace(context: CanvasRenderingContext2D, unit: Unit, loaded: Ass
   centred(context, String(unit.health), hx + hw / 2, hy + hh / 2)
 }
 
-/** The back of the disk: plastic with faint traces; the hub and ribs are geometry on top. */
+/** The back of the disk: the sunken panel, darker than the rim, with the shadow of the hub's disc; the parts are geometry on top. */
 function drawTechBack(context: CanvasRenderingContext2D): void {
   context.clearRect(0, 0, W, H)
   context.fillStyle = COMMON.body
   diskPath(context, true)
   context.fill()
-  context.strokeStyle = 'rgb(62 243 255 / 0.12)'
-  context.lineWidth = 3
-  for (let i = 0; i < 12; i++) {
-    const x = 30 + ((i * 53) % (W - 60))
-    const y = H * 0.4 + ((i * 97) % (H * 0.5))
-    context.beginPath()
-    context.moveTo(x, y)
-    context.lineTo(x + ((i % 3) - 1) * 40, y + 40)
-    context.lineTo(x + ((i % 3) - 1) * 40, y + 70)
-    context.stroke()
-  }
-  context.fillStyle = 'rgb(62 243 255 / 0.35)'
-  context.textAlign = 'center'
-  context.textBaseline = 'middle'
-  context.font = '40px VT323'
-  context.fillText('P03', W / 2, H * 0.55)
+  context.fillStyle = 'rgb(0 0 0 / 0.35)'
+  context.fillRect(W * 0.045, H * 0.24, W * 0.91, H * 0.615)
+  context.fillStyle = 'rgb(0 0 0 / 0.3)'
+  context.beginPath()
+  context.arc(W / 2, H * 0.4, W * 0.42, 0, Math.PI * 2)
+  context.fill()
 }
 
 export type CardStyle = 'cabin' | 'tech'

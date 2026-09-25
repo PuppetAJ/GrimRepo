@@ -99,24 +99,41 @@ function build(kind: 'full' | 'compact') {
     for (let i = 0; i < 6; i++)
       plastic.push(box(0.42, 0.895 + i * 0.013, 0.58, 0.901 + i * 0.013, raised * 0.7, front + raised * 0.35))
 
-  // The back: the steel shutter plate over the hub, the hub, two plastic ribs and the bottom band.
-  metal.push(box(0.28, 0.02, 0.72, 0.2, raised, back - raised / 2))
-  dark.push(box(0.1, 0.03, 0.15, 0.05, 0.004, back - raised))
-  dark.push(box(0.85, 0.03, 0.9, 0.05, 0.004, back - raised))
-  const [hx, hy] = at(0.5, 0.34)
+  // The back, after Act 3's card: a rim with the panel sunk inside it, the shutter's steel plate at the top lined up
+  // with the front's window, the hub in its housing, two rails the housing rides on down to the bottom band.
+  const backFace = outline(height)
+  backFace.holes.push(cut(0.045, 0.24, 0.955, 0.855))
+  plastic.push(
+    new THREE.ExtrudeGeometry(backFace, { depth: raised, bevelEnabled: false }).translate(0, 0, back - raised),
+  )
+  const sunk = back
+  const rimBack = back - raised
+  metal.push(box(0.25, 0.01, 0.75, 0.23, raised * 1.2, rimBack - raised * 0.6))
+  dark.push(box(0.57, 0.035, 0.66, 0.2, 0.004, rimBack - raised * 1.2))
+  dark.push(box(0.09, 0.012, 0.15, 0.036, 0.004, rimBack))
+  dark.push(box(0.85, 0.012, 0.91, 0.036, 0.004, rimBack))
+  // The hub's housing, up to rim height, with the hub and its ring on it.
+  plastic.push(box(0.25, 0.25, 0.75, 0.55, raised, sunk - raised / 2))
+  const [hx, hy] = at(0.5, 0.4)
   metal.push(
-    new THREE.CylinderGeometry(0.19 * w, 0.19 * w, raised, 28)
+    new THREE.CylinderGeometry(0.16 * w, 0.16 * w, raised * 0.6, 28)
       .rotateX(Math.PI / 2)
-      .translate(hx, hy, back - raised / 2),
+      .translate(hx, hy, rimBack - raised * 0.3),
   )
-  metal.push(new THREE.TorusGeometry(0.27 * w, 0.012, 6, 36).translate(hx, hy, back - raised / 2))
-  dark.push(
-    new THREE.CylinderGeometry(0.03 * w, 0.03 * w, 0.004, 12).rotateX(Math.PI / 2).translate(hx, hy, back - raised),
-  )
-  plastic.push(box(0.27, 0.62, 0.31, 0.88, raised, back - raised / 2))
-  plastic.push(box(0.69, 0.62, 0.73, 0.88, raised, back - raised / 2))
-  plastic.push(box(0.06, 0.9, 0.94, 0.95, raised, back - raised / 2))
-  plastic.push(box(0.06, 0.62, 0.94, 0.64, raised, back - raised / 2))
+  metal.push(new THREE.TorusGeometry(0.18 * w, 0.01, 6, 36).translate(hx, hy, rimBack - raised * 0.3))
+  dark.push(box(0.5, 0.36, 0.56, 0.4, 0.004, rimBack - raised * 0.6))
+  dark.push(box(0.46, 0.42, 0.5, 0.45, 0.004, rimBack - raised * 0.6))
+  // Rails from the housing to the bottom band, with a guide at each top and a foot at each bottom.
+  for (const x of [0.27, 0.73]) {
+    metal.push(box(x - 0.008, 0.47, x + 0.008, 0.85, raised * 0.7, sunk - raised * 0.35))
+    plastic.push(box(x - 0.03, 0.44, x + 0.03, 0.48, raised, sunk - raised / 2))
+    plastic.push(box(x - 0.04, 0.82, x + 0.04, 0.86, raised, sunk - raised / 2))
+  }
+  // The bottom band with its slot, and the dark blocks at the rim's foot.
+  plastic.push(box(0.05, 0.875, 0.95, 0.975, raised * 0.8, rimBack - raised * 0.4))
+  dark.push(box(0.09, 0.9, 0.91, 0.95, 0.004, rimBack - raised * 0.8))
+  dark.push(box(0.0, 0.8, 0.045, 0.86, 0.004, rimBack))
+  dark.push(box(0.955, 0.8, 1.0, 0.86, 0.004, rimBack))
 
   // One mesh per material: the pieces are unindexed first, or they cannot merge.
   const merge = (parts: THREE.BufferGeometry[]) => {
@@ -244,6 +261,8 @@ export const diskMaterials = (kind: 'common' | 'rare' = 'common'): Plastics =>
       ? plastics('#7a2030', '#2a0a10', '#3a0d14', '#1a0508', '#9a2a3c', '#3a0e16')
       : plastics('#2e4664', '#0c1826', '#15212f', '#08111a', '#3f5f84', '#12243a'))
 
-/** Where the face and back planes sit: just off the body, under the raised rim. */
+/** Where the face and back planes sit: just off the body, under the raised rims. */
 export const FACE_Z = front + 0.0008
 export const BACK_Z = back - 0.0008
+/** How far the back's rim and parts stand off the body, so a face-down stack can space its disks. */
+export const BACK_RELIEF = raised * 2.4

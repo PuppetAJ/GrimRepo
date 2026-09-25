@@ -3,7 +3,7 @@ import { easing } from 'maath'
 import { useMemo, useRef, useState, type ReactNode } from 'react'
 import * as THREE from 'three'
 import { backTexture, faceLights, faceTexture, type CardStyle, type loadCardAssets } from './faces.ts'
-import { BACK_Z, diskGeometry, diskMaterials, FACE_Z } from './Disk.tsx'
+import { BACK_RELIEF, BACK_Z, diskGeometry, diskMaterials, FACE_Z } from './Disk.tsx'
 import { BOARD_DEPTH, CARD, DECK, DISK, lanes, PILE, ROW_Z, slot, TABLE_Y, type Row, type Vec3 } from './layout.ts'
 
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
@@ -207,7 +207,7 @@ function Stack({
     const faceUp = top !== back
     const disk = diskGeometry(faceUp ? 'full' : 'compact')
     const plastics = diskMaterials('common')
-    const pitch = DISK.depth + DISK.relief * 2
+    const pitch = DISK.depth + DISK.relief + BACK_RELIEF
     return [...Array(layers).keys()].map((i) => {
       const topmost = i === layers - 1
       return (
