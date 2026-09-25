@@ -156,7 +156,7 @@ function Scene({
         hint={hint}
       />
       <EndTurnButton active={can({ type: 'ringBell' })} rung={rung} onClick={() => act({ type: 'ringBell' })} />
-      <Lanes view={view} legal={legal} act={act} play={TINT.glow} />
+      <Lanes view={view} legal={legal} act={act} play={TINT.play} />
 
       {view.hand.map((unit, index) => {
         const selected = view.summon?.uid === unit.uid
@@ -216,12 +216,15 @@ function Scene({
       {playback.popups.map((popup) => (
         <Popup key={popup.id} text={popup.text} tone={popup.tone} position={popup.position} born={popup.at} />
       ))}
-      {import.meta.env.DEV ? <TestHandle game={game} view={view} busy={busy} skip={skip} /> : null}
+      {/* In development, or in a build made with VITE_TEST_HANDLE=1 for measuring and testing it. */}
+      {import.meta.env.DEV || import.meta.env['VITE_TEST_HANDLE'] === '1' ? (
+        <TestHandle game={game} view={view} busy={busy} skip={skip} />
+      ) : null}
     </>
   )
 }
 
-/** Draws a stand-in popup, unseen, for the table's first frames, so its shader is built while loading rather than mid-turn. */
+/** For the table's first frames, draws everything, off-screen too, and a stand-in popup, so no shader is built mid-turn. */
 function WarmUp() {
   const [warm, setWarm] = useState(false)
   const frames = useRef(0)
@@ -240,8 +243,22 @@ function WarmUp() {
     },
     [material],
   )
+  // Off-screen things are drawn too for these frames, or their shaders wait until the camera first turns to them.
+  const { scene } = useThree()
+  const culled = useRef<THREE.Object3D[]>([])
   useFrame(() => {
-    if (!warm && ++frames.current > 3) setWarm(true)
+    if (warm) return
+    if (frames.current === 0)
+      scene.traverse((object) => {
+        if (!object.frustumCulled) return
+        object.frustumCulled = false
+        culled.current.push(object)
+      })
+    if (++frames.current > 3) {
+      for (const object of culled.current) object.frustumCulled = true
+      culled.current = []
+      setWarm(true)
+    }
   })
   return warm ? null : <sprite material={material} position={BOARD_CENTER} scale={0.01} />
 }

@@ -5,6 +5,7 @@ const PALETTES = {
   cyan: {
     glow: '#3ef3ff',
     light: '#3ef3ff',
+    play: '#3ef3ff',
     glowHdr: [0.8, 3, 3.4],
     you: '#3ef3ff',
     line: '90 216 240',
@@ -25,14 +26,16 @@ const PALETTES = {
   },
   green: {
     glow: '#8dffa8',
+    // The playable lanes and the board's lines lean white, like the holograms.
+    play: '#c8f7d6',
     // Lamps near white with a green cast, as the cyan's were near white with a blue one; saturated green made P03 olive.
     light: '#b8f5cb',
     glowHdr: [1.6, 3.2, 2],
     // Green is P03's, so the player's lead shows white.
     you: '#e8fff0',
-    line: '160 240 185',
-    gear: '96 176 128',
-    field: '105 165 130',
+    line: '205 240 215',
+    gear: '140 185 155',
+    field: '105 150 125',
     slot: '10 26 20',
     deep: '#0b1c14',
     screenGround: '#03150c',

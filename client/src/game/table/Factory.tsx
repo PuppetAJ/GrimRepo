@@ -12,7 +12,7 @@ import {
 } from '@react-three/postprocessing'
 import { easing } from 'maath'
 import { ToneMappingMode } from 'postprocessing'
-import { Suspense, use, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactElement } from 'react'
+import { memo, Suspense, use, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactElement } from 'react'
 import { TIP } from 'shared'
 import * as THREE from 'three'
 import type { View } from '../view.ts'
@@ -107,8 +107,12 @@ function Room() {
   const clean = metal(useTexture(surfaces('table')), [4, 3])
   const floor = metal(useTexture(surfaces('floor')), [12, 12])
   const wall = metal(useTexture(surfaces('wall')), [8, 3])
-  const table = useMemo(() => ({ ...clean, map: weathered(clean.map, 11, 1) }), [clean])
-  const floorMap = useMemo(() => weathered(floor.map, 5, 0.7), [floor])
+  // Keyed on the textures, not the object holding them, which is new on every render: the grime is painted once.
+  const table = useMemo(
+    () => ({ map: weathered(clean.map, 11, 1), normalMap: clean.normalMap, roughnessMap: clean.roughnessMap }),
+    [clean.map, clean.normalMap, clean.roughnessMap],
+  )
+  const floorMap = useMemo(() => weathered(floor.map, 5, 0.7), [floor.map])
   useEffect(
     () => () => {
       table.map.dispose()
@@ -258,7 +262,7 @@ export function TechBoard() {
 }
 
 /** A screen on a bracket, showing a canvas that is redrawn when what it shows changes. */
-function Monitor({ position, turn, lines }: { position: Vec3; turn: number; lines: string[] }) {
+const Monitor = memo(function Monitor({ position, turn, lines }: { position: Vec3; turn: number; lines: string[] }) {
   const [canvas, texture] = useMemo(() => {
     const element = document.createElement('canvas')
     element.width = 512
@@ -292,7 +296,7 @@ function Monitor({ position, turn, lines }: { position: Vec3; turn: number; line
       </mesh>
     </group>
   )
-}
+})
 
 /** The scale by the table: it tips towards whoever is losing. Set aside while the battery shows the lead. */
 export function Scale({ view }: { view: View }) {
@@ -435,7 +439,7 @@ function Lamp() {
     const t = clock.getElapsedTime()
     // Steady, with a brief dip every few seconds.
     const flicker = 1 - 0.35 * Math.max(0, Math.sin(t * 9.7) * Math.sin(t * 0.37) - 0.85) * 6
-    if (light.current) light.current.intensity = 26 * flicker
+    if (light.current) light.current.intensity = 18 * flicker
     if (bulb.current) (bulb.current.material as THREE.MeshBasicMaterial).color.copy(GLOW).multiplyScalar(flicker)
   })
   return (
@@ -460,7 +464,7 @@ function Lamp() {
         <boxGeometry args={[1.3, 0.05, 0.3]} />
         <meshBasicMaterial color={GLOW} toneMapped={false} />
       </mesh>
-      <pointLight ref={light} color={TINT.lamp} position={[1.85, 2.6, 0.4]} intensity={26} distance={12} decay={1.8} />
+      <pointLight ref={light} color={TINT.lamp} position={[1.85, 2.6, 0.4]} intensity={18} distance={12} decay={1.8} />
     </group>
   )
 }
@@ -554,7 +558,17 @@ function loadFaces(): Promise<Record<Face, THREE.Texture>> {
             context.imageSmoothingEnabled = false
             const w = image.width * scale
             const h = image.height * scale
-            context.drawImage(image, (90 - w) / 2, (65 - h) / 2, w, h)
+            // The pack draws its faces in its own cyan; each is made white here, so the screen's glow gives it the palette's colour.
+            const shape = document.createElement('canvas')
+            shape.width = 90
+            shape.height = 65
+            const ink = shape.getContext('2d') as CanvasRenderingContext2D
+            ink.imageSmoothingEnabled = false
+            ink.drawImage(image, (90 - w) / 2, (65 - h) / 2, w, h)
+            ink.globalCompositeOperation = 'source-in'
+            ink.fillStyle = '#ffffff'
+            ink.fillRect(0, 0, 90, 65)
+            context.drawImage(shape, 0, 0)
             const texture = new THREE.CanvasTexture(canvas)
             // The pack's faces are stored upside down, as the game's textures were.
             texture.flipY = true
@@ -627,7 +641,7 @@ function P03({ mood }: { mood: Mood }) {
     screen.color.set('#000000')
     screen.alphaTest = 0
     screen.emissiveMap = textures[mood === 'smug' ? 'happy' : mood]
-    screen.emissive.set(mood === 'smug' ? LIT : '#ffffff')
+    screen.emissive.set(LIT)
     screen.emissiveIntensity = 1.6
     screen.needsUpdate = true
   }, [scene, textures, mood])
@@ -658,7 +672,7 @@ export function FactoryP03({ view, busy, outcome }: { view: View; busy: boolean;
   return (
     <>
       <P03 mood={mood} />
-      <pointLight color={TINT.light} position={[X, 10.4, -13.4]} intensity={12} distance={10} decay={1.6} />
+      <pointLight color={TINT.light} position={[X, 10.4, -13.4]} intensity={10} distance={10} decay={1.6} />
     </>
   )
 }
@@ -692,8 +706,8 @@ export function Factory({ view, log }: { view: View; log: string[] }) {
       <ambientLight color={TINT.ambient} intensity={0.45} />
       <hemisphereLight color={TINT.hemisphere} groundColor="#000000" intensity={0.8} />
       {/* A little light over the deck and the pile, and over the player's hands. */}
-      <pointLight color={TINT.cool} position={[X + 3.3, TABLE_Y + 2.2, -8.6]} intensity={14} distance={7} decay={1.8} />
-      <pointLight color={TINT.fill} position={[X, TABLE_Y + 1.6, -5.2]} intensity={8} distance={6} decay={2} />
+      <pointLight color={TINT.cool} position={[X + 3.3, TABLE_Y + 2.2, -8.6]} intensity={10} distance={7} decay={1.8} />
+      <pointLight color={TINT.fill} position={[X, TABLE_Y + 1.6, -5.2]} intensity={6} distance={6} decay={2} />
       {/* A cool lamp over the board, so the cards read. */}
       <spotLight
         color={TINT.spot}
@@ -701,20 +715,32 @@ export function Factory({ view, log }: { view: View; log: string[] }) {
         target-position={[X, TABLE_Y, -10.2]}
         angle={0.5}
         penumbra={0.6}
-        intensity={90}
+        intensity={55}
         decay={1.6}
         distance={20}
       />
+      <Fixtures />
+      <Monitor position={LOG_AT} turn={0.3} lines={lines} />
+      <Monitor position={STATUS_AT} turn={-0.3} lines={status} />
+      <Suspense fallback={null}>
+        <Battery view={view} />
+      </Suspense>
+    </>
+  )
+}
+
+const LOG_AT: Vec3 = [X - 4.3, 9.5, -14.2]
+const STATUS_AT: Vec3 = [X + 4.3, 9.5, -14.2]
+
+/** Everything in the room that no move changes, kept out of the re-render each move brings. */
+const Fixtures = memo(function Fixtures() {
+  return (
+    <>
       <Room />
       <Lamp />
       <DrumRack />
       <Props />
-      <Monitor position={[X - 4.3, 9.5, -14.2]} turn={0.3} lines={lines} />
-      <Monitor position={[X + 4.3, 9.5, -14.2]} turn={-0.3} lines={status} />
-      <Suspense fallback={null}>
-        {chosenGems() === 'module' ? <GemModule /> : <Gems />}
-        <Battery view={view} />
-      </Suspense>
+      <Suspense fallback={null}>{chosenGems() === 'module' ? <GemModule /> : <Gems />}</Suspense>
       {/* Dust drifting in the light. */}
       <Sparkles
         count={140}
@@ -727,7 +753,7 @@ export function Factory({ view, log }: { view: View; log: string[] }) {
       />
     </>
   )
-}
+})
 
 /** The factory's bell: a big red button that says what it does. */
 export function EndTurnButton({
