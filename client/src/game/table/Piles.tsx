@@ -5,7 +5,7 @@ import * as THREE from 'three'
 import { faceContent, faceLights, faceTexture, type loadCardAssets } from './faces.ts'
 import { BACK_RELIEF, bakedDisk, Disk, diskMaterials } from './Disk.tsx'
 import { claimCursor, releaseCursor } from './cursor.ts'
-import { DECK, DISK, PILE, type Vec3 } from './layout.ts'
+import { CARD, DECK, DISK, PILE, type Vec3 } from './layout.ts'
 
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
 type Click = (event: ThreeEvent<MouseEvent>) => void
@@ -191,7 +191,8 @@ export function Deck({
       <Nudge
         active={active}
         onClick={onClick}
-        size={[0.8, stackHeight(layers), 1.32]}
+        // Closed disks are compact, so the deck is shorter front to back than the open pile beside it.
+        size={[0.8, stackHeight(layers), CARD.height * DISK.compact + 0.04]}
         label="deck"
         hint={hint}
         cursor="draw"
@@ -226,7 +227,7 @@ export function Pile({
       <Nudge
         active={active}
         onClick={onClick}
-        size={[0.8, stackHeight(6), 1.32]}
+        size={[0.8, stackHeight(6), CARD.height + 0.04]}
         label="pile"
         hint={hint}
         cursor="boilerplate"
