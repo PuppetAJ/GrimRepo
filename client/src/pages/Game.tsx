@@ -26,7 +26,7 @@ function savedMode(): Mode {
 }
 
 const UPRIGHT_PHONE = '(orientation: portrait) and (max-width: 767px)'
-// The Act 2 layout needs three columns side by side; narrower screens keep the first text table.
+// The Act 2 layout's three columns need this much width; narrower, it stacks into one column.
 const WIDE = '(min-width: 1100px)'
 
 function useMedia(media: string): boolean {
@@ -91,7 +91,7 @@ export function Game() {
   if (game.status === 'error') return <Failure title="The table is not ready" detail={game.message} />
 
   if (mode === 'text')
-    return text === 'act2' && wide ? (
+    return text === 'act2' ? (
       // Into most of the page's side padding, so the table has the width and only thin gutters remain.
       <div className="-mx-2 sm:-mx-9">
         <TerminalTable
@@ -102,6 +102,7 @@ export function Game() {
             chooseText('classic')
             setText('classic')
           }}
+          narrow={!wide}
         />
       </div>
     ) : (
