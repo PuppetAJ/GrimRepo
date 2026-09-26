@@ -317,12 +317,6 @@ const SCREEN_TEXT: CSSProperties = {
   textShadow: `0 0 6px ${LIT}, 0 0 14px ${LIT}`,
   whiteSpace: 'pre',
   overflow: 'hidden',
-  position: 'relative',
-}
-const SCANLINES: CSSProperties = {
-  position: 'absolute',
-  inset: 0,
-  backgroundImage: 'repeating-linear-gradient(0deg, rgb(0 0 0 / 0.3) 0 2px, transparent 2px 4px)',
 }
 
 /** A screen on a bracket: its glass and scanlines in the scene, its text laid over them by the page. */
@@ -396,8 +390,6 @@ const Monitor = memo(function Monitor({
               {line}
             </div>
           ))}
-          {/* Scanlines across the text too, as the scene's own once drew over it. */}
-          <div style={SCANLINES} />
         </div>
       </Html>
     </group>

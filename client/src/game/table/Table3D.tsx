@@ -547,17 +547,20 @@ function Hud({
           <div
             role="region"
             aria-label="Card reader"
-            className="mt-2 flex h-40 max-h-full min-h-0 w-72 gap-2 rounded-md border-2 border-[#2f6b3d] bg-[#a9e7b8] p-2 text-[#0b1f12]"
+            className="relative mt-2 flex h-40 max-h-full min-h-0 w-72 gap-2 overflow-hidden rounded-md border-2 border-[#2f6b3d] bg-[#a9e7b8] p-2 text-[#0b1f12]"
           >
             <FlatReaderBody unit={reading.unit} />
+            {/* The glass over a card read up close: scanlines, a rolling band and dark corners. */}
+            <span aria-hidden className="crt-glass pointer-events-none absolute inset-0" />
           </div>
         ) : (
           <div
             role="region"
             aria-label="Card reader"
-            className="@container mt-3 flex min-h-0 w-64 flex-col gap-2 overflow-hidden rounded-md border-2 border-[#2f6b3d] bg-[#a9e7b8] p-3 text-[#0b1f12]"
+            className="@container relative mt-3 flex min-h-0 w-64 flex-col gap-2 overflow-hidden rounded-md border-2 border-[#2f6b3d] bg-[#a9e7b8] p-3 text-[#0b1f12]"
           >
             <ReaderBody unit={reading.unit} dense />
+            <span aria-hidden className="crt-glass pointer-events-none absolute inset-0" />
           </div>
         )}
       </div>
@@ -862,8 +865,9 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
           }}
         >
           {'unit' in magnifiedRead ? (
-            <div className="flex h-40 gap-2 rounded-md border-2 border-[#2f6b3d] bg-[#a9e7b8] p-2 font-terminal text-[#0b1f12]">
+            <div className="relative flex h-40 gap-2 overflow-hidden rounded-md border-2 border-[#2f6b3d] bg-[#a9e7b8] p-2 font-terminal text-[#0b1f12]">
               <FlatReaderBody unit={magnifiedRead.unit} />
+              <span aria-hidden className="crt-glass pointer-events-none absolute inset-0" />
             </div>
           ) : (
             <ScreenReadout lines={magnifiedRead.lines} className="h-40 text-base" />
