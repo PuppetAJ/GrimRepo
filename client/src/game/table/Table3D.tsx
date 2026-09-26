@@ -82,7 +82,6 @@ function TargetOutline({ lane, colour }: { lane: number; colour: string }) {
       dashed
       dashSize={0.07}
       gapSize={0.045}
-      toneMapped={false}
     />
   )
 }

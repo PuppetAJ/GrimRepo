@@ -175,7 +175,7 @@ function Room() {
       {/* A thin lit edge along the console, the only line of light near the player. */}
       <mesh position={[X, TABLE_Y - 0.05, -6.18]}>
         <boxGeometry args={[10.4, 0.03, 0.03]} />
-        <meshBasicMaterial color={GLOW} toneMapped={false} />
+        <meshBasicMaterial color={GLOW} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[X, 0, -10]}>
         <planeGeometry args={[60, 60]} />
@@ -342,7 +342,7 @@ const Monitor = memo(function Monitor({ position, turn, lines }: { position: Vec
       </mesh>
       <mesh position={[0, 0, 0.115]}>
         <planeGeometry args={[SCREEN.width, SCREEN.height]} />
-        <meshBasicMaterial map={texture} color={SCREEN_HDR} toneMapped={false} />
+        <meshBasicMaterial map={texture} color={SCREEN_HDR} />
       </mesh>
       {/* Under the page's own overlays, and out of the way of the pointer and screen readers. */}
       <Html transform position={[0, 0, 0.12]} scale={SCREEN_SCALE} zIndexRange={[1, 0]} pointerEvents="none">
@@ -938,7 +938,7 @@ export function EndTurnButton({
         {/* The label on the plate's near edge. */}
         <mesh position={[0, 0.062, 0.62]} rotation={[-Math.PI / 2, 0, 0]}>
           <planeGeometry args={[0.8, 0.2]} />
-          <meshBasicMaterial map={label} toneMapped={false} />
+          <meshBasicMaterial map={label} />
         </mesh>
       </Nudge>
     </group>
