@@ -5,7 +5,7 @@ import { queue, queueCountFor, retireDeadCode } from './opponent.ts'
 import {
   HAND_LIMIT,
   LANES,
-  STARTING_HEALTH,
+  TIP,
   TURN_LIMIT,
   type Action,
   type GameEvent,
@@ -31,8 +31,9 @@ export function createGame({ seed, debug = false }: GameOptions): GameState {
     status: 'playing',
     nextUid: 1,
     debug,
-    player: { health: STARTING_HEALTH, deck: rng.shuffle(PLAYER_DECK), hand: [], board: Array(LANES).fill(null) },
-    opponent: { health: STARTING_HEALTH, front: Array(LANES).fill(null), back: Array(LANES).fill(null) },
+    scale: 0,
+    player: { deck: rng.shuffle(PLAYER_DECK), hand: [], board: Array(LANES).fill(null) },
+    opponent: { front: Array(LANES).fill(null), back: Array(LANES).fill(null) },
     summon: null,
   }
   // Three from the deck and one Boilerplate, so the first turn always has something to play.
@@ -151,7 +152,7 @@ export function apply(current: GameState, action: Action): Result {
 /** The bell: the player's cards attack, then the opponent clears dead code, advances, attacks, and queues more. */
 function playTurn(state: GameState, rng: Rng, events: GameEvent[]): void {
   attack(state, 'player', events)
-  if (state.opponent.health <= 0) return finish(state, 'win', events)
+  if (state.scale >= TIP) return finish(state, 'win', events)
 
   retireDeadCode(state, events)
   for (let lane = 0; lane < LANES; lane++) {
@@ -164,7 +165,7 @@ function playTurn(state: GameState, rng: Rng, events: GameEvent[]): void {
   }
 
   attack(state, 'opponent', events)
-  if (state.player.health <= 0) return finish(state, 'loss', events)
+  if (state.scale <= -TIP) return finish(state, 'loss', events)
 
   queue(state, rng, queueCountFor(state.turn, rng), state.turn, events)
 

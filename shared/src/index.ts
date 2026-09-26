@@ -16,7 +16,7 @@ export {
   HAND_LIMIT,
   LANES,
   RULES_VERSION,
-  STARTING_HEALTH,
+  TIP,
   TURN_LIMIT,
   type Action,
   type GameEvent,
@@ -26,5 +26,6 @@ export {
   type Slot,
   type Unit,
 } from './engine/types.ts'
+export { costOf, worthOf } from './engine/units.ts'
 export { Rng } from './rng.ts'
 export { SCORE_TURN_BASELINE, scoreBattle, type Outcome } from './scoring.ts'

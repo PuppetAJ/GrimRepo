@@ -67,6 +67,10 @@ export function createApp({
         setHeaders: (res, filePath) => {
           if (filePath.includes(`${path.sep}assets${path.sep}`)) {
             res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+          } else if (/[/\\](models|textures|cards|p03)[/\\]/.test(filePath)) {
+            // The table's models and images keep their names across deploys, so they are kept an hour and then
+            // refreshed in the background, rather than checked on every visit.
+            res.setHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400')
           }
         },
       }),

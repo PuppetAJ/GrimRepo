@@ -11,15 +11,13 @@ export function table({
   board = [],
   front = [],
   back = [],
-  playerHealth,
-  opponentHealth,
+  scale,
 }: {
   hand?: string[]
   board?: Row
   front?: Row
   back?: Row
-  playerHealth?: number
-  opponentHealth?: number
+  scale?: number
 }): GameState {
   const state = createGame({ seed: 7 })
   const row = (ids: Row) =>
@@ -29,8 +27,7 @@ export function table({
   state.player.board = row(board)
   state.opponent.front = row(front)
   state.opponent.back = row(back)
-  if (playerHealth !== undefined) state.player.health = playerHealth
-  if (opponentHealth !== undefined) state.opponent.health = opponentHealth
+  if (scale !== undefined) state.scale = scale
   return state
 }
 

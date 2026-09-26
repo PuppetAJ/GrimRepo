@@ -1,5 +1,9 @@
 import { apply, card, createGame, type Action, type GameEvent, type GameState, type Unit } from 'shared'
 
+/** Where the scale stands, in P03's words. */
+const lead = (scale: number) =>
+  scale === 0 ? 'The scale is level.' : scale > 0 ? `You lead by ${scale}.` : `I lead by ${-scale}.`
+
 const lane = (index: number) => `lane ${index + 1}`
 
 /** Every unit either state knows about, so an event can name a card that has since died. */
@@ -33,8 +37,8 @@ export function narrate(before: GameState, events: GameEvent[]): string[] {
         return [`Segfault. ${event.uids.length} of my cards are gone. Rude.`]
       case 'hit':
         return event.side === 'opponent'
-          ? [`You hit me for ${event.amount}. ${event.health} left.`]
-          : [`I hit you for ${event.amount}. ${event.health} left.`]
+          ? [`You hit me for ${event.amount}. ${lead(event.scale)}`]
+          : [`I hit you for ${event.amount}. ${lead(event.scale)}`]
       case 'killed':
         return [mine(event.uid) ? `Your ${name(event.uid)} died.` : `My ${name(event.uid)} died.`]
       case 'overkill':

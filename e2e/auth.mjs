@@ -120,6 +120,14 @@ section('The demo account and redirects')
     'the table warns that the demo game is shared',
     /shared demo account/.test(await page.getByRole('note').innerText()),
   )
+  await page.getByRole('button', { name: 'Close the note' }).click()
+  check('the warning can be closed', (await page.getByRole('note').count()) === 0)
+  await page.reload()
+  await page
+    .getByRole('button', { name: /Look at the board|Draw from the deck|Press the button/ })
+    .first()
+    .waitFor()
+  check('and stays closed', (await page.getByRole('note').count()) === 0)
 
   await page.goto(`${BASE}/account`)
   await page.getByRole('heading', { name: 'You are using the demo account' }).waitFor()

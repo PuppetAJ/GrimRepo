@@ -22,7 +22,7 @@ describe('P03', () => {
     })
     assert.ok(events.some((event) => event.type === 'retired' && event.lane === 2))
     assert.equal(state.opponent.front[2]?.card, 'GoogleFu')
-    assert.equal(state.player.health, 47, 'and it attacks the turn it arrives')
+    assert.equal(state.scale, -3, 'and it attacks the turn it arrives')
   })
 
   it('keeps a wall that is holding back one of the player’s attackers', () => {

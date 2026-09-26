@@ -129,7 +129,7 @@ export function Player() {
                   <div className="flex min-w-0 flex-1 flex-col">
                     <span>
                       {game.forfeited
-                        ? `Walk away on turn ${game.turns}`
+                        ? `Forfeited on turn ${game.turns}`
                         : game.outcome === 'win'
                           ? `Win in ${game.turns} turns`
                           : `Lose on turn ${game.turns}`}

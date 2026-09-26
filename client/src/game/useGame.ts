@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { apply, type Action, type GameState } from 'shared'
+import { apply, type Action, type GameEvent, type GameState } from 'shared'
 import { toast } from 'sonner'
 import { api, ApiError, type Finished, type OpenGame } from '../lib/api.ts'
 import { history, narrate } from '../lib/narrate.ts'
+import { fixture } from './fixtures.ts'
 
 export type Game =
   | { status: 'loading' }
@@ -10,6 +11,8 @@ export type Game =
   | {
       status: 'ready'
       id: number
+      /** Counts every deal and reload, so a table can tell a fresh start from a move. */
+      generation: number
       state: GameState
       log: string[]
       unsaved: number
@@ -17,22 +20,31 @@ export type Game =
       result: Finished | null
       act: (action: Action) => void
       forfeit: () => Promise<void>
+      /** Hears each move's events as it is made; returns the unsubscribe. */
+      subscribe: (listener: Listener) => () => void
     }
 
-type Table = { id: number; state: GameState; log: string[] }
+export type Ready = Extract<Game, { status: 'ready' }>
+
+type Listener = (events: GameEvent[]) => void
+
+type Table = { id: number; generation: number; state: GameState; log: string[] }
 
 // Enough for any real game, so the console always holds the whole story.
 const LOG_LINES = 2_000
 
+let generations = 0
+
 function open(game: OpenGame): Table {
   const rebuilt = history(game.seed, game.actions)
-  if (!rebuilt) throw new Error('This game could not be replayed. Walk away from it to start another.')
+  if (!rebuilt) throw new Error('This game could not be replayed. Forfeit it to start another.')
   const lines = rebuilt.lines.map((line) => `P03> ${line}`)
   // A resumed game with no moves is still a new deal, as when two requests race to start it.
   if (game.resumed && game.actions.length) lines.push(`P03> Welcome back. Turn ${rebuilt.state.turn}.`)
   if (game.rulesChanged)
     lines.unshift('P03> I rewrote the rules since your last game. It could not continue, so here is a new deal.')
-  return { id: game.id, state: rebuilt.state, log: lines.slice(-LOG_LINES) }
+  generations += 1
+  return { id: game.id, generation: generations, state: rebuilt.state, log: lines.slice(-LOG_LINES) }
 }
 
 /** The open game: played here, saved at every draw and bell, and scored on the server. */
@@ -47,8 +59,22 @@ export function useGame(): Game {
   const saved = useRef(0)
   const pending = useRef<Action[]>([])
   const chain = useRef<Promise<void>>(Promise.resolve())
+  // Told as each move is made, so a table playing the events back never misses one to batching.
+  const listeners = useRef(new Set<Listener>())
+  const subscribe = useCallback((listener: Listener) => {
+    listeners.current.add(listener)
+    return () => void listeners.current.delete(listener)
+  }, [])
 
   useEffect(() => {
+    const fixed = fixture()
+    // Dealt as a reply would be, after the effect, so a fixture loads the way a game does.
+    if (fixed)
+      return void Promise.resolve().then(() => {
+        generations += 1
+        setTable({ id: -1, generation: generations, state: fixed.state, log: fixed.log })
+        setResult(null)
+      })
     let current = true
     api.startGame().then(
       (game) => {
@@ -112,8 +138,10 @@ export function useGame(): Game {
         toast.error(outcome.reason)
         return
       }
-      pending.current.push(action)
+      // A fixture is played here only.
+      if (table.id !== -1) pending.current.push(action)
       setUnsaved(pending.current.length)
+      for (const listener of listeners.current) listener(outcome.events)
       const lines = narrate(table.state, outcome.events).map((line) => `P03> ${line}`)
       setTable({ ...table, state: outcome.state, log: [...table.log, ...lines].slice(-LOG_LINES) })
       // A draw shows the next card, so it is saved at once; otherwise a reload could peek and draw again.
@@ -124,6 +152,7 @@ export function useGame(): Game {
 
   const forfeit = useCallback(async () => {
     if (id === undefined) return
+    if (id === -1) return setReloads((n) => n + 1)
     try {
       // Anything unsaved is dropped: walking away ends the game where the server last saw it.
       await chain.current
@@ -135,5 +164,5 @@ export function useGame(): Game {
 
   if (error) return { status: 'error', message: error }
   if (!table) return { status: 'loading' }
-  return { status: 'ready', ...table, unsaved, saving, result, act, forfeit }
+  return { status: 'ready', ...table, unsaved, saving, result, act, forfeit, subscribe }
 }

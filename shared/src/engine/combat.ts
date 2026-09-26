@@ -10,7 +10,8 @@ function remove(row: Slot[], uid: number): number {
 export function attack(state: GameState, side: Side, events: GameEvent[]): void {
   const attackers = side === 'player' ? state.player.board : state.opponent.front
   const defenders = side === 'player' ? state.opponent.front : state.player.board
-  const target = side === 'player' ? state.opponent : state.player
+  // The player's hits tip the scale their way; P03's tip it back.
+  const toward = side === 'player' ? 1 : -1
 
   for (let lane = 0; lane < LANES; lane++) {
     const attacker = attackers[lane]
@@ -24,12 +25,12 @@ export function attack(state: GameState, side: Side, events: GameEvent[]): void 
       events.push({ type: 'attacked', side, lane, target: defender ? aimed : 'face' })
 
       if (!defender) {
-        target.health = Math.max(0, target.health - attacker.attack)
+        state.scale += toward * attacker.attack
         events.push({
           type: 'hit',
           side: side === 'player' ? 'opponent' : 'player',
           amount: attacker.attack,
-          health: target.health,
+          scale: state.scale,
         })
         continue
       }

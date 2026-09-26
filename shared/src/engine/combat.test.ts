@@ -13,19 +13,24 @@ describe('combat', () => {
   it('hits the opponent directly through an empty lane', () => {
     const { state, events } = bell(table({ board: ['GoogleFu'] }))
     assert.equal(hits(events, 'opponent'), 3)
-    assert.equal(state.opponent.health, 47)
+    assert.equal(state.scale, 3, 'and tips the scale toward the player')
+  })
+
+  it("lets P03's hits tip the scale back, so a lead can be lost", () => {
+    const { state } = bell(table({ front: ['GoogleFu'], scale: 5 }))
+    assert.equal(state.scale, 2)
   })
 
   it('damages the card opposite instead, and leaves it wounded', () => {
     const { state } = bell(table({ board: ['GoogleFu'], front: ['Firewall'] }))
     assert.equal(state.opponent.front[0]?.health, 3)
-    assert.equal(state.opponent.health, 50)
+    assert.equal(state.scale, 0)
   })
 
   it('kills a card whose health runs out', () => {
     const { state, events } = bell(table({ board: ['GitSome'], front: ['GrimRepo'] }))
     assert.ok(events.some((event) => event.type === 'killed' && event.side === 'opponent'))
-    assert.equal(state.opponent.health, 50, 'a card that dies still blocks the hit')
+    assert.equal(state.scale, 0, 'a card that dies still blocks the hit')
   })
 
   it('carries overkill into the card queued behind', () => {
@@ -38,7 +43,7 @@ describe('combat', () => {
 
   it('never lets overkill reach a player', () => {
     const { state } = bell(table({ board: ['JACK'], front: ['Loop'] }))
-    assert.equal(state.opponent.health, 50)
+    assert.equal(state.scale, 0)
   })
 
   it('does nothing with a card that has no attack', () => {
@@ -50,7 +55,7 @@ describe('combat', () => {
     const state = table({ board: ['GoogleFu'], front: ['Bug'] })
     ;(state.player.board[0] as { sigils: string[] }).sigils.push('bypass')
     const after = bell(state).state
-    assert.equal(after.opponent.health, 47)
+    assert.equal(after.scale, 3)
     assert.equal(after.opponent.front[0]?.health, 8)
   })
 

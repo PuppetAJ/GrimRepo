@@ -11,6 +11,8 @@
 @import '@fontsource/vt323/400.css';
 
 @custom-variant dark (&:is(.dark *));
+/* Phones held sideways, where the 3D table takes the whole screen. */
+@custom-variant short (@media (max-height: 32rem));
 
 /* `:root` holds the values; `@theme inline` maps each to the Tailwind name shadcn's components use. */
 @theme inline {
@@ -118,4 +120,234 @@
     color: #b8f5c4;
     text-shadow: 0 0 8px rgb(125 255 154 / 0.35);
   }
+}
+
+/* A change on the scale's readout, rising and fading; reduced motion keeps only the fade. */
+@keyframes health-change {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-0.75rem);
+  }
+}
+
+/* The prompt, shaken and reddened when the player tries something it does not allow yet; reduced motion keeps the red. */
+@keyframes nudge {
+  0%,
+  60% {
+    color: var(--death);
+  }
+  15% {
+    transform: translateX(-6px);
+  }
+  30% {
+    transform: translateX(5px);
+  }
+  45% {
+    transform: translateX(-3px);
+  }
+  60% {
+    transform: translateX(2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes nudge {
+    0%,
+    60% {
+      color: var(--death);
+    }
+  }
+  @keyframes health-change {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+}
+
+/* Inside the table's frame, 3D or text, the pointer is P03's green; what can be clicked gets a badge. */
+[data-table] {
+  cursor:
+    url(/cursors/arrow.svg) 2 2,
+    default;
+}
+[data-table] :is(button:not(:disabled), a, summary, label, [role='button']) {
+  cursor:
+    url(/cursors/point.svg) 2 2,
+    pointer;
+}
+/* The same icons the 3D table shows, on the buttons that do the same things. */
+[data-table] [data-action='draw-deck']:not(:disabled) {
+  cursor:
+    url(/cursors/draw.svg) 2 2,
+    pointer;
+}
+[data-table] [data-action='draw-boilerplate']:not(:disabled) {
+  cursor:
+    url(/cursors/boilerplate.svg) 2 2,
+    pointer;
+}
+[data-table] [data-action='ringBell']:not(:disabled) {
+  cursor:
+    url(/cursors/press.svg) 2 2,
+    pointer;
+}
+[data-table] :is([data-action='mark'], [data-action='unmark']):not(:disabled) {
+  cursor:
+    url(/cursors/mark.svg) 2 2,
+    pointer;
+}
+
+/* The Act 2 text table's moves, played back one at a time as on the 3D table. */
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-6px) rotate(-2deg);
+  }
+  40% {
+    transform: translateX(5px) rotate(2deg);
+  }
+  60% {
+    transform: translateX(-3px);
+  }
+  80% {
+    transform: translateX(2px);
+  }
+}
+@keyframes lunge-up {
+  50% {
+    transform: translateY(-38%);
+  }
+}
+@keyframes lunge-down {
+  50% {
+    transform: translateY(38%);
+  }
+}
+@keyframes rise {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -160%);
+  }
+}
+@keyframes arrive-up {
+  from {
+    opacity: 0;
+    transform: translateY(40%) scale(0.9);
+  }
+}
+@keyframes arrive-down {
+  from {
+    opacity: 0;
+    transform: translateY(-60%);
+  }
+}
+@keyframes fold-away {
+  45% {
+    transform: scaleY(0.68);
+    opacity: 1;
+  }
+  to {
+    transform: scaleY(0.68) translateY(var(--away, 60%));
+    opacity: 0;
+  }
+}
+@keyframes offer-up {
+  to {
+    transform: translateY(-40%) rotate(25deg) scale(0.3);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes shake {
+    50% {
+      opacity: 0.6;
+    }
+  }
+  @keyframes lunge-up {
+    50% {
+      opacity: 0.6;
+    }
+  }
+  @keyframes lunge-down {
+    50% {
+      opacity: 0.6;
+    }
+  }
+  @keyframes arrive-up {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes arrive-down {
+    from {
+      opacity: 0;
+    }
+  }
+}
+
+/* The Act 2 table's monitor: a faint circuit grid behind it, and glass over it. */
+.crt {
+  background-image: repeating-linear-gradient(0deg, rgb(0 0 0 / 0.07) 0 1px, transparent 1px 3px);
+}
+.crt-glass {
+  background:
+    radial-gradient(ellipse at center, transparent 55%, rgb(0 0 0 / 0.55) 100%),
+    repeating-linear-gradient(0deg, rgb(0 0 0 / 0.05) 0 2px, transparent 2px 4px);
+  animation: flicker 9s steps(1) infinite;
+}
+.crt-glass::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  top: -25%;
+  height: 25%;
+  background: linear-gradient(transparent, rgb(125 255 154 / 0.05), transparent);
+  animation: roll 8s linear infinite;
+}
+@keyframes roll {
+  to {
+    transform: translateY(500%);
+  }
+}
+@keyframes flicker {
+  0%,
+  96%,
+  100% {
+    opacity: 1;
+  }
+  97% {
+    opacity: 0.8;
+  }
+  98% {
+    opacity: 1;
+  }
+  98.6% {
+    opacity: 0.88;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .crt-glass,
+  .crt-glass::after {
+    animation: none;
+  }
+}
+[data-table] [data-full]:disabled {
+  cursor:
+    url(/cursors/full.svg) 2 2,
+    not-allowed;
 }

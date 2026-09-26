@@ -39,3 +39,7 @@ docs/
 # Agent tooling
 AGENTS.md
 CLAUDE.md
+
+# Local mockup pages and the models dropped in for them; served by `pnpm dev` at /mockups/.
+client/mockups/
+client/public/mockups/
