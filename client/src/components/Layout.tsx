@@ -1,4 +1,5 @@
 import { ChevronDown, LogOut, Settings, UserRound } from 'lucide-react'
+import { Suspense } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button.tsx'
@@ -12,6 +13,7 @@ import {
 import { authClient } from '../lib/auth.ts'
 import { Avatar } from './Avatar.tsx'
 import { Logo } from './Logo.tsx'
+import { Loading } from './States.tsx'
 
 const tabs = [
   { to: '/', label: 'README', end: true },
@@ -35,7 +37,12 @@ export function Layout() {
     <div className="flex min-h-screen flex-col">
       <header className="flex items-center justify-between gap-3 border-b bg-chrome px-4 py-3 sm:px-12">
         <Logo />
-        {session.isPending ? null : name ? (
+        {/* While the session loads, an invisible button holds the header at its full height, so the page never drops. */}
+        {session.isPending ? (
+          <Button variant="outline" aria-hidden tabIndex={-1} className="invisible">
+            Sign in
+          </Button>
+        ) : name ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" aria-label="Account menu" className="gap-2">
@@ -85,7 +92,9 @@ export function Layout() {
       </nav>
 
       <main className="flex-1 px-4 py-8 sm:px-12">
-        <Outlet />
+        <Suspense fallback={<Loading label="Loading" />}>
+          <Outlet />
+        </Suspense>
       </main>
 
       <footer className="border-t px-4 py-6 text-sm text-muted-foreground sm:px-12">

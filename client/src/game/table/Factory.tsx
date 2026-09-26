@@ -1,4 +1,4 @@
-import { Sparkles, useGLTF, useTexture } from '@react-three/drei'
+import { Html, Sparkles, useGLTF, useTexture } from '@react-three/drei'
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
 import {
   Bloom,
@@ -15,7 +15,7 @@ import {
 } from '@react-three/postprocessing'
 import { easing } from 'maath'
 import { ToneMappingMode } from 'postprocessing'
-import { memo, Suspense, use, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { memo, Suspense, use, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { TIP } from 'shared'
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
@@ -23,6 +23,7 @@ import type { View } from '../view.ts'
 import { Nudge } from './Piles.tsx'
 import { TINT } from './palette.ts'
 import { MOOD } from './mood.ts'
+import { holding, startHold, type Screen } from './reading.ts'
 import {
   BATTERY_CELLS,
   BELL,
@@ -45,6 +46,7 @@ const GLOW = new THREE.Color(...TINT.glowHdr)
 // Glow is kept for what is brighter than white, so no lamp can make a lit card glow; these are pushed past it.
 const SCREEN_HDR = new THREE.Color(1.7, 1.7, 1.7)
 const DUST = new THREE.Color(TINT.cool).multiplyScalar(2)
+const STILL = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 // The cards' glow comes from what their faces give off, not from lamps, so its pass is lit by nothing.
 const SELECTED_LIGHT = new THREE.AmbientLight('#000000', 0)
 
@@ -174,7 +176,7 @@ function Room() {
       {/* A thin lit edge along the console, the only line of light near the player. */}
       <mesh position={[X, TABLE_Y - 0.05, -6.18]}>
         <boxGeometry args={[10.4, 0.03, 0.03]} />
-        <meshBasicMaterial color={GLOW} toneMapped={false} />
+        <meshBasicMaterial color={GLOW} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[X, 0, -10]}>
         <planeGeometry args={[60, 60]} />
@@ -301,40 +303,95 @@ export function TechBoard() {
   )
 }
 
-/** A screen on a bracket, showing a canvas that is redrawn when what it shows changes. */
-const Monitor = memo(function Monitor({ position, turn, lines }: { position: Vec3; turn: number; lines: string[] }) {
-  const [canvas, texture] = useMemo(() => {
-    const element = document.createElement('canvas')
-    element.width = 512
-    element.height = 320
-    const map = new THREE.CanvasTexture(element)
-    map.colorSpace = THREE.SRGBColorSpace
-    return [element, map] as const
-  }, [])
-  useEffect(() => () => texture.dispose(), [texture])
-  useEffect(() => {
+// A monitor's text is page text laid on its screen, so it stays sharp when the table renders at a lower resolution.
+const SCREEN = { width: 2.66, height: 1.66, px: 512 }
+// drei's Html draws 40 CSS pixels to a unit; this fits 512 of them across the screen.
+const SCREEN_SCALE = SCREEN.width / (SCREEN.px / 40)
+const SCREEN_TEXT: CSSProperties = {
+  width: SCREEN.px,
+  height: (SCREEN.px * SCREEN.height) / SCREEN.width,
+  padding: '16px 22px',
+  font: '30px/33px VT323, monospace',
+  color: LIT,
+  // Stands in for the bloom the scene gives what is brighter than white.
+  textShadow: `0 0 6px ${LIT}, 0 0 14px ${LIT}`,
+  whiteSpace: 'pre',
+  overflow: 'hidden',
+}
+
+/** A screen on a bracket: its glass and scanlines in the scene, its text laid over them by the page. */
+const Monitor = memo(function Monitor({
+  screen,
+  position,
+  turn,
+  lines,
+  onHold,
+  onPin,
+}: {
+  screen: Screen
+  position: Vec3
+  turn: number
+  lines: string[]
+  onHold?: (screen: Screen, x: number, y: number) => void
+  onPin?: (screen: Screen) => void
+}) {
+  const cancelHold = useRef<(() => void) | null>(null)
+  const letGo = () => {
+    cancelHold.current?.()
+    cancelHold.current = null
+  }
+  useEffect(() => letGo, [])
+  const texture = useMemo(() => {
+    const canvas = document.createElement('canvas')
+    canvas.width = 512
+    canvas.height = 320
     const context = canvas.getContext('2d') as CanvasRenderingContext2D
     context.fillStyle = TINT.screenGround
     context.fillRect(0, 0, canvas.width, canvas.height)
     context.fillStyle = `rgb(${TINT.line} / 0.06)`
     for (let y = 0; y < canvas.height; y += 4) context.fillRect(0, y, canvas.width, 1)
-    context.fillStyle = LIT
-    context.font = '30px VT323'
-    context.textBaseline = 'top'
-    lines.forEach((line, i) => context.fillText(line, 22, 16 + i * 33, canvas.width - 44))
-    texture.needsUpdate = true
-  }, [canvas, texture, lines])
+    const map = new THREE.CanvasTexture(canvas)
+    map.colorSpace = THREE.SRGBColorSpace
+    return map
+  }, [])
+  useEffect(() => () => texture.dispose(), [texture])
   return (
-    <group position={position} rotation={[0, turn, 0]}>
+    <group
+      // Named so a sliding finger can tell which screen it is over.
+      name={`screen-${screen}`}
+      position={position}
+      rotation={[0, turn, 0]}
+      onPointerDown={(event) => {
+        if (!onHold || (event.pointerType !== 'touch' && event.button !== 0)) return
+        letGo()
+        cancelHold.current = startHold(event, (x, y) => onHold(screen, x, y))
+      }}
+      onPointerUp={letGo}
+      onPointerCancel={letGo}
+      onClick={(event) => {
+        event.stopPropagation()
+        // A hold was a look; a click or a tap pins the readout.
+        if (!holding()) onPin?.(screen)
+      }}
+    >
       <mesh>
         <boxGeometry args={[2.9, 1.95, 0.22]} />
         <meshStandardMaterial color="#171c21" metalness={0.8} roughness={0.4} />
       </mesh>
       <mesh position={[0, 0, 0.115]}>
-        <planeGeometry args={[2.66, 1.66]} />
-        {/* Past white, so its text glows: only what is brighter than white glows. */}
-        <meshBasicMaterial map={texture} color={SCREEN_HDR} toneMapped={false} />
+        <planeGeometry args={[SCREEN.width, SCREEN.height]} />
+        <meshBasicMaterial map={texture} color={SCREEN_HDR} />
       </mesh>
+      {/* Under the page's own overlays, and out of the way of the pointer and screen readers. */}
+      <Html transform position={[0, 0, 0.12]} scale={SCREEN_SCALE} zIndexRange={[1, 0]} pointerEvents="none">
+        <div aria-hidden style={SCREEN_TEXT}>
+          {lines.map((line, i) => (
+            <div key={i} style={{ overflow: 'hidden' }}>
+              {line}
+            </div>
+          ))}
+        </div>
+      </Html>
     </group>
   )
 })
@@ -749,19 +806,40 @@ function scaleBar(scale: number): string {
   return `YOU[${' '.repeat(6 - you)}${'#'.repeat(you)}|${'#'.repeat(p03)}${' '.repeat(6 - p03)}]P03`
 }
 
+/** The left monitor: the battle log, the last eight lines of P03's console, or as many as asked for. */
+export function logLines(log: string[], count = 8): string[] {
+  return ['// P03 CONSOLE', ...log.slice(-count).map((line) => line.replace(/^P03> /, '> '))]
+}
+
+/** The right monitor: the scale, the turn and the deck. */
+export function statusLines(view: Pick<View, 'scale' | 'turn' | 'deck'>): string[] {
+  return [
+    '// STATUS',
+    `SCALE ${view.scale === 0 ? 'LEVEL' : `${view.scale > 0 ? '+' : ''}${view.scale} ${view.scale > 0 ? 'YOU' : 'P03'}`}`,
+    scaleBar(view.scale),
+    `TIP AT ${TIP}`,
+    `TURN ${view.turn}`,
+    `DECK ${view.deck}`,
+  ]
+}
+
 /** Everything around the table: the room, the light, the screens and the props. */
-export function Factory({ view, log }: { view: View; log: string[] }) {
-  // The left monitor is the battle log: the last eight lines of P03's console.
-  const lines = useMemo(() => ['// P03 CONSOLE', ...log.slice(-8).map((line) => line.replace(/^P03> /, '> '))], [log])
+export function Factory({
+  view,
+  log,
+  onHold,
+  onPin,
+}: {
+  view: View
+  log: string[]
+  /** Told when a screen is clicked or tapped, which pins its readout open. */
+  onPin?: (screen: Screen) => void
+  /** Told when a finger or the mouse's button has held a screen, and where. */
+  onHold?: (screen: Screen, x: number, y: number) => void
+}) {
+  const lines = useMemo(() => logLines(log), [log])
   const status = useMemo(
-    () => [
-      '// STATUS',
-      `SCALE ${view.scale === 0 ? 'LEVEL' : `${view.scale > 0 ? '+' : ''}${view.scale} ${view.scale > 0 ? 'YOU' : 'P03'}`}`,
-      scaleBar(view.scale),
-      `TIP AT ${TIP}`,
-      `TURN ${view.turn}`,
-      `DECK ${view.deck}`,
-    ],
+    () => statusLines({ scale: view.scale, turn: view.turn, deck: view.deck }),
     [view.scale, view.turn, view.deck],
   )
   return (
@@ -796,8 +874,8 @@ export function Factory({ view, log }: { view: View; log: string[] }) {
         distance={20}
       />
       <Fixtures />
-      <Monitor position={LOG_AT} turn={0.3} lines={lines} />
-      <Monitor position={STATUS_AT} turn={-0.3} lines={status} />
+      <Monitor screen="log" position={LOG_AT} turn={0.3} lines={lines} onHold={onHold} onPin={onPin} />
+      <Monitor screen="status" position={STATUS_AT} turn={-0.3} lines={status} onHold={onHold} onPin={onPin} />
       <Suspense fallback={null}>
         <Battery view={view} />
       </Suspense>
@@ -825,16 +903,14 @@ const Fixtures = memo(function Fixtures() {
       <Suspense fallback={null}>
         <GemModule />
       </Suspense>
-      {/* Dust drifting in the light. */}
-      {/* Remade when the count changes, which it cannot take in place. */}
+      {/* Dust drifting in the light, hanging still for anyone who asks for less motion. */}
       <Sparkles
         ref={dust}
-        key={MOOD.dustCount}
         count={MOOD.dustCount}
         scale={[14, 7, 12]}
         position={[X, 8.5, -11]}
         size={MOOD.dustSize}
-        speed={MOOD.dustSpeed}
+        speed={STILL ? 0 : MOOD.dustSpeed}
         color={DUST}
         opacity={MOOD.dustOpacity}
       />
@@ -921,17 +997,18 @@ export function EndTurnButton({
         {/* The label on the plate's near edge. */}
         <mesh position={[0, 0.062, 0.62]} rotation={[-Math.PI / 2, 0, 0]}>
           <planeGeometry args={[0.8, 0.2]} />
-          <meshBasicMaterial map={label} toneMapped={false} />
+          <meshBasicMaterial map={label} />
         </mesh>
       </Nudge>
     </group>
   )
 }
 
-/** Glow on the screens and lamps, a little grain and scanline, and dark corners. */
-export function FactoryEffects() {
+/** Glow on the screens and lamps, a little grain and scanline, and dark corners; less of it on a struggling machine. */
+export function FactoryEffects({ quality = 0 }: { quality?: number }) {
   // A Retina screen's pixels are fine enough to need no smoothing; MSAA there cost two thirds of the frame.
   const sharp = useThree((state) => state.viewport.dpr) >= 1.5
+  if (quality >= 2) return null
   return (
     <EffectComposer multisampling={0}>
       <Bloom mipmapBlur luminanceThreshold={MOOD.bloomThreshold} intensity={MOOD.bloom} radius={MOOD.bloomRadius} />
@@ -940,7 +1017,7 @@ export function FactoryEffects() {
       <Noise opacity={MOOD.noise} />
       <Vignette offset={0.28} darkness={MOOD.vignette} />
       {/* The face-up cards' own soft glow, from the tagged faces alone, so no lamp can add to it. */}
-      {MOOD.cardBloom > 0 ? (
+      {MOOD.cardBloom > 0 && quality < 1 ? (
         <SelectiveBloom
           lights={[SELECTED_LIGHT]}
           mipmapBlur

@@ -5,13 +5,14 @@ import { easing } from 'maath'
 import { Flag, LayoutGrid, LogOut, Maximize, Minimize, MoveUp, Type } from 'lucide-react'
 import { Suspense, use, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
-import { HAND_LIMIT, legalActions, PLAYER_DECK, type Action, type GameState } from 'shared'
+import { HAND_LIMIT, legalActions, PLAYER_DECK, type Action, type GameState, type Unit } from 'shared'
 import * as THREE from 'three'
 import { Button } from '@/components/ui/button.tsx'
 import { DemoNote, GameOver, has, laneAction, owed, prompt, ScaleBar, Forfeit } from '../controls.tsx'
 import { useFullScreen } from '../fullScreen.ts'
 import type { Ready } from '../useGame.ts'
 import type { View } from '../view.ts'
+import { FlatReaderBody } from '../CardReader.tsx'
 import { Card, Popup, type Look, type Place } from './Cards.tsx'
 import { disposeFaces, loadCardAssets } from './faces.ts'
 import {
@@ -28,15 +29,35 @@ import {
   type CameraView,
 } from './layout.ts'
 import { Deck, Pile } from './Piles.tsx'
-import { EndTurnButton, Factory, FactoryEffects, FactoryP03, TechBoard } from './Factory.tsx'
+import { EndTurnButton, Factory, FactoryEffects, FactoryP03, logLines, statusLines, TechBoard } from './Factory.tsx'
 import { TINT } from './palette.ts'
 import { CardBatch } from './Batch.tsx'
 import { Boot } from './Boot.tsx'
 import { claimCursor, cursorCss, onCursor, releaseCursor } from './cursor.ts'
 import { MOOD } from './mood.ts'
+import { released, type Screen, type Target } from './reading.ts'
 import { usePlayback } from './usePlayback.ts'
 
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
+
+// The most of P03's console a log readout holds.
+const LOG_READ = 200
+
+// A touch screen, where cards are read by holding them and a hand card is lifted before it is played.
+const COARSE = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
+
+/** How the scene's cards and screens tell the page to read them. */
+type Reader = {
+  /** The hand card lifted by a first tap on touch. */
+  peek: number | null
+  hold: (target: Target, x: number, y: number) => void
+  lift: (unit: Unit | null) => void
+  /** Pins a screen's readout open, or closes it if it is the one pinned. */
+  pin: (screen: Screen) => void
+}
+
+/** What a reader shows: a card in full, or a screen's lines. */
+type Readout = { unit: Unit } | { lines: string[] }
 
 const seat = new THREE.Vector3()
 
@@ -82,7 +103,6 @@ function TargetOutline({ lane, colour }: { lane: number; colour: string }) {
       dashed
       dashSize={0.07}
       gapSize={0.045}
-      toneMapped={false}
     />
   )
 }
@@ -160,7 +180,11 @@ function Scene({
   hinted,
   onHint,
   onWarm,
+  quality,
+  reader,
 }: {
+  quality: number
+  reader: Reader
   game: Ready
   assets: Assets
   view: View
@@ -192,11 +216,16 @@ function Scene({
         <CameraRig view={camera} />
         {/* One boundary, so the stand-in popup is drawn only once every light and the fog are in place. */}
         <Suspense fallback={null}>
-          <Factory view={view} log={game.log} />
+          <Factory
+            view={view}
+            log={game.log}
+            onHold={(screen, x, y) => reader.hold({ screen }, x, y)}
+            onPin={(screen) => reader.pin(screen)}
+          />
           <FactoryP03 view={view} busy={busy} outcome={busy ? undefined : game.result?.outcome} />
           <WarmUp onWarm={onWarm} />
         </Suspense>
-        <FactoryEffects />
+        <FactoryEffects quality={quality} />
         <TechBoard />
         <Deck
           count={view.deck}
@@ -229,14 +258,20 @@ function Scene({
               summoning={Boolean(view.summon)}
               assets={assets}
               shake={hinted === unit.uid ? hint : 0}
+              raised={reader.peek === unit.uid}
+              onHold={(x, y) => reader.hold({ card: unit.uid }, x, y)}
               onClick={
-                selected
-                  ? () => act({ type: 'cancel' })
-                  : selectable
-                    ? () => act({ type: 'select', uid: unit.uid })
-                    : can({ type: 'draw' })
-                      ? () => onHint(unit.uid)
-                      : undefined
+                // On touch every card can be tapped, to read it; with a mouse, only one that can do something.
+                selected || selectable || can({ type: 'draw' }) || COARSE
+                  ? (_event, touch) => {
+                      // On touch, the first tap lifts the card and reads it; the second plays it.
+                      if (touch && !selected && reader.peek !== unit.uid) return reader.lift(unit)
+                      reader.lift(null)
+                      if (selected) act({ type: 'cancel' })
+                      else if (selectable) act({ type: 'select', uid: unit.uid })
+                      else if (can({ type: 'draw' })) onHint(unit.uid)
+                    }
+                  : undefined
               }
             />
           )
@@ -260,6 +295,7 @@ function Scene({
                 cursor={action?.type === 'mark' || action?.type === 'unmark' ? 'mark' : 'point'}
                 // A card on the board covers its lane, so it passes the aim on to it.
                 onHover={row === 'board' ? (on) => setAimed(on ? lane : null) : undefined}
+                onHold={(x, y) => reader.hold({ card: unit.uid }, x, y)}
               />
             )
           }),
@@ -363,7 +399,9 @@ declare global {
       busy: () => boolean
       act: (action: Action) => void
       skip: () => void
-      screen: (what: 'deck' | 'pile' | 'bell' | { lane: number } | { uid: number }) => { x: number; y: number } | null
+      screen: (
+        what: 'deck' | 'pile' | 'bell' | 'log' | 'status' | { lane: number; far?: boolean } | { uid: number },
+      ) => { x: number; y: number } | null
       stats: () => Promise<Record<string, number>>
     }
   }
@@ -394,7 +432,16 @@ function TestHandle({ game, view, busy, skip }: { game: Ready; view: View; busy:
         if (what === 'deck') return onScreen(new THREE.Vector3(DECK[0], DECK[1] + 0.2, DECK[2]))
         if (what === 'pile') return onScreen(new THREE.Vector3(PILE[0], PILE[1] + 0.1, PILE[2]))
         if (what === 'bell') return onScreen(new THREE.Vector3(BELL[0], BELL[1] + 0.3, BELL[2]))
-        if ('lane' in what) return onScreen(new THREE.Vector3(...slot('board', what.lane)))
+        if (what === 'log' || what === 'status') {
+          const screen = scene.getObjectByName(`screen-${what}`)
+          return screen ? onScreen(screen.getWorldPosition(new THREE.Vector3())) : null
+        }
+        if ('lane' in what) {
+          const at = new THREE.Vector3(...slot('board', what.lane))
+          // The far edge, toward P03, is the part of a lane's card the hand never covers.
+          if (what.far) at.z -= CARD.height * 0.35
+          return onScreen(at)
+        }
         // Near the top edge, the part of a hand card that is always on screen.
         const object = scene.getObjectByName(`card-${what.uid}`)
         return object ? onScreen(object.localToWorld(new THREE.Vector3(0, CARD.height * 0.36, 0))) : null
@@ -466,7 +513,13 @@ function Hud({
   fullScreen,
   ring,
   hint,
+  lifted,
+  pinned,
+  onUnpin,
 }: {
+  lifted: Unit | null
+  pinned: string[] | null
+  onUnpin: () => void
   game: Ready
   view: View
   busy: boolean
@@ -487,11 +540,32 @@ function Hud({
   const ended = game.result && !busy
   return (
     <>
-      <div className="pointer-events-none absolute top-0 left-0 flex flex-col p-3 font-terminal sm:p-4">
+      {/* Stops above the prompt, so the reader under the scale never runs over it; above the monitors' text. */}
+      <div className="pointer-events-none absolute top-0 bottom-24 left-0 z-10 flex flex-col items-start p-3 font-terminal sm:p-4">
         <ScaleBar scale={view.scale} className="text-xl sm:text-2xl" />
         <span className="text-lg text-p03-dim sm:text-xl">
           Turn {view.turn} · Deck {view.deck}
         </span>
+        {/* A screen's readout pinned open by a click or a tap, or a hand card lifted by a first tap on touch. */}
+        {pinned ? (
+          // It takes the pointer, to be scrolled, and closes with its button or a click elsewhere.
+          <ScreenReadout
+            lines={pinned}
+            className="pointer-events-auto mt-2 h-52 max-h-full w-80 text-base"
+            label="Monitor readout"
+            onClose={onUnpin}
+          />
+        ) : lifted ? (
+          <div
+            role="region"
+            aria-label="Card reader"
+            className="relative mt-2 flex h-40 max-h-full min-h-0 w-72 gap-2 overflow-hidden rounded-md border-2 border-[#2f6b3d] bg-[#a9e7b8] p-2 text-[#0b1f12]"
+          >
+            <FlatReaderBody unit={lifted} />
+            {/* The glass over a card read up close: scanlines, a rolling band and dark corners. */}
+            <span aria-hidden className="crt-glass pointer-events-none absolute inset-0" />
+          </div>
+        ) : null}
       </div>
 
       <div className="absolute top-0 right-0 z-10 flex flex-col items-end gap-1 p-3 sm:p-4">
@@ -637,9 +711,12 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
   const camera: CameraView = playback.view.summon ? 'board' : chosen
   const [ready, setReady] = useState(false)
   const [rung, setRung] = useState(0)
-  // The screen's own resolution to start, up to 2; lowered toward 1 while the frame rate cannot keep up, and raised again.
-  const sharpest = Math.min(2, window.devicePixelRatio || 1)
-  const [dpr, setDpr] = useState(sharpest)
+  // The screen's own resolution, up to 2 (1.5 on touch screens, whose GPUs are the weakest and pixels the finest).
+  const sharpest = Math.min(window.matchMedia('(pointer: coarse)').matches ? 1.5 : 2, window.devicePixelRatio || 1)
+  // While the frame rate cannot keep up, the table gives up its effects before its sharpness: 1 drops the cards' glow,
+  // 2 all post-processing, 3 the resolution, to 1.5 at the lowest, so the cards stay readable. It climbs back as it can.
+  const [quality, setQuality] = useState(0)
+  const dpr = quality >= 3 ? Math.min(1.5, sharpest) : sharpest
   // Counts the times a card was tried before the draw, so the piles and the prompt can point at what comes first.
   const [hint, setHint] = useState(0)
   const [hinted, setHinted] = useState<number | null>(null)
@@ -671,6 +748,34 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
   }
   const playing = { ...game, act }
 
+  // What is being read: a hand card lifted by a first tap on touch, a screen's readout pinned open by a click or a tap,
+  // or whatever is under a held button or finger. Kept by id, so it shows the card as it is now.
+  const [peek, setPeek] = useState<number | null>(null)
+  const [pinned, setPinned] = useState<Screen | null>(null)
+  const [magnified, setMagnified] = useState<{ target: Target; x: number; y: number } | null>(null)
+  const reader: Reader = {
+    peek,
+    hold: (target, x, y) => setMagnified({ target, x, y }),
+    lift: (unit) => {
+      setPeek(unit?.uid ?? null)
+      setPinned(null)
+    },
+    pin: (screen) => {
+      setPinned((last) => (last === screen ? null : screen))
+      setPeek(null)
+    },
+  }
+  const readout = (target: Target | null): Readout | null => {
+    if (!target) return null
+    if ('screen' in target)
+      return { lines: target.screen === 'log' ? logLines(game.log, LOG_READ) : statusLines(playback.view) }
+    const unit = unitOf(playback.view, target.card)
+    return unit ? { unit } : null
+  }
+  const lifted = peek === null ? null : unitOf(playback.view, peek)
+  const pin = readout(pinned && { screen: pinned })
+  const magnifiedRead = readout(magnified?.target ?? null)
+
   return (
     <div
       data-game-id={game.id}
@@ -686,17 +791,29 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
         onCreated={({ gl }) => (gl.toneMapping = THREE.ACESFilmicToneMapping)}
         fallback={<NoWebGL onText={onText} />}
         aria-hidden
+        // A tap on nothing puts a lifted hand card back down.
+        onPointerMissed={() => (peek !== null || pinned !== null) && reader.lift(null)}
+        // A held finger reads a card; the page's long-press menu would get in the way.
+        onContextMenu={(event) => COARSE && event.preventDefault()}
       >
         <color attach="background" args={['#020203']} />
         <Exposure />
+        <HeldReader
+          on={magnified !== null}
+          onMove={(target, x, y) => setMagnified((last) => (last ? { target: target ?? last.target, x, y } : last))}
+          onEnd={() => {
+            setMagnified(null)
+            released()
+          }}
+        />
         <CursorSync />
         {/* Only once loaded and settled: the first frames are slow, and would lower the resolution for good. */}
         {settled ? (
           <PerformanceMonitor
             factor={1}
             flipflops={3}
-            onChange={({ factor }) => setDpr(Math.round((1 + factor * (sharpest - 1)) * 4) / 4)}
-            onFallback={() => setDpr(1)}
+            onChange={({ factor }) => setQuality(Math.min(3, Math.round((1 - factor) * 10)))}
+            onFallback={() => setQuality(3)}
           />
         ) : null}
         <Suspense fallback={null}>
@@ -711,6 +828,8 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
             camera={camera}
             hint={hint}
             hinted={hinted}
+            quality={quality}
+            reader={reader}
             onWarm={() => setWarmed(true)}
             onHint={(uid) => {
               setHinted(uid)
@@ -734,8 +853,156 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
           fullScreen={fullScreen}
           ring={() => act({ type: 'ringBell' })}
           hint={hint}
+          lifted={lifted}
+          pinned={pin && 'lines' in pin ? pin.lines : null}
+          onUnpin={() => setPinned(null)}
         />
       ) : null}
+      {magnifiedRead && magnified ? (
+        <div
+          aria-hidden
+          data-magnifier
+          className="pointer-events-none fixed z-[60] w-80 shadow-[0_0_18px_rgb(0_0_0/0.85)]"
+          // Above the finger, or below it near the top of the screen; never off either side.
+          style={{
+            left: Math.min(Math.max(8, magnified.x - 160), window.innerWidth - 328),
+            top: magnified.y > 200 ? magnified.y - 190 : magnified.y + 40,
+          }}
+        >
+          {'unit' in magnifiedRead ? (
+            <div className="relative flex h-40 gap-2 overflow-hidden rounded-md border-2 border-[#2f6b3d] bg-[#a9e7b8] p-2 font-terminal text-[#0b1f12]">
+              <FlatReaderBody unit={magnifiedRead.unit} />
+              <span aria-hidden className="crt-glass pointer-events-none absolute inset-0" />
+            </div>
+          ) : (
+            <ScreenReadout lines={magnifiedRead.lines} className="h-40 text-base" />
+          )}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+/** A card on the table or in the hand, by its id. */
+function unitOf(view: View, uid: number): Unit | null {
+  return [...view.hand, ...view.board, ...view.front, ...view.back].find((unit) => unit?.uid === uid) ?? null
+}
+
+/**
+ * While a held finger or mouse button keeps the magnifier up, reads whatever card or screen is under it as it moves; a
+ * finger's page stays still.
+ */
+function HeldReader({
+  on,
+  onMove,
+  onEnd,
+}: {
+  on: boolean
+  onMove: (target: Target | null, x: number, y: number) => void
+  onEnd: () => void
+}) {
+  const { camera, scene, raycaster, gl } = useThree()
+  const latest = useRef({ onMove, onEnd })
+  useEffect(() => {
+    latest.current = { onMove, onEnd }
+  })
+  useEffect(() => {
+    if (!on) return
+    const pointer = new THREE.Vector2()
+    const at = (x: number, y: number) => {
+      const box = gl.domElement.getBoundingClientRect()
+      pointer.set(((x - box.left) / box.width) * 2 - 1, -((y - box.top) / box.height) * 2 + 1)
+      raycaster.setFromCamera(pointer, camera)
+      // The nearest card or screen under it: each is a group named for what it is.
+      let target: Target | null = null
+      for (const hit of raycaster.intersectObjects(scene.children, true)) {
+        let object: THREE.Object3D | null = hit.object
+        while (object && !/^(card|screen)-/.test(object.name)) object = object.parent
+        if (!object) continue
+        target = object.name.startsWith('card-')
+          ? { card: Number(object.name.slice(5)) }
+          : { screen: object.name === 'screen-log' ? 'log' : 'status' }
+        break
+      }
+      latest.current.onMove(target, x, y)
+    }
+    const touchMove = (event: TouchEvent) => {
+      event.preventDefault()
+      const touch = event.touches[0]
+      if (touch) at(touch.clientX, touch.clientY)
+    }
+    const mouseMove = (event: PointerEvent) => event.pointerType === 'mouse' && at(event.clientX, event.clientY)
+    const mouseUp = (event: PointerEvent) => event.pointerType === 'mouse' && latest.current.onEnd()
+    const end = () => latest.current.onEnd()
+    document.addEventListener('touchmove', touchMove, { passive: false })
+    document.addEventListener('touchend', end)
+    document.addEventListener('touchcancel', end)
+    window.addEventListener('pointermove', mouseMove)
+    window.addEventListener('pointerup', mouseUp)
+    return () => {
+      document.removeEventListener('touchmove', touchMove)
+      document.removeEventListener('touchend', end)
+      document.removeEventListener('touchcancel', end)
+      window.removeEventListener('pointermove', mouseMove)
+      window.removeEventListener('pointerup', mouseUp)
+    }
+  }, [on, camera, scene, raycaster, gl])
+  return null
+}
+
+/**
+ * A wall screen's lines, read up close: the screen's dark glass, glow and scanlines. Its heading stays at the top; the
+ * lines scroll under it, opening at the newest and following new ones unless scrolled back.
+ */
+function ScreenReadout({
+  lines,
+  className = '',
+  label,
+  onClose,
+}: {
+  lines: string[]
+  className?: string
+  label?: string
+  onClose?: () => void
+}) {
+  const [heading, ...rest] = lines
+  const box = useRef<HTMLDivElement | null>(null)
+  const following = useRef(true)
+  useLayoutEffect(() => {
+    if (box.current && following.current) box.current.scrollTop = box.current.scrollHeight
+  }, [rest.length])
+  return (
+    <div
+      role={label ? 'region' : undefined}
+      aria-label={label}
+      className={`p03-screen relative flex flex-col overflow-hidden rounded-md border-2 border-[#2f6b3d] px-3 py-2 font-terminal leading-snug ${className}`}
+    >
+      <span aria-hidden className="crt-glass pointer-events-none absolute inset-0" />
+      <p className="flex shrink-0 justify-between gap-2">
+        {heading}
+        {onClose ? (
+          <button type="button" onClick={onClose} aria-label="Close the readout" className="px-1 text-p03">
+            ✕
+          </button>
+        ) : null}
+      </p>
+      <div
+        ref={box}
+        onScroll={(event) => {
+          const { scrollTop, clientHeight, scrollHeight } = event.currentTarget
+          following.current = scrollTop + clientHeight >= scrollHeight - 4
+        }}
+        className="flex min-h-0 flex-1 touch-pan-y [scrollbar-width:none] flex-col overflow-y-auto overscroll-contain [mask-image:linear-gradient(to_bottom,transparent,black_1.25rem)]"
+      >
+        {/* Pushed to the bottom while the lines are fewer than the room. */}
+        <div className="mt-auto">
+          {rest.map((line, i) => (
+            <p key={i} className="whitespace-pre-wrap">
+              {line}
+            </p>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }

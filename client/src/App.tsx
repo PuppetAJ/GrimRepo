@@ -1,15 +1,18 @@
+import { lazy } from 'react'
 import { Route, Routes } from 'react-router'
 import { Layout } from './components/Layout.tsx'
 import { RequireAuth } from './components/RequireAuth.tsx'
-import { Account } from './pages/Account.tsx'
-import { Game } from './pages/Game.tsx'
 import { Home } from './pages/Home.tsx'
 import { Leaderboard } from './pages/Leaderboard.tsx'
-import { MyStats } from './pages/MyStats.tsx'
 import { NotFound } from './pages/NotFound.tsx'
-import { Player } from './pages/Player.tsx'
-import { SignIn } from './pages/SignIn.tsx'
-import { SignUp } from './pages/SignUp.tsx'
+
+// The home page and the leaderboard come with the first load; every other page loads when it is opened.
+const Account = lazy(() => import('./pages/Account.tsx').then((page) => ({ default: page.Account })))
+const Game = lazy(() => import('./pages/Game.tsx').then((page) => ({ default: page.Game })))
+const MyStats = lazy(() => import('./pages/MyStats.tsx').then((page) => ({ default: page.MyStats })))
+const Player = lazy(() => import('./pages/Player.tsx').then((page) => ({ default: page.Player })))
+const SignIn = lazy(() => import('./pages/SignIn.tsx').then((page) => ({ default: page.SignIn })))
+const SignUp = lazy(() => import('./pages/SignUp.tsx').then((page) => ({ default: page.SignUp })))
 
 export default function App() {
   return (
