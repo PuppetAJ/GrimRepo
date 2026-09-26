@@ -76,6 +76,28 @@ section('The 3D table')
     await click({ lane: 2 })
     await until(page, (id) => window.__game.state().player.board[2]?.uid === id, uid)
     check('clicking a lane plays it there', true)
+    // Looking down at the board, as a player does to read their own row, which the hand covers from the seat.
+    await page.mouse.move(5, 300)
+    await page.keyboard.press('w')
+    await page.waitForTimeout(1200)
+    await page.mouse.move(...Object.values(await page.evaluate(() => window.__game.screen({ lane: 2, far: true }))))
+    const reader = page.getByRole('region', { name: 'Card reader' })
+    const name = card(free.find(([id]) => id === uid)[1]).name
+    const read = await until(
+      page,
+      (name) => document.querySelector('[aria-label="Card reader"]')?.textContent.includes(name),
+      name,
+      5_000,
+    ).then(
+      () => true,
+      () => false,
+    )
+    check('pointing at a card on the board reads it in full', read)
+    await page.mouse.move(5, 300)
+    await reader.waitFor({ state: 'detached' })
+    check('and the reader goes when the pointer leaves the cards', true)
+    await page.keyboard.press('s')
+    await page.waitForTimeout(1200)
 
     await page.waitForTimeout(600)
     await click('bell')

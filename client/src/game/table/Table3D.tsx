@@ -5,14 +5,15 @@ import { easing } from 'maath'
 import { Flag, LayoutGrid, LogOut, Maximize, Minimize, MoveUp, Type } from 'lucide-react'
 import { Suspense, use, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
-import { HAND_LIMIT, legalActions, PLAYER_DECK, type Action, type GameState } from 'shared'
+import { HAND_LIMIT, legalActions, PLAYER_DECK, type Action, type GameState, type Unit } from 'shared'
 import * as THREE from 'three'
 import { Button } from '@/components/ui/button.tsx'
 import { DemoNote, GameOver, has, laneAction, owed, prompt, ScaleBar, Forfeit } from '../controls.tsx'
 import { useFullScreen } from '../fullScreen.ts'
 import type { Ready } from '../useGame.ts'
 import type { View } from '../view.ts'
-import { Card, Popup, type Look, type Place } from './Cards.tsx'
+import { FlatReaderBody, ReaderBody } from '../CardReader.tsx'
+import { Card, Popup, released, type Look, type Place } from './Cards.tsx'
 import { disposeFaces, loadCardAssets } from './faces.ts'
 import {
   BELL,
@@ -37,6 +38,18 @@ import { MOOD } from './mood.ts'
 import { usePlayback } from './usePlayback.ts'
 
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
+
+// A touch screen, where cards are read by holding them and a hand card is lifted before it is played.
+const COARSE = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
+
+/** How the scene's cards tell the page to read them. */
+type Reader = {
+  /** The hand card lifted by a first tap on touch. */
+  peek: number | null
+  read: (unit: Unit | null) => void
+  hold: (unit: Unit, x: number, y: number) => void
+  lift: (unit: Unit | null) => void
+}
 
 const seat = new THREE.Vector3()
 
@@ -160,8 +173,10 @@ function Scene({
   onHint,
   onWarm,
   quality,
+  reader,
 }: {
   quality: number
+  reader: Reader
   game: Ready
   assets: Assets
   view: View
@@ -230,14 +245,21 @@ function Scene({
               summoning={Boolean(view.summon)}
               assets={assets}
               shake={hinted === unit.uid ? hint : 0}
+              raised={reader.peek === unit.uid}
+              onRead={(on) => reader.read(on ? unit : null)}
+              onHold={(x, y) => reader.hold(unit, x, y)}
               onClick={
-                selected
-                  ? () => act({ type: 'cancel' })
-                  : selectable
-                    ? () => act({ type: 'select', uid: unit.uid })
-                    : can({ type: 'draw' })
-                      ? () => onHint(unit.uid)
-                      : undefined
+                // On touch every card can be tapped, to read it; with a mouse, only one that can do something.
+                selected || selectable || can({ type: 'draw' }) || COARSE
+                  ? (_event, touch) => {
+                      // On touch, the first tap lifts the card and reads it; the second plays it.
+                      if (touch && !selected && reader.peek !== unit.uid) return reader.lift(unit)
+                      reader.lift(null)
+                      if (selected) act({ type: 'cancel' })
+                      else if (selectable) act({ type: 'select', uid: unit.uid })
+                      else if (can({ type: 'draw' })) onHint(unit.uid)
+                    }
+                  : undefined
               }
             />
           )
@@ -261,6 +283,8 @@ function Scene({
                 cursor={action?.type === 'mark' || action?.type === 'unmark' ? 'mark' : 'point'}
                 // A card on the board covers its lane, so it passes the aim on to it.
                 onHover={row === 'board' ? (on) => setAimed(on ? lane : null) : undefined}
+                onRead={(on) => reader.read(on ? unit : null)}
+                onHold={(x, y) => reader.hold(unit, x, y)}
               />
             )
           }),
@@ -364,7 +388,9 @@ declare global {
       busy: () => boolean
       act: (action: Action) => void
       skip: () => void
-      screen: (what: 'deck' | 'pile' | 'bell' | { lane: number } | { uid: number }) => { x: number; y: number } | null
+      screen: (
+        what: 'deck' | 'pile' | 'bell' | { lane: number; far?: boolean } | { uid: number },
+      ) => { x: number; y: number } | null
       stats: () => Promise<Record<string, number>>
     }
   }
@@ -395,7 +421,12 @@ function TestHandle({ game, view, busy, skip }: { game: Ready; view: View; busy:
         if (what === 'deck') return onScreen(new THREE.Vector3(DECK[0], DECK[1] + 0.2, DECK[2]))
         if (what === 'pile') return onScreen(new THREE.Vector3(PILE[0], PILE[1] + 0.1, PILE[2]))
         if (what === 'bell') return onScreen(new THREE.Vector3(BELL[0], BELL[1] + 0.3, BELL[2]))
-        if ('lane' in what) return onScreen(new THREE.Vector3(...slot('board', what.lane)))
+        if ('lane' in what) {
+          const at = new THREE.Vector3(...slot('board', what.lane))
+          // The far edge, toward P03, is the part of a lane's card the hand never covers.
+          if (what.far) at.z -= CARD.height * 0.35
+          return onScreen(at)
+        }
         // Near the top edge, the part of a hand card that is always on screen.
         const object = scene.getObjectByName(`card-${what.uid}`)
         return object ? onScreen(object.localToWorld(new THREE.Vector3(0, CARD.height * 0.36, 0))) : null
@@ -467,7 +498,9 @@ function Hud({
   fullScreen,
   ring,
   hint,
+  reading,
 }: {
+  reading: Unit | null
   game: Ready
   view: View
   busy: boolean
@@ -488,11 +521,32 @@ function Hud({
   const ended = game.result && !busy
   return (
     <>
-      <div className="pointer-events-none absolute top-0 left-0 flex flex-col p-3 font-terminal sm:p-4">
+      {/* Stops above the prompt, so the reader under the scale never runs over it. */}
+      <div className="pointer-events-none absolute top-0 bottom-24 left-0 flex flex-col items-start p-3 font-terminal sm:p-4">
         <ScaleBar scale={view.scale} className="text-xl sm:text-2xl" />
         <span className="text-lg text-p03-dim sm:text-xl">
           Turn {view.turn} · Deck {view.deck}
         </span>
+        {/* The card pointed at, read in full; lying flat on a touch screen, where it was lifted by a tap. */}
+        {reading ? (
+          COARSE ? (
+            <div
+              role="region"
+              aria-label="Card reader"
+              className="mt-2 flex h-40 max-h-full min-h-0 w-72 gap-2 rounded-md border-2 border-[#2f6b3d] bg-[#a9e7b8] p-2 text-[#0b1f12]"
+            >
+              <FlatReaderBody unit={reading} />
+            </div>
+          ) : (
+            <div
+              role="region"
+              aria-label="Card reader"
+              className="@container mt-3 flex min-h-0 w-64 flex-col gap-2 overflow-hidden rounded-md border-2 border-[#2f6b3d] bg-[#a9e7b8] p-3 text-[#0b1f12]"
+            >
+              <ReaderBody unit={reading} dense />
+            </div>
+          )
+        ) : null}
       </div>
 
       <div className="absolute top-0 right-0 z-10 flex flex-col items-end gap-1 p-3 sm:p-4">
@@ -675,6 +729,29 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
   }
   const playing = { ...game, act }
 
+  // The card being read: pointed at with a mouse, lifted by a first tap, or held under a finger. Kept as its id, so it
+  // shows the card as it is now.
+  const [reading, setReading] = useState<number | null>(null)
+  const [peek, setPeek] = useState<number | null>(null)
+  const [magnified, setMagnified] = useState<{ uid: number; x: number; y: number } | null>(null)
+  const fade = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const reader: Reader = {
+    peek,
+    read: (unit) => {
+      clearTimeout(fade.current)
+      // Moving from card to card keeps the reader up; leaving the cards lets it go after a moment.
+      if (unit) setReading(unit.uid)
+      else fade.current = setTimeout(() => setReading(null), 350)
+    },
+    hold: (unit, x, y) => setMagnified({ uid: unit.uid, x, y }),
+    lift: (unit) => {
+      setPeek(unit?.uid ?? null)
+      setReading(unit?.uid ?? null)
+    },
+  }
+  const readCard = reading === null ? null : unitOf(playback.view, reading)
+  const magnifiedCard = magnified && unitOf(playback.view, magnified.uid)
+
   return (
     <div
       data-game-id={game.id}
@@ -690,9 +767,21 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
         onCreated={({ gl }) => (gl.toneMapping = THREE.ACESFilmicToneMapping)}
         fallback={<NoWebGL onText={onText} />}
         aria-hidden
+        // A tap on nothing puts a lifted hand card back down.
+        onPointerMissed={() => peek !== null && reader.lift(null)}
+        // A held finger reads a card; the page's long-press menu would get in the way.
+        onContextMenu={(event) => COARSE && event.preventDefault()}
       >
         <color attach="background" args={['#020203']} />
         <Exposure />
+        <TouchReader
+          on={magnified !== null}
+          onMove={(uid, x, y) => setMagnified((last) => (last ? { uid: uid ?? last.uid, x, y } : last))}
+          onEnd={() => {
+            setMagnified(null)
+            released()
+          }}
+        />
         <CursorSync />
         {/* Only once loaded and settled: the first frames are slow, and would lower the resolution for good. */}
         {settled ? (
@@ -716,6 +805,7 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
             hint={hint}
             hinted={hinted}
             quality={quality}
+            reader={reader}
             onWarm={() => setWarmed(true)}
             onHint={(uid) => {
               setHinted(uid)
@@ -739,8 +829,77 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
           fullScreen={fullScreen}
           ring={() => act({ type: 'ringBell' })}
           hint={hint}
+          reading={readCard}
         />
+      ) : null}
+      {magnifiedCard && magnified ? (
+        <div
+          aria-hidden
+          className="pointer-events-none fixed z-[60] flex h-40 w-72 gap-2 rounded-md border-2 border-[#2f6b3d] bg-[#a9e7b8] p-2 font-terminal text-[#0b1f12] shadow-[0_0_18px_rgb(0_0_0/0.85)]"
+          // Above the finger, or below it near the top of the screen; never off either side.
+          style={{
+            left: Math.min(Math.max(8, magnified.x - 144), window.innerWidth - 296),
+            top: magnified.y > 200 ? magnified.y - 190 : magnified.y + 40,
+          }}
+        >
+          <FlatReaderBody unit={magnifiedCard} />
+        </div>
       ) : null}
     </div>
   )
+}
+
+/** A card on the table or in the hand, by its id. */
+function unitOf(view: View, uid: number): Unit | null {
+  return [...view.hand, ...view.board, ...view.front, ...view.back].find((unit) => unit?.uid === uid) ?? null
+}
+
+/** While a finger holds the magnifier up, reads whichever card is under it as it slides, and keeps the page still. */
+function TouchReader({
+  on,
+  onMove,
+  onEnd,
+}: {
+  on: boolean
+  onMove: (uid: number | null, x: number, y: number) => void
+  onEnd: () => void
+}) {
+  const { camera, scene, raycaster, gl } = useThree()
+  const latest = useRef({ onMove, onEnd })
+  useEffect(() => {
+    latest.current = { onMove, onEnd }
+  })
+  useEffect(() => {
+    if (!on) return
+    const pointer = new THREE.Vector2()
+    const move = (event: TouchEvent) => {
+      event.preventDefault()
+      const touch = event.touches[0]
+      if (!touch) return
+      const box = gl.domElement.getBoundingClientRect()
+      pointer.set(((touch.clientX - box.left) / box.width) * 2 - 1, -((touch.clientY - box.top) / box.height) * 2 + 1)
+      raycaster.setFromCamera(pointer, camera)
+      // The nearest card under the finger: each card is a group named for its id.
+      let uid: number | null = null
+      for (const hit of raycaster.intersectObjects(scene.children, true)) {
+        let object: THREE.Object3D | null = hit.object
+        while (object && !object.name.startsWith('card-')) object = object.parent
+        if (object) {
+          uid = Number(object.name.slice(5))
+          break
+        }
+      }
+      latest.current.onMove(uid, touch.clientX, touch.clientY)
+    }
+    const end = () => latest.current.onEnd()
+    document.addEventListener('touchmove', move, { passive: false })
+    document.addEventListener('touchend', end)
+    document.addEventListener('touchcancel', end)
+    return () => {
+      document.removeEventListener('touchmove', move)
+      document.removeEventListener('touchend', end)
+      document.removeEventListener('touchcancel', end)
+    }
+  }, [on, camera, scene, raycaster, gl])
+  return null
 }
