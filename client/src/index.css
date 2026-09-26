@@ -346,3 +346,8 @@
     animation: none;
   }
 }
+[data-table] [data-full]:disabled {
+  cursor:
+    url(/cursors/full.svg) 2 2,
+    not-allowed;
+}

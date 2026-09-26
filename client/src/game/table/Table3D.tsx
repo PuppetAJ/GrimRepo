@@ -5,7 +5,7 @@ import { easing } from 'maath'
 import { Flag, LayoutGrid, LogOut, Maximize, Minimize, MoveUp, Type } from 'lucide-react'
 import { Suspense, use, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
-import { legalActions, PLAYER_DECK, type Action, type GameState } from 'shared'
+import { HAND_LIMIT, legalActions, PLAYER_DECK, type Action, type GameState } from 'shared'
 import * as THREE from 'three'
 import { Button } from '@/components/ui/button.tsx'
 import { DemoNote, GameOver, has, laneAction, owed, prompt, ScaleBar, WalkAway } from '../controls.tsx'
@@ -205,12 +205,14 @@ function Scene({
           active={can({ type: 'draw', from: 'deck' } as Partial<Action>)}
           onClick={() => act({ type: 'draw', from: 'deck' })}
           hint={hint}
+          full={!busy && !game.result && state.player.hand.length >= HAND_LIMIT && !state.drawn}
         />
         <Pile
           assets={assets}
           active={can({ type: 'draw', from: 'boilerplate' } as Partial<Action>)}
           onClick={() => act({ type: 'draw', from: 'boilerplate' })}
           hint={hint}
+          full={!busy && !game.result && state.player.hand.length >= HAND_LIMIT && !state.drawn}
         />
         <EndTurnButton active={can({ type: 'ringBell' })} rung={rung} onClick={() => act({ type: 'ringBell' })} />
         <Lanes view={view} legal={legal} act={act} play={TINT.play} aimed={aimed} onAim={setAimed} />

@@ -1,4 +1,4 @@
-export type CursorKind = 'arrow' | 'point' | 'draw' | 'boilerplate' | 'press' | 'mark'
+export type CursorKind = 'arrow' | 'point' | 'draw' | 'boilerplate' | 'press' | 'mark' | 'full'
 
 /** The CSS for one of the table's cursors, green like P03's text, falling back to the browser's own. */
 export const cursorCss = (kind: CursorKind) =>

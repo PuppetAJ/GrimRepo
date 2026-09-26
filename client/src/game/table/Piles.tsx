@@ -23,6 +23,7 @@ export function Nudge({
   hint = 0,
   still = false,
   cursor,
+  blocked,
   children,
 }: {
   active: boolean
@@ -36,6 +37,8 @@ export function Nudge({
   still?: boolean
   /** The pointer's own look over it, from /cursors/, when it can be clicked. */
   cursor?: 'draw' | 'boilerplate' | 'press'
+  /** How the pointer looks over it when it cannot be clicked for a reason worth showing, such as a full hand. */
+  blocked?: 'full'
   children: ReactNode
 }) {
   const group = useRef<THREE.Group>(null)
@@ -46,8 +49,9 @@ export function Nudge({
   const self = useRef({})
   useEffect(() => {
     if (hovered && active) claimCursor(self.current, cursor ?? 'point')
+    else if (hovered && blocked) claimCursor(self.current, blocked)
     else releaseCursor(self.current)
-  }, [hovered, active, cursor])
+  }, [hovered, active, cursor, blocked])
   useEffect(() => () => releaseCursor(self.current), [])
   useEffect(() => {
     if (!hint) return
@@ -176,12 +180,15 @@ export function Deck({
   onClick,
   active,
   hint,
+  full,
 }: {
   count: number
   total: number
   onClick: Click
   active: boolean
   hint?: number
+  /** The hand is at its limit, so the draw is skipped. */
+  full?: boolean
 }) {
   const layers = count === 0 ? 0 : Math.max(1, Math.round((count / total) * 12))
   return (
@@ -193,6 +200,7 @@ export function Deck({
         label="deck"
         hint={hint}
         cursor="draw"
+        blocked={full ? 'full' : undefined}
       >
         <Stack layers={layers} />
       </Nudge>
@@ -208,11 +216,13 @@ export function Pile({
   onClick,
   active,
   hint,
+  full,
 }: {
   assets: Assets
   onClick: Click
   active: boolean
   hint?: number
+  full?: boolean
 }) {
   const top = useMemo(() => faceTexture(BOILERPLATE_UNIT, assets), [assets])
   const lights = useMemo(
@@ -228,6 +238,7 @@ export function Pile({
         label="pile"
         hint={hint}
         cursor="boilerplate"
+        blocked={full ? 'full' : undefined}
       >
         <Stack layers={6} top={top} lights={lights} />
       </Nudge>

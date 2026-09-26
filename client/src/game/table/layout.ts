@@ -50,7 +50,7 @@ export const lanes = [...Array(LANES).keys()]
 
 // The hand is held in front of the camera, in its own space: x right, y up, z towards the viewer.
 // At rest a hand card shows down to its stats; hovering lifts it fully into view.
-const HAND = { distance: 1.5, scale: 0.4, y: -0.47, spread: 1.4, gap: 0.4, raise: 0.14, hover: 0.09, stowed: -0.5 }
+const HAND = { distance: 1.5, scale: 0.4, y: -0.47, spread: 1.8, gap: 0.4, raise: 0.14, hover: 0.09, stowed: -0.5 }
 export const HAND_SCALE = HAND.scale
 
 /** A hand card's place and tilt, fanned about the middle of the hand. */
@@ -67,7 +67,8 @@ export function handPlace(
   // The ends droop only a little, so a full hand's numbers stay above the screen's edge.
   const lift = raise - Math.abs(offset) * 0.012
   // Later cards sit a little nearer, so neighbours overlap the way a held hand does; a card being looked at comes forward.
-  const near = index * 0.002 + (hovered || selected ? 0.03 : 0)
+  // Each a disk's thickness nearer than the last, so where corners meet they overlap rather than pass through.
+  const near = index * 0.02 + (hovered || selected ? 0.04 : 0)
   // A full hand holds its cards a little smaller, so it stays clear of the board and the screen's edge.
   const scale = HAND.scale * (count > 5 ? 1 - (count - 5) * 0.05 : 1)
   return { position: [offset * gap, HAND.y + lift, -HAND.distance + near], roll: -offset * 0.04, scale }

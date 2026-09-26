@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { card, legalActions, SIGILS, TIP, type Action, type SigilId, type Slot, type Unit } from 'shared'
+import { card, HAND_LIMIT, legalActions, SIGILS, TIP, type Action, type SigilId, type Slot, type Unit } from 'shared'
 import { DemoNote, describe, GameOver, has, laneAction, owed, prompt, scaleWords, WalkAway } from './controls.tsx'
 import { ICONS, STAT_ICONS } from './table/faces.ts'
 import type { Playback } from './table/playback.ts'
@@ -416,6 +416,8 @@ export function TerminalTable({
   const legal = busy || result ? [] : legalActions(state)
   const summoning = state.summon ? state.player.hand.find((unit) => unit.uid === state.summon?.uid) : undefined
   const mustDraw = has(legal, { type: 'draw' })
+  // At the limit the draw is skipped; the piles say so.
+  const handFull = !busy && !result && state.player.hand.length >= HAND_LIMIT && !state.drawn
   // Where the pointer was, not the card that was there: a card played into that lane shows at once.
   const [looking, setLooking] = useState<Place | null>(null)
   const fullScreen = useFullScreen()
@@ -779,6 +781,8 @@ export function TerminalTable({
         type="button"
         data-action="draw-deck"
         disabled={!mustDraw}
+        data-full={handFull || undefined}
+        title={handFull ? `Your hand is full (${HAND_LIMIT}): no draw this turn` : undefined}
         onClick={() => act({ type: 'draw', from: 'deck' })}
         aria-label={`Draw from the deck, ${view.deck} left`}
         className={`flex flex-col items-center gap-1 text-p03 disabled:brightness-50 disabled:saturate-50 ${narrow ? 'w-12 sm:w-16' : 'w-20'}`}
@@ -792,6 +796,8 @@ export function TerminalTable({
         type="button"
         data-action="draw-boilerplate"
         disabled={!mustDraw}
+        data-full={handFull || undefined}
+        title={handFull ? `Your hand is full (${HAND_LIMIT}): no draw this turn` : undefined}
         onClick={() => act({ type: 'draw', from: 'boilerplate' })}
         aria-label="Take a Boilerplate"
         className={`flex flex-col items-center gap-1 text-p03 disabled:brightness-50 disabled:saturate-50 ${narrow ? 'w-12 sm:w-16' : 'w-20'}`}
