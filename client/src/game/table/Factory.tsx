@@ -325,20 +325,17 @@ const Monitor = memo(function Monitor({
   position,
   turn,
   lines,
-  onRead,
   onHold,
-  onTap,
+  onPin,
 }: {
   screen: Screen
   position: Vec3
   turn: number
   lines: string[]
-  onRead?: (screen: Screen, on: boolean) => void
   onHold?: (screen: Screen, x: number, y: number) => void
-  onTap?: (screen: Screen) => void
+  onPin?: (screen: Screen) => void
 }) {
   const cancelHold = useRef<(() => void) | null>(null)
-  const touched = useRef(false)
   const letGo = () => {
     cancelHold.current?.()
     cancelHold.current = null
@@ -364,14 +361,8 @@ const Monitor = memo(function Monitor({
       name={`screen-${screen}`}
       position={position}
       rotation={[0, turn, 0]}
-      onPointerOver={(event) => {
-        event.stopPropagation()
-        if (event.pointerType !== 'touch') onRead?.(screen, true)
-      }}
-      onPointerOut={(event) => event.pointerType !== 'touch' && onRead?.(screen, false)}
       onPointerDown={(event) => {
-        touched.current = event.pointerType === 'touch'
-        if (!touched.current || !onHold) return
+        if (!onHold || (event.pointerType !== 'touch' && event.button !== 0)) return
         letGo()
         cancelHold.current = startHold(event, (x, y) => onHold(screen, x, y))
       }}
@@ -379,8 +370,8 @@ const Monitor = memo(function Monitor({
       onPointerCancel={letGo}
       onClick={(event) => {
         event.stopPropagation()
-        // A hold was a look; a finger's tap pins the readout.
-        if (!holding() && touched.current) onTap?.(screen)
+        // A hold was a look; a click or a tap pins the readout.
+        if (!holding()) onPin?.(screen)
       }}
     >
       <mesh>
@@ -836,17 +827,14 @@ export function statusLines(view: Pick<View, 'scale' | 'turn' | 'deck'>): string
 export function Factory({
   view,
   log,
-  onRead,
   onHold,
-  onTap,
+  onPin,
 }: {
   view: View
   log: string[]
-  /** Told when a finger taps a screen, which pins its readout open. */
-  onTap?: (screen: Screen) => void
-  /** Told when a mouse arrives on a screen to read it, and leaves. */
-  onRead?: (screen: Screen, on: boolean) => void
-  /** Told when a finger has held a screen, and where. */
+  /** Told when a screen is clicked or tapped, which pins its readout open. */
+  onPin?: (screen: Screen) => void
+  /** Told when a finger or the mouse's button has held a screen, and where. */
   onHold?: (screen: Screen, x: number, y: number) => void
 }) {
   const lines = useMemo(() => logLines(log), [log])
@@ -886,15 +874,14 @@ export function Factory({
         distance={20}
       />
       <Fixtures />
-      <Monitor screen="log" position={LOG_AT} turn={0.3} lines={lines} onRead={onRead} onHold={onHold} onTap={onTap} />
+      <Monitor screen="log" position={LOG_AT} turn={0.3} lines={lines} onHold={onHold} onPin={onPin} />
       <Monitor
         screen="status"
         position={STATUS_AT}
         turn={-0.3}
         lines={status}
-        onRead={onRead}
         onHold={onHold}
-        onTap={onTap}
+        onPin={onPin}
       />
       <Suspense fallback={null}>
         <Battery view={view} />

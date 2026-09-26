@@ -97,11 +97,8 @@ export function PixelCard({ unit, big = false }: { unit: Unit; big?: boolean }) 
   )
 }
 
-/**
- * A card read in full: its name and cost, the art large, every sigil spelled out, and its stats. Dense, for a reader
- * that cannot be scrolled, the art is a strip and the sigils take what room they need.
- */
-export function ReaderBody({ unit, dense = false }: { unit: Unit; dense?: boolean }) {
+/** A card read in full: its name and cost, the art large, every sigil spelled out, and its stats. */
+export function ReaderBody({ unit }: { unit: Unit }) {
   return (
     <>
       <p className="flex items-start justify-between gap-2 text-[clamp(1.25rem,12cqi,1.875rem)] leading-none">
@@ -115,16 +112,14 @@ export function ReaderBody({ unit, dense = false }: { unit: Unit; dense?: boolea
         ) : null}
       </p>
       {/* The art large and the stats under it, as Act 2's inspector shows a card. */}
-      <div
-        className={`grid place-items-center overflow-hidden rounded-sm border-2 border-[#0b1f12] bg-[#8fd3a0] bg-[repeating-linear-gradient(0deg,rgb(0_0_0/0.06)_0_1px,transparent_1px_3px)] ${dense ? 'h-24 shrink-0' : 'min-h-8 flex-1'}`}
-      >
+      <div className="grid min-h-8 flex-1 place-items-center overflow-hidden rounded-sm border-2 border-[#0b1f12] bg-[#8fd3a0] bg-[repeating-linear-gradient(0deg,rgb(0_0_0/0.06)_0_1px,transparent_1px_3px)]">
         <Art id={unit.card} big />
       </div>
       {/* Only as tall as the sigils need, up to a limit, scrolling past it; the art takes the rest. */}
-      <div className={`flex min-h-0 flex-col overflow-y-auto ${dense ? 'gap-1' : 'max-h-40 gap-2'}`}>
+      <div className="flex max-h-40 min-h-0 flex-col gap-2 overflow-y-auto">
         {unit.sigils.length ? (
           unit.sigils.map((sigil) => (
-            <p key={sigil} className={`flex gap-2 leading-tight ${dense ? 'text-lg' : 'text-xl'}`}>
+            <p key={sigil} className="flex gap-2 text-xl leading-tight">
               <span className="shrink-0 pt-0.5">
                 <Sigil id={sigil} size={20} />
               </span>

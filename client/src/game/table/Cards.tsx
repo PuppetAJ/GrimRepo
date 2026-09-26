@@ -43,7 +43,6 @@ export function Card({
   shake = 0,
   onClick,
   onHover,
-  onRead,
   onHold,
   raised = false,
   cursor = 'point',
@@ -63,9 +62,7 @@ export function Card({
   onClick?: (event: ThreeEvent<MouseEvent>, touch: boolean) => void
   /** Told when the pointer arrives on the card and leaves it. */
   onHover?: (on: boolean) => void
-  /** Told when a mouse arrives on the card to read it, and leaves. */
-  onRead?: (on: boolean) => void
-  /** Told when a finger has held the card, and where. */
+  /** Told when a finger or the mouse's button has held the card, and where. */
   onHold?: (x: number, y: number) => void
   /** Held up as if pointed at, as a hand card tapped once on touch is. */
   raised?: boolean
@@ -245,7 +242,7 @@ export function Card({
     },
     onPointerDown: (event: ThreeEvent<PointerEvent>) => {
       touched.current = event.pointerType === 'touch'
-      if (!touched.current || !onHold) return
+      if (!onHold || (!touched.current && event.button !== 0)) return
       letGo()
       cancelHold.current = startHold(event, onHold)
     },
@@ -255,12 +252,10 @@ export function Card({
       event.stopPropagation()
       setPointed(true)
       onHover?.(true)
-      if (event.pointerType !== 'touch') onRead?.(true)
     },
-    onPointerOut: (event: ThreeEvent<PointerEvent>) => {
+    onPointerOut: () => {
       setPointed(false)
       onHover?.(false)
-      if (event.pointerType !== 'touch') onRead?.(false)
     },
     // Stopped here too, or what lies behind the card is hovered again on the next move.
     onPointerMove: (event: ThreeEvent<PointerEvent>) => event.stopPropagation(),

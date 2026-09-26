@@ -80,33 +80,36 @@ section('The 3D table')
     await page.mouse.move(5, 300)
     await page.keyboard.press('w')
     await page.waitForTimeout(1200)
-    await page.mouse.move(...Object.values(await page.evaluate(() => window.__game.screen({ lane: 2, far: true }))))
-    const reader = page.getByRole('region', { name: 'Card reader' })
     const name = card(free.find(([id]) => id === uid)[1]).name
-    const read = await until(
+    const untouched = await page.evaluate(() => JSON.stringify(window.__game.state()))
+    await page.mouse.move(...Object.values(await page.evaluate(() => window.__game.screen({ lane: 2, far: true }))))
+    await page.mouse.down()
+    const magnified = await until(
       page,
-      (name) => document.querySelector('[aria-label="Card reader"]')?.textContent.includes(name),
+      (name) => document.querySelector('[data-magnifier]')?.textContent.includes(name),
       name,
       5_000,
     ).then(
       () => true,
       () => false,
     )
-    check('pointing at a card on the board reads it in full', read)
-    await page.mouse.move(5, 300)
-    await reader.waitFor({ state: 'detached' })
-    check('and the reader goes when the pointer leaves the cards', true)
+    check('holding the mouse on a card on the board magnifies it', magnified)
+    await page.mouse.up()
+    await page.locator('[data-magnifier]').waitFor({ state: 'detached' })
+    await page.waitForTimeout(300)
+    check(
+      'and letting go puts it away without playing anything',
+      untouched === (await page.evaluate(() => JSON.stringify(window.__game.state()))),
+    )
     await page.keyboard.press('s')
     await page.waitForTimeout(1200)
-    await page.mouse.move(...Object.values(await page.evaluate(() => window.__game.screen('log'))))
+    await page.mouse.click(...Object.values(await page.evaluate(() => window.__game.screen('log'))))
     const monitor = page.getByRole('region', { name: 'Monitor readout' })
     await monitor.waitFor()
-    check(
-      "pointing at P03's console reads its lines up close",
-      (await monitor.textContent()).includes('// P03 CONSOLE'),
-    )
-    await page.mouse.move(5, 300)
+    check("clicking P03's console pins its lines open", (await monitor.textContent()).includes('// P03 CONSOLE'))
+    await page.mouse.click(700, 180)
     await monitor.waitFor({ state: 'detached' })
+    check('and a click elsewhere closes them', true)
 
     await page.waitForTimeout(600)
     await click('bell')

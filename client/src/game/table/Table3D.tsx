@@ -12,7 +12,7 @@ import { DemoNote, GameOver, has, laneAction, owed, prompt, ScaleBar, Forfeit } 
 import { useFullScreen } from '../fullScreen.ts'
 import type { Ready } from '../useGame.ts'
 import type { View } from '../view.ts'
-import { FlatReaderBody, ReaderBody } from '../CardReader.tsx'
+import { FlatReaderBody } from '../CardReader.tsx'
 import { Card, Popup, type Look, type Place } from './Cards.tsx'
 import { disposeFaces, loadCardAssets } from './faces.ts'
 import {
@@ -50,7 +50,6 @@ const COARSE = typeof window !== 'undefined' && window.matchMedia('(pointer: coa
 type Reader = {
   /** The hand card lifted by a first tap on touch. */
   peek: number | null
-  read: (target: Target | null) => void
   hold: (target: Target, x: number, y: number) => void
   lift: (unit: Unit | null) => void
   /** Pins a screen's readout open, or closes it if it is the one pinned. */
@@ -220,9 +219,8 @@ function Scene({
           <Factory
             view={view}
             log={game.log}
-            onRead={(screen, on) => reader.read(on ? { screen } : null)}
             onHold={(screen, x, y) => reader.hold({ screen }, x, y)}
-            onTap={(screen) => reader.pin(screen)}
+            onPin={(screen) => reader.pin(screen)}
           />
           <FactoryP03 view={view} busy={busy} outcome={busy ? undefined : game.result?.outcome} />
           <WarmUp onWarm={onWarm} />
@@ -261,7 +259,6 @@ function Scene({
               assets={assets}
               shake={hinted === unit.uid ? hint : 0}
               raised={reader.peek === unit.uid}
-              onRead={(on) => reader.read(on ? { card: unit.uid } : null)}
               onHold={(x, y) => reader.hold({ card: unit.uid }, x, y)}
               onClick={
                 // On touch every card can be tapped, to read it; with a mouse, only one that can do something.
@@ -298,7 +295,6 @@ function Scene({
                 cursor={action?.type === 'mark' || action?.type === 'unmark' ? 'mark' : 'point'}
                 // A card on the board covers its lane, so it passes the aim on to it.
                 onHover={row === 'board' ? (on) => setAimed(on ? lane : null) : undefined}
-                onRead={(on) => reader.read(on ? { card: unit.uid } : null)}
                 onHold={(x, y) => reader.hold({ card: unit.uid }, x, y)}
               />
             )
@@ -517,15 +513,13 @@ function Hud({
   fullScreen,
   ring,
   hint,
-  reading,
+  lifted,
   pinned,
   onUnpin,
-  logBox,
 }: {
-  reading: Readout | null
+  lifted: Unit | null
   pinned: string[] | null
   onUnpin: () => void
-  logBox: React.RefObject<HTMLDivElement | null>
   game: Ready
   view: View
   busy: boolean
@@ -552,43 +546,26 @@ function Hud({
         <span className="text-lg text-p03-dim sm:text-xl">
           Turn {view.turn} · Deck {view.deck}
         </span>
-        {/* The card pointed at, read in full, or lying flat on a touch screen, where it was lifted by a tap; or a screen. */}
+        {/* A screen's readout pinned open by a click or a tap, or a hand card lifted by a first tap on touch. */}
         {pinned ? (
-          // Pinned by a tap: it takes the finger, to be scrolled, and closes with its button or a tap elsewhere.
+          // It takes the pointer, to be scrolled, and closes with its button or a click elsewhere.
           <ScreenReadout
             lines={pinned}
             className="pointer-events-auto mt-2 h-52 max-h-full w-80 text-base"
             label="Monitor readout"
-            scroll={logBox}
             onClose={onUnpin}
           />
-        ) : !reading ? null : 'lines' in reading ? (
-          <ScreenReadout
-            lines={reading.lines}
-            className="mt-3 max-h-80 min-h-0 w-80 text-lg"
-            label="Monitor readout"
-            scroll={logBox}
-          />
-        ) : COARSE ? (
+        ) : lifted ? (
           <div
             role="region"
             aria-label="Card reader"
             className="relative mt-2 flex h-40 max-h-full min-h-0 w-72 gap-2 overflow-hidden rounded-md border-2 border-[#2f6b3d] bg-[#a9e7b8] p-2 text-[#0b1f12]"
           >
-            <FlatReaderBody unit={reading.unit} />
+            <FlatReaderBody unit={lifted} />
             {/* The glass over a card read up close: scanlines, a rolling band and dark corners. */}
             <span aria-hidden className="crt-glass pointer-events-none absolute inset-0" />
           </div>
-        ) : (
-          <div
-            role="region"
-            aria-label="Card reader"
-            className="@container relative mt-3 flex min-h-0 w-64 flex-col gap-2 overflow-hidden rounded-md border-2 border-[#2f6b3d] bg-[#a9e7b8] p-3 text-[#0b1f12]"
-          >
-            <ReaderBody unit={reading.unit} dense />
-            <span aria-hidden className="crt-glass pointer-events-none absolute inset-0" />
-          </div>
-        )}
+        ) : null}
       </div>
 
       <div className="absolute top-0 right-0 z-10 flex flex-col items-end gap-1 p-3 sm:p-4">
@@ -771,34 +748,21 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
   }
   const playing = { ...game, act }
 
-  // What is being read: a card or a screen pointed at with a mouse, a hand card lifted by a first tap, or whatever is
-  // under a held finger. Kept by id, so it shows the card as it is now.
-  const [reading, setReading] = useState<Target | null>(null)
+  // What is being read: a hand card lifted by a first tap on touch, a screen's readout pinned open by a click or a tap,
+  // or whatever is under a held button or finger. Kept by id, so it shows the card as it is now.
   const [peek, setPeek] = useState<number | null>(null)
-  const [magnified, setMagnified] = useState<{ target: Target; x: number; y: number } | null>(null)
-  // A screen's readout pinned open by a tap, to be scrolled with a finger.
   const [pinned, setPinned] = useState<Screen | null>(null)
-  // The log readout's scrolling box, which the mouse wheel moves while the log is pointed at.
-  const logBox = useRef<HTMLDivElement>(null)
-  const fade = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const [magnified, setMagnified] = useState<{ target: Target; x: number; y: number } | null>(null)
   const reader: Reader = {
     peek,
-    read: (target) => {
-      clearTimeout(fade.current)
-      // Moving from one thing to the next keeps the reader up; leaving them lets it go after a moment.
-      if (target) setReading(target)
-      else fade.current = setTimeout(() => setReading(null), 350)
-    },
     hold: (target, x, y) => setMagnified({ target, x, y }),
     lift: (unit) => {
       setPeek(unit?.uid ?? null)
-      setReading(unit ? { card: unit.uid } : null)
       setPinned(null)
     },
     pin: (screen) => {
       setPinned((last) => (last === screen ? null : screen))
       setPeek(null)
-      setReading(null)
     },
   }
   const readout = (target: Target | null): Readout | null => {
@@ -808,19 +772,8 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
     const unit = unitOf(playback.view, target.card)
     return unit ? { unit } : null
   }
-  const read = readout(pinned ? null : reading)
+  const lifted = peek === null ? null : unitOf(playback.view, peek)
   const pin = readout(pinned && { screen: pinned })
-  // While the log is pointed at, the mouse wheel scrolls its readout instead of the page.
-  const readingLog = !pinned && reading !== null && 'screen' in reading && reading.screen === 'log'
-  useEffect(() => {
-    if (!readingLog) return
-    const wheel = (event: WheelEvent) => {
-      event.preventDefault()
-      logBox.current?.scrollBy({ top: event.deltaY })
-    }
-    window.addEventListener('wheel', wheel, { passive: false })
-    return () => window.removeEventListener('wheel', wheel)
-  }, [readingLog])
   const magnifiedRead = readout(magnified?.target ?? null)
 
   return (
@@ -845,7 +798,7 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
       >
         <color attach="background" args={['#020203']} />
         <Exposure />
-        <TouchReader
+        <HeldReader
           on={magnified !== null}
           onMove={(target, x, y) => setMagnified((last) => (last ? { target: target ?? last.target, x, y } : last))}
           onEnd={() => {
@@ -900,15 +853,15 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
           fullScreen={fullScreen}
           ring={() => act({ type: 'ringBell' })}
           hint={hint}
-          reading={read}
+          lifted={lifted}
           pinned={pin && 'lines' in pin ? pin.lines : null}
           onUnpin={() => setPinned(null)}
-          logBox={logBox}
         />
       ) : null}
       {magnifiedRead && magnified ? (
         <div
           aria-hidden
+          data-magnifier
           className="pointer-events-none fixed z-[60] w-80 shadow-[0_0_18px_rgb(0_0_0/0.85)]"
           // Above the finger, or below it near the top of the screen; never off either side.
           style={{
@@ -935,8 +888,11 @@ function unitOf(view: View, uid: number): Unit | null {
   return [...view.hand, ...view.board, ...view.front, ...view.back].find((unit) => unit?.uid === uid) ?? null
 }
 
-/** While a finger holds the magnifier up, reads whichever card is under it as it slides, and keeps the page still. */
-function TouchReader({
+/**
+ * While a held finger or mouse button keeps the magnifier up, reads whatever card or screen is under it as it moves; a
+ * finger's page stays still.
+ */
+function HeldReader({
   on,
   onMove,
   onEnd,
@@ -953,14 +909,11 @@ function TouchReader({
   useEffect(() => {
     if (!on) return
     const pointer = new THREE.Vector2()
-    const move = (event: TouchEvent) => {
-      event.preventDefault()
-      const touch = event.touches[0]
-      if (!touch) return
+    const at = (x: number, y: number) => {
       const box = gl.domElement.getBoundingClientRect()
-      pointer.set(((touch.clientX - box.left) / box.width) * 2 - 1, -((touch.clientY - box.top) / box.height) * 2 + 1)
+      pointer.set(((x - box.left) / box.width) * 2 - 1, -((y - box.top) / box.height) * 2 + 1)
       raycaster.setFromCamera(pointer, camera)
-      // The nearest card or screen under the finger: each is a group named for what it is.
+      // The nearest card or screen under it: each is a group named for what it is.
       let target: Target | null = null
       for (const hit of raycaster.intersectObjects(scene.children, true)) {
         let object: THREE.Object3D | null = hit.object
@@ -971,16 +924,27 @@ function TouchReader({
           : { screen: object.name === 'screen-log' ? 'log' : 'status' }
         break
       }
-      latest.current.onMove(target, touch.clientX, touch.clientY)
+      latest.current.onMove(target, x, y)
     }
+    const touchMove = (event: TouchEvent) => {
+      event.preventDefault()
+      const touch = event.touches[0]
+      if (touch) at(touch.clientX, touch.clientY)
+    }
+    const mouseMove = (event: PointerEvent) => event.pointerType === 'mouse' && at(event.clientX, event.clientY)
+    const mouseUp = (event: PointerEvent) => event.pointerType === 'mouse' && latest.current.onEnd()
     const end = () => latest.current.onEnd()
-    document.addEventListener('touchmove', move, { passive: false })
+    document.addEventListener('touchmove', touchMove, { passive: false })
     document.addEventListener('touchend', end)
     document.addEventListener('touchcancel', end)
+    window.addEventListener('pointermove', mouseMove)
+    window.addEventListener('pointerup', mouseUp)
     return () => {
-      document.removeEventListener('touchmove', move)
+      document.removeEventListener('touchmove', touchMove)
       document.removeEventListener('touchend', end)
       document.removeEventListener('touchcancel', end)
+      window.removeEventListener('pointermove', mouseMove)
+      window.removeEventListener('pointerup', mouseUp)
     }
   }, [on, camera, scene, raycaster, gl])
   return null
@@ -994,14 +958,11 @@ function ScreenReadout({
   lines,
   className = '',
   label,
-  scroll,
   onClose,
 }: {
   lines: string[]
   className?: string
   label?: string
-  /** Set to the scrolling box, so the mouse wheel can move it. */
-  scroll?: React.RefObject<HTMLDivElement | null>
   onClose?: () => void
 }) {
   const [heading, ...rest] = lines
@@ -1026,10 +987,7 @@ function ScreenReadout({
         ) : null}
       </p>
       <div
-        ref={(element) => {
-          box.current = element
-          if (scroll) scroll.current = element
-        }}
+        ref={box}
         onScroll={(event) => {
           const { scrollTop, clientHeight, scrollHeight } = event.currentTarget
           following.current = scrollTop + clientHeight >= scrollHeight - 4
