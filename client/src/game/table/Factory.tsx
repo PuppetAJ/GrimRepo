@@ -23,6 +23,7 @@ import type { View } from '../view.ts'
 import { Nudge } from './Piles.tsx'
 import { TINT } from './palette.ts'
 import { MOOD } from './mood.ts'
+import { startHold, type Screen } from './reading.ts'
 import {
   BATTERY_CELLS,
   BELL,
@@ -316,10 +317,36 @@ const SCREEN_TEXT: CSSProperties = {
   textShadow: `0 0 6px ${LIT}, 0 0 14px ${LIT}`,
   whiteSpace: 'pre',
   overflow: 'hidden',
+  position: 'relative',
+}
+const SCANLINES: CSSProperties = {
+  position: 'absolute',
+  inset: 0,
+  backgroundImage: 'repeating-linear-gradient(0deg, rgb(0 0 0 / 0.3) 0 2px, transparent 2px 4px)',
 }
 
 /** A screen on a bracket: its glass and scanlines in the scene, its text laid over them by the page. */
-const Monitor = memo(function Monitor({ position, turn, lines }: { position: Vec3; turn: number; lines: string[] }) {
+const Monitor = memo(function Monitor({
+  screen,
+  position,
+  turn,
+  lines,
+  onRead,
+  onHold,
+}: {
+  screen: Screen
+  position: Vec3
+  turn: number
+  lines: string[]
+  onRead?: (screen: Screen, on: boolean) => void
+  onHold?: (screen: Screen, x: number, y: number) => void
+}) {
+  const cancelHold = useRef<(() => void) | null>(null)
+  const letGo = () => {
+    cancelHold.current?.()
+    cancelHold.current = null
+  }
+  useEffect(() => letGo, [])
   const texture = useMemo(() => {
     const canvas = document.createElement('canvas')
     canvas.width = 512
@@ -335,7 +362,24 @@ const Monitor = memo(function Monitor({ position, turn, lines }: { position: Vec
   }, [])
   useEffect(() => () => texture.dispose(), [texture])
   return (
-    <group position={position} rotation={[0, turn, 0]}>
+    <group
+      // Named so a sliding finger can tell which screen it is over.
+      name={`screen-${screen}`}
+      position={position}
+      rotation={[0, turn, 0]}
+      onPointerOver={(event) => {
+        event.stopPropagation()
+        if (event.pointerType !== 'touch') onRead?.(screen, true)
+      }}
+      onPointerOut={(event) => event.pointerType !== 'touch' && onRead?.(screen, false)}
+      onPointerDown={(event) => {
+        if (event.pointerType !== 'touch' || !onHold) return
+        letGo()
+        cancelHold.current = startHold(event, (x, y) => onHold(screen, x, y))
+      }}
+      onPointerUp={letGo}
+      onPointerCancel={letGo}
+    >
       <mesh>
         <boxGeometry args={[2.9, 1.95, 0.22]} />
         <meshStandardMaterial color="#171c21" metalness={0.8} roughness={0.4} />
@@ -352,6 +396,8 @@ const Monitor = memo(function Monitor({ position, turn, lines }: { position: Vec
               {line}
             </div>
           ))}
+          {/* Scanlines across the text too, as the scene's own once drew over it. */}
+          <div style={SCANLINES} />
         </div>
       </Html>
     </group>
@@ -768,19 +814,40 @@ function scaleBar(scale: number): string {
   return `YOU[${' '.repeat(6 - you)}${'#'.repeat(you)}|${'#'.repeat(p03)}${' '.repeat(6 - p03)}]P03`
 }
 
+/** The left monitor: the battle log, the last eight lines of P03's console. */
+export function logLines(log: string[]): string[] {
+  return ['// P03 CONSOLE', ...log.slice(-8).map((line) => line.replace(/^P03> /, '> '))]
+}
+
+/** The right monitor: the scale, the turn and the deck. */
+export function statusLines(view: Pick<View, 'scale' | 'turn' | 'deck'>): string[] {
+  return [
+    '// STATUS',
+    `SCALE ${view.scale === 0 ? 'LEVEL' : `${view.scale > 0 ? '+' : ''}${view.scale} ${view.scale > 0 ? 'YOU' : 'P03'}`}`,
+    scaleBar(view.scale),
+    `TIP AT ${TIP}`,
+    `TURN ${view.turn}`,
+    `DECK ${view.deck}`,
+  ]
+}
+
 /** Everything around the table: the room, the light, the screens and the props. */
-export function Factory({ view, log }: { view: View; log: string[] }) {
-  // The left monitor is the battle log: the last eight lines of P03's console.
-  const lines = useMemo(() => ['// P03 CONSOLE', ...log.slice(-8).map((line) => line.replace(/^P03> /, '> '))], [log])
+export function Factory({
+  view,
+  log,
+  onRead,
+  onHold,
+}: {
+  view: View
+  log: string[]
+  /** Told when a mouse arrives on a screen to read it, and leaves. */
+  onRead?: (screen: Screen, on: boolean) => void
+  /** Told when a finger has held a screen, and where. */
+  onHold?: (screen: Screen, x: number, y: number) => void
+}) {
+  const lines = useMemo(() => logLines(log), [log])
   const status = useMemo(
-    () => [
-      '// STATUS',
-      `SCALE ${view.scale === 0 ? 'LEVEL' : `${view.scale > 0 ? '+' : ''}${view.scale} ${view.scale > 0 ? 'YOU' : 'P03'}`}`,
-      scaleBar(view.scale),
-      `TIP AT ${TIP}`,
-      `TURN ${view.turn}`,
-      `DECK ${view.deck}`,
-    ],
+    () => statusLines({ scale: view.scale, turn: view.turn, deck: view.deck }),
     [view.scale, view.turn, view.deck],
   )
   return (
@@ -815,8 +882,8 @@ export function Factory({ view, log }: { view: View; log: string[] }) {
         distance={20}
       />
       <Fixtures />
-      <Monitor position={LOG_AT} turn={0.3} lines={lines} />
-      <Monitor position={STATUS_AT} turn={-0.3} lines={status} />
+      <Monitor screen="log" position={LOG_AT} turn={0.3} lines={lines} onRead={onRead} onHold={onHold} />
+      <Monitor screen="status" position={STATUS_AT} turn={-0.3} lines={status} onRead={onRead} onHold={onHold} />
       <Suspense fallback={null}>
         <Battery view={view} />
       </Suspense>

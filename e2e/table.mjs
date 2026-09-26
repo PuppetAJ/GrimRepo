@@ -98,6 +98,15 @@ section('The 3D table')
     check('and the reader goes when the pointer leaves the cards', true)
     await page.keyboard.press('s')
     await page.waitForTimeout(1200)
+    await page.mouse.move(...Object.values(await page.evaluate(() => window.__game.screen('log'))))
+    const monitor = page.getByRole('region', { name: 'Monitor readout' })
+    await monitor.waitFor()
+    check(
+      "pointing at P03's console reads its lines up close",
+      (await monitor.textContent()).includes('// P03 CONSOLE'),
+    )
+    await page.mouse.move(5, 300)
+    await monitor.waitFor({ state: 'detached' })
 
     await page.waitForTimeout(600)
     await click('bell')

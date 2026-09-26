@@ -11,6 +11,7 @@ import { Disk, facePlanes, type DiskHandle } from './Disk.tsx'
 import { backTexture, faceContent, faceLights, faceTexture, type loadCardAssets } from './faces.ts'
 import { DECK, handPlace, slot, type Row, type Vec3 } from './layout.ts'
 import { LEAVE_MS, type Lunge } from './playback.ts'
+import { holding, startHold } from './reading.ts'
 
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
 
@@ -28,15 +29,6 @@ const scale = new THREE.Vector3()
 const Z = new THREE.Vector3(0, 0, 1)
 
 const LUNGE_MS = 240
-
-// How long a finger rests on a card before it is magnified, and until when a click is a hold's release, not a play.
-const HOLD_MS = 280
-let heldUntil = 0
-
-/** Called when a hold's finger lifts: the click that follows it is swallowed. */
-export function released(): void {
-  heldUntil = performance.now() + 400
-}
 
 export function Card({
   unit,
@@ -85,10 +77,10 @@ export function Card({
   const [pointed, setPointed] = useState(false)
   const hovered = pointed || raised
   const touched = useRef(false)
-  const holding = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const cancelHold = useRef<(() => void) | null>(null)
   const letGo = () => {
-    if (holding.current) clearTimeout(holding.current)
-    holding.current = null
+    cancelHold.current?.()
+    cancelHold.current = null
   }
   useEffect(() => letGo, [])
   const self = useRef({})
@@ -248,18 +240,14 @@ export function Card({
     onClick: (event: ThreeEvent<MouseEvent>) => {
       event.stopPropagation()
       // A hold was a look, not a play.
-      if (performance.now() < heldUntil) return
+      if (holding()) return
       onClick?.(event, touched.current)
     },
     onPointerDown: (event: ThreeEvent<PointerEvent>) => {
       touched.current = event.pointerType === 'touch'
       if (!touched.current || !onHold) return
-      const { clientX, clientY } = event.nativeEvent
       letGo()
-      holding.current = setTimeout(() => {
-        heldUntil = Infinity
-        onHold(clientX, clientY)
-      }, HOLD_MS)
+      cancelHold.current = startHold(event, onHold)
     },
     onPointerUp: letGo,
     onPointerCancel: letGo,
