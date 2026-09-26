@@ -875,14 +875,7 @@ export function Factory({
       />
       <Fixtures />
       <Monitor screen="log" position={LOG_AT} turn={0.3} lines={lines} onHold={onHold} onPin={onPin} />
-      <Monitor
-        screen="status"
-        position={STATUS_AT}
-        turn={-0.3}
-        lines={status}
-        onHold={onHold}
-        onPin={onPin}
-      />
+      <Monitor screen="status" position={STATUS_AT} turn={-0.3} lines={status} onHold={onHold} onPin={onPin} />
       <Suspense fallback={null}>
         <Battery view={view} />
       </Suspense>
