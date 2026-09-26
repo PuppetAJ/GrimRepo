@@ -10,28 +10,24 @@ const FADE = 2.5
 
 type Edge = [number, number, number, number]
 
-/** A seeded walk over the grid: each trace leaves a node and bends once, and some end in a pad. */
-function traces(width: number, height: number): { edges: Edge[]; pads: [number, number][] } {
+/** A seeded walk over the grid: each trace leaves a point and bends as it goes. */
+function traces(width: number, height: number): Edge[] {
   let seed = 7
   const random = () => (seed = (seed * 16807) % 2147483647) / 2147483647
   const cols = Math.ceil(width / STEP)
   const rows = Math.ceil(height / STEP)
   const edges: Edge[] = []
-  const pads: [number, number][] = []
   for (let i = 0; i < (cols * rows) / 5; i++) {
     let x = Math.floor(random() * cols) * STEP
     let y = Math.floor(random() * rows) * STEP
-    pads.push([x, y])
     for (let leg = 0; leg < 2 + Math.floor(random() * 3); leg++) {
       const along = Math.ceil(random() * 4) * STEP * (random() < 0.5 ? -1 : 1)
       const [nx, ny] = leg % 2 === 0 ? [x + along, y] : [x, y + along]
       edges.push([x, y, nx, ny])
       ;[x, y] = [nx, ny]
     }
-    // A node at each end of every trace.
-    pads.push([x, y])
   }
-  return { edges, pads }
+  return edges
 }
 
 export function Circuit() {
@@ -75,8 +71,7 @@ export function Circuit() {
       const { clientWidth: w, clientHeight: h } = element
       element.width = board.width = w * ratio
       element.height = board.height = h * ratio
-      const made = traces(w, h)
-      edges = made.edges
+      edges = traces(w, h)
       meeting = new Map()
       edges.forEach(([x0, y0, x1, y1], i) => {
         for (const point of [key(x0, y0), key(x1, y1)]) meeting.set(point, [...(meeting.get(point) ?? []), i])
@@ -92,15 +87,13 @@ export function Circuit() {
         ink.lineTo(x1, y1)
       }
       ink.stroke()
-      // Round pads with a dark hole, as a board's vias are.
-      for (const [x, y] of made.pads) {
-        ink.fillStyle = 'rgb(125 255 154 / 0.16)'
+      // A solid node where a trace ends; where traces meet and carry on, the line runs through as it is.
+      ink.fillStyle = 'rgb(125 255 154 / 0.16)'
+      for (const [point, touching] of meeting) {
+        if (touching.length !== 1) continue
+        const [x, y] = point.split(',').map(Number) as [number, number]
         ink.beginPath()
-        ink.arc(x, y, 3.5, 0, Math.PI * 2)
-        ink.fill()
-        ink.fillStyle = 'rgb(4 10 6 / 0.9)'
-        ink.beginPath()
-        ink.arc(x, y, 1.3, 0, Math.PI * 2)
+        ink.arc(x, y, 3.2, 0, Math.PI * 2)
         ink.fill()
       }
       // Spread through their lives, so they do not all fade together.

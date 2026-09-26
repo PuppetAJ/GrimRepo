@@ -119,7 +119,7 @@ function Balance({ scale }: { scale: number }) {
       aria-valuetext={scaleWords(scale)}
       className="flex flex-col items-center"
     >
-      <svg viewBox="0 0 200 150" className="max-h-[15dvh] w-full" shapeRendering="crispEdges" aria-hidden>
+      <svg viewBox="0 0 200 150" className="max-h-[14dvh] w-full" shapeRendering="crispEdges" aria-hidden>
         <g stroke="#7dff9a" fill="none" strokeWidth={3}>
           {/* The post: a column with vents, standing on a plinth, the hub at the top. */}
           <rect x={94} y={48} width={12} height={82} />
@@ -402,6 +402,10 @@ export function TerminalTable({
   const [looking, setLooking] = useState<Place | null>(null)
   const fullScreen = useFullScreen()
   const { frame, size } = useFit(fullScreen.on)
+  // What the table's height leaves room for: the process monitor only on tall tables, and less print on short ones.
+  const height = typeof size.height === 'number' ? size.height : 900
+  const roomy = height >= 880
+  const short = height < 760
   const pointedAt = !looking
     ? null
     : 'uid' in looking
@@ -486,9 +490,9 @@ export function TerminalTable({
           >
             <span className="grid size-[min(3.5rem,6dvh)] place-items-center rounded-full border-4 border-[#2f6b3d] bg-[#a3172b] shadow-[0_0_14px_rgb(255_60_60/0.4)]" />
             <span className="text-2xl tracking-widest">EXECUTE</span>
-            <span className="text-sm text-p03-dim [@media(max-height:780px)]:hidden">press the button · E</span>
+            {short ? null : <span className="text-sm text-p03-dim">press the button · E</span>}
           </button>
-          <Processes />
+          {roomy ? <Processes /> : null}
         </aside>
 
         <section aria-label="The table" className="relative z-10 flex min-h-0 flex-col items-center gap-2">
@@ -641,15 +645,19 @@ export function TerminalTable({
                 <p className="flex items-start justify-between gap-2 text-3xl leading-none">
                   <span>{card(inspected.card).name}</span>
                   {card(inspected.card).cost ? (
-                    <span className="shrink-0 text-lg">x{card(inspected.card).cost}</span>
+                    <span className="flex shrink-0 gap-1 pt-1" aria-label={`Costs ${card(inspected.card).cost}`}>
+                      {[...Array(card(inspected.card).cost).keys()].map((i) => (
+                        <span key={i} className="size-4 bg-[#ff9a2e] outline outline-2 outline-[#0b1f12]" />
+                      ))}
+                    </span>
                   ) : null}
                 </p>
                 {/* The art large and the stats under it, as Act 2's inspector shows a card. */}
-                <div className="grid min-h-0 flex-[1.4] place-items-center rounded-sm border-2 border-[#0b1f12] bg-[#8fd3a0] bg-[repeating-linear-gradient(0deg,rgb(0_0_0/0.06)_0_1px,transparent_1px_3px)]">
+                <div className="grid min-h-16 flex-1 place-items-center rounded-sm border-2 border-[#0b1f12] bg-[#8fd3a0] bg-[repeating-linear-gradient(0deg,rgb(0_0_0/0.06)_0_1px,transparent_1px_3px)]">
                   <Art id={inspected.card} big />
                 </div>
-                {/* A fixed height, with the sigils scrolling inside it, so reading a card never moves the page. */}
-                <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
+                {/* Only as tall as the sigils need, up to a limit, scrolling past it; the art takes the rest. */}
+                <div className="flex max-h-[45%] shrink-0 flex-col gap-2 overflow-y-auto">
                   {inspected.sigils.length ? (
                     inspected.sigils.map((sigil) => (
                       <p key={sigil} className="flex gap-2 text-xl leading-tight">
@@ -687,7 +695,10 @@ export function TerminalTable({
             aria-label="P03's console"
             className="rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-2 text-base"
           >
-            <ol aria-live="polite" className="flex h-36 flex-col-reverse overflow-y-auto text-lg">
+            <ol
+              aria-live="polite"
+              className={`flex flex-col-reverse overflow-y-auto text-lg ${short ? 'h-24' : 'h-32'}`}
+            >
               {[...game.log].reverse().map((line, index) => (
                 <li key={game.log.length - index}>{line}</li>
               ))}

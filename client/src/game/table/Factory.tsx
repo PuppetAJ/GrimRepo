@@ -846,6 +846,12 @@ const STATUS_AT: Vec3 = [X + 4.3, 9.5, -14.2]
 /** Everything in the room that no move changes, kept out of the re-render each move brings. */
 const Fixtures = memo(function Fixtures() {
   const mood = useTuning()
+  // The dust is drawn as at 1x whatever the resolution, so it looks the same when the resolution adapts.
+  const dust = useRef<THREE.Points>(null)
+  useFrame(() => {
+    const material = dust.current?.material as { pixelRatio?: number } | undefined
+    if (material) material.pixelRatio = 1
+  })
   return (
     <>
       <Room />
@@ -856,6 +862,7 @@ const Fixtures = memo(function Fixtures() {
       {/* Dust drifting in the light. */}
       {/* Remade when the count changes, which it cannot take in place. */}
       <Sparkles
+        ref={dust}
         key={mood.dustCount}
         count={mood.dustCount}
         scale={[14, 7, 12]}
