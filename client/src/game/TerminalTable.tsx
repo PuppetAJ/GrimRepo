@@ -328,7 +328,8 @@ function useFit(full: boolean) {
         // From where the table starts on the page, however tall the header is at this zoom.
         room = window.innerHeight - (element.getBoundingClientRect().top + window.scrollY) - margin
       }
-      const height = Math.max(480, Math.min(room, width * MOST_TALL))
+      // Never shorter than its columns need: on a window smaller still, the page scrolls rather than cutting parts off.
+      const height = Math.max(600, Math.min(room, width * MOST_TALL))
       setSize(
         full
           ? { width, height, left: (window.innerWidth - width) / 2, top: (window.innerHeight - height) / 2 }
@@ -349,7 +350,7 @@ function useFit(full: boolean) {
 
 const PROCESSES = ['p03.core', 'scale.svc', 'sacrifice.d', 'lane.watch', 'gc.reaper', 'deck.shuf']
 
-/** P03's idle process monitor, in the space under the button; shown only when three of its lines fit, and scrolling. */
+/** P03's idle process monitor, in the space under the button; shown once its heading and a line fit, and scrolling. */
 function Processes() {
   const [tick, setTick] = useState(0)
   const [box, setBox] = useState<HTMLDivElement | null>(null)
@@ -360,9 +361,9 @@ function Processes() {
   }, [])
   useEffect(() => {
     if (!box) return
-    // The heading and three lines, each about 1.5rem, and the padding.
+    // The heading and one line, each about 1.5rem, and the padding.
     const measure = () =>
-      setFits(box.clientHeight >= 7.5 * parseFloat(getComputedStyle(document.documentElement).fontSize))
+      setFits(box.clientHeight >= 4.5 * parseFloat(getComputedStyle(document.documentElement).fontSize))
     measure()
     const observer = new ResizeObserver(measure)
     observer.observe(box)
@@ -651,7 +652,9 @@ export function TerminalTable({
         </section>
 
         <aside className="relative z-10 flex min-h-0 flex-col gap-3 overflow-hidden">
-          <Panel className="flex min-h-0 flex-1 flex-col gap-2 bg-[#a9e7b8] text-[#0b1f12]">
+          {/* As tall as the card needs, up to a cap; when short, its art gives way down to a floor that still shows the
+              name and stats. The console below takes whatever is left. */}
+          <Panel className="flex max-h-[30rem] min-h-[15rem] shrink flex-col gap-2 bg-[#a9e7b8] text-[#0b1f12]">
             {inspected ? (
               <>
                 <p className="flex items-start justify-between gap-2 text-3xl leading-none">
@@ -669,7 +672,7 @@ export function TerminalTable({
                   <Art id={inspected.card} big />
                 </div>
                 {/* Only as tall as the sigils need, up to a limit, scrolling past it; the art takes the rest. */}
-                <div className="flex max-h-[45%] shrink-0 flex-col gap-2 overflow-y-auto">
+                <div className="flex max-h-40 shrink-0 flex-col gap-2 overflow-y-auto">
                   {inspected.sigils.length ? (
                     inspected.sigils.map((sigil) => (
                       <p key={sigil} className="flex gap-2 text-xl leading-tight">
@@ -705,12 +708,9 @@ export function TerminalTable({
           </Panel>
           <section
             aria-label="P03's console"
-            className="rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-2 text-base"
+            className="flex min-h-16 flex-1 flex-col rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-2 text-base"
           >
-            <ol
-              aria-live="polite"
-              className={`flex flex-col-reverse overflow-y-auto text-lg ${short ? 'h-24' : 'h-32'}`}
-            >
+            <ol aria-live="polite" className="flex min-h-0 flex-1 flex-col-reverse overflow-y-auto text-lg">
               {[...game.log].reverse().map((line, index) => (
                 <li key={game.log.length - index}>{line}</li>
               ))}
