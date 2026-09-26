@@ -1,5 +1,6 @@
-import { card, CARDS, type SigilId, type Unit } from 'shared'
+import { card, CARDS, type Unit } from 'shared'
 import { CanvasTexture, SRGBColorSpace, type Texture } from 'three'
+import { ICONS, STAT_ICONS } from './icons.ts'
 import { TINT } from './palette.ts'
 import { CORNER_HOLES, DISK, RECESS, SCREEN_DIVIDER, SECTIONS, SIGIL_BAND } from './layout.ts'
 
@@ -25,7 +26,7 @@ export function loadCardAssets(): Promise<Assets> {
   assets ??= (async () => {
     const withArt = Object.keys(CARDS).filter((id) => id !== 'Boilerplate')
     const [art] = await Promise.all([
-      Promise.all(withArt.map((id) => image(`/cards/${id}.png`))),
+      Promise.all(withArt.map((id) => image(`/cards/${id}.webp`))),
       document.fonts.load('48px VT323'),
     ])
     return { art: new Map(withArt.map((id, i) => [id, art[i] as HTMLImageElement])) }
@@ -87,23 +88,6 @@ const RARE: Palette = {
   plateInk: '#1a1214',
   cost: '#ffb14a',
   hurt: '#ffd3d0',
-}
-
-// Small pixel icons for the sigils, drawn on the strip; the text table spells them out.
-/** A sword by attack and a shield by health, so a new player can tell the two numbers apart. */
-export const STAT_ICONS = {
-  attack: ['00000011', '00000111', '00001110', '11011100', '01111000', '00110000', '01011000', '10000000'],
-  health: ['11111111', '10000001', '10111101', '10111101', '10011001', '01011010', '00100100', '00011000'],
-}
-
-export const ICONS: Record<SigilId, string[]> = {
-  segfault: ['01111110', '11011011', '11111111', '11100111', '01111110', '00100100', '01100110', '01000010'],
-  bypass: ['00010000', '00111000', '01111100', '00010000', '00010000', '11111111', '10101011', '11111111'],
-  technical_debt: ['00011000', '00111100', '00011000', '01100110', '11111111', '01100110', '00011000', '00000000'],
-  try_catch: ['11111111', '10000001', '10111101', '10111101', '01011010', '00111100', '00011000', '00000000'],
-  rate_limiter: ['10010010', '01010100', '00111000', '11111110', '00111000', '01010100', '10010010', '00000000'],
-  fork: ['10000001', '11000011', '01100110', '00111100', '00011000', '00011000', '00011000', '00011000'],
-  hotfix: ['00111100', '00111100', '11111111', '11111111', '11111111', '00111100', '00111100', '00000000'],
 }
 
 function pixels(context: CanvasRenderingContext2D, grid: string[], x: number, y: number, size: number, colour: string) {

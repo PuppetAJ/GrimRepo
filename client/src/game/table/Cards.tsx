@@ -11,6 +11,7 @@ import { Disk, facePlanes, type DiskHandle } from './Disk.tsx'
 import { backTexture, faceContent, faceLights, faceTexture, type loadCardAssets } from './faces.ts'
 import { DECK, handPlace, slot, type Row, type Vec3 } from './layout.ts'
 import { LEAVE_MS, type Lunge } from './playback.ts'
+import { holding, startHold } from './reading.ts'
 
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
 
@@ -42,6 +43,8 @@ export function Card({
   shake = 0,
   onClick,
   onHover,
+  onHold,
+  raised = false,
   cursor = 'point',
 }: {
   unit: Unit
@@ -55,15 +58,28 @@ export function Card({
   leavingHow?: 'died' | 'sacrificed'
   look?: Look
   assets: Assets
-  onClick?: (event: ThreeEvent<MouseEvent>) => void
+  /** Told whether a finger made the click, since on touch a first tap only lifts a hand card. */
+  onClick?: (event: ThreeEvent<MouseEvent>, touch: boolean) => void
   /** Told when the pointer arrives on the card and leaves it. */
   onHover?: (on: boolean) => void
+  /** Told when a finger or the mouse's button has held the card, and where. */
+  onHold?: (x: number, y: number) => void
+  /** Held up as if pointed at, as a hand card tapped once on touch is. */
+  raised?: boolean
   /** How the pointer looks over the card when it can be clicked. */
   cursor?: CursorKind
 }) {
   const mesh = useRef<THREE.Object3D>(null)
   const disk = useRef<DiskHandle>(null)
-  const [hovered, setHovered] = useState(false)
+  const [pointed, setPointed] = useState(false)
+  const hovered = pointed || raised
+  const touched = useRef(false)
+  const cancelHold = useRef<(() => void) | null>(null)
+  const letGo = () => {
+    cancelHold.current?.()
+    cancelHold.current = null
+  }
+  useEffect(() => letGo, [])
   const self = useRef({})
   const clickable = Boolean(onClick)
   useEffect(() => {
@@ -220,15 +236,25 @@ export function Card({
   const handlers = {
     onClick: (event: ThreeEvent<MouseEvent>) => {
       event.stopPropagation()
-      onClick?.(event)
+      // A hold was a look, not a play.
+      if (holding()) return
+      onClick?.(event, touched.current)
     },
+    onPointerDown: (event: ThreeEvent<PointerEvent>) => {
+      touched.current = event.pointerType === 'touch'
+      if (!onHold || (!touched.current && event.button !== 0)) return
+      letGo()
+      cancelHold.current = startHold(event, onHold)
+    },
+    onPointerUp: letGo,
+    onPointerCancel: letGo,
     onPointerOver: (event: ThreeEvent<PointerEvent>) => {
       event.stopPropagation()
-      setHovered(true)
+      setPointed(true)
       onHover?.(true)
     },
     onPointerOut: () => {
-      setHovered(false)
+      setPointed(false)
       onHover?.(false)
     },
     // Stopped here too, or what lies behind the card is hovered again on the next move.

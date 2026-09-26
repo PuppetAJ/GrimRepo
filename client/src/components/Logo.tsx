@@ -2,7 +2,7 @@ import { Link } from 'react-router'
 
 export function Logo() {
   return (
-    <Link to="/" className="flex items-center gap-2 whitespace-nowrap sm:gap-3" aria-label="Grim Repo, home">
+    <Link to="/" className="flex items-center gap-2 whitespace-nowrap sm:gap-3" aria-label="p03 / grim-repo, home">
       <svg
         width="26"
         height="26"

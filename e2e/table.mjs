@@ -76,6 +76,40 @@ section('The 3D table')
     await click({ lane: 2 })
     await until(page, (id) => window.__game.state().player.board[2]?.uid === id, uid)
     check('clicking a lane plays it there', true)
+    // Looking down at the board, as a player does to read their own row, which the hand covers from the seat.
+    await page.mouse.move(5, 300)
+    await page.keyboard.press('w')
+    await page.waitForTimeout(1200)
+    const name = card(free.find(([id]) => id === uid)[1]).name
+    const untouched = await page.evaluate(() => JSON.stringify(window.__game.state()))
+    await page.mouse.move(...Object.values(await page.evaluate(() => window.__game.screen({ lane: 2, far: true }))))
+    await page.mouse.down()
+    const magnified = await until(
+      page,
+      (name) => document.querySelector('[data-magnifier]')?.textContent.includes(name),
+      name,
+      5_000,
+    ).then(
+      () => true,
+      () => false,
+    )
+    check('holding the mouse on a card on the board magnifies it', magnified)
+    await page.mouse.up()
+    await page.locator('[data-magnifier]').waitFor({ state: 'detached' })
+    await page.waitForTimeout(300)
+    check(
+      'and letting go puts it away without playing anything',
+      untouched === (await page.evaluate(() => JSON.stringify(window.__game.state()))),
+    )
+    await page.keyboard.press('s')
+    await page.waitForTimeout(1200)
+    await page.mouse.click(...Object.values(await page.evaluate(() => window.__game.screen('log'))))
+    const monitor = page.getByRole('region', { name: 'Monitor readout' })
+    await monitor.waitFor()
+    check("clicking P03's console pins its lines open", (await monitor.textContent()).includes('// P03 CONSOLE'))
+    await page.mouse.click(700, 180)
+    await monitor.waitFor({ state: 'detached' })
+    check('and a click elsewhere closes them', true)
 
     await page.waitForTimeout(600)
     await click('bell')
