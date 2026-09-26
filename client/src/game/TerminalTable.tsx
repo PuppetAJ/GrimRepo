@@ -455,12 +455,14 @@ export function TerminalTable({
   // Less print on short tables.
   const height = typeof size.height === 'number' ? size.height : 900
   const short = height < 760
-  const pointedAt = !looking
-    ? null
-    : 'uid' in looking
-      ? (view.hand.find((unit) => unit.uid === looking.uid) ?? null)
-      : (view[looking.row][looking.lane] ?? null)
-  const inspected = pointedAt ?? summoning ?? null
+  const at = (place: Place | null) =>
+    !place
+      ? null
+      : 'uid' in place
+        ? (view.hand.find((unit) => unit.uid === place.uid) ?? null)
+        : (view[place.row][place.lane] ?? null)
+  // The card being summoned holds the reader until it is played or put back.
+  const inspected = summoning ?? at(looking) ?? null
   // The reader keeps the last card pointed at, as Act 2's does: leaving it, or a zoom moving the page under a still
   // pointer, does not empty it. Pointing at an empty lane leaves it too.
   // On touch, holding a card magnifies it above the finger; letting go does not play it.
@@ -472,7 +474,38 @@ export function TerminalTable({
     hold.current = null
     setMagnified(null)
   }
+  // Once a hold opens the magnifier, sliding the finger reads whatever card it is over, and the page stays still.
+  const magnifying = magnified !== null
+  useEffect(() => {
+    if (!magnifying) return
+    const move = (event: TouchEvent) => {
+      event.preventDefault()
+      const touch = event.touches[0]
+      if (!touch) return
+      const key = document.elementFromPoint(touch.clientX, touch.clientY)?.closest<HTMLElement>('[data-look]')?.dataset[
+        'look'
+      ]
+      const place: Place | null = !key
+        ? null
+        : key.startsWith('uid:')
+          ? { uid: Number(key.slice(4)) }
+          : { row: key.split(':')[0] as BoardRow, lane: Number(key.split(':')[1]) }
+      const unit = at(place)
+      if (place && unit) setLooking(place)
+      setMagnified((last) => (last ? { unit: unit ?? last.unit, x: touch.clientX, y: touch.clientY } : last))
+    }
+    const end = () => setMagnified(null)
+    document.addEventListener('touchmove', move, { passive: false })
+    document.addEventListener('touchend', end)
+    document.addEventListener('touchcancel', end)
+    return () => {
+      document.removeEventListener('touchmove', move)
+      document.removeEventListener('touchend', end)
+      document.removeEventListener('touchcancel', end)
+    }
+  })
   const look = (place: Place, unit: Slot | Unit = null) => ({
+    'data-look': 'uid' in place ? `uid:${place.uid}` : `${place.row}:${place.lane}`,
     onPointerEnter: () => unit && setLooking(place),
     onFocus: () => unit && setLooking(place),
     onPointerDown: (event: React.PointerEvent) => {
@@ -487,7 +520,8 @@ export function TerminalTable({
     },
     onPointerUp: letGo,
     onPointerCancel: letGo,
-    onPointerLeave: letGo,
+    // A finger held down stays on its card until lifted; the page's touch listeners let it go.
+    onPointerLeave: (event: React.PointerEvent) => event.pointerType !== 'touch' && letGo(),
   })
   // The cards on the table when the page opened are simply there; only those dealt, drawn or queued since arrive.
   const [present] = useState(
@@ -521,7 +555,8 @@ export function TerminalTable({
   // A lane's size comes from the board's height, so the whole table fits the window.
   const [handSection, setHandSection] = useState<HTMLElement | null>(null)
   const { setArea, lane: laneSize } = useLaneSize(narrow, handSection, layout === 'mid' ? 13 * 16 + 12 : 0)
-  const cell = 'flex shrink-0 items-center justify-center rounded-md border-2 p-1'
+  const cell =
+    'flex shrink-0 select-none items-center justify-center rounded-md border-2 p-1 [-webkit-touch-callout:none]'
   const faces = playback.popups.filter((popup) => 'face' in popup.spot)
   const over = result && !busy
 
@@ -697,7 +732,7 @@ export function TerminalTable({
   )
   const readerPanel = (
     <Panel
-      className={`@container flex flex-col gap-2 bg-[#a9e7b8] text-[#0b1f12] ${layout === 'mid' ? 'h-[min(20rem,64%)] shrink-0' : narrow ? 'h-56' : 'max-h-[30rem] min-h-[15rem] flex-1 basis-0'}`}
+      className={`@container flex flex-col gap-2 overflow-hidden bg-[#a9e7b8] text-[#0b1f12] ${layout === 'mid' ? 'h-[min(20rem,72%)] shrink-0' : narrow ? 'h-56' : 'max-h-[30rem] min-h-[15rem] flex-1 basis-0'}`}
     >
       {inspected ? (
         <>
@@ -712,11 +747,11 @@ export function TerminalTable({
             ) : null}
           </p>
           {/* The art large and the stats under it, as Act 2's inspector shows a card. */}
-          <div className="grid min-h-16 flex-1 place-items-center rounded-sm border-2 border-[#0b1f12] bg-[#8fd3a0] bg-[repeating-linear-gradient(0deg,rgb(0_0_0/0.06)_0_1px,transparent_1px_3px)]">
+          <div className="grid min-h-8 flex-1 place-items-center overflow-hidden rounded-sm border-2 border-[#0b1f12] bg-[#8fd3a0] bg-[repeating-linear-gradient(0deg,rgb(0_0_0/0.06)_0_1px,transparent_1px_3px)]">
             <Art id={inspected.card} big />
           </div>
           {/* Only as tall as the sigils need, up to a limit, scrolling past it; the art takes the rest. */}
-          <div className="flex max-h-40 shrink-0 flex-col gap-2 overflow-y-auto">
+          <div className="flex max-h-40 min-h-0 flex-col gap-2 overflow-y-auto">
             {inspected.sigils.length ? (
               inspected.sigils.map((sigil) => (
                 <p key={sigil} className="flex gap-2 text-xl leading-tight">
@@ -873,7 +908,7 @@ export function TerminalTable({
   const handCards = (
     // A box the cards scroll in, so a full hand never runs over the controls or the piles.
     <div
-      className={`justify-[safe_center] flex min-w-0 flex-1 items-center gap-2 overflow-x-auto rounded-md border-2 border-[#1f3a26] bg-[#050d07]/70 px-1 pt-3.5 pb-1 ${narrow ? '' : 'h-full'}`}
+      className={`justify-[safe_center] flex min-w-0 flex-1 items-center gap-2 overflow-x-auto rounded-md border-2 border-[#1f3a26] bg-[#050d07]/70 px-1 pt-5 pb-1 ${narrow ? '' : 'h-full'}`}
     >
       {view.hand.map((unit) => {
         const selected = unit.uid === state.summon?.uid
@@ -884,13 +919,7 @@ export function TerminalTable({
           <div
             key={unit.uid}
             {...look({ uid: unit.uid }, unit)}
-            className={
-              narrow
-                ? layout === 'mid'
-                  ? 'w-[clamp(5rem,6.5vw,6.5rem)] shrink-0'
-                  : 'w-14 shrink-0'
-                : 'aspect-[4/5] h-full shrink-0'
-            }
+            className={`shrink-0 select-none [-webkit-touch-callout:none] ${narrow ? (layout === 'mid' ? 'w-[clamp(5rem,6.5vw,6.5rem)]' : 'w-14') : 'aspect-[4/5] h-full'}`}
             style={fresh(unit.uid) ? { animation: 'arrive-up 280ms ease-out' } : undefined}
           >
             <button
@@ -1008,6 +1037,7 @@ export function TerminalTable({
       data-seed={state.seed}
       data-table="text"
       // A held card was being read, not played.
+      onContextMenu={(event) => (hold.current || held.current) && event.preventDefault()}
       onClickCapture={(event) => {
         if (!held.current) return
         held.current = false
