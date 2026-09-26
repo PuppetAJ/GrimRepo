@@ -45,6 +45,7 @@ const GLOW = new THREE.Color(...TINT.glowHdr)
 // Glow is kept for what is brighter than white, so no lamp can make a lit card glow; these are pushed past it.
 const SCREEN_HDR = new THREE.Color(1.7, 1.7, 1.7)
 const DUST = new THREE.Color(TINT.cool).multiplyScalar(2)
+const STILL = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 // The cards' glow comes from what their faces give off, not from lamps, so its pass is lit by nothing.
 const SELECTED_LIGHT = new THREE.AmbientLight('#000000', 0)
 
@@ -825,16 +826,14 @@ const Fixtures = memo(function Fixtures() {
       <Suspense fallback={null}>
         <GemModule />
       </Suspense>
-      {/* Dust drifting in the light. */}
-      {/* Remade when the count changes, which it cannot take in place. */}
+      {/* Dust drifting in the light, hanging still for anyone who asks for less motion. */}
       <Sparkles
         ref={dust}
-        key={MOOD.dustCount}
         count={MOOD.dustCount}
         scale={[14, 7, 12]}
         position={[X, 8.5, -11]}
         size={MOOD.dustSize}
-        speed={MOOD.dustSpeed}
+        speed={STILL ? 0 : MOOD.dustSpeed}
         color={DUST}
         opacity={MOOD.dustOpacity}
       />
