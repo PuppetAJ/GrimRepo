@@ -17,6 +17,8 @@ const MODE_KEY = 'grimrepo:table'
 
 function savedMode(): Mode {
   try {
+    // Asking for a text layout in the address asks for the text table too.
+    if (new URLSearchParams(window.location.search).has('text')) localStorage.setItem(MODE_KEY, 'text')
     return localStorage.getItem(MODE_KEY) === 'text' ? 'text' : '3d'
   } catch {
     return '3d'

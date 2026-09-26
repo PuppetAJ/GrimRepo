@@ -22,6 +22,7 @@ export function Nudge({
   lift = 0.05,
   hint = 0,
   still = false,
+  exact = false,
   cursor,
   children,
 }: {
@@ -34,6 +35,8 @@ export function Nudge({
   hint?: number
   /** Stays put when pointed at, as a thing bolted down does. */
   still?: boolean
+  /** Pointed at by what it holds, not by a box round it. */
+  exact?: boolean
   /** The pointer's own look over it, from /cursors/, when it can be clicked. */
   cursor?: 'draw' | 'boilerplate' | 'press'
   children: ReactNode
@@ -61,25 +64,31 @@ export function Nudge({
     const t = (performance.now() - since.current) / 1000
     moving.rotation.z = on ? 0.04 * Math.sin(t * 38) * Math.exp(-t * 7) : 0
   })
+  const handlers = {
+    onClick: (event: ThreeEvent<MouseEvent>) => {
+      event.stopPropagation()
+      if (active) onClick(event)
+    },
+    // Only the nearest thing under the pointer is hovered: the pile and the deck overlap from the seat.
+    onPointerOver: (event: ThreeEvent<PointerEvent>) => {
+      event.stopPropagation()
+      setHovered(true)
+      since.current = performance.now()
+    },
+    onPointerMove: (event: ThreeEvent<PointerEvent>) => event.stopPropagation(),
+    onPointerOut: () => setHovered(false),
+  }
+  // A stack is pointed at by its own disks, which touch, so its outline is exactly what is seen; other things by a box.
+  if (exact)
+    return (
+      <group ref={group} name={label} {...handlers}>
+        {children}
+      </group>
+    )
   return (
     <group>
       <group ref={group}>{children}</group>
-      <mesh
-        name={label}
-        position={[0, size[1] / 2, 0]}
-        onClick={(event) => {
-          event.stopPropagation()
-          if (active) onClick(event)
-        }}
-        // Only the nearest thing under the pointer is hovered: the pile and the deck overlap from the seat.
-        onPointerOver={(event) => {
-          event.stopPropagation()
-          setHovered(true)
-          since.current = performance.now()
-        }}
-        onPointerMove={(event) => event.stopPropagation()}
-        onPointerOut={() => setHovered(false)}
-      >
+      <mesh name={label} position={[0, size[1] / 2, 0]} {...handlers}>
         <boxGeometry args={size} />
         <meshBasicMaterial visible={false} />
       </mesh>
@@ -146,6 +155,9 @@ function Stack({
       for (let i = 0; i < plain; i++) mesh.setMatrixAt(i, place(i, faceUp, layer))
       mesh.count = Math.max(plain, 0)
       mesh.instanceMatrix.needsUpdate = true
+      // The bounds are cached for picking, so they are worked out again as the stack changes.
+      mesh.boundingSphere = null
+      mesh.boundingBox = null
     }
   }, [plain, faceUp])
   const shown = faceUp && layers > 0 ? place(layers - 1, true, new THREE.Matrix4()) : null
@@ -187,12 +199,11 @@ export function Deck({
   const layers = count === 0 ? 0 : Math.max(1, Math.round((count / total) * 12))
   return (
     <group position={DECK}>
-      {/* One box round the whole stack, as tall as it stands. */}
       <Nudge
         active={active}
         onClick={onClick}
-        // Closed disks are compact, so the deck is shorter front to back than the open pile beside it.
-        size={[0.8, stackHeight(layers), CARD.height * DISK.compact + 0.04]}
+        size={[0.8, stackHeight(layers), CARD.height * DISK.compact]}
+        exact
         label="deck"
         hint={hint}
         cursor="draw"
@@ -227,7 +238,8 @@ export function Pile({
       <Nudge
         active={active}
         onClick={onClick}
-        size={[0.8, stackHeight(6), CARD.height + 0.04]}
+        size={[0.8, stackHeight(6), CARD.height]}
+        exact
         label="pile"
         hint={hint}
         cursor="boilerplate"

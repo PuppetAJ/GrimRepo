@@ -2,60 +2,28 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { card, legalActions, SIGILS, TIP, type Action, type SigilId, type Slot, type Unit } from 'shared'
 import { DemoNote, describe, GameOver, has, laneAction, owed, prompt, scaleWords, WalkAway } from './controls.tsx'
 import { ICONS } from './table/faces.ts'
+import { useFullScreen } from './fullScreen.ts'
 import type { Ready } from './useGame.ts'
 
 // The text table laid out as Inscryption's Act 2, in P03's green: the scale and the button on the left, the board in
 // the middle, the card being looked at on the right, and the hand along the bottom.
 const INK = '#0b1f12'
 
-const arts = new Map<string, Promise<string>>()
-
-/** A card's 2022 art as a few dozen pixels of ink, the way Act 2 draws its cards; made once per card. */
-function pixelArt(id: string): Promise<string> {
-  let found = arts.get(id)
-  if (!found) {
-    found = new Promise((resolve) => {
-      const image = new Image()
-      image.onload = () => {
-        const [w, h] = [96, 74]
-        const canvas = document.createElement('canvas')
-        canvas.width = w
-        canvas.height = h
-        const context = canvas.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D
-        const scale = Math.min(w / image.width, h / image.height)
-        const [dw, dh] = [image.width * scale, image.height * scale]
-        context.drawImage(image, (w - dw) / 2, (h - dh) / 2, dw, dh)
-        // The art is ink on a clear ground: each pixel is ink or nothing, as on a one-bit screen.
-        const pixels = context.getImageData(0, 0, w, h)
-        const { data } = pixels
-        for (let i = 0; i < data.length; i += 4) {
-          const on = (data[i + 3] as number) > 60
-          data[i] = 11
-          data[i + 1] = 31
-          data[i + 2] = 18
-          data[i + 3] = on ? 255 : 0
-        }
-        context.putImageData(pixels, 0, 0)
-        resolve(canvas.toDataURL())
-      }
-      image.onerror = () => resolve('')
-      image.src = `/cards/${id}.png`
-    })
-    arts.set(id, found)
-  }
-  return found
-}
-
-function usePixelArt(id: string): string {
-  const [url, setUrl] = useState('')
-  useEffect(() => {
-    let live = true
-    void pixelArt(id).then((found) => live && setUrl(found))
-    return () => {
-      live = false
-    }
-  }, [id])
-  return url
+/** A card's 2022 art in ink: the drawing is ink on a clear ground, so it serves as a mask, sharp at any size. */
+function Art({ id, big = false }: { id: string; big?: boolean }) {
+  if (id === 'Boilerplate') return <span className={big ? 'text-4xl' : 'text-lg'}>{'<div>'}</span>
+  return (
+    <span
+      aria-hidden
+      className="block h-[86%] w-[86%] bg-[#0b1f12]"
+      style={{
+        maskImage: `url(/cards/${id}.png)`,
+        maskSize: 'contain',
+        maskRepeat: 'no-repeat',
+        maskPosition: 'center',
+      }}
+    />
+  )
 }
 
 /** One of the sigils' pixel icons. */
@@ -75,18 +43,13 @@ function Sigil({ id, size = 18, colour = INK }: { id: SigilId; size?: number; co
 /** A card as Act 2 draws it: art above, sigils below, the cost in the corner and attack and health at the foot. */
 function PixelCard({ unit, big = false }: { unit: Unit; big?: boolean }) {
   const def = card(unit.card)
-  const art = usePixelArt(unit.card)
   const rare = def.tier === 'S'
   return (
     <span
       className={`relative flex aspect-[4/5] w-full flex-col overflow-hidden rounded-[3px] border-2 text-[#0b1f12] ${rare ? 'border-[#ff8f86] bg-[#f3c6c0]' : 'border-[#0b1f12] bg-[#a9e7b8]'} bg-[repeating-linear-gradient(0deg,rgb(0_0_0/0.06)_0_1px,transparent_1px_3px)]`}
     >
       <span className="relative flex flex-[1.25] items-center justify-center border-b-2 border-current/60 bg-[#8fd3a0]/60">
-        {art ? (
-          <img src={art} alt="" className="h-[82%] w-[82%] object-contain [image-rendering:pixelated]" />
-        ) : (
-          <span className={big ? 'text-3xl' : 'text-lg'}>{'<div>'}</span>
-        )}
+        <Art id={unit.card} big={big} />
         {def.cost ? (
           <span className="absolute top-1 right-1 flex gap-[2px]" aria-hidden>
             {[...Array(def.cost).keys()].map((i) => (
@@ -111,8 +74,8 @@ function PixelCard({ unit, big = false }: { unit: Unit; big?: boolean }) {
 /** Where the scale stands, drawn as a balance: whoever takes damage has it land in their pan. */
 function Balance({ scale }: { scale: number }) {
   const lean = Math.max(-1, Math.min(1, scale / TIP))
-  // The player's pan is on the left; P03's hits weigh it down.
-  const angle = (lean * 16 * Math.PI) / 180
+  // The player's pan is on the left; the leader's pan sinks, and the marker below points the same way.
+  const angle = (-lean * 16 * Math.PI) / 180
   const [cx, cy, arm] = [100, 42, 70]
   const end = (side: number) => [cx + side * arm * Math.cos(angle), cy + side * arm * Math.sin(angle)] as const
   const [left, right] = [end(-1), end(1)]
@@ -147,9 +110,17 @@ function Balance({ scale }: { scale: number }) {
           ))}
         </g>
         {ends.map(([x, y], i) => (
-          <text key={i} x={x} y={y + 70} textAnchor="middle" fill="#7dff9a" fontFamily="VT323" fontSize={16}>
-            {i === 0 ? 'YOU' : 'P03'}
-          </text>
+          <g key={i} fontFamily="VT323" textAnchor="middle">
+            <text x={x} y={y + 70} fill="#7dff9a" fontSize={16}>
+              {i === 0 ? 'YOU' : 'P03'}
+            </text>
+            {/* The lead, weighing in the leader's pan. */}
+            {(i === 0 ? scale > 0 : scale < 0) ? (
+              <text x={x} y={y + 41} fill="#b8f5c4" fontSize={18}>
+                x{Math.abs(scale)}
+              </text>
+            ) : null}
+          </g>
         ))}
       </svg>
       {/* The ruler under it, as in Act 2, with the marker at the lead. */}
@@ -174,6 +145,10 @@ function Balance({ scale }: { scale: number }) {
   )
 }
 
+// The left column's buttons: bordered like its panels, in the terminal's type.
+const SIDE_BUTTON =
+  'rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-2 font-terminal text-lg text-p03 hover:bg-[#13261a]'
+
 function Panel({ children, className = '' }: { children: ReactNode; className?: string }) {
   return <div className={`rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-3 ${className}`}>{children}</div>
 }
@@ -197,6 +172,7 @@ export function TerminalTable({
   const summoning = state.summon ? state.player.hand.find((unit) => unit.uid === state.summon?.uid) : undefined
   const mustDraw = has(legal, { type: 'draw' })
   const [looking, setLooking] = useState<Unit | null>(null)
+  const fullScreen = useFullScreen()
   const inspected = looking ?? summoning ?? null
   const look = (unit: Slot) => ({
     onPointerEnter: () => unit && setLooking(unit),
@@ -224,7 +200,7 @@ export function TerminalTable({
       data-game-id={game.id}
       data-seed={state.seed}
       data-table="text"
-      className="p03-screen grid grid-cols-[14rem_minmax(0,1fr)_16rem] gap-3 rounded-lg border border-[#2f6b3d] p-3 font-terminal text-xl"
+      className={`p03-screen grid grid-cols-[14rem_minmax(0,1fr)_16rem] gap-3 border border-[#2f6b3d] p-3 font-terminal text-xl ${fullScreen.on ? 'fixed inset-0 z-40 content-center overflow-auto' : 'rounded-lg'}`}
     >
       <aside className="flex flex-col gap-3">
         <Panel className="flex items-baseline justify-between text-2xl">
@@ -259,12 +235,25 @@ export function TerminalTable({
             Cancel
           </button>
         ) : null}
-        <div className="mt-auto flex flex-col gap-2 font-sans text-sm">
-          <WalkAway forfeit={game.forfeit} />
-          <button type="button" onClick={on3d} className="text-left text-p03-dim underline hover:text-p03">
+        <div className="mt-auto flex flex-col gap-2">
+          {fullScreen.supported ? (
+            <button type="button" onClick={fullScreen.toggle} className={SIDE_BUTTON}>
+              {fullScreen.on ? 'Leave full screen' : 'Full screen'}
+            </button>
+          ) : null}
+          <WalkAway forfeit={game.forfeit} className={`${SIDE_BUTTON} h-auto justify-center`} />
+          <button
+            type="button"
+            onClick={on3d}
+            className="text-left font-sans text-sm text-p03-dim underline hover:text-p03"
+          >
             Play on the 3D table
           </button>
-          <button type="button" onClick={onClassic} className="text-left text-p03-dim underline hover:text-p03">
+          <button
+            type="button"
+            onClick={onClassic}
+            className="text-left font-sans text-sm text-p03-dim underline hover:text-p03"
+          >
             The first text table
           </button>
         </div>
@@ -361,8 +350,9 @@ export function TerminalTable({
                   <span className="shrink-0 text-lg">x{card(inspected.card).cost}</span>
                 ) : null}
               </p>
-              <div className="mx-auto w-2/3">
-                <PixelCard unit={inspected} big />
+              {/* The art large and the stats under it, as Act 2's inspector shows a card. */}
+              <div className="grid aspect-[5/4] place-items-center rounded-sm border-2 border-[#0b1f12] bg-[#8fd3a0] bg-[repeating-linear-gradient(0deg,rgb(0_0_0/0.06)_0_1px,transparent_1px_3px)]">
+                <Art id={inspected.card} big />
               </div>
               {inspected.sigils.length ? (
                 inspected.sigils.map((sigil) => (
@@ -378,9 +368,14 @@ export function TerminalTable({
               ) : (
                 <p className="text-lg">No sigils.</p>
               )}
-              <p className="mt-auto flex justify-between border-t-2 border-[#0b1f12]/40 pt-1 text-2xl">
-                <span>{inspected.attack}</span>
-                <span>{inspected.health}</span>
+              <p className="mt-auto flex justify-between border-t-2 border-[#0b1f12]/40 pt-1 text-3xl">
+                <span aria-label={`Attack ${inspected.attack}`}>{inspected.attack}</span>
+                <span
+                  aria-label={`Health ${inspected.health}`}
+                  className={inspected.health < inspected.maxHealth ? 'text-[#a3172b]' : ''}
+                >
+                  {inspected.health}
+                </span>
               </p>
             </>
           ) : (
