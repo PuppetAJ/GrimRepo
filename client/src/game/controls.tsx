@@ -41,10 +41,10 @@ export function owed(summoning: Unit, board: Slot[], marked: number[]): number {
 /** The line under the table saying what the player can do next. */
 export function prompt(mustDraw: boolean, summoning: Unit | undefined, left = 0): string {
   if (mustDraw) return 'Draw a card to start your turn.'
-  if (!summoning) return 'Pick a card to play, or press the button.'
+  if (!summoning) return 'Play a card, or press the button.'
   const name = card(summoning.card).name
-  if (left > 0) return `Summoning ${name}: ${'◆'.repeat(left)} left to pay. Pick cards on the table to sacrifice.`
-  return `Summoning ${name}: paid. Pick a lane.`
+  if (left > 0) return `Summoning ${name}: sacrifice ${'◆'.repeat(left)} from the table.`
+  return `Summoning ${name}: pick a lane.`
 }
 
 export function GameOver({ result, className = '' }: { result: Finished; className?: string }) {

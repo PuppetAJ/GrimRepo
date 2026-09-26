@@ -50,28 +50,32 @@ export const lanes = [...Array(LANES).keys()]
 
 // The hand is held in front of the camera, in its own space: x right, y up, z towards the viewer.
 // At rest a hand card shows down to its stats; hovering lifts it fully into view.
-const HAND = { distance: 1.5, scale: 0.4, y: -0.47, spread: 1.8, gap: 0.4, raise: 0.14, hover: 0.09, stowed: -0.5 }
+const HAND = { distance: 1.5, scale: 0.4, y: -0.455, radius: 3, raise: 0.14, hover: 0.09, stowed: -0.5 }
 export const HAND_SCALE = HAND.scale
 
-/** A hand card's place and tilt, fanned about the middle of the hand. */
+/** A hand card's place and tilt: a fan, every card turned about one point below the hand, as a held hand is. */
 export function handPlace(
   index: number,
   count: number,
   { selected = false, hovered = false, summoning = false } = {},
 ): { position: Vec3; roll: number; scale: number } {
-  const gap = count > 1 ? Math.min(HAND.gap, HAND.spread / (count - 1)) : 0
-  // The card being summoned moves to the middle, under the board.
-  const offset = summoning && selected ? 0 : index - (count - 1) / 2
-  // While a card is being summoned the rest of the hand drops away, and it rises only a little, clear of the lanes.
-  const raise = summoning ? (selected ? 0.04 : HAND.stowed) : selected ? HAND.raise : hovered ? HAND.hover : 0
-  // A fan: the outer cards drop and lean away along an arc, gently, so a full hand's numbers stay above the screen's edge.
-  const lift = raise - offset * offset * 0.006
-  // Later cards sit a little nearer, so neighbours overlap the way a held hand does; a card being looked at comes forward.
-  // The arc also runs back at the ends, so neighbours differ in depth and their corners never pass through each other.
-  const near = -offset * offset * 0.012 + (hovered || selected ? 0.04 : 0)
   // A full hand holds its cards a little smaller, so it stays clear of the board and the screen's edge.
   const scale = HAND.scale * (count > 5 ? 1 - (count - 5) * 0.05 : 1)
-  return { position: [offset * gap, HAND.y + lift, -HAND.distance + near], roll: -offset * 0.05, scale }
+  // Neighbours' bottom corners just meet on the arc, so no card covers another's numbers.
+  const step = (CARD.width * scale * 1.04) / (HAND.radius - (CARD.height * scale) / 2)
+  // The card being summoned moves to the middle, under the board.
+  const angle = (summoning && selected ? 0 : index - (count - 1) / 2) * step
+  // While a card is being summoned the rest of the hand drops away, and it rises only a little, clear of the lanes.
+  const raise = summoning ? (selected ? 0.04 : HAND.stowed) : selected ? HAND.raise : hovered ? HAND.hover : 0
+  // Lifted along its own length, out from the fan's centre.
+  const reach = HAND.radius + raise
+  // Each card sits a little nearer than the one to its left, and a card being looked at comes forward.
+  const near = angle * 0.08 + (hovered || selected ? 0.04 : 0)
+  return {
+    position: [Math.sin(angle) * reach, HAND.y - HAND.radius + Math.cos(angle) * reach, -HAND.distance + near],
+    roll: -angle,
+    scale,
+  }
 }
 
 export type CameraView = 'table' | 'board'

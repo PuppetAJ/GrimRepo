@@ -91,12 +91,18 @@ function PixelCard({ unit, big = false }: { unit: Unit; big?: boolean }) {
           </span>
         ) : null}
       </span>
-      <span className="flex flex-1 items-center justify-center gap-1">
+      {/* Many sigils share the card's width, and long numbers print smaller, so nothing runs off the card. */}
+      <span className="flex flex-1 items-center justify-center gap-[2cqw]">
         {unit.sigils.map((sigil) => (
-          <Sigil key={sigil} id={sigil} size="20cqw" />
+          <Sigil key={sigil} id={sigil} size={`${Math.min(20, 86 / unit.sigils.length - 2)}cqw`} />
         ))}
       </span>
-      <span className="flex justify-between px-[5cqw] pb-[2cqw] text-[21cqw] leading-none">
+      <span
+        className="flex justify-between px-[5cqw] pb-[2cqw] leading-none"
+        style={{
+          fontSize: `${Math.min(21, 44 / Math.max(String(unit.attack).length, String(unit.health).length))}cqw`,
+        }}
+      >
         <span className="flex items-center gap-[2cqw]">
           <Sigil id="attack" size="0.5em" />
           {unit.attack}
@@ -290,7 +296,7 @@ function Rising({ text, tone, className = 'top-1/2 left-1/2' }: { text: string; 
 }
 
 /** The largest lane that fits the space given, four across and three down: the board takes the window's height. */
-function useLaneSize(narrow: boolean, hand: HTMLElement | null) {
+function useLaneSize(narrow: boolean, hand: HTMLElement | null, aside = 0) {
   const [area, setArea] = useState<HTMLDivElement | null>(null)
   const [size, setSize] = useState(96)
   const current = useRef(96)
@@ -298,9 +304,13 @@ function useLaneSize(narrow: boolean, hand: HTMLElement | null) {
     if (!area) return
     const fit = () => {
       // The panel's padding and border, the gaps between lanes, and the line between P03's rows and the player's.
-      const width = (area.clientWidth - (narrow ? 16 : 28) - 3 * (narrow ? 4 : 8)) / 4
-      // Compact, the lanes take up whatever room the hand leaves above the window's bottom, three rows of them.
-      const room = hand ? window.innerHeight - 12 - hand.getBoundingClientRect().bottom : 0
+      const width = (area.clientWidth - aside - 28 - 3 * (narrow ? 4 : 8)) / 4
+      // Compact, the lanes take up whatever room the hand leaves above the window's bottom, three rows of them,
+      // measured as if the page were scrolled to the top, so scrolling never grows the board.
+      const table = hand?.closest<HTMLElement>('[data-table]')
+      const fixed = table ? getComputedStyle(table).position === 'fixed' : false
+      const scrolled = (fixed ? 0 : window.scrollY) + (table?.scrollTop ?? 0)
+      const room = hand ? window.innerHeight - 12 - (hand.getBoundingClientRect().bottom + scrolled) : 0
       const height = narrow ? current.current + room / (3 * 1.25) : ((area.clientHeight - 28 - 3 * 8 - 2) / 3) * 0.8
       current.current = Math.max(40, Math.floor(Math.min(width, height)))
       setSize(current.current)
@@ -314,7 +324,7 @@ function useLaneSize(narrow: boolean, hand: HTMLElement | null) {
       observer.disconnect()
       window.removeEventListener('resize', fit)
     }
-  }, [area, narrow, hand])
+  }, [area, narrow, hand, aside])
   return { setArea, lane: { width: size, height: size * 1.25 } }
 }
 
@@ -510,7 +520,7 @@ export function TerminalTable({
 
   // A lane's size comes from the board's height, so the whole table fits the window.
   const [handSection, setHandSection] = useState<HTMLElement | null>(null)
-  const { setArea, lane: laneSize } = useLaneSize(narrow, handSection)
+  const { setArea, lane: laneSize } = useLaneSize(narrow, handSection, layout === 'mid' ? 13 * 16 + 12 : 0)
   const cell = 'flex shrink-0 items-center justify-center rounded-md border-2 p-1'
   const faces = playback.popups.filter((popup) => 'face' in popup.spot)
   const over = result && !busy
@@ -627,7 +637,9 @@ export function TerminalTable({
                 tilted={marked}
                 empty={
                   verb ? (
-                    <span className="grid size-full place-items-center text-base text-p03-dim">play here</span>
+                    <span className="grid size-full place-items-center text-center text-base leading-none text-p03-dim">
+                      play here
+                    </span>
                   ) : null
                 }
               />
@@ -670,25 +682,27 @@ export function TerminalTable({
       ) : null}
     </Panel>
   )
+  const said = busy
+    ? "P03's turn…"
+    : prompt(mustDraw, summoning, summoning ? owed(summoning, state.player.board, state.summon?.marked ?? []) : 0)
   const promptLine = (
     <p
       key={refused.count}
-      className="text-p03-dim"
+      title={said}
+      className={`text-p03-dim ${layout === 'narrow' ? 'line-clamp-2 h-[2lh] w-full text-lg leading-tight' : layout === 'mid' ? 'w-full truncate text-[clamp(1rem,4.4cqi,1.25rem)]' : 'max-w-full truncate'}`}
       style={refused.count ? { animation: 'nudge 0.6s ease-out' } : undefined}
     >
-      {busy
-        ? "P03's turn…"
-        : prompt(mustDraw, summoning, summoning ? owed(summoning, state.player.board, state.summon?.marked ?? []) : 0)}
+      {said}
     </p>
   )
   const readerPanel = (
     <Panel
-      className={`flex flex-col gap-2 bg-[#a9e7b8] text-[#0b1f12] ${narrow ? 'h-56' : 'max-h-[30rem] min-h-[15rem] flex-1 basis-0'}`}
+      className={`@container flex flex-col gap-2 bg-[#a9e7b8] text-[#0b1f12] ${layout === 'mid' ? 'h-[min(20rem,64%)] shrink-0' : narrow ? 'h-56' : 'max-h-[30rem] min-h-[15rem] flex-1 basis-0'}`}
     >
       {inspected ? (
         <>
-          <p className="flex items-start justify-between gap-2 text-3xl leading-none">
-            <span>{card(inspected.card).name}</span>
+          <p className="flex items-start justify-between gap-2 text-[clamp(1.25rem,12cqi,1.875rem)] leading-none">
+            <span className="min-w-0 [overflow-wrap:anywhere]">{card(inspected.card).name}</span>
             {card(inspected.card).cost ? (
               <span className="flex shrink-0 gap-1 pt-1" aria-label={`Costs ${card(inspected.card).cost}`}>
                 {[...Array(card(inspected.card).cost).keys()].map((i) => (
@@ -815,7 +829,7 @@ export function TerminalTable({
   const consolePanel = (
     <section
       aria-label="P03's console"
-      className={`flex flex-col rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-2 text-base ${narrow ? 'h-36' : 'min-h-16 flex-1 basis-0'}`}
+      className={`flex flex-col rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-2 text-base ${layout === 'narrow' ? 'h-36' : 'min-h-16 flex-1 basis-0'}`}
     >
       <ol aria-live="polite" className="flex min-h-0 flex-1 flex-col-reverse overflow-y-auto text-lg">
         {[...game.log].reverse().map((line, index) => (
@@ -859,7 +873,7 @@ export function TerminalTable({
   const handCards = (
     // A box the cards scroll in, so a full hand never runs over the controls or the piles.
     <div
-      className={`justify-[safe_center] flex min-w-0 flex-1 gap-2 overflow-x-auto rounded-md border-2 border-[#1f3a26] bg-[#050d07]/70 p-1 ${narrow ? '' : 'h-full'}`}
+      className={`justify-[safe_center] flex min-w-0 flex-1 items-center gap-2 overflow-x-auto rounded-md border-2 border-[#1f3a26] bg-[#050d07]/70 px-1 pt-3.5 pb-1 ${narrow ? '' : 'h-full'}`}
     >
       {view.hand.map((unit) => {
         const selected = unit.uid === state.summon?.uid
@@ -870,7 +884,13 @@ export function TerminalTable({
           <div
             key={unit.uid}
             {...look({ uid: unit.uid }, unit)}
-            className={narrow ? (layout === 'mid' ? 'w-20 shrink-0' : 'w-14 shrink-0') : 'aspect-[4/5] h-full shrink-0'}
+            className={
+              narrow
+                ? layout === 'mid'
+                  ? 'w-[clamp(5rem,6.5vw,6.5rem)] shrink-0'
+                  : 'w-14 shrink-0'
+                : 'aspect-[4/5] h-full shrink-0'
+            }
             style={fresh(unit.uid) ? { animation: 'arrive-up 280ms ease-out' } : undefined}
           >
             <button
@@ -994,25 +1014,19 @@ export function TerminalTable({
         event.stopPropagation()
         event.preventDefault()
       }}
-      className={`p03-screen crt flex w-full flex-col gap-2 overflow-hidden border border-[#2f6b3d] p-2 font-terminal text-xl sm:gap-3 sm:p-3 ${fullScreen.on ? 'fixed inset-0 z-50 overflow-y-auto' : 'relative rounded-lg'}`}
+      className={`p03-screen crt mx-auto flex w-full max-w-[1792px] flex-col gap-2 overflow-hidden border border-[#2f6b3d] p-2 font-terminal text-xl sm:gap-3 sm:p-3 ${fullScreen.on ? 'fixed inset-0 z-50 overflow-y-auto' : 'relative rounded-lg'}`}
     >
       <Circuit />
       <span aria-hidden className="crt-glass pointer-events-none absolute inset-0 z-30" />
       {topStrip}
-      <div className="relative z-10 flex gap-3">
-        <section aria-label="The table" className="flex min-w-0 flex-1 flex-col items-center gap-2">
+      <div ref={setArea} className="relative z-10 flex justify-center gap-3">
+        <section aria-label="The table" className="flex flex-none flex-col items-center gap-2">
           {onDemo ? <DemoNote /> : null}
-          <div ref={setArea} className="flex w-full justify-center">
-            {boardPanel}
-          </div>
-          <div className="flex w-full items-center justify-between gap-2">
-            {promptLine}
-            <div className="w-24 shrink-0">{cancelButton}</div>
-          </div>
+          {boardPanel}
         </section>
         {layout === 'mid' ? (
-          // Pinned to the board's height so the column never makes the row taller.
-          <div className="relative w-64 shrink-0">
+          // Pinned to the board's height so the column never makes the row taller; it takes the width left over.
+          <div className="relative max-w-[32rem] min-w-52 flex-1">
             <div className="absolute inset-0 flex flex-col gap-3">
               {readerPanel}
               {consolePanel}
@@ -1020,7 +1034,14 @@ export function TerminalTable({
           </div>
         ) : null}
       </div>
-      <section ref={setHandSection} aria-label="Your hand" className="relative z-10 flex items-end gap-2">
+      {/* The prompt over the hand and Cancel over the piles, in two columns so their edges line up. */}
+      <section
+        ref={setHandSection}
+        aria-label="Your hand"
+        className="relative z-10 grid grid-cols-[minmax(0,1fr)_auto] items-stretch gap-2"
+      >
+        <div className="@container flex min-w-0 items-center">{promptLine}</div>
+        {cancelButton}
         {handCards}
         {pilesPanel}
       </section>

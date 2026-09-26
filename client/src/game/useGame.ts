@@ -3,6 +3,7 @@ import { apply, type Action, type GameEvent, type GameState } from 'shared'
 import { toast } from 'sonner'
 import { api, ApiError, type Finished, type OpenGame } from '../lib/api.ts'
 import { history, narrate } from '../lib/narrate.ts'
+import { fixture } from './fixtures.ts'
 
 export type Game =
   | { status: 'loading' }
@@ -66,6 +67,14 @@ export function useGame(): Game {
   }, [])
 
   useEffect(() => {
+    const fixed = fixture()
+    // Dealt as a reply would be, after the effect, so a fixture loads the way a game does.
+    if (fixed)
+      return void Promise.resolve().then(() => {
+        generations += 1
+        setTable({ id: -1, generation: generations, state: fixed.state, log: fixed.log })
+        setResult(null)
+      })
     let current = true
     api.startGame().then(
       (game) => {
@@ -129,7 +138,8 @@ export function useGame(): Game {
         toast.error(outcome.reason)
         return
       }
-      pending.current.push(action)
+      // A fixture is played here only.
+      if (table.id !== -1) pending.current.push(action)
       setUnsaved(pending.current.length)
       for (const listener of listeners.current) listener(outcome.events)
       const lines = narrate(table.state, outcome.events).map((line) => `P03> ${line}`)
@@ -142,6 +152,7 @@ export function useGame(): Game {
 
   const forfeit = useCallback(async () => {
     if (id === undefined) return
+    if (id === -1) return setReloads((n) => n + 1)
     try {
       // Anything unsaved is dropped: walking away ends the game where the server last saw it.
       await chain.current
