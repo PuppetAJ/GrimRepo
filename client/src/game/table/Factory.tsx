@@ -945,10 +945,11 @@ export function EndTurnButton({
   )
 }
 
-/** Glow on the screens and lamps, a little grain and scanline, and dark corners. */
-export function FactoryEffects() {
+/** Glow on the screens and lamps, a little grain and scanline, and dark corners; less of it on a struggling machine. */
+export function FactoryEffects({ quality = 0 }: { quality?: number }) {
   // A Retina screen's pixels are fine enough to need no smoothing; MSAA there cost two thirds of the frame.
   const sharp = useThree((state) => state.viewport.dpr) >= 1.5
+  if (quality >= 2) return null
   return (
     <EffectComposer multisampling={0}>
       <Bloom mipmapBlur luminanceThreshold={MOOD.bloomThreshold} intensity={MOOD.bloom} radius={MOOD.bloomRadius} />
@@ -957,7 +958,7 @@ export function FactoryEffects() {
       <Noise opacity={MOOD.noise} />
       <Vignette offset={0.28} darkness={MOOD.vignette} />
       {/* The face-up cards' own soft glow, from the tagged faces alone, so no lamp can add to it. */}
-      {MOOD.cardBloom > 0 ? (
+      {MOOD.cardBloom > 0 && quality < 1 ? (
         <SelectiveBloom
           lights={[SELECTED_LIGHT]}
           mipmapBlur

@@ -160,7 +160,9 @@ function Scene({
   hinted,
   onHint,
   onWarm,
+  quality,
 }: {
+  quality: number
   game: Ready
   assets: Assets
   view: View
@@ -196,7 +198,7 @@ function Scene({
           <FactoryP03 view={view} busy={busy} outcome={busy ? undefined : game.result?.outcome} />
           <WarmUp onWarm={onWarm} />
         </Suspense>
-        <FactoryEffects />
+        <FactoryEffects quality={quality} />
         <TechBoard />
         <Deck
           count={view.deck}
@@ -637,10 +639,12 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
   const camera: CameraView = playback.view.summon ? 'board' : chosen
   const [ready, setReady] = useState(false)
   const [rung, setRung] = useState(0)
-  // The screen's own resolution to start, up to 2 (1.5 on touch screens, whose GPUs are the weakest and pixels the
-  // finest); lowered toward 1 while the frame rate cannot keep up, and raised again. The monitors' text never drops.
+  // The screen's own resolution, up to 2 (1.5 on touch screens, whose GPUs are the weakest and pixels the finest).
   const sharpest = Math.min(window.matchMedia('(pointer: coarse)').matches ? 1.5 : 2, window.devicePixelRatio || 1)
-  const [dpr, setDpr] = useState(sharpest)
+  // While the frame rate cannot keep up, the table gives up its effects before its sharpness: 1 drops the cards' glow,
+  // 2 all post-processing, 3 the resolution, to 1.5 at the lowest, so the cards stay readable. It climbs back as it can.
+  const [quality, setQuality] = useState(0)
+  const dpr = quality >= 3 ? Math.min(1.5, sharpest) : sharpest
   // Counts the times a card was tried before the draw, so the piles and the prompt can point at what comes first.
   const [hint, setHint] = useState(0)
   const [hinted, setHinted] = useState<number | null>(null)
@@ -696,8 +700,8 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
           <PerformanceMonitor
             factor={1}
             flipflops={3}
-            onChange={({ factor }) => setDpr(Math.round((1 + factor * (sharpest - 1)) * 4) / 4)}
-            onFallback={() => setDpr(1)}
+            onChange={({ factor }) => setQuality(Math.min(3, Math.round((1 - factor) * 10)))}
+            onFallback={() => setQuality(3)}
           />
         ) : null}
         <Suspense fallback={null}>
@@ -712,6 +716,7 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
             camera={camera}
             hint={hint}
             hinted={hinted}
+            quality={quality}
             onWarm={() => setWarmed(true)}
             onHint={(uid) => {
               setHinted(uid)
