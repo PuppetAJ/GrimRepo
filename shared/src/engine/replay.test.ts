@@ -3,7 +3,7 @@ import { describe, it } from 'node:test'
 import { Rng } from '../rng.ts'
 import { playOut } from './bot.ts'
 import { apply, createGame, legalActions, replay, summary } from './game.ts'
-import { HAND_LIMIT, LANES, TURN_LIMIT, type Action, type GameState } from './types.ts'
+import { HAND_LIMIT, LANES, TIP, TURN_LIMIT, type Action, type GameState } from './types.ts'
 import { units } from './units.ts'
 
 const step = (state: GameState, action: Action) => {
@@ -67,7 +67,7 @@ describe('a thousand random games', () => {
         moves += 1
         assert.ok(moves < 50_000, `seed ${seed} never ended`)
 
-        assert.ok(state.player.health >= 0 && state.opponent.health >= 0)
+        assert.ok(state.status !== 'playing' || Math.abs(state.scale) < TIP, 'a game still going has not tipped')
         assert.ok(state.player.hand.length <= HAND_LIMIT)
         assert.equal(state.player.board.length, LANES)
         const uids = [

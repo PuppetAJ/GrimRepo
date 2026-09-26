@@ -44,6 +44,11 @@
       }
     },
     {
+      // The 3D table changes three.js objects every frame on purpose, as Chunkd's editor does; state would re-render sixty times a second.
+      "files": ["client/src/game/table/**"],
+      "rules": { "react/immutability": "off" }
+    },
+    {
       "files": ["server/**"],
       "rules": {
         "no-restricted-imports": [

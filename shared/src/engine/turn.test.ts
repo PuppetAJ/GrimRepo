@@ -4,7 +4,7 @@ import { CARDS } from '../cards.ts'
 import { apply, createGame, legalActions } from './game.ts'
 import { maxCostFor } from './opponent.ts'
 import { play, refused, table } from './test-support.ts'
-import { TURN_LIMIT } from './types.ts'
+import { TIP, TURN_LIMIT } from './types.ts'
 
 describe('a turn', () => {
   it('runs the player’s attacks before the opponent’s', () => {
@@ -15,23 +15,23 @@ describe('a turn', () => {
     assert.deepEqual(sides, ['player', 'opponent'])
   })
 
-  it('ends in a win the moment the opponent reaches zero, before it can strike back', () => {
-    const state = table({ board: ['GoogleFu'], front: [null, 'JACK'], opponentHealth: 3, playerHealth: 1 })
+  it('ends in a win the moment the scale tips to the player, before P03 can strike back', () => {
+    const state = table({ board: ['GoogleFu'], front: [null, 'JACK'], scale: TIP - 3 })
     const { state: after, events } = play(state, { type: 'ringBell' })
     assert.equal(after.status, 'won')
     assert.ok(!events.some((event) => event.type === 'attacked' && event.side === 'opponent'))
     assert.deepEqual(events.at(-1), { type: 'gameOver', outcome: 'win', turns: 1 })
   })
 
-  it('ends in a loss when the opponent’s attacks bring the player to zero', () => {
-    const { state } = play(table({ front: ['JACK'], playerHealth: 10 }), { type: 'ringBell' })
+  it('ends in a loss when P03’s attacks tip the scale its way', () => {
+    const { state } = play(table({ front: ['JACK'], scale: 10 - TIP }), { type: 'ringBell' })
     assert.equal(state.status, 'lost')
-    assert.equal(state.player.health, 0)
+    assert.equal(state.scale, -TIP - 3, 'the overshoot is kept')
   })
 
   it('stops a card killed by the player from attacking that turn', () => {
     const { state } = play(table({ board: ['GitSome'], front: ['GoogleFu'] }), { type: 'ringBell' })
-    assert.equal(state.player.health, 50)
+    assert.equal(state.scale, 0)
   })
 
   it('moves queued cards up into empty lanes, and they attack straight away', () => {
@@ -42,7 +42,7 @@ describe('a turn', () => {
     assert.equal(state.opponent.front[1]?.card, 'GrimRepo', 'a card that can attack still blocks its queue')
     assert.equal(state.opponent.back[1]?.card, 'Loop')
     assert.ok(events.some((event) => event.type === 'advanced' && event.lane === 0))
-    assert.equal(state.player.health, 44, 'the new arrival and the blocker both hit an empty lane')
+    assert.equal(state.scale, -6, 'the new arrival and the blocker both hit an empty lane')
   })
 
   it('queues new cards only into empty back lanes, and only cheap ones early on', () => {
@@ -76,7 +76,7 @@ describe('a turn', () => {
   })
 
   it('accepts nothing once the game is over', () => {
-    const { state } = play(table({ front: ['JACK'], playerHealth: 1 }), { type: 'ringBell' })
+    const { state } = play(table({ front: ['JACK'], scale: 1 - TIP }), { type: 'ringBell' })
     assert.deepEqual(legalActions(state), [])
     assert.equal(refused(state, { type: 'ringBell' }), 'The game is over')
   })

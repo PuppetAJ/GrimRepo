@@ -19,13 +19,14 @@ const { check, section, report } = reporter()
 
 section('A whole game')
 {
-  const { context, page } = await freshPage(browser)
+  const { context, page } = await freshPage(browser, { table: 'text' })
   const player = await signUp(page, newPlayer('Game'))
   await page.goto(`${BASE}/game`)
   await page.locator('[data-seed]').waitFor()
   check(
     'a new game starts on turn 1, asking for a draw',
-    /Turn 1/.test(await visibleText(page)) && (await page.locator('[data-action="ringBell"]').count()) === 0,
+    /Turn 1/.test(await visibleText(page)) &&
+      (await page.locator('[data-action="ringBell"]:not(:disabled)').count()) === 0,
   )
 
   const { state } = await playWithBot(page)
@@ -77,7 +78,7 @@ section('A whole game')
 
 section('Resuming')
 {
-  const { context, page } = await freshPage(browser)
+  const { context, page } = await freshPage(browser, { table: 'text' })
   const resumer = await signUp(page, newPlayer('Resume'))
   await page.goto(`${BASE}/game`)
   const seed = await page.locator('[data-seed]').getAttribute('data-seed')
@@ -111,12 +112,12 @@ section('Resuming')
   check(
     'a draw cannot be taken back by reloading',
     (await page.locator('[data-action="select"]').count()) === handBefore + 1 &&
-      (await page.locator('[data-action="draw-deck"]').count()) === 0,
+      (await page.locator('[data-action="draw-deck"]:not(:disabled)').count()) === 0,
   )
 
   section('Walking away')
-  await page.getByRole('button', { name: 'Walk away' }).click()
-  await page.getByRole('alertdialog').getByRole('button', { name: 'Walk away' }).click()
+  await page.getByRole('button', { name: 'Forfeit' }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Forfeit' }).click()
   await page
     .getByRole('status')
     .filter({ hasText: /You lose/ })
