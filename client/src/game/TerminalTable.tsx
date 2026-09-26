@@ -13,7 +13,7 @@ const INK = '#0b1f12'
 
 /** A card's 2022 art in ink: the drawing is ink on a clear ground, so it serves as a mask, sharp at any size. */
 function Art({ id, big = false }: { id: string; big?: boolean }) {
-  if (id === 'Boilerplate') return <span className={big ? 'text-4xl' : 'text-lg'}>{'<div>'}</span>
+  if (id === 'Boilerplate') return <span className={big ? 'text-4xl' : 'text-[15cqw]'}>{'<div>'}</span>
   return (
     <span
       aria-hidden
@@ -35,7 +35,8 @@ function Sigil({
   colour = INK,
 }: {
   id: SigilId | keyof typeof STAT_ICONS
-  size?: number
+  /** Pixels, or any CSS length, such as em to follow the text beside it. */
+  size?: number | string
   colour?: string
 }) {
   const grid = id === 'attack' || id === 'health' ? STAT_ICONS[id] : ICONS[id]
@@ -59,37 +60,38 @@ function PixelCard({ unit, big = false }: { unit: Unit; big?: boolean }) {
   const rare = def.tier === 'S'
   return (
     <span
-      className={`relative flex aspect-[4/5] w-full flex-col overflow-hidden text-[#0b1f12] [clip-path:polygon(0_0,86%_0,100%_9%,100%_100%,0_100%)] ${rare ? 'bg-[#f3c6c0]' : 'bg-[#a9e7b8]'} bg-[repeating-linear-gradient(0deg,rgb(0_0_0/0.07)_0_1px,transparent_1px_3px)]`}
+      // Its print is sized from its own width, so a small card on a short window stays legible.
+      className={`@container relative flex aspect-[4/5] w-full flex-col overflow-hidden text-[#0b1f12] [clip-path:polygon(0_0,86%_0,100%_9%,100%_100%,0_100%)] ${rare ? 'bg-[#f3c6c0]' : 'bg-[#a9e7b8]'} bg-[repeating-linear-gradient(0deg,rgb(0_0_0/0.07)_0_1px,transparent_1px_3px)]`}
     >
       {/* The shutter, and its window. */}
       <span aria-hidden className="absolute top-0 left-[22%] z-10 h-[9%] w-[46%] rounded-b-sm bg-[#b9c3c8]">
         <span className="absolute top-[18%] right-[16%] h-[62%] w-[20%] bg-[#0b1f12]" />
       </span>
       <span
-        className={`relative mx-[6%] mt-[11%] flex flex-[1.3] items-center justify-center border-2 border-[#0b1f12]/70 ${rare ? 'bg-[#e8aea8]' : 'bg-[#8fd3a0]'}`}
+        className={`relative mx-[6%] mt-[16%] flex flex-[1.3] items-center justify-center border-2 border-[#0b1f12]/70 ${rare ? 'bg-[#e8aea8]' : 'bg-[#8fd3a0]'}`}
       >
         <Art id={unit.card} big={big} />
         {def.cost ? (
-          <span className="absolute top-1 right-1 flex gap-[2px]" aria-hidden>
+          <span className="absolute top-[4cqw] right-[4cqw] flex gap-[2cqw]" aria-hidden>
             {[...Array(def.cost).keys()].map((i) => (
-              <span key={i} className="size-2.5 bg-[#ff9a2e] outline outline-1 outline-[#0b1f12]" />
+              <span key={i} className="size-[7cqw] bg-[#ff9a2e] outline outline-1 outline-[#0b1f12]" />
             ))}
           </span>
         ) : null}
       </span>
       <span className="flex flex-1 items-center justify-center gap-1">
         {unit.sigils.map((sigil) => (
-          <Sigil key={sigil} id={sigil} size={big ? 38 : 24} />
+          <Sigil key={sigil} id={sigil} size="20cqw" />
         ))}
       </span>
-      <span className={`flex justify-between px-1.5 pb-0.5 leading-none ${big ? 'text-4xl' : 'text-[1.7rem]'}`}>
-        <span className="flex items-center gap-0.5">
-          <Sigil id="attack" size={big ? 18 : 14} />
+      <span className="flex justify-between px-[5cqw] pb-[2cqw] text-[21cqw] leading-none">
+        <span className="flex items-center gap-[2cqw]">
+          <Sigil id="attack" size="0.5em" />
           {unit.attack}
         </span>
-        <span className={`flex items-center gap-0.5 ${unit.health < unit.maxHealth ? 'text-[#a3172b]' : ''}`}>
+        <span className={`flex items-center gap-[2cqw] ${unit.health < unit.maxHealth ? 'text-[#a3172b]' : ''}`}>
           {unit.health}
-          <Sigil id="health" size={big ? 18 : 14} />
+          <Sigil id="health" size="0.5em" />
         </span>
       </span>
     </span>
@@ -116,7 +118,7 @@ function Balance({ scale }: { scale: number }) {
       aria-valuetext={scaleWords(scale)}
       className="flex flex-col items-center"
     >
-      <svg viewBox="0 0 200 150" className="w-full" shapeRendering="crispEdges" aria-hidden>
+      <svg viewBox="0 0 200 150" className="max-h-[15dvh] w-full" shapeRendering="crispEdges" aria-hidden>
         <g stroke="#7dff9a" fill="none" strokeWidth={3}>
           {/* The post: a column with vents, standing on a plinth, the hub at the top. */}
           <rect x={94} y={48} width={12} height={82} />
@@ -275,6 +277,58 @@ function Rising({ text, tone, className = 'top-1/2 left-1/2' }: { text: string; 
   )
 }
 
+/** The largest lane that fits the space given, four across and three down: the board takes the window's height. */
+function useLaneSize() {
+  const [area, setArea] = useState<HTMLDivElement | null>(null)
+  const [size, setSize] = useState(96)
+  useEffect(() => {
+    if (!area) return
+    const fit = () => {
+      // The panel's padding and border, the gaps between lanes, and the line between P03's rows and the player's.
+      const width = (area.clientWidth - 28 - 3 * 8) / 4
+      const height = ((area.clientHeight - 28 - 3 * 8 - 2) / 3) * 0.8
+      setSize(Math.max(48, Math.floor(Math.min(width, height))))
+    }
+    fit()
+    const observer = new ResizeObserver(fit)
+    observer.observe(area)
+    return () => observer.disconnect()
+  }, [area])
+  return { setArea, lane: { width: size, height: size * 1.25 } }
+}
+
+const PROCESSES = ['p03.core', 'scale.svc', 'sacrifice.d', 'lane.watch', 'gc.reaper', 'deck.shuf']
+
+/** P03's idle process monitor, filling the space under the button: names, load bars and a blinking cursor. */
+function Processes() {
+  const [tick, setTick] = useState(0)
+  useEffect(() => {
+    const timer = setInterval(() => setTick((n) => n + 1), 900)
+    return () => clearInterval(timer)
+  }, [])
+  // A steady wander rather than noise, from the tick, so it reads as work being done.
+  const load = (i: number) =>
+    Math.round(4 + 4 * (1 + Math.sin(tick * 0.7 + i * 1.9)) * (0.5 + 0.5 * Math.cos(tick * 0.23 + i)))
+  return (
+    <div
+      aria-hidden
+      className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border-2 border-[#1f3a26] bg-[#050d07] p-2 text-base text-p03-dim"
+    >
+      <p className="text-p03">// PROCESSES</p>
+      {PROCESSES.map((name, i) => (
+        <p key={name} className="flex justify-between gap-2 whitespace-pre">
+          <span>{name}</span>
+          <span className="text-p03">{'|'.repeat(load(i)).padEnd(12, '.')}</span>
+        </p>
+      ))}
+      <p className="mt-auto">
+        mem {String(40 + ((tick * 7) % 23)).padStart(2)}% · up {tick}s
+        <span className={tick % 2 ? 'invisible' : ''}>_</span>
+      </p>
+    </div>
+  )
+}
+
 /** The text table laid out as Act 2: a whole game through its buttons, played back one move at a time. */
 export function TerminalTable({
   game,
@@ -338,7 +392,9 @@ export function TerminalTable({
     return () => window.removeEventListener('keydown', onKey)
   }, [canPress, act])
 
-  const cell = 'flex aspect-[4/5] min-w-0 items-center justify-center rounded-md border-2 p-1'
+  // A lane's size comes from the board's height, so the whole table fits the window.
+  const { setArea, lane: laneSize } = useLaneSize()
+  const cell = 'flex shrink-0 items-center justify-center rounded-md border-2 p-1'
   const faces = playback.popups.filter((popup) => 'face' in popup.spot)
   const over = result && !busy
 
@@ -347,9 +403,11 @@ export function TerminalTable({
       data-game-id={game.id}
       data-seed={state.seed}
       data-table="text"
-      className={`p03-screen mx-auto grid w-full max-w-[112rem] grid-cols-[17rem_minmax(0,1fr)_22rem] gap-4 border border-[#2f6b3d] p-4 font-terminal text-2xl ${fullScreen.on ? 'fixed inset-0 z-40 max-w-none content-center overflow-auto' : 'rounded-lg'}`}
+      className={`p03-screen crt relative mx-auto grid w-full max-w-[112rem] grid-cols-[17rem_minmax(0,1fr)_22rem] grid-rows-[minmax(0,1fr)_auto] gap-4 overflow-hidden border border-[#2f6b3d] p-4 font-terminal text-2xl ${fullScreen.on ? 'fixed inset-0 z-40 h-dvh max-w-none' : 'h-[calc(100dvh-9.5rem)] min-h-[30rem] rounded-lg'}`}
     >
-      <aside className="flex flex-col gap-3">
+      {/* The glass over it all: scanlines with a band rolling down, dark corners, and a rare flicker. */}
+      <span aria-hidden className="crt-glass pointer-events-none absolute inset-0 z-30" />
+      <aside className="relative z-10 flex min-h-0 flex-col gap-3 overflow-hidden">
         <Panel className="flex items-center justify-between text-2xl">
           <span className="text-p03">Turn {view.turn}</span>
           <span className="text-base text-p03-dim" aria-live="polite">
@@ -368,158 +426,141 @@ export function TerminalTable({
           aria-label="Press the button"
           className="flex flex-col items-center gap-1 rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-3 text-p03 enabled:hover:bg-[#13261a] disabled:opacity-40"
         >
-          <span className="grid size-14 place-items-center rounded-full border-4 border-[#2f6b3d] bg-[#a3172b] shadow-[0_0_14px_rgb(255_60_60/0.4)]" />
+          <span className="grid size-[min(3.5rem,6dvh)] place-items-center rounded-full border-4 border-[#2f6b3d] bg-[#a3172b] shadow-[0_0_14px_rgb(255_60_60/0.4)]" />
           <span className="text-2xl tracking-widest">EXECUTE</span>
-          <span className="text-sm text-p03-dim">press the button · E</span>
+          <span className="text-sm text-p03-dim [@media(max-height:780px)]:hidden">press the button · E</span>
         </button>
-        <div className="mt-auto flex flex-col gap-2">
-          {fullScreen.supported ? (
-            <button type="button" onClick={fullScreen.toggle} className={SIDE_BUTTON}>
-              {fullScreen.on ? 'Leave full screen' : 'Full screen'}
-            </button>
-          ) : null}
-          <WalkAway forfeit={game.forfeit} className={`${SIDE_BUTTON} h-auto justify-center`} />
-          <button
-            type="button"
-            onClick={on3d}
-            className="text-left font-sans text-sm text-p03-dim underline hover:text-p03"
-          >
-            Play on the 3D table
-          </button>
-          <button
-            type="button"
-            onClick={onClassic}
-            className="text-left font-sans text-sm text-p03-dim underline hover:text-p03"
-          >
-            The first text table
-          </button>
-        </div>
+        <Processes />
       </aside>
 
-      <section aria-label="The table" className="mx-auto flex w-full max-w-[46rem] flex-col gap-2">
+      <section aria-label="The table" className="relative z-10 flex min-h-0 flex-col items-center gap-2">
         {onDemo ? <DemoNote /> : null}
-        <Panel className="relative flex flex-col gap-2">
-          {/* P03's face above the board and the player's below it, where hits to either land. */}
-          {faces.map((popup) => (
-            <Rising
-              key={popup.id}
-              text={popup.text}
-              tone={popup.tone}
-              className={
-                'face' in popup.spot && popup.spot.face === 'opponent' ? 'top-0 left-1/2' : 'top-full left-1/2'
-              }
-            />
-          ))}
-          <div className="grid grid-cols-4 gap-2" aria-label="P03's queue">
-            {view.back.map((unit, i) => (
-              <div
-                key={i}
-                {...look({ row: 'back', lane: i })}
-                aria-label={unit ? `Queued in lane ${i + 1}: ${describe(unit)}` : `Lane ${i + 1}: nothing queued`}
-                className={`${cell} border-[#1f3a26] opacity-80`}
-              >
-                <Occupant
-                  row="back"
-                  fresh={fresh}
-                  lane={i}
-                  unit={unit}
-                  playback={playback}
-                  empty={<span className="grid size-full place-items-center text-5xl text-[#2f6b3d]">↓</span>}
-                />
-              </div>
+        <div ref={setArea} className="flex min-h-0 w-full flex-1 items-center justify-center">
+          <Panel className="relative flex flex-col gap-2">
+            {/* P03's face above the board and the player's below it, where hits to either land. */}
+            {faces.map((popup) => (
+              <Rising
+                key={popup.id}
+                text={popup.text}
+                tone={popup.tone}
+                className={
+                  'face' in popup.spot && popup.spot.face === 'opponent' ? 'top-0 left-1/2' : 'top-full left-1/2'
+                }
+              />
             ))}
-          </div>
-          <div className="grid grid-cols-4 gap-2" aria-label="P03's row">
-            {view.front.map((unit, i) => (
-              <div
-                key={i}
-                {...look({ row: 'front', lane: i })}
-                aria-label={unit ? `P03's lane ${i + 1}: ${describe(unit)}` : `P03's lane ${i + 1}: empty`}
-                className={`${cell} border-[#1f3a26]`}
-              >
-                <Occupant row="front" lane={i} unit={unit} playback={playback} fresh={fresh} />
-              </div>
-            ))}
-          </div>
-          <div className="border-t-2 border-death/50" />
-          <div className="grid grid-cols-4 gap-2" aria-label="Your row">
-            {view.board.map((unit, i) => {
-              const action = laneAction(legal, i)
-              const marked = state.summon?.marked.includes(i) ?? false
-              // Paid for: a marked lane is where the card goes, so it says so, over the card being given up.
-              const paid = marked && action?.type === 'place'
-              const verb =
-                action?.type === 'mark'
-                  ? 'Sacrifice'
-                  : action?.type === 'unmark'
-                    ? 'Spare'
-                    : action?.type === 'place'
-                      ? 'Play here'
-                      : null
-              const label = `Lane ${i + 1}: ${unit ? describe(unit) : 'empty'}${verb ? `. ${verb}` : ''}${marked ? ', marked for sacrifice' : ''}`
-              // A dashed outline on what can be clicked, red where a card would be given up, as in Act 2.
-              const frame = paid
-                ? 'border-dashed border-p03'
-                : marked
-                  ? 'border-dashed border-death bg-[#2a1214]'
-                  : action?.type === 'mark'
-                    ? 'border-dashed border-death/70 hover:border-death'
-                    : action
-                      ? 'border-dashed border-p03/60 hover:border-p03'
-                      : 'border-[#1f3a26]'
-              const body = (
-                <>
+            <div className="flex justify-center gap-2" aria-label="P03's queue">
+              {view.back.map((unit, i) => (
+                <div
+                  key={i}
+                  {...look({ row: 'back', lane: i })}
+                  aria-label={unit ? `Queued in lane ${i + 1}: ${describe(unit)}` : `Lane ${i + 1}: nothing queued`}
+                  className={`${cell} border-[#1f3a26] opacity-80`}
+                  style={laneSize}
+                >
                   <Occupant
-                    row="board"
+                    row="back"
                     fresh={fresh}
                     lane={i}
                     unit={unit}
                     playback={playback}
-                    tilted={marked}
-                    empty={
-                      verb ? (
-                        <span className="grid size-full place-items-center text-base text-p03-dim">play here</span>
-                      ) : null
-                    }
+                    empty={<span className="grid size-full place-items-center text-5xl text-[#2f6b3d]">↓</span>}
                   />
-                  {paid ? (
-                    <span className="absolute inset-x-1 bottom-1 z-10 rounded-sm bg-[#07130b]/90 py-0.5 text-center text-base text-p03">
-                      ↓ play here
-                    </span>
-                  ) : null}
-                </>
-              )
-              // The lane's card stays put while the lane becomes clickable and back, so nothing plays again.
-              return (
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-center gap-2" aria-label="P03's row">
+              {view.front.map((unit, i) => (
                 <div
                   key={i}
-                  aria-label={action ? undefined : label}
-                  {...look({ row: 'board', lane: i })}
-                  onClick={action ? undefined : () => !busy && refuse(`lane-${i}`)}
-                  className={`${cell} relative ${frame}`}
-                  style={shaking(`lane-${i}`)}
+                  {...look({ row: 'front', lane: i })}
+                  aria-label={unit ? `P03's lane ${i + 1}: ${describe(unit)}` : `P03's lane ${i + 1}: empty`}
+                  className={`${cell} border-[#1f3a26]`}
+                  style={laneSize}
                 >
-                  {body}
-                  {action ? (
-                    <button
-                      type="button"
-                      aria-label={label}
-                      data-action={action.type}
-                      data-lane={i}
-                      onClick={() => act(action)}
-                      className="absolute inset-0 z-20 rounded-md"
-                    />
-                  ) : null}
+                  <Occupant row="front" lane={i} unit={unit} playback={playback} fresh={fresh} />
                 </div>
-              )
-            })}
-          </div>
-          {over ? (
-            <div className="absolute inset-0 grid place-items-center bg-black/60 p-4">
-              <GameOver result={result} className="w-full max-w-md bg-p03-ground/95 font-terminal text-xl" />
+              ))}
             </div>
-          ) : null}
-        </Panel>
+            <div className="border-t-2 border-death/50" />
+            <div className="flex justify-center gap-2" aria-label="Your row">
+              {view.board.map((unit, i) => {
+                const action = laneAction(legal, i)
+                const marked = state.summon?.marked.includes(i) ?? false
+                // Paid for: a marked lane is where the card goes, so it says so, over the card being given up.
+                const paid = marked && action?.type === 'place'
+                const verb =
+                  action?.type === 'mark'
+                    ? 'Sacrifice'
+                    : action?.type === 'unmark'
+                      ? 'Spare'
+                      : action?.type === 'place'
+                        ? 'Play here'
+                        : null
+                const label = `Lane ${i + 1}: ${unit ? describe(unit) : 'empty'}${verb ? `. ${verb}` : ''}${marked ? ', marked for sacrifice' : ''}`
+                // A dashed outline on what can be clicked, red where a card would be given up, as in Act 2.
+                const frame = paid
+                  ? 'border-dashed border-p03'
+                  : marked
+                    ? 'border-dashed border-death bg-[#2a1214]'
+                    : action?.type === 'mark'
+                      ? 'border-dashed border-death/70 hover:border-death'
+                      : action
+                        ? 'border-dashed border-p03/60 hover:border-p03'
+                        : 'border-[#1f3a26]'
+                const body = (
+                  <>
+                    <Occupant
+                      row="board"
+                      fresh={fresh}
+                      lane={i}
+                      unit={unit}
+                      playback={playback}
+                      tilted={marked}
+                      empty={
+                        verb ? (
+                          <span className="grid size-full place-items-center text-base text-p03-dim">play here</span>
+                        ) : null
+                      }
+                    />
+                    {paid ? (
+                      <span className="absolute inset-x-1 bottom-1 z-10 rounded-sm bg-[#07130b]/90 py-0.5 text-center text-base text-p03">
+                        ↓ play here
+                      </span>
+                    ) : null}
+                  </>
+                )
+                // The lane's card stays put while the lane becomes clickable and back, so nothing plays again.
+                return (
+                  <div
+                    key={i}
+                    aria-label={action ? undefined : label}
+                    {...look({ row: 'board', lane: i })}
+                    onClick={action ? undefined : () => !busy && refuse(`lane-${i}`)}
+                    className={`${cell} relative ${frame}`}
+                    style={{ ...laneSize, ...shaking(`lane-${i}`) }}
+                  >
+                    {body}
+                    {action ? (
+                      <button
+                        type="button"
+                        aria-label={label}
+                        data-action={action.type}
+                        data-lane={i}
+                        onClick={() => act(action)}
+                        className="absolute inset-0 z-20 rounded-md"
+                      />
+                    ) : null}
+                  </div>
+                )
+              })}
+            </div>
+            {over ? (
+              <div className="absolute inset-0 grid place-items-center bg-black/60 p-4">
+                <GameOver result={result} className="w-full max-w-md bg-p03-ground/95 font-terminal text-xl" />
+              </div>
+            ) : null}
+          </Panel>
+        </div>
         <p
           key={refused.count}
           className="text-p03-dim"
@@ -535,8 +576,8 @@ export function TerminalTable({
         </p>
       </section>
 
-      <aside className="flex flex-col gap-3">
-        <Panel className="flex h-[36rem] flex-col gap-2 bg-[#a9e7b8] text-[#0b1f12]">
+      <aside className="relative z-10 flex min-h-0 flex-col gap-3 overflow-hidden">
+        <Panel className="flex min-h-0 flex-1 flex-col gap-2 bg-[#a9e7b8] text-[#0b1f12]">
           {inspected ? (
             <>
               <p className="flex items-start justify-between gap-2 text-3xl leading-none">
@@ -585,7 +626,7 @@ export function TerminalTable({
           )}
         </Panel>
         <section aria-label="P03's console" className="rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-2 text-base">
-          <ol aria-live="polite" className="flex h-44 flex-col-reverse overflow-y-auto text-lg">
+          <ol aria-live="polite" className="flex h-36 flex-col-reverse overflow-y-auto text-lg">
             {[...game.log].reverse().map((line, index) => (
               <li key={game.log.length - index}>{line}</li>
             ))}
@@ -603,8 +644,30 @@ export function TerminalTable({
         </button>
       </aside>
 
-      <section aria-label="Your hand" className="col-span-3 flex items-end gap-4 border-t-2 border-[#2f6b3d] pt-3">
-        <div className="flex min-w-0 flex-1 justify-center gap-2">
+      <section
+        aria-label="Your hand"
+        className="relative z-10 col-span-3 flex h-[clamp(8rem,19dvh,13rem)] items-end gap-4 border-t-2 border-[#2f6b3d] pt-3"
+      >
+        {/* The table's own controls, in the hand row's spare room on the left, so the left column never runs out. */}
+        <div className="flex w-[17rem] shrink-0 flex-col justify-end gap-2 self-stretch">
+          <div className="flex gap-2">
+            {fullScreen.supported ? (
+              <button type="button" onClick={fullScreen.toggle} className={`${SIDE_BUTTON} flex-1`}>
+                {fullScreen.on ? 'Leave full screen' : 'Full screen'}
+              </button>
+            ) : null}
+            <WalkAway forfeit={game.forfeit} className={`${SIDE_BUTTON} h-auto flex-1 justify-center`} />
+          </div>
+          <div className="flex justify-between font-sans text-sm text-p03-dim">
+            <button type="button" onClick={on3d} className="underline hover:text-p03">
+              Play on the 3D table
+            </button>
+            <button type="button" onClick={onClassic} className="underline hover:text-p03">
+              First text table
+            </button>
+          </div>
+        </div>
+        <div className="flex h-full min-w-0 flex-1 justify-center gap-2">
           {view.hand.map((unit) => {
             const selected = unit.uid === state.summon?.uid
             const allowed = has(legal, { type: 'select', uid: unit.uid } as Partial<Action>)
@@ -614,7 +677,7 @@ export function TerminalTable({
               <div
                 key={unit.uid}
                 {...look({ uid: unit.uid })}
-                className="w-36 shrink"
+                className="aspect-[4/5] h-full shrink"
                 style={fresh(unit.uid) ? { animation: 'arrive-up 280ms ease-out' } : undefined}
               >
                 <button
