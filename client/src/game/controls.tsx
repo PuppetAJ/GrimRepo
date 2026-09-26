@@ -67,10 +67,10 @@ export function GameOver({ result, className = '' }: { result: Finished; classNa
   )
 }
 
-export function WalkAway({
+export function Forfeit({
   forfeit,
   className = '',
-  children = 'Walk away',
+  children = 'Forfeit',
 }: {
   forfeit: () => Promise<void>
   className?: string
@@ -85,7 +85,7 @@ export function WalkAway({
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Walk away from this game?</AlertDialogTitle>
+          <AlertDialogTitle>Forfeit this game?</AlertDialogTitle>
           <AlertDialogDescription>
             It counts as a loss on the turn you have reached, and you get a fresh deal.
           </AlertDialogDescription>
@@ -93,7 +93,7 @@ export function WalkAway({
         <AlertDialogFooter>
           <AlertDialogCancel>Keep playing</AlertDialogCancel>
           <AlertDialogAction variant="destructive" onClick={() => void forfeit()}>
-            Walk away
+            Forfeit
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

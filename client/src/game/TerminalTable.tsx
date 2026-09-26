@@ -10,7 +10,7 @@ import {
   prompt,
   ScaleBar,
   scaleWords,
-  WalkAway,
+  Forfeit,
 } from './controls.tsx'
 import { ICONS, STAT_ICONS } from './table/faces.ts'
 import type { Playback } from './table/playback.ts'
@@ -192,7 +192,7 @@ function Balance({ scale }: { scale: number }) {
 
 // The left column's buttons: bordered like its panels, in the terminal's type.
 const SIDE_BUTTON =
-  'rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-2 font-terminal text-lg text-p03 hover:bg-[#13261a] hover:text-p03 dark:hover:bg-[#13261a]'
+  'rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-2 font-terminal text-lg text-p03 hover:bg-[#13261a] hover:text-p03 aria-expanded:bg-[#13261a] aria-expanded:text-p03 dark:hover:bg-[#13261a] dark:aria-expanded:bg-[#13261a]'
 
 function Panel({ children, className = '' }: { children: ReactNode; className?: string }) {
   return <div className={`rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-3 ${className}`}>{children}</div>
@@ -891,7 +891,7 @@ export function TerminalTable({
             {fullScreen.on ? 'Exit full screen' : 'Full screen'}
           </button>
         ) : null}
-        <WalkAway forfeit={game.forfeit} className={`${SIDE_BUTTON} h-auto flex-1 justify-center`} />
+        <Forfeit forfeit={game.forfeit} className={`${SIDE_BUTTON} h-auto flex-1 justify-center`} />
       </div>
       <div className="flex justify-between font-sans text-sm text-p03-dim">
         <button type="button" onClick={on3d} className="underline hover:text-p03">

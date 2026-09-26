@@ -6,7 +6,7 @@ import { card, type Unit } from 'shared'
 import * as THREE from 'three'
 import { useBatch } from './Batch.tsx'
 import { claimCursor, releaseCursor, type CursorKind } from './cursor.ts'
-import { tuning } from './tuning.ts'
+import { MOOD } from './mood.ts'
 import { Disk, facePlanes, type DiskHandle } from './Disk.tsx'
 import { backTexture, faceContent, faceLights, faceTexture, type loadCardAssets } from './faces.ts'
 import { DECK, handPlace, slot, type Row, type Vec3 } from './layout.ts'
@@ -194,7 +194,7 @@ export function Card({
 
     // A card that can be sacrificed pulses red; a marked one holds it.
     // Only the screen and the numerals glow, from their own map, as brightly as the mood asks.
-    const rest = tuning().cardGlow
+    const rest = MOOD.cardGlow
     const pulse = look === 'markable' ? 0.12 + 0.1 * Math.sin(now / 160) : 0
     const glow =
       look === 'selected'

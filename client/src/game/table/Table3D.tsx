@@ -3,12 +3,12 @@ import { Selection } from '@react-three/postprocessing'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { easing } from 'maath'
 import { Flag, LayoutGrid, LogOut, Maximize, Minimize, MoveUp, Type } from 'lucide-react'
-import { Suspense, use, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Suspense, use, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { HAND_LIMIT, legalActions, PLAYER_DECK, type Action, type GameState } from 'shared'
 import * as THREE from 'three'
 import { Button } from '@/components/ui/button.tsx'
-import { DemoNote, GameOver, has, laneAction, owed, prompt, ScaleBar, WalkAway } from '../controls.tsx'
+import { DemoNote, GameOver, has, laneAction, owed, prompt, ScaleBar, Forfeit } from '../controls.tsx'
 import { useFullScreen } from '../fullScreen.ts'
 import type { Ready } from '../useGame.ts'
 import type { View } from '../view.ts'
@@ -33,8 +33,7 @@ import { TINT } from './palette.ts'
 import { CardBatch } from './Batch.tsx'
 import { Boot } from './Boot.tsx'
 import { claimCursor, cursorCss, onCursor, releaseCursor } from './cursor.ts'
-import { MoodPanel } from './MoodPanel.tsx'
-import { tuning } from './tuning.ts'
+import { MOOD } from './mood.ts'
 import { usePlayback } from './usePlayback.ts'
 
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
@@ -348,11 +347,10 @@ function CursorSync() {
   return null
 }
 
-/** The renderer's exposure, from the mood's tuning. */
+/** The renderer's exposure, from the mood. */
 function Exposure() {
-  useFrame(({ gl }) => {
-    gl.toneMappingExposure = tuning().exposure
-  })
+  const gl = useThree((three) => three.gl)
+  useLayoutEffect(() => void (gl.toneMappingExposure = MOOD.exposure), [gl])
   return null
 }
 
@@ -532,10 +530,10 @@ function Hud({
             </Link>
           </Button>
           {game.result ? null : (
-            <WalkAway forfeit={game.forfeit} className="h-8 px-3">
+            <Forfeit forfeit={game.forfeit} className="h-8 px-3">
               <Flag aria-hidden />
-              <Label>Walk away</Label>
-            </WalkAway>
+              <Label>Forfeit</Label>
+            </Forfeit>
           )}
         </div>
         {onDemo ? (
@@ -722,7 +720,6 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
           <Loaded onLoad={setReady} />
         </Suspense>
       </Canvas>
-      {new URLSearchParams(window.location.search).has('mood') ? <MoodPanel /> : null}
       <Boot stage={warmed ? 'done' : active ? 'assets' : 'warming'} progress={progress} files={files} />
       {ready ? (
         <Hud

@@ -22,7 +22,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import type { View } from '../view.ts'
 import { Nudge } from './Piles.tsx'
 import { TINT } from './palette.ts'
-import { tuning, useTuning } from './tuning.ts'
+import { MOOD } from './mood.ts'
 import {
   BATTERY_CELLS,
   BELL,
@@ -129,7 +129,6 @@ const lamp = (colour: string, tint: number) =>
 
 /** The console the game is played on, the floor and the walls. */
 function Room() {
-  const mood = useTuning()
   const clean = metal(useTexture(surfaces('table')), [4, 3])
   const floor = metal(useTexture(surfaces('floor')), [12, 12])
   const wall = metal(useTexture(surfaces('wall')), [8, 3])
@@ -168,7 +167,7 @@ function Room() {
             metalness={0.6}
             roughness={0.38}
             emissive={TINT.fill}
-            emissiveIntensity={mood.trimGlow}
+            emissiveIntensity={MOOD.trimGlow}
           />
         </mesh>
       ))}
@@ -492,7 +491,6 @@ function GemModule() {
 
 /** The lamp on the player's left: a post, an arm, and a bar of light that flickers now and then. */
 function Lamp() {
-  const mood = useTuning()
   const light = useRef<THREE.PointLight>(null)
   // The weathered fluorescent light by Mark Peters (CC BY); its emissive map marks the tubes, which glow in the palette's light.
   const { scene: fixture } = useGLTF('/models/light.glb', false, false)
@@ -504,8 +502,8 @@ function Lamp() {
     const t = clock.getElapsedTime()
     // Steady, with a brief dip every few seconds.
     const flicker = 1 - 0.35 * Math.max(0, Math.sin(t * 9.7) * Math.sin(t * 0.37) - 0.85) * 6
-    if (light.current) light.current.intensity = tuning().lamp * flicker
-    tube.emissive.set(lamp(TINT.lamp, tuning().lampTint)).multiplyScalar(GLOW.g * 0.6 * flicker)
+    if (light.current) light.current.intensity = MOOD.lamp * flicker
+    tube.emissive.set(lamp(TINT.lamp, MOOD.lampTint)).multiplyScalar(GLOW.g * 0.6 * flicker)
   })
   return (
     <group position={[X - 6.4, TABLE_Y, -10.6]}>
@@ -524,7 +522,7 @@ function Lamp() {
       <primitive object={fixture} position={[1.85, 3.12, -0.2]} rotation={[0.35, 0, 0]} scale={1.05} />
       <pointLight
         ref={light}
-        color={lamp(TINT.lamp, mood.lampTint)}
+        color={lamp(TINT.lamp, MOOD.lampTint)}
         position={[1.85, 2.6, 0.4]}
         intensity={18}
         distance={12}
@@ -564,7 +562,6 @@ function DrumRack() {
 
 /** A rack on the right of the status screen with P03's hammer and pliers hung on it (not usable yet), and springs on the floor. */
 function Props() {
-  const mood = useTuning()
   const steel = { color: '#20262c', metalness: 0.85, roughness: 0.45 }
   const hammer = useGLTF('/models/hammer.glb', false, false).scene
   const pliers = useGLTF('/models/pliers.glb', false, false).scene
@@ -584,7 +581,7 @@ function Props() {
         {/* Hung by its head, handle down. */}
         <primitive object={hammer} position={[-0.5, 0.2, 0.26]} rotation={[0, 0, Math.PI / 2]} scale={0.7} />
         <primitive object={pliers} position={[0.5, 0.2, 0.26]} rotation={[0, Math.PI / 2, 0]} scale={0.7} />
-        <pointLight color={TINT.light} position={[0, 0.4, 1.2]} intensity={mood.rackLight} distance={4} decay={2} />
+        <pointLight color={TINT.light} position={[0, 0.4, 1.2]} intensity={MOOD.rackLight} distance={4} decay={2} />
       </group>
       {[
         [X - 6.8, 0.5, -7.5],
@@ -735,12 +732,11 @@ function P03({ mood }: { mood: Mood }) {
 }
 
 export function FactoryP03({ view, busy, outcome }: { view: View; busy: boolean; outcome?: 'win' | 'loss' }) {
-  const tuned = useTuning()
   const mood = useMood(view, busy, outcome)
   return (
     <>
       <P03 mood={mood} />
-      <pointLight color={TINT.light} position={[X, 10.4, -13.4]} intensity={tuned.p03Light} distance={10} decay={1.6} />
+      <pointLight color={TINT.light} position={[X, 10.4, -13.4]} intensity={MOOD.p03Light} distance={10} decay={1.6} />
     </>
   )
 }
@@ -755,7 +751,6 @@ function scaleBar(scale: number): string {
 
 /** Everything around the table: the room, the light, the screens and the props. */
 export function Factory({ view, log }: { view: View; log: string[] }) {
-  const mood = useTuning()
   // The left monitor is the battle log: the last eight lines of P03's console.
   const lines = useMemo(() => ['// P03 CONSOLE', ...log.slice(-8).map((line) => line.replace(/^P03> /, '> '))], [log])
   const status = useMemo(
@@ -771,32 +766,32 @@ export function Factory({ view, log }: { view: View; log: string[] }) {
   )
   return (
     <>
-      <fog attach="fog" args={[TINT.fog, mood.fogNear, mood.fogFar]} />
-      <ambientLight color={TINT.ambient} intensity={mood.ambient} />
-      <hemisphereLight color={TINT.hemisphere} groundColor="#000000" intensity={mood.hemisphere} />
+      <fog attach="fog" args={[TINT.fog, MOOD.fogNear, MOOD.fogFar]} />
+      <ambientLight color={TINT.ambient} intensity={MOOD.ambient} />
+      <hemisphereLight color={TINT.hemisphere} groundColor="#000000" intensity={MOOD.hemisphere} />
       {/* A little light over the deck and the pile, and over the player's hands. */}
       <pointLight
-        color={lamp(TINT.cool, mood.lampTint)}
+        color={lamp(TINT.cool, MOOD.lampTint)}
         position={[X + 3.3, TABLE_Y + 2.2, -8.6]}
-        intensity={mood.deckLight}
+        intensity={MOOD.deckLight}
         distance={7}
         decay={1.8}
       />
       <pointLight
-        color={lamp(TINT.fill, mood.lampTint)}
+        color={lamp(TINT.fill, MOOD.lampTint)}
         position={[X, TABLE_Y + 1.6, -5.2]}
-        intensity={mood.handLight}
+        intensity={MOOD.handLight}
         distance={6}
         decay={2}
       />
       {/* A cool lamp over the board, so the cards read. */}
       <spotLight
-        color={lamp(TINT.spot, mood.lampTint)}
+        color={lamp(TINT.spot, MOOD.lampTint)}
         position={[X, 13, -8.2]}
         target-position={[X, TABLE_Y, -10.2]}
         angle={0.5}
         penumbra={0.6}
-        intensity={mood.spot}
+        intensity={MOOD.spot}
         decay={1.6}
         distance={20}
       />
@@ -815,7 +810,6 @@ const STATUS_AT: Vec3 = [X + 4.3, 9.5, -14.2]
 
 /** Everything in the room that no move changes, kept out of the re-render each move brings. */
 const Fixtures = memo(function Fixtures() {
-  const mood = useTuning()
   // The dust is drawn as at 1x whatever the resolution, so it looks the same when the resolution adapts.
   const dust = useRef<THREE.Points>(null)
   useFrame(() => {
@@ -835,14 +829,14 @@ const Fixtures = memo(function Fixtures() {
       {/* Remade when the count changes, which it cannot take in place. */}
       <Sparkles
         ref={dust}
-        key={mood.dustCount}
-        count={mood.dustCount}
+        key={MOOD.dustCount}
+        count={MOOD.dustCount}
         scale={[14, 7, 12]}
         position={[X, 8.5, -11]}
-        size={mood.dustSize}
-        speed={mood.dustSpeed}
+        size={MOOD.dustSize}
+        speed={MOOD.dustSpeed}
         color={DUST}
-        opacity={mood.dustOpacity}
+        opacity={MOOD.dustOpacity}
       />
     </>
   )
@@ -936,18 +930,17 @@ export function EndTurnButton({
 
 /** Glow on the screens and lamps, a little grain and scanline, and dark corners. */
 export function FactoryEffects() {
-  const mood = useTuning()
   // A Retina screen's pixels are fine enough to need no smoothing; MSAA there cost two thirds of the frame.
   const sharp = useThree((state) => state.viewport.dpr) >= 1.5
   return (
     <EffectComposer multisampling={0}>
-      <Bloom mipmapBlur luminanceThreshold={mood.bloomThreshold} intensity={mood.bloom} radius={mood.bloomRadius} />
+      <Bloom mipmapBlur luminanceThreshold={MOOD.bloomThreshold} intensity={MOOD.bloom} radius={MOOD.bloomRadius} />
       <ChromaticAberration offset={[0.0006, 0.0006]} />
-      <Scanline density={1.4} opacity={mood.scanline} />
-      <Noise opacity={mood.noise} />
-      <Vignette offset={0.28} darkness={mood.vignette} />
+      <Scanline density={1.4} opacity={MOOD.scanline} />
+      <Noise opacity={MOOD.noise} />
+      <Vignette offset={0.28} darkness={MOOD.vignette} />
       {/* The face-up cards' own soft glow, from the tagged faces alone, so no lamp can add to it. */}
-      {mood.cardBloom > 0 ? (
+      {MOOD.cardBloom > 0 ? (
         <SelectiveBloom
           lights={[SELECTED_LIGHT]}
           mipmapBlur
@@ -955,13 +948,13 @@ export function FactoryEffects() {
           // A soft halo needs no detail, so it is worked out at half size, and a quarter on fine screens.
           resolutionScale={sharp ? 0.25 : 0.5}
           levels={4}
-          intensity={mood.cardBloom}
+          intensity={MOOD.cardBloom}
           radius={0.55}
         />
       ) : null}
       <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
-      <HueSaturation hue={mood.hue * Math.PI} saturation={mood.saturation} />
-      <BrightnessContrast brightness={mood.brightness} contrast={mood.contrast} />
+      <HueSaturation hue={MOOD.hue * Math.PI} saturation={MOOD.saturation} />
+      <BrightnessContrast brightness={MOOD.brightness} contrast={MOOD.contrast} />
       {/* Below that, a cheap edge smoothing pass instead. */}
       {sharp ? null : <SMAA />}
     </EffectComposer>

@@ -116,8 +116,8 @@ section('Resuming')
   )
 
   section('Walking away')
-  await page.getByRole('button', { name: 'Walk away' }).click()
-  await page.getByRole('alertdialog').getByRole('button', { name: 'Walk away' }).click()
+  await page.getByRole('button', { name: 'Forfeit' }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Forfeit' }).click()
   await page
     .getByRole('status')
     .filter({ hasText: /You lose/ })

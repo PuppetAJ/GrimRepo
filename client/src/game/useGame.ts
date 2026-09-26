@@ -37,7 +37,7 @@ let generations = 0
 
 function open(game: OpenGame): Table {
   const rebuilt = history(game.seed, game.actions)
-  if (!rebuilt) throw new Error('This game could not be replayed. Walk away from it to start another.')
+  if (!rebuilt) throw new Error('This game could not be replayed. Forfeit it to start another.')
   const lines = rebuilt.lines.map((line) => `P03> ${line}`)
   // A resumed game with no moves is still a new deal, as when two requests race to start it.
   if (game.resumed && game.actions.length) lines.push(`P03> Welcome back. Turn ${rebuilt.state.turn}.`)
