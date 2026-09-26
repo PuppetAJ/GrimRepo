@@ -637,8 +637,9 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
   const camera: CameraView = playback.view.summon ? 'board' : chosen
   const [ready, setReady] = useState(false)
   const [rung, setRung] = useState(0)
-  // The screen's own resolution to start, up to 2; lowered toward 1 while the frame rate cannot keep up, and raised again.
-  const sharpest = Math.min(2, window.devicePixelRatio || 1)
+  // The screen's own resolution to start, up to 2 (1.5 on touch screens, whose GPUs are the weakest and pixels the
+  // finest); lowered toward 1 while the frame rate cannot keep up, and raised again. The monitors' text never drops.
+  const sharpest = Math.min(window.matchMedia('(pointer: coarse)').matches ? 1.5 : 2, window.devicePixelRatio || 1)
   const [dpr, setDpr] = useState(sharpest)
   // Counts the times a card was tried before the draw, so the piles and the prompt can point at what comes first.
   const [hint, setHint] = useState(0)
