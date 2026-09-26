@@ -26,11 +26,13 @@ function savedMode(): Mode {
 }
 
 const UPRIGHT_PHONE = '(orientation: portrait) and (max-width: 767px)'
-// The board beside the card reader is the default, down to this width; narrower, one column.
+// The Act 2 layout's three columns need this much width; narrower, the board sits beside the card reader.
+const WIDE = '(min-width: 1100px)'
+// Down to this width; narrower still, one column.
 const MID = '(min-width: 560px)'
 type Layout = 'wide' | 'mid' | 'narrow'
 
-// ?layout=wide brings back the three columns, and ?layout=narrow the single column, to compare them.
+// ?layout=wide, mid or narrow forces one, to compare them.
 function askedLayout(): Layout | null {
   const asked = new URLSearchParams(window.location.search).get('layout')
   return asked === 'wide' || asked === 'mid' || asked === 'narrow' ? asked : null
@@ -82,6 +84,7 @@ export function Game() {
   const onDemo = user?.username === DEMO.username
   const [mode, setMode] = useState<Mode>(savedMode)
   const upright = useMedia(UPRIGHT_PHONE)
+  const wide = useMedia(WIDE)
   const mid = useMedia(MID)
   const [text, setText] = useState(chosenText)
 
@@ -109,7 +112,7 @@ export function Game() {
             chooseText('classic')
             setText('classic')
           }}
-          layout={askedLayout() ?? (mid ? 'mid' : 'narrow')}
+          layout={askedLayout() ?? (wide ? 'wide' : mid ? 'mid' : 'narrow')}
         />
       </div>
     ) : (

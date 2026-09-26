@@ -689,7 +689,7 @@ export function TerminalTable({
     <p
       key={refused.count}
       title={said}
-      className={`text-p03-dim ${layout === 'narrow' ? 'line-clamp-2 h-[2lh] w-full text-lg leading-tight' : layout === 'mid' ? 'w-full truncate text-[clamp(1rem,4.4cqi,1.25rem)]' : 'max-w-full truncate'}`}
+      className={`text-p03-dim ${layout === 'narrow' ? 'h-[2lh] w-full overflow-y-auto text-lg leading-tight' : layout === 'mid' ? 'w-full truncate text-[clamp(1rem,4.4cqi,1.25rem)]' : 'w-full truncate text-center text-[clamp(1rem,4cqi,1.5rem)]'}`}
       style={refused.count ? { animation: 'nudge 0.6s ease-out' } : undefined}
     >
       {said}
@@ -981,7 +981,7 @@ export function TerminalTable({
             <div ref={setArea} className="flex min-h-0 w-full flex-1 items-center justify-center">
               {boardPanel}
             </div>
-            {promptLine}
+            <div className="@container w-full">{promptLine}</div>
           </section>
           <aside className="relative z-10 flex min-h-0 flex-col gap-3 overflow-hidden">
             {readerPanel}
