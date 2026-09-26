@@ -22,7 +22,6 @@ export function Nudge({
   lift = 0.05,
   hint = 0,
   still = false,
-  exact = false,
   cursor,
   children,
 }: {
@@ -35,8 +34,6 @@ export function Nudge({
   hint?: number
   /** Stays put when pointed at, as a thing bolted down does. */
   still?: boolean
-  /** Pointed at by what it holds, not by a box round it. */
-  exact?: boolean
   /** The pointer's own look over it, from /cursors/, when it can be clicked. */
   cursor?: 'draw' | 'boilerplate' | 'press'
   children: ReactNode
@@ -78,13 +75,6 @@ export function Nudge({
     onPointerMove: (event: ThreeEvent<PointerEvent>) => event.stopPropagation(),
     onPointerOut: () => setHovered(false),
   }
-  // A stack is pointed at by its own disks, which touch, so its outline is exactly what is seen; other things by a box.
-  if (exact)
-    return (
-      <group ref={group} name={label} {...handlers}>
-        {children}
-      </group>
-    )
   return (
     <group>
       <group ref={group}>{children}</group>
@@ -103,8 +93,8 @@ const turn = new THREE.Quaternion()
 const tilt = new THREE.Euler()
 const ONE = new THREE.Vector3(1, 1, 1)
 
-/** How tall a stack of this many disks stands, with a little over for the pointer. */
-const stackHeight = (layers: number) => Math.max(1, layers) * pitch + 0.04
+/** A stack's box: exactly as wide and deep as its disks, and loose above them, so moving over it never flickers. */
+const stackHeight = (layers: number) => Math.max(1, layers) * pitch + 0.25
 
 /** Where the i-th disk of a stack lies: a little uneven, so the stack reads as a pile of real disks. */
 function place(i: number, faceUp: boolean, into: THREE.Matrix4): THREE.Matrix4 {
@@ -155,9 +145,6 @@ function Stack({
       for (let i = 0; i < plain; i++) mesh.setMatrixAt(i, place(i, faceUp, layer))
       mesh.count = Math.max(plain, 0)
       mesh.instanceMatrix.needsUpdate = true
-      // The bounds are cached for picking, so they are worked out again as the stack changes.
-      mesh.boundingSphere = null
-      mesh.boundingBox = null
     }
   }, [plain, faceUp])
   const shown = faceUp && layers > 0 ? place(layers - 1, true, new THREE.Matrix4()) : null
@@ -202,8 +189,7 @@ export function Deck({
       <Nudge
         active={active}
         onClick={onClick}
-        size={[0.8, stackHeight(layers), CARD.height * DISK.compact]}
-        exact
+        size={[CARD.width, stackHeight(layers), CARD.height * DISK.compact]}
         label="deck"
         hint={hint}
         cursor="draw"
@@ -238,8 +224,7 @@ export function Pile({
       <Nudge
         active={active}
         onClick={onClick}
-        size={[0.8, stackHeight(6), CARD.height]}
-        exact
+        size={[CARD.width, stackHeight(6), CARD.height]}
         label="pile"
         hint={hint}
         cursor="boilerplate"

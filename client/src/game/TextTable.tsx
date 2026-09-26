@@ -1,4 +1,4 @@
-import { Heart, Swords } from 'lucide-react'
+import { Shield, Swords } from 'lucide-react'
 import { Link } from 'react-router'
 import { card, legalActions, SIGILS, type Action, type GameState, type Slot, type Unit } from 'shared'
 import { Button } from '@/components/ui/button.tsx'
@@ -23,7 +23,7 @@ function CardFace({ unit, faded = false }: { unit: Unit; faded?: boolean }) {
           {unit.attack}
         </span>
         <span className="inline-flex items-center gap-1">
-          <Heart className="size-4" aria-hidden />
+          <Shield className="size-4" aria-hidden />
           {unit.health}
         </span>
       </span>
@@ -205,7 +205,7 @@ export function TextTable({ game, onDemo, on3d }: { game: Ready; onDemo: boolean
                   </Button>
                 ) : null}
                 <Button data-action="ringBell" onClick={() => act({ type: 'ringBell' })}>
-                  Ring the bell
+                  Press the button
                 </Button>
               </>
             )}

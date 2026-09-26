@@ -90,6 +90,12 @@ const RARE: Palette = {
 }
 
 // Small pixel icons for the sigils, drawn on the strip; the text table spells them out.
+/** A sword by attack and a shield by health, so a new player can tell the two numbers apart. */
+export const STAT_ICONS = {
+  attack: ['00000011', '00000111', '00001110', '11011100', '01111000', '00110000', '01011000', '10000000'],
+  health: ['11111111', '10000001', '10111101', '10111101', '10011001', '01011010', '00100100', '00011000'],
+}
+
 export const ICONS: Record<SigilId, string[]> = {
   segfault: ['01111110', '11011011', '11111111', '11100111', '01111110', '00100100', '01100110', '01000010'],
   bypass: ['00010000', '00111000', '01111100', '00010000', '00010000', '11111111', '10101011', '11111111'],
@@ -300,12 +306,15 @@ function drawFace(context: CanvasRenderingContext2D, unit: Unit, loaded: Assets,
     )
   }
 
-  // Attack and health as plain numerals, each centred in its own box.
+  // Attack and health, each in its own box beside its icon: the sword on the outer side of the one, the shield of the other.
+  const icon = 3
+  pixels(context, STAT_ICONS.attack, ax + 6, ay + ah / 2 - 4 * icon, icon, palette.line)
+  pixels(context, STAT_ICONS.health, hx + hw - 6 - 8 * icon, hy + hh / 2 - 4 * icon, icon, palette.line)
   context.font = Math.max(unit.attack, unit.health) > 99 ? '40px VT323' : '64px VT323'
   context.fillStyle = palette.line
-  centred(context, String(unit.attack), ax + aw / 2, ay + ah / 2)
+  centred(context, String(unit.attack), ax + aw / 2 + 12, ay + ah / 2)
   context.fillStyle = unit.health < unit.maxHealth ? palette.hurt : palette.line
-  centred(context, String(unit.health), hx + hw / 2, hy + hh / 2)
+  centred(context, String(unit.health), hx + hw / 2 - 12, hy + hh / 2)
 }
 
 /** The back of the disk: the sunken panel, darker than the rim, with the shadow of the hub's disc; the parts are geometry on top. */

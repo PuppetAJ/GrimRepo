@@ -124,7 +124,7 @@ section('The demo account and redirects')
   check('the warning can be closed', (await page.getByRole('note').count()) === 0)
   await page.reload()
   await page
-    .getByRole('button', { name: /Look at the board|Draw from the deck|Ring the bell/ })
+    .getByRole('button', { name: /Look at the board|Draw from the deck|Press the button/ })
     .first()
     .waitFor()
   check('and stays closed', (await page.getByRole('note').count()) === 0)

@@ -14,7 +14,7 @@ const badges = [
 const turn = [
   { cmd: 'grimrepo draw', note: 'one card a turn, or a free Boilerplate' },
   { cmd: 'grimrepo sacrifice --until-paid', note: 'costly cards are paid for with cards in play' },
-  { cmd: 'grimrepo ring-bell', note: 'attack; overkill spills into the queue' },
+  { cmd: 'grimrepo execute', note: 'attack; overkill spills into the queue' },
 ]
 
 export function Home() {

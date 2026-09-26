@@ -595,7 +595,7 @@ function Hud({
                   onClick={ring}
                   aria-keyshortcuts="E"
                 >
-                  Ring the bell
+                  Press the button
                   <kbd aria-hidden className="rounded border border-current/40 px-1 font-mono text-xs opacity-70">
                     E
                   </kbd>

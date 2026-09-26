@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { card, legalActions, SIGILS, TIP, type Action, type SigilId, type Slot, type Unit } from 'shared'
 import { DemoNote, describe, GameOver, has, laneAction, owed, prompt, scaleWords, WalkAway } from './controls.tsx'
-import { ICONS } from './table/faces.ts'
+import { ICONS, STAT_ICONS } from './table/faces.ts'
 import { useFullScreen } from './fullScreen.ts'
 import type { Ready } from './useGame.ts'
 
@@ -26,9 +26,17 @@ function Art({ id, big = false }: { id: string; big?: boolean }) {
   )
 }
 
-/** One of the sigils' pixel icons. */
-function Sigil({ id, size = 18, colour = INK }: { id: SigilId; size?: number; colour?: string }) {
-  const grid = ICONS[id]
+/** One of the sigils' pixel icons, or the sword or the shield. */
+function Sigil({
+  id,
+  size = 18,
+  colour = INK,
+}: {
+  id: SigilId | keyof typeof STAT_ICONS
+  size?: number
+  colour?: string
+}) {
+  const grid = id === 'attack' || id === 'health' ? STAT_ICONS[id] : ICONS[id]
   return (
     <svg width={size} height={size} viewBox="0 0 8 8" shapeRendering="crispEdges" aria-hidden>
       {grid.flatMap((row, y) =>
@@ -64,8 +72,14 @@ function PixelCard({ unit, big = false }: { unit: Unit; big?: boolean }) {
         ))}
       </span>
       <span className={`flex justify-between px-1 leading-none ${big ? 'text-3xl' : 'text-xl'}`}>
-        <span>{unit.attack}</span>
-        <span className={unit.health < unit.maxHealth ? 'text-[#a3172b]' : ''}>{unit.health}</span>
+        <span className="flex items-center gap-0.5">
+          <Sigil id="attack" size={big ? 16 : 11} />
+          {unit.attack}
+        </span>
+        <span className={`flex items-center gap-0.5 ${unit.health < unit.maxHealth ? 'text-[#a3172b]' : ''}`}>
+          {unit.health}
+          <Sigil id="health" size={big ? 16 : 11} />
+        </span>
       </span>
     </span>
   )
@@ -147,7 +161,7 @@ function Balance({ scale }: { scale: number }) {
 
 // The left column's buttons: bordered like its panels, in the terminal's type.
 const SIDE_BUTTON =
-  'rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-2 font-terminal text-lg text-p03 hover:bg-[#13261a]'
+  'rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-2 font-terminal text-lg text-p03 hover:bg-[#13261a] hover:text-p03'
 
 function Panel({ children, className = '' }: { children: ReactNode; className?: string }) {
   return <div className={`rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-3 ${className}`}>{children}</div>
@@ -203,7 +217,7 @@ export function TerminalTable({
       className={`p03-screen grid grid-cols-[14rem_minmax(0,1fr)_16rem] gap-3 border border-[#2f6b3d] p-3 font-terminal text-xl ${fullScreen.on ? 'fixed inset-0 z-40 content-center overflow-auto' : 'rounded-lg'}`}
     >
       <aside className="flex flex-col gap-3">
-        <Panel className="flex items-baseline justify-between text-2xl">
+        <Panel className="flex items-center justify-between text-2xl">
           <span className="text-p03">Turn {state.turn}</span>
           <span className="text-base text-p03-dim" aria-live="polite">
             {game.saving ? 'saving…' : game.unsaved ? `${game.unsaved} unsaved` : 'saved'}
@@ -218,12 +232,12 @@ export function TerminalTable({
           disabled={!canRing}
           onClick={() => act({ type: 'ringBell' })}
           aria-keyshortcuts="E"
-          aria-label="Ring the bell"
+          aria-label="Press the button"
           className="flex flex-col items-center gap-1 rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-3 text-p03 enabled:hover:bg-[#13261a] disabled:opacity-40"
         >
           <span className="grid size-14 place-items-center rounded-full border-4 border-[#2f6b3d] bg-[#a3172b] shadow-[0_0_14px_rgb(255_60_60/0.4)]" />
           <span className="text-2xl tracking-widest">EXECUTE</span>
-          <span className="text-sm text-p03-dim">ring the bell · E</span>
+          <span className="text-sm text-p03-dim">press the button · E</span>
         </button>
         {state.summon ? (
           <button
@@ -369,12 +383,16 @@ export function TerminalTable({
                 <p className="text-lg">No sigils.</p>
               )}
               <p className="mt-auto flex justify-between border-t-2 border-[#0b1f12]/40 pt-1 text-3xl">
-                <span aria-label={`Attack ${inspected.attack}`}>{inspected.attack}</span>
+                <span aria-label={`Attack ${inspected.attack}`} className="flex items-center gap-1">
+                  <Sigil id="attack" size={20} />
+                  {inspected.attack}
+                </span>
                 <span
                   aria-label={`Health ${inspected.health}`}
-                  className={inspected.health < inspected.maxHealth ? 'text-[#a3172b]' : ''}
+                  className={`flex items-center gap-1 ${inspected.health < inspected.maxHealth ? 'text-[#a3172b]' : ''}`}
                 >
                   {inspected.health}
+                  <Sigil id="health" size={20} />
                 </span>
               </p>
             </>
