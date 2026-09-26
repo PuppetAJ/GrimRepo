@@ -10,24 +10,27 @@ const FADE = 2.5
 
 type Edge = [number, number, number, number]
 
-/** A seeded walk over the grid: each trace leaves a point and bends as it goes. */
-function traces(width: number, height: number): Edge[] {
+/** A seeded walk over the grid: each trace leaves a point and bends as it goes, with a node at either end of it. */
+function traces(width: number, height: number): { edges: Edge[]; nodes: [number, number][] } {
   let seed = 7
   const random = () => (seed = (seed * 16807) % 2147483647) / 2147483647
   const cols = Math.ceil(width / STEP)
   const rows = Math.ceil(height / STEP)
   const edges: Edge[] = []
+  const nodes: [number, number][] = []
   for (let i = 0; i < (cols * rows) / 5; i++) {
     let x = Math.floor(random() * cols) * STEP
     let y = Math.floor(random() * rows) * STEP
+    nodes.push([x, y])
     for (let leg = 0; leg < 2 + Math.floor(random() * 3); leg++) {
       const along = Math.ceil(random() * 4) * STEP * (random() < 0.5 ? -1 : 1)
       const [nx, ny] = leg % 2 === 0 ? [x + along, y] : [x, y + along]
       edges.push([x, y, nx, ny])
       ;[x, y] = [nx, ny]
     }
+    nodes.push([x, y])
   }
-  return edges
+  return { edges, nodes }
 }
 
 export function Circuit() {
@@ -71,7 +74,8 @@ export function Circuit() {
       const { clientWidth: w, clientHeight: h } = element
       element.width = board.width = w * ratio
       element.height = board.height = h * ratio
-      edges = traces(w, h)
+      const made = traces(w, h)
+      edges = made.edges
       meeting = new Map()
       edges.forEach(([x0, y0, x1, y1], i) => {
         for (const point of [key(x0, y0), key(x1, y1)]) meeting.set(point, [...(meeting.get(point) ?? []), i])
@@ -87,14 +91,19 @@ export function Circuit() {
         ink.lineTo(x1, y1)
       }
       ink.stroke()
-      // A solid node where a trace ends; where traces meet and carry on, the line runs through as it is.
-      ink.fillStyle = 'rgb(125 255 154 / 0.16)'
-      for (const [point, touching] of meeting) {
-        if (touching.length !== 1) continue
-        const [x, y] = point.split(',').map(Number) as [number, number]
+      // Each trace's ends: solid where nothing carries on from them, a node with a hole where another trace does.
+      // Opaque, so the lines under them do not show through.
+      for (const [x, y] of made.nodes) {
+        ink.fillStyle = '#23432d'
         ink.beginPath()
-        ink.arc(x, y, 3.2, 0, Math.PI * 2)
+        ink.arc(x, y, 3.4, 0, Math.PI * 2)
         ink.fill()
+        if ((meeting.get(key(x, y))?.length ?? 0) > 1) {
+          ink.fillStyle = '#050b07'
+          ink.beginPath()
+          ink.arc(x, y, 1.4, 0, Math.PI * 2)
+          ink.fill()
+        }
       }
       // Spread through their lives, so they do not all fade together.
       pulses = [...Array(PULSES)].map((_, i) => born((LIFE * i) / PULSES))
@@ -105,7 +114,12 @@ export function Circuit() {
     const draw = (now: number) => {
       const dt = Math.min(0.1, (now - last) / 1000)
       last = now
+      // Cleared in the canvas's own pixels: under a ratio below 1 (zoomed far out), a scaled clear misses part of it
+      // and the signals leave glowing trails.
+      context.save()
+      context.setTransform(1, 0, 0, 1, 0, 0)
       context.clearRect(0, 0, element.width, element.height)
+      context.restore()
       context.drawImage(board, 0, 0, element.clientWidth, element.clientHeight)
       if (!still)
         for (const pulse of pulses) {
