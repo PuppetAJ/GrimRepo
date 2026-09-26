@@ -76,7 +76,8 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
   const { view } = playback
   const next: Playback = {
     view: step(view, event),
-    lunges: playback.lunges,
+    // A lunge is kept only while it plays, so a card drawn again later does not strike twice.
+    lunges: new Map([...playback.lunges].filter(([, lunge]) => now - lunge.at < 1000)),
     popups: playback.popups.filter((popup) => now - popup.at < POPUP_MS),
     leaving: playback.leaving.filter((card) => now - card.at < LEAVE_MS),
     spawns: playback.spawns,

@@ -17,7 +17,7 @@ function Art({ id, big = false }: { id: string; big?: boolean }) {
   return (
     <span
       aria-hidden
-      className="block h-[86%] w-[86%] bg-[#0b1f12]"
+      className="block h-[92%] w-[92%] bg-[#0b1f12]"
       style={{
         maskImage: `url(/cards/${id}.png)`,
         maskSize: 'contain',
@@ -50,37 +50,46 @@ function Sigil({
   )
 }
 
-/** A card as Act 2 draws it: art above, sigils below, the cost in the corner and attack and health at the foot. */
+/**
+ * A card as Act 2 draws it, shaped loosely like the 3D table's floppy disks: a clipped corner and a steel shutter at
+ * the top, the art below it, sigils under that, the cost in the corner and attack and health at the foot.
+ */
 function PixelCard({ unit, big = false }: { unit: Unit; big?: boolean }) {
   const def = card(unit.card)
   const rare = def.tier === 'S'
   return (
     <span
-      className={`relative flex aspect-[4/5] w-full flex-col overflow-hidden rounded-[3px] border-2 text-[#0b1f12] ${rare ? 'border-[#ff8f86] bg-[#f3c6c0]' : 'border-[#0b1f12] bg-[#a9e7b8]'} bg-[repeating-linear-gradient(0deg,rgb(0_0_0/0.06)_0_1px,transparent_1px_3px)]`}
+      className={`relative flex aspect-[4/5] w-full flex-col overflow-hidden text-[#0b1f12] [clip-path:polygon(0_0,86%_0,100%_9%,100%_100%,0_100%)] ${rare ? 'bg-[#f3c6c0]' : 'bg-[#a9e7b8]'} bg-[repeating-linear-gradient(0deg,rgb(0_0_0/0.07)_0_1px,transparent_1px_3px)]`}
     >
-      <span className="relative flex flex-[1.25] items-center justify-center border-b-2 border-current/60 bg-[#8fd3a0]/60">
+      {/* The shutter, and its window. */}
+      <span aria-hidden className="absolute top-0 left-[22%] z-10 h-[9%] w-[46%] rounded-b-sm bg-[#b9c3c8]">
+        <span className="absolute top-[18%] right-[16%] h-[62%] w-[20%] bg-[#0b1f12]" />
+      </span>
+      <span
+        className={`relative mx-[6%] mt-[11%] flex flex-[1.3] items-center justify-center border-2 border-[#0b1f12]/70 ${rare ? 'bg-[#e8aea8]' : 'bg-[#8fd3a0]'}`}
+      >
         <Art id={unit.card} big={big} />
         {def.cost ? (
           <span className="absolute top-1 right-1 flex gap-[2px]" aria-hidden>
             {[...Array(def.cost).keys()].map((i) => (
-              <span key={i} className="size-2 bg-[#ff9a2e] outline outline-1 outline-[#0b1f12]" />
+              <span key={i} className="size-2.5 bg-[#ff9a2e] outline outline-1 outline-[#0b1f12]" />
             ))}
           </span>
         ) : null}
       </span>
       <span className="flex flex-1 items-center justify-center gap-1">
         {unit.sigils.map((sigil) => (
-          <Sigil key={sigil} id={sigil} size={big ? 34 : 20} />
+          <Sigil key={sigil} id={sigil} size={big ? 38 : 24} />
         ))}
       </span>
-      <span className={`flex justify-between px-1 leading-none ${big ? 'text-3xl' : 'text-xl'}`}>
+      <span className={`flex justify-between px-1.5 pb-0.5 leading-none ${big ? 'text-4xl' : 'text-[1.7rem]'}`}>
         <span className="flex items-center gap-0.5">
-          <Sigil id="attack" size={big ? 16 : 11} />
+          <Sigil id="attack" size={big ? 18 : 14} />
           {unit.attack}
         </span>
         <span className={`flex items-center gap-0.5 ${unit.health < unit.maxHealth ? 'text-[#a3172b]' : ''}`}>
           {unit.health}
-          <Sigil id="health" size={big ? 16 : 11} />
+          <Sigil id="health" size={big ? 18 : 14} />
         </span>
       </span>
     </span>
@@ -170,6 +179,7 @@ function Panel({ children, className = '' }: { children: ReactNode; className?: 
 }
 
 type BoardRow = 'back' | 'front' | 'board'
+type Place = { row: BoardRow; lane: number } | { uid: number }
 
 // How long a lunge takes, as on the 3D table.
 const LUNGE_MS = 240
@@ -185,6 +195,7 @@ function Occupant({
   playback,
   empty = null,
   tilted = false,
+  fresh,
 }: {
   row: BoardRow
   lane: number
@@ -192,6 +203,8 @@ function Occupant({
   playback: Playback
   empty?: ReactNode
   tilted?: boolean
+  /** Whether a card arrived after the page loaded, and so arrives on screen too. */
+  fresh: (uid: number) => boolean
 }) {
   const lunge = unit ? playback.lunges.get(unit.uid) : undefined
   // Keyed by when it began, a lunge plays once, the moment it is added.
@@ -206,7 +219,11 @@ function Occupant({
         <span
           key={unit.uid}
           className={`block size-full transition-transform duration-200 ${tilted ? '-translate-y-1 rotate-6' : ''}`}
-          style={{ animation: `${row === 'board' ? 'arrive-up' : 'arrive-down'} 280ms ease-out` }}
+          style={
+            fresh(unit.uid)
+              ? { animation: `${row === 'board' ? 'arrive-up' : 'arrive-down'} 280ms ease-out` }
+              : undefined
+          }
         >
           <span
             key={striking ? striking.at : 'still'}
@@ -277,15 +294,31 @@ export function TerminalTable({
   const legal = busy || result ? [] : legalActions(state)
   const summoning = state.summon ? state.player.hand.find((unit) => unit.uid === state.summon?.uid) : undefined
   const mustDraw = has(legal, { type: 'draw' })
-  const [looking, setLooking] = useState<Unit | null>(null)
+  // Where the pointer is, not the card that was there: a card played into that lane shows at once.
+  const [looking, setLooking] = useState<Place | null>(null)
   const fullScreen = useFullScreen()
-  const inspected = looking ?? summoning ?? null
-  const look = (unit: Slot) => ({
-    onPointerEnter: () => unit && setLooking(unit),
+  const pointedAt = !looking
+    ? null
+    : 'uid' in looking
+      ? (view.hand.find((unit) => unit.uid === looking.uid) ?? null)
+      : (view[looking.row][looking.lane] ?? null)
+  const inspected = pointedAt ?? summoning ?? null
+  const look = (place: Place) => ({
+    onPointerEnter: () => setLooking(place),
     onPointerLeave: () => setLooking(null),
-    onFocus: () => unit && setLooking(unit),
+    onFocus: () => setLooking(place),
     onBlur: () => setLooking(null),
   })
+  // The cards on the table when the page opened are simply there; only those dealt, drawn or queued since arrive.
+  const [present] = useState(
+    () =>
+      new Set(
+        [...state.player.hand, ...state.player.board, ...state.opponent.front, ...state.opponent.back].flatMap(
+          (unit) => (unit ? [unit.uid] : []),
+        ),
+      ),
+  )
+  const fresh = (uid: number) => !present.has(uid)
   // Something tried that cannot be done yet shakes, and so does the prompt saying what comes first.
   const [refused, setRefused] = useState({ what: '', count: 0 })
   const refuse = (what: string) => setRefused((last) => ({ what, count: last.count + 1 }))
@@ -314,7 +347,7 @@ export function TerminalTable({
       data-game-id={game.id}
       data-seed={state.seed}
       data-table="text"
-      className={`p03-screen grid grid-cols-[14rem_minmax(0,1fr)_16rem] gap-3 border border-[#2f6b3d] p-3 font-terminal text-xl ${fullScreen.on ? 'fixed inset-0 z-40 content-center overflow-auto' : 'rounded-lg'}`}
+      className={`p03-screen mx-auto grid w-full max-w-[112rem] grid-cols-[17rem_minmax(0,1fr)_22rem] gap-4 border border-[#2f6b3d] p-4 font-terminal text-2xl ${fullScreen.on ? 'fixed inset-0 z-40 max-w-none content-center overflow-auto' : 'rounded-lg'}`}
     >
       <aside className="flex flex-col gap-3">
         <Panel className="flex items-center justify-between text-2xl">
@@ -363,7 +396,7 @@ export function TerminalTable({
         </div>
       </aside>
 
-      <section aria-label="The table" className="mx-auto flex w-full max-w-[38rem] flex-col gap-2">
+      <section aria-label="The table" className="mx-auto flex w-full max-w-[46rem] flex-col gap-2">
         {onDemo ? <DemoNote /> : null}
         <Panel className="relative flex flex-col gap-2">
           {/* P03's face above the board and the player's below it, where hits to either land. */}
@@ -381,12 +414,13 @@ export function TerminalTable({
             {view.back.map((unit, i) => (
               <div
                 key={i}
-                {...look(unit)}
+                {...look({ row: 'back', lane: i })}
                 aria-label={unit ? `Queued in lane ${i + 1}: ${describe(unit)}` : `Lane ${i + 1}: nothing queued`}
                 className={`${cell} border-[#1f3a26] opacity-80`}
               >
                 <Occupant
                   row="back"
+                  fresh={fresh}
                   lane={i}
                   unit={unit}
                   playback={playback}
@@ -399,11 +433,11 @@ export function TerminalTable({
             {view.front.map((unit, i) => (
               <div
                 key={i}
-                {...look(unit)}
+                {...look({ row: 'front', lane: i })}
                 aria-label={unit ? `P03's lane ${i + 1}: ${describe(unit)}` : `P03's lane ${i + 1}: empty`}
                 className={`${cell} border-[#1f3a26]`}
               >
-                <Occupant row="front" lane={i} unit={unit} playback={playback} />
+                <Occupant row="front" lane={i} unit={unit} playback={playback} fresh={fresh} />
               </div>
             ))}
           </div>
@@ -437,6 +471,7 @@ export function TerminalTable({
                 <>
                   <Occupant
                     row="board"
+                    fresh={fresh}
                     lane={i}
                     unit={unit}
                     playback={playback}
@@ -454,29 +489,27 @@ export function TerminalTable({
                   ) : null}
                 </>
               )
-              return action ? (
-                <button
-                  key={i}
-                  type="button"
-                  aria-label={label}
-                  data-action={action.type}
-                  data-lane={i}
-                  onClick={() => act(action)}
-                  {...look(unit)}
-                  className={`${cell} relative ${frame}`}
-                >
-                  {body}
-                </button>
-              ) : (
+              // The lane's card stays put while the lane becomes clickable and back, so nothing plays again.
+              return (
                 <div
                   key={i}
-                  aria-label={label}
-                  {...look(unit)}
-                  onClick={() => !busy && refuse(`lane-${i}`)}
+                  aria-label={action ? undefined : label}
+                  {...look({ row: 'board', lane: i })}
+                  onClick={action ? undefined : () => !busy && refuse(`lane-${i}`)}
                   className={`${cell} relative ${frame}`}
                   style={shaking(`lane-${i}`)}
                 >
                   {body}
+                  {action ? (
+                    <button
+                      type="button"
+                      aria-label={label}
+                      data-action={action.type}
+                      data-lane={i}
+                      onClick={() => act(action)}
+                      className="absolute inset-0 z-20 rounded-md"
+                    />
+                  ) : null}
                 </div>
               )
             })}
@@ -503,20 +536,10 @@ export function TerminalTable({
       </section>
 
       <aside className="flex flex-col gap-3">
-        {/* Always in its place, shown only while summoning, so nothing moves when it comes and goes. */}
-        <button
-          type="button"
-          {...(state.summon ? { 'data-action': 'cancel' } : { 'aria-hidden': true, tabIndex: -1 })}
-          disabled={!state.summon}
-          onClick={() => act({ type: 'cancel' })}
-          className={`${SIDE_BUTTON} ${state.summon ? '' : 'invisible'}`}
-        >
-          Cancel
-        </button>
-        <Panel className="flex min-h-[22rem] flex-col gap-2 bg-[#a9e7b8] text-[#0b1f12]">
+        <Panel className="flex h-[36rem] flex-col gap-2 bg-[#a9e7b8] text-[#0b1f12]">
           {inspected ? (
             <>
-              <p className="flex items-start justify-between gap-2 text-2xl leading-none">
+              <p className="flex items-start justify-between gap-2 text-3xl leading-none">
                 <span>{card(inspected.card).name}</span>
                 {card(inspected.card).cost ? (
                   <span className="shrink-0 text-lg">x{card(inspected.card).cost}</span>
@@ -526,20 +549,23 @@ export function TerminalTable({
               <div className="grid aspect-[5/4] place-items-center rounded-sm border-2 border-[#0b1f12] bg-[#8fd3a0] bg-[repeating-linear-gradient(0deg,rgb(0_0_0/0.06)_0_1px,transparent_1px_3px)]">
                 <Art id={inspected.card} big />
               </div>
-              {inspected.sigils.length ? (
-                inspected.sigils.map((sigil) => (
-                  <p key={sigil} className="flex gap-2 text-lg leading-tight">
-                    <span className="shrink-0 pt-0.5">
-                      <Sigil id={sigil} size={20} />
-                    </span>
-                    <span>
-                      <strong>{SIGILS[sigil].name}.</strong> {SIGILS[sigil].text}
-                    </span>
-                  </p>
-                ))
-              ) : (
-                <p className="text-lg">No sigils.</p>
-              )}
+              {/* A fixed height, with the sigils scrolling inside it, so reading a card never moves the page. */}
+              <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
+                {inspected.sigils.length ? (
+                  inspected.sigils.map((sigil) => (
+                    <p key={sigil} className="flex gap-2 text-xl leading-tight">
+                      <span className="shrink-0 pt-0.5">
+                        <Sigil id={sigil} size={20} />
+                      </span>
+                      <span>
+                        <strong>{SIGILS[sigil].name}.</strong> {SIGILS[sigil].text}
+                      </span>
+                    </p>
+                  ))
+                ) : (
+                  <p className="text-lg">No sigils.</p>
+                )}
+              </div>
               <p className="mt-auto flex justify-between border-t-2 border-[#0b1f12]/40 pt-1 text-3xl">
                 <span aria-label={`Attack ${inspected.attack}`} className="flex items-center gap-1">
                   <Sigil id="attack" size={20} />
@@ -559,12 +585,22 @@ export function TerminalTable({
           )}
         </Panel>
         <section aria-label="P03's console" className="rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-2 text-base">
-          <ol aria-live="polite" className="flex max-h-44 flex-col-reverse overflow-y-auto">
+          <ol aria-live="polite" className="flex h-44 flex-col-reverse overflow-y-auto text-lg">
             {[...game.log].reverse().map((line, index) => (
               <li key={game.log.length - index}>{line}</li>
             ))}
           </ol>
         </section>
+        {/* Always in its place, shown only while summoning, so nothing moves when it comes and goes. */}
+        <button
+          type="button"
+          {...(state.summon ? { 'data-action': 'cancel' } : { 'aria-hidden': true, tabIndex: -1 })}
+          disabled={!state.summon}
+          onClick={() => act({ type: 'cancel' })}
+          className={`${SIDE_BUTTON} ${state.summon ? '' : 'invisible'}`}
+        >
+          Cancel
+        </button>
       </aside>
 
       <section aria-label="Your hand" className="col-span-3 flex items-end gap-4 border-t-2 border-[#2f6b3d] pt-3">
@@ -577,9 +613,9 @@ export function TerminalTable({
               // that cannot be played yet can say so by shaking.
               <div
                 key={unit.uid}
-                {...look(unit)}
-                className="w-28 shrink"
-                style={{ animation: 'arrive-up 280ms ease-out' }}
+                {...look({ uid: unit.uid })}
+                className="w-36 shrink"
+                style={fresh(unit.uid) ? { animation: 'arrive-up 280ms ease-out' } : undefined}
               >
                 <button
                   type="button"
@@ -612,7 +648,7 @@ export function TerminalTable({
             disabled={!mustDraw}
             onClick={() => act({ type: 'draw', from: 'deck' })}
             aria-label={`Draw from the deck, ${view.deck} left`}
-            className="flex w-16 flex-col items-center gap-1 text-p03 disabled:opacity-40"
+            className="flex w-20 flex-col items-center gap-1 text-p03 disabled:opacity-40"
           >
             <span className="grid aspect-[4/5] w-full place-items-center rounded-md border-2 border-[#2f6b3d] bg-[#0b1f12] text-3xl shadow-[3px_3px_0_#1f3a26,6px_6px_0_#13261a]">
               ▦
@@ -625,7 +661,7 @@ export function TerminalTable({
             disabled={!mustDraw}
             onClick={() => act({ type: 'draw', from: 'boilerplate' })}
             aria-label="Take a Boilerplate"
-            className="flex w-16 flex-col items-center gap-1 text-p03 disabled:opacity-40"
+            className="flex w-20 flex-col items-center gap-1 text-p03 disabled:opacity-40"
           >
             <span className="grid aspect-[4/5] w-full place-items-center rounded-md border-2 border-[#0b1f12] bg-[#a9e7b8] text-lg text-[#0b1f12] shadow-[3px_3px_0_#1f3a26,6px_6px_0_#13261a]">
               {'</>'}
