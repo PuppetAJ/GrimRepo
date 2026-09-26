@@ -12,7 +12,7 @@ import {
   scaleWords,
   Forfeit,
 } from './controls.tsx'
-import { ICONS, STAT_ICONS } from './table/faces.ts'
+import { ICONS, STAT_ICONS } from './table/icons.ts'
 import type { Playback } from './table/playback.ts'
 import { usePlayback } from './table/usePlayback.ts'
 import { Circuit } from './Circuit.tsx'
@@ -31,7 +31,7 @@ function Art({ id, big = false }: { id: string; big?: boolean }) {
       aria-hidden
       className="block h-[92%] w-[92%] bg-[#0b1f12]"
       style={{
-        maskImage: `url(/cards/${id}.png)`,
+        maskImage: `url(/cards/${id}.webp)`,
         maskSize: 'contain',
         maskRepeat: 'no-repeat',
         maskPosition: 'center',
