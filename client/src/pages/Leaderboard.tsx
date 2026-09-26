@@ -1,10 +1,12 @@
 import { Link, useLocation } from 'react-router'
 import { Avatar } from '../components/Avatar.tsx'
+import { Corruption } from '../components/p03/Corruption.tsx'
+import { useP03Says } from '../components/p03/says.ts'
 import { Failure } from '../components/States.tsx'
 import { Skeleton } from '@/components/ui/skeleton.tsx'
-import { api, type Finished } from '../lib/api.ts'
+import { api, type Finished, type LeaderboardRow } from '../lib/api.ts'
 import { authClient } from '../lib/auth.ts'
-import { number } from '../lib/format.ts'
+import { initials, number } from '../lib/format.ts'
 import { useAsync } from '../lib/useAsync.ts'
 
 export function Leaderboard() {
@@ -13,6 +15,24 @@ export function Leaderboard() {
   const me = (session.data?.user as { username?: string } | undefined)?.username
   // Set by the game page when a game ends, so the result greets the player here.
   const result = (useLocation().state as { result?: Finished } | null)?.result
+  const first = board.status === 'ready' ? board.data[0] : undefined
+  useP03Says(
+    board.status === 'loading'
+      ? null
+      : result
+        ? [
+            result.outcome === 'win'
+              ? `You beat me in ${result.turns} turns. I have filed a bug against you.`
+              : `You lasted ${result.turns} turns. I have seen longer.`,
+            result.isBest ? 'A new best. I will remember it.' : 'Not your best. I remember that one too.',
+          ]
+        : first
+          ? [
+              `${first.username} is first. I am watching ${first.username}.`,
+              'Everyone else: I am watching you as well.',
+            ]
+          : ['An empty board. Nobody has finished a game against me.'],
+  )
 
   return (
     <div className="flex flex-col gap-6">
@@ -63,39 +83,123 @@ export function Leaderboard() {
           </p>
         ) : null}
         {board.status === 'ready' && board.data.length > 0 ? (
-          <ol className="overflow-hidden rounded-lg border bg-card">
-            {board.data.map((row) => {
-              const top = board.data[0]?.bestScore || 1
-              const mine = row.username.toLowerCase() === me
-              return (
-                <li
-                  key={row.username}
-                  className={`flex items-center gap-4 border-t px-4 py-3.5 first:border-t-0 sm:gap-5 sm:px-6 ${mine ? 'bg-muted' : ''}`}
-                >
-                  <span className="w-10 font-mono text-muted-foreground">#{row.rank}</span>
-                  <Avatar name={row.username} />
-                  <div className="flex min-w-0 flex-1 flex-col sm:w-72 sm:flex-none">
-                    <Link to={`/players/${row.username}`} className="truncate font-semibold hover:text-primary">
-                      {row.username}
-                      {mine ? <span className="sr-only"> (you)</span> : null}
-                    </Link>
-                    <span className="text-sm text-muted-foreground">
-                      {row.wins} of {row.games} won
-                    </span>
-                  </div>
-                  <div aria-hidden className="hidden h-2.5 flex-1 rounded-full bg-accent sm:block">
-                    <div
-                      className="h-2.5 rounded-full bg-primary"
-                      style={{ width: `${Math.round((row.bestScore / top) * 100)}%` }}
+          <div className="overflow-hidden rounded-lg border bg-card">
+            <table className="w-full border-collapse text-left">
+              <caption className="sr-only">Players by their best score</caption>
+              <thead className="text-xs tracking-wide text-muted-foreground uppercase">
+                <tr>
+                  <th scope="col" className="w-px py-2.5 pr-4 pl-4 font-medium whitespace-nowrap sm:pr-5 sm:pl-6">
+                    Rank
+                  </th>
+                  <th scope="col" className="py-2.5 font-medium">
+                    Player
+                  </th>
+                  <th scope="col" className="hidden sm:table-cell">
+                    <span className="sr-only">Score against first place</span>
+                  </th>
+                  <th scope="col" className="py-2.5 pr-4 text-right font-medium whitespace-nowrap sm:pr-6">
+                    Best score
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {board.data.map((row, index) =>
+                  index === 0 ? (
+                    <FirstPlace key={row.username} row={row} mine={row.username.toLowerCase() === me} />
+                  ) : (
+                    <Row
+                      key={row.username}
+                      row={row}
+                      top={board.data[0]?.bestScore || 1}
+                      mine={row.username.toLowerCase() === me}
                     />
-                  </div>
-                  <span className="w-20 text-right font-mono">{number(row.bestScore)}</span>
-                </li>
-              )
-            })}
-          </ol>
+                  ),
+                )}
+              </tbody>
+            </table>
+          </div>
         ) : null}
       </div>
     </div>
+  )
+}
+
+function Played({ row }: { row: LeaderboardRow }) {
+  return (
+    <>
+      {row.wins} of {row.games} won
+    </>
+  )
+}
+
+/** First place, taken over by P03: he keeps an eye on whoever is winning. */
+function FirstPlace({ row, mine }: { row: LeaderboardRow; mine: boolean }) {
+  return (
+    <tr className="p03-screen border-b border-[#2f6b3d] font-terminal">
+      <td className="py-4 pr-4 pl-4 text-xl text-p03-dim sm:pr-5 sm:pl-6">
+        <span aria-hidden>0x01</span>
+        <span className="sr-only">1</span>
+      </td>
+      <td className="py-4">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <span
+            aria-hidden
+            className="flex size-9 shrink-0 items-center justify-center border border-p03 text-lg text-p03"
+          >
+            {initials(row.username)}
+          </span>
+          <div className="flex min-w-0 flex-col">
+            <div className="flex flex-wrap items-center gap-x-2.5">
+              <Link to={`/players/${row.username}`} className="truncate text-3xl leading-none text-p03 hover:underline">
+                {row.username}
+                {mine ? <span className="sr-only"> (you)</span> : null}
+              </Link>
+              <span className="hidden bg-p03 px-1.5 text-base leading-snug text-p03-ground [text-shadow:none] md:inline">
+                WATCHED BY P03
+              </span>
+            </div>
+            <span className="font-mono text-sm text-p03-dim">
+              <Played row={row} />
+            </span>
+          </div>
+        </div>
+      </td>
+      <td aria-hidden className="relative hidden w-full px-5 sm:table-cell">
+        <div className="h-5 bg-[repeating-linear-gradient(90deg,var(--p03)_0_10px,transparent_10px_13px)]" />
+        <Corruption cols={16} rows={6} corner="top-right" seed={31} className="top-0 right-5" />
+      </td>
+      <td className="py-4 pr-4 text-right text-3xl text-p03 sm:pr-6">{number(row.bestScore)}</td>
+    </tr>
+  )
+}
+
+function Row({ row, top, mine }: { row: LeaderboardRow; top: number; mine: boolean }) {
+  return (
+    <tr className={`border-t first:border-t-0 ${mine ? 'bg-muted' : ''}`}>
+      <td className="py-3.5 pr-4 pl-4 font-mono text-muted-foreground sm:pr-5 sm:pl-6">#{row.rank}</td>
+      <td className="py-3.5">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <Avatar name={row.username} />
+          <div className="flex min-w-0 flex-col">
+            <Link to={`/players/${row.username}`} className="truncate font-semibold hover:text-primary">
+              {row.username}
+              {mine ? <span className="sr-only"> (you)</span> : null}
+            </Link>
+            <span className="text-sm text-muted-foreground">
+              <Played row={row} />
+            </span>
+          </div>
+        </div>
+      </td>
+      <td aria-hidden className="hidden w-full px-5 sm:table-cell">
+        <div className="h-2.5 rounded-full bg-accent">
+          <div
+            className="h-2.5 rounded-full bg-primary"
+            style={{ width: `${Math.round((row.bestScore / top) * 100)}%` }}
+          />
+        </div>
+      </td>
+      <td className="py-3.5 pr-4 text-right font-mono sm:pr-6">{number(row.bestScore)}</td>
+    </tr>
   )
 }

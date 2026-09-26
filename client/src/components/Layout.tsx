@@ -1,6 +1,6 @@
 import { ChevronDown, LogOut, Settings, UserRound } from 'lucide-react'
-import { Suspense } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router'
+import { Suspense, useState } from 'react'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button.tsx'
 import {
@@ -13,6 +13,8 @@ import {
 import { authClient } from '../lib/auth.ts'
 import { Avatar } from './Avatar.tsx'
 import { Logo } from './Logo.tsx'
+import { Console } from './p03/Console.tsx'
+import { useP03Lines } from './p03/says.ts'
 import { Loading } from './States.tsx'
 
 const tabs = [
@@ -26,6 +28,10 @@ export function Layout() {
   const navigate = useNavigate()
   const user = session.data?.user as { displayUsername?: string; username?: string } | undefined
   const name = user?.displayUsername ?? user?.username
+  // The game has its own console on the table, so P03's dock stays out of it.
+  const playing = useLocation().pathname.startsWith('/game')
+  const speaking = useP03Lines().length > 0 && !playing
+  const [docked, setDocked] = useState(0)
 
   async function signOut() {
     await authClient.signOut()
@@ -34,9 +40,15 @@ export function Layout() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col">
+    // Room under the footer for the docked console, so it never covers the end of the page.
+    <div className="flex min-h-screen flex-col" style={speaking ? { paddingBottom: docked + 16 } : undefined}>
       <header className="flex items-center justify-between gap-3 border-b bg-chrome px-4 py-3 sm:px-12">
-        <Logo />
+        <div className="flex items-center gap-3">
+          <Logo />
+          <span className="hidden rounded-full border border-input px-2.5 py-0.5 text-xs text-muted-foreground md:inline">
+            Public, unfortunately
+          </span>
+        </div>
         {/* While the session loads, an invisible button holds the header at its full height, so the page never drops. */}
         {session.isPending ? (
           <Button variant="outline" aria-hidden tabIndex={-1} className="invisible">
@@ -100,6 +112,7 @@ export function Layout() {
       <footer className="border-t px-4 py-6 text-sm text-muted-foreground sm:px-12">
         A tribute to Inscryption. Built by Adrian Jimenez.
       </footer>
+      {playing ? null : <Console onHeight={setDocked} />}
     </div>
   )
 }

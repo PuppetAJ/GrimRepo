@@ -122,6 +122,21 @@
   }
 }
 
+/* P03's corruption: each pixel appears once, nearest the corner first; reduced motion shows it whole. */
+.corruption rect {
+  animation: corrupt 0.01s steps(1) both;
+}
+@keyframes corrupt {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .corruption rect {
+    animation: none;
+  }
+}
+
 /* A change on the scale's readout, rising and fading; reduced motion keeps only the fade. */
 @keyframes health-change {
   from {

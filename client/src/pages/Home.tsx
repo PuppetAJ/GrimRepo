@@ -1,6 +1,8 @@
 import { Link } from 'react-router'
 import { Button } from '@/components/ui/button.tsx'
 import { Avatar } from '../components/Avatar.tsx'
+import { Corruption } from '../components/p03/Corruption.tsx'
+import { useP03Says } from '../components/p03/says.ts'
 import { api } from '../lib/api.ts'
 import { number } from '../lib/format.ts'
 import { useAsync } from '../lib/useAsync.ts'
@@ -19,20 +21,36 @@ const turn = [
 
 export function Home() {
   const top = useAsync(() => api.leaderboard().then((rows) => rows.slice(0, 3)), 'top')
+  const first = top.status === 'ready' ? top.data[0] : undefined
+  useP03Says(
+    top.status === 'loading'
+      ? null
+      : [
+          'Another visitor. Sit down; the table is set.',
+          'I have rewritten this repository. You are welcome.',
+          first
+            ? `${first.username} holds first place with ${number(first.bestScore)}. For now.`
+            : 'Nobody has beaten me yet.',
+        ],
+  )
 
   return (
     <div className="flex flex-col gap-10 lg:flex-row lg:items-start">
-      <article className="min-w-0 flex-1 rounded-lg border bg-card">
+      <article className="relative min-w-0 flex-1 overflow-hidden rounded-lg border bg-card">
+        <Corruption cols={16} rows={9} corner="top-right" seed={7} className="top-0 right-0 max-sm:hidden" />
         <div className="border-b px-5 py-3 font-mono text-sm text-muted-foreground">README.md</div>
         <div className="flex flex-col gap-6 px-6 py-8 sm:px-11">
           <h1 className="font-display text-7xl leading-none sm:text-8xl">Grim Repo</h1>
-          <ul aria-label="Badges" className="flex flex-wrap gap-2 font-mono text-xs">
+          <ul aria-label="Badges" className="flex flex-wrap items-center gap-2 font-mono text-xs">
             {badges.map((badge) => (
               <li key={badge.label} className="inline-flex overflow-hidden rounded">
                 <span className="bg-input px-2 py-1">{badge.label}</span>
                 <span className={`${badge.color} px-2 py-1 font-medium text-background`}>{badge.value}</span>
               </li>
             ))}
+            <li className="p03-screen border border-[#2f6b3d] px-2 py-0.5 font-terminal text-lg leading-none text-p03">
+              P03: watching
+            </li>
           </ul>
           <p className="max-w-2xl text-lg leading-relaxed text-foreground/85">
             A card game of sacrifices, played on floppy disks against P03 in his factory. Every card costs something: to
@@ -62,7 +80,12 @@ export function Home() {
           <ul className="list-disc space-y-1 pl-6 text-foreground/85">
             <li>The dealer does not lose on purpose.</li>
             <li>FourOhFour removes everything on the other side of the table. Working as intended.</li>
-            <li>Y2K is not in the deck. Do not ask about Y2K.</li>
+            <li>
+              Y2K is not in the deck.{' '}
+              <span className="bg-p03-ground px-1.5 font-terminal text-xl whitespace-nowrap text-p03 [text-shadow:0_0_6px_rgb(125_255_154/0.5)]">
+                [P03: REDACTED]
+              </span>
+            </li>
           </ul>
         </div>
       </article>
@@ -71,7 +94,7 @@ export function Home() {
         <section className="flex flex-col gap-2">
           <h2 className="font-semibold">About</h2>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            An Inscryption-style card game. Quick battles now; a run of three stages and an endless mode are on the way.
+            An Inscryption-style card game. Quick battles now; a roguelike run across a map is on the way.
           </p>
         </section>
         <section className="flex flex-col gap-3 border-t pt-5">

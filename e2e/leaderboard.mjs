@@ -26,11 +26,14 @@ section('The leaderboard')
 {
   await page.goto(`${BASE}/leaderboard`)
   await page.getByRole('heading', { name: 'Contributors' }).waitFor()
-  const rows = page.locator('ol > li')
+  const rows = page.locator('tbody > tr')
   await rows.first().waitFor()
   const texts = await rows.allInnerTexts()
-  const scores = texts.map((text) => Number(text.trim().split('\n').at(-1).replaceAll(',', '')))
-  check('it starts at rank 1', texts[0].trim().startsWith('#1'), texts[0])
+  const scores = (await page.locator('tbody > tr > td:last-child').allInnerTexts()).map((text) =>
+    Number(text.trim().replaceAll(',', '')),
+  )
+  check('it starts at rank 1, which P03 has taken over', texts[0].trim().startsWith('0x01'), texts[0])
+  check('the next row is rank 2 or a tie for 1', /^#[12]\b/.test(texts[1]?.trim() ?? ''), texts[1])
   check(
     'and never goes up in score',
     scores.every((score, i) => i === 0 || score <= scores[i - 1]),

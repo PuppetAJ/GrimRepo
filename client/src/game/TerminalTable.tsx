@@ -680,6 +680,8 @@ export function TerminalTable({
       }}
     >
       <PixelCard unit={magnified.unit} big />
+      {/* The same glass as the 3D table's magnified cards. */}
+      <span className="crt-glass absolute inset-0 [clip-path:polygon(0_0,86%_0,100%_9%,100%_100%,0_100%)]" />
     </div>
   ) : null
   const consolePanel = (
