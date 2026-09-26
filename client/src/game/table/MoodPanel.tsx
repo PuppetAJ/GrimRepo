@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { TUNING, tune, useTuning, type Tuning } from './tuning.ts'
 import { chosenPalette } from './scene.ts'
 
@@ -127,8 +127,24 @@ export function MoodPanel() {
         </button>
       </div>
       <p className="mt-2 text-muted-foreground">
-        Changed values show in green. Copy them and paste them to Claude to make them the default.
+        Resolution now: <Resolution />. Changed values show in green. Copy them and paste them to Claude to make them
+        the default.
       </p>
     </details>
   )
+}
+
+/** The canvas's pixel ratio as it stands, which the table lowers on its own when frames run slow. */
+function Resolution() {
+  const [ratio, setRatio] = useState('')
+  useEffect(() => {
+    const read = () => {
+      const canvas = document.querySelector('[data-table="3d"] canvas') as HTMLCanvasElement | null
+      if (canvas) setRatio((canvas.width / canvas.clientWidth).toFixed(2))
+    }
+    read()
+    const timer = setInterval(read, 500)
+    return () => clearInterval(timer)
+  }, [])
+  return <span className="text-p03">{ratio}×</span>
 }

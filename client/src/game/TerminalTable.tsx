@@ -362,7 +362,7 @@ function Processes() {
   return (
     <div
       aria-hidden
-      className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border-2 border-[#1f3a26] bg-[#050d07] [mask-image:linear-gradient(to_bottom,black_80%,transparent)] p-2 text-base text-p03-dim"
+      className="flex min-h-0 flex-1 flex-col overflow-y-auto rounded-md border-2 border-[#1f3a26] bg-[#050d07] p-2 text-base text-p03-dim"
     >
       <p className="text-p03">// PROCESSES</p>
       {PROCESSES.map((name, i) => (
@@ -371,7 +371,7 @@ function Processes() {
           <span className="text-p03">{'|'.repeat(load(i)).padEnd(12, '.')}</span>
         </p>
       ))}
-      <p className="mt-auto">
+      <p className="mt-auto pt-1">
         mem {String(40 + ((tick * 7) % 23)).padStart(2)}% · up {tick}s
         <span className={tick % 2 ? 'invisible' : ''}>_</span>
       </p>
@@ -482,7 +482,7 @@ export function TerminalTable({
             onClick={() => act({ type: 'ringBell' })}
             aria-keyshortcuts="E"
             aria-label="Press the button"
-            className="flex flex-col items-center gap-1 rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-3 text-p03 enabled:hover:bg-[#13261a] disabled:brightness-50 disabled:saturate-50"
+            className="flex flex-col items-center gap-1 rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-3 text-p03 enabled:hover:bg-[#13261a] disabled:[&>*]:opacity-40"
           >
             <span className="grid size-[min(3.5rem,6dvh)] place-items-center rounded-full border-4 border-[#2f6b3d] bg-[#a3172b] shadow-[0_0_14px_rgb(255_60_60/0.4)]" />
             <span className="text-2xl tracking-widest">EXECUTE</span>
@@ -645,7 +645,7 @@ export function TerminalTable({
                   ) : null}
                 </p>
                 {/* The art large and the stats under it, as Act 2's inspector shows a card. */}
-                <div className="grid aspect-[5/4] place-items-center rounded-sm border-2 border-[#0b1f12] bg-[#8fd3a0] bg-[repeating-linear-gradient(0deg,rgb(0_0_0/0.06)_0_1px,transparent_1px_3px)]">
+                <div className="grid min-h-0 flex-[1.4] place-items-center rounded-sm border-2 border-[#0b1f12] bg-[#8fd3a0] bg-[repeating-linear-gradient(0deg,rgb(0_0_0/0.06)_0_1px,transparent_1px_3px)]">
                   <Art id={inspected.card} big />
                 </div>
                 {/* A fixed height, with the sigils scrolling inside it, so reading a card never moves the page. */}
@@ -665,7 +665,7 @@ export function TerminalTable({
                     <p className="text-lg">No sigils.</p>
                   )}
                 </div>
-                <p className="mt-auto flex justify-between border-t-2 border-[#0b1f12]/40 pt-1 text-3xl">
+                <p className="flex shrink-0 justify-between border-t-2 border-[#0b1f12]/40 pt-1 text-3xl">
                   <span aria-label={`Attack ${inspected.attack}`} className="flex items-center gap-1">
                     <Sigil id="attack" size={20} />
                     {inspected.attack}
