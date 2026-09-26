@@ -362,7 +362,7 @@ function Processes() {
   return (
     <div
       aria-hidden
-      className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border-2 border-[#1f3a26] bg-[#050d07] p-2 text-base text-p03-dim"
+      className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border-2 border-[#1f3a26] bg-[#050d07] [mask-image:linear-gradient(to_bottom,black_80%,transparent)] p-2 text-base text-p03-dim"
     >
       <p className="text-p03">// PROCESSES</p>
       {PROCESSES.map((name, i) => (
@@ -482,7 +482,7 @@ export function TerminalTable({
             onClick={() => act({ type: 'ringBell' })}
             aria-keyshortcuts="E"
             aria-label="Press the button"
-            className="flex flex-col items-center gap-1 rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-3 text-p03 enabled:hover:bg-[#13261a] disabled:opacity-40"
+            className="flex flex-col items-center gap-1 rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-3 text-p03 enabled:hover:bg-[#13261a] disabled:brightness-50 disabled:saturate-50"
           >
             <span className="grid size-[min(3.5rem,6dvh)] place-items-center rounded-full border-4 border-[#2f6b3d] bg-[#a3172b] shadow-[0_0_14px_rgb(255_60_60/0.4)]" />
             <span className="text-2xl tracking-widest">EXECUTE</span>
@@ -512,7 +512,7 @@ export function TerminalTable({
                     key={i}
                     {...look({ row: 'back', lane: i })}
                     aria-label={unit ? `Queued in lane ${i + 1}: ${describe(unit)}` : `Lane ${i + 1}: nothing queued`}
-                    className={`${cell} border-[#1f3a26] opacity-80`}
+                    className={`${cell} border-[#1f3a26] brightness-75`}
                     style={laneSize}
                   >
                     <Occupant
@@ -753,7 +753,7 @@ export function TerminalTable({
                         ? act({ type: 'select', uid: unit.uid })
                         : !selected && !busy && refuse(`card-${unit.uid}`)
                     }
-                    className={`w-full rounded-md p-1 transition-transform ${selected ? '-translate-y-3 outline-2 outline-p03 outline-dashed' : allowed ? 'hover:-translate-y-1' : 'opacity-40'}`}
+                    className={`w-full rounded-md p-1 transition-transform ${selected ? '-translate-y-3 outline-2 outline-p03 outline-dashed' : allowed ? 'hover:-translate-y-1' : 'brightness-50 saturate-50'}`}
                   >
                     <span
                       key={refused.what === `card-${unit.uid}` ? refused.count : 0}
@@ -774,7 +774,7 @@ export function TerminalTable({
               disabled={!mustDraw}
               onClick={() => act({ type: 'draw', from: 'deck' })}
               aria-label={`Draw from the deck, ${view.deck} left`}
-              className="flex w-20 flex-col items-center gap-1 text-p03 disabled:opacity-40"
+              className="flex w-20 flex-col items-center gap-1 text-p03 disabled:brightness-50 disabled:saturate-50"
             >
               <span className="grid aspect-[4/5] w-full place-items-center rounded-md border-2 border-[#2f6b3d] bg-[#0b1f12] text-3xl shadow-[3px_3px_0_#1f3a26,6px_6px_0_#13261a]">
                 ▦
@@ -787,7 +787,7 @@ export function TerminalTable({
               disabled={!mustDraw}
               onClick={() => act({ type: 'draw', from: 'boilerplate' })}
               aria-label="Take a Boilerplate"
-              className="flex w-20 flex-col items-center gap-1 text-p03 disabled:opacity-40"
+              className="flex w-20 flex-col items-center gap-1 text-p03 disabled:brightness-50 disabled:saturate-50"
             >
               <span className="grid aspect-[4/5] w-full place-items-center rounded-md border-2 border-[#0b1f12] bg-[#a9e7b8] text-lg text-[#0b1f12] shadow-[3px_3px_0_#1f3a26,6px_6px_0_#13261a]">
                 {'</>'}

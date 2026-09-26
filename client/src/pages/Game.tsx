@@ -92,15 +92,18 @@ export function Game() {
 
   if (mode === 'text')
     return text === 'act2' && wide ? (
-      <TerminalTable
-        game={game}
-        onDemo={onDemo}
-        on3d={() => choose('3d')}
-        onClassic={() => {
-          chooseText('classic')
-          setText('classic')
-        }}
-      />
+      // Into most of the page's side padding, so the table has the width and only thin gutters remain.
+      <div className="-mx-2 sm:-mx-9">
+        <TerminalTable
+          game={game}
+          onDemo={onDemo}
+          on3d={() => choose('3d')}
+          onClassic={() => {
+            chooseText('classic')
+            setText('classic')
+          }}
+        />
+      </div>
     ) : (
       <TextTable game={game} onDemo={onDemo} on3d={() => choose('3d')} />
     )
