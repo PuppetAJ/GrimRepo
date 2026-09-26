@@ -2,7 +2,9 @@ import type { GameEvent, GameState, Unit } from 'shared'
 import { locate, project, step, type View } from '../view.ts'
 import { DECK, P03_HAND, PILE, slot, TABLE_Y, type Row, type Vec3 } from './layout.ts'
 
-export type Popup = { id: number; text: string; tone: 'damage' | 'heal' | 'note'; position: Vec3; at: number }
+/** Where a popup belongs on the board, for tables that lay it out as a page rather than in 3D. */
+export type Spot = { row: Row; lane: number } | { face: 'player' | 'opponent' }
+export type Popup = { id: number; text: string; tone: 'damage' | 'heal' | 'note'; position: Vec3; spot: Spot; at: number }
 export type Leaving = { unit: Unit; row: Row; lane: number; at: number; how: 'died' | 'sacrificed' }
 export type Lunge = { at: number; toward: 1 | -1 }
 
@@ -79,9 +81,9 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
     leaving: playback.leaving.filter((card) => now - card.at < LEAVE_MS),
     spawns: playback.spawns,
   }
-  const popup = (text: string, tone: Popup['tone'], position: Vec3) => {
+  const popup = (text: string, tone: Popup['tone'], position: Vec3, spot: Spot) => {
     popupIds += 1
-    next.popups = [...next.popups, { id: popupIds, text, tone, position, at: now }]
+    next.popups = [...next.popups, { id: popupIds, text, tone, position, spot, at: now }]
   }
   const leave = (uid: number, how: Leaving['how'] = 'died') => {
     const found = where(view, uid)
@@ -106,15 +108,18 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
       const found = where(view, event.uid)
       if (found) {
         const heal = event.type === 'healed'
-        popup(`${heal ? '+' : '-'}${event.amount}`, heal ? 'heal' : 'damage', slot(found.row, found.lane, 0.3))
+        popup(`${heal ? '+' : '-'}${event.amount}`, heal ? 'heal' : 'damage', slot(found.row, found.lane, 0.3), {
+          row: found.row,
+          lane: found.lane,
+        })
       }
       break
     }
     case 'overkill':
-      popup(`overkill ${event.amount}`, 'note', slot('back', event.lane, 0.5))
+      popup(`overkill ${event.amount}`, 'note', slot('back', event.lane, 0.5), { row: 'back', lane: event.lane })
       break
     case 'hit':
-      popup(`-${event.amount}`, 'damage', FACE[event.side])
+      popup(`-${event.amount}`, 'damage', FACE[event.side], { face: event.side })
       break
     case 'killed':
     case 'retired':
@@ -122,7 +127,10 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
       break
     case 'sacrificed':
       if (!event.survived) leave(event.uid, 'sacrificed')
-      popup(event.survived ? 'caught' : 'sacrificed', 'note', slot('board', event.lane, 0.45))
+      popup(event.survived ? 'caught' : 'sacrificed', 'note', slot('board', event.lane, 0.45), {
+        row: 'board',
+        lane: event.lane,
+      })
       break
     case 'wiped':
       for (const uid of event.uids) leave(uid)

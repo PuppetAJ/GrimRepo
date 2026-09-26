@@ -1,7 +1,9 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import { card, legalActions, SIGILS, TIP, type Action, type SigilId, type Slot, type Unit } from 'shared'
 import { DemoNote, describe, GameOver, has, laneAction, owed, prompt, scaleWords, WalkAway } from './controls.tsx'
 import { ICONS, STAT_ICONS } from './table/faces.ts'
+import type { Playback } from './table/playback.ts'
+import { usePlayback } from './table/usePlayback.ts'
 import { useFullScreen } from './fullScreen.ts'
 import type { Ready } from './useGame.ts'
 
@@ -161,15 +163,102 @@ function Balance({ scale }: { scale: number }) {
 
 // The left column's buttons: bordered like its panels, in the terminal's type.
 const SIDE_BUTTON =
-  'rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-2 font-terminal text-lg text-p03 hover:bg-[#13261a] hover:text-p03'
+  'rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-2 font-terminal text-lg text-p03 hover:bg-[#13261a] hover:text-p03 dark:hover:bg-[#13261a]'
 
 function Panel({ children, className = '' }: { children: ReactNode; className?: string }) {
   return <div className={`rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-3 ${className}`}>{children}</div>
 }
 
-const lane = (unit: Slot, fallback: ReactNode) => (unit ? <PixelCard unit={unit} /> : fallback)
+type BoardRow = 'back' | 'front' | 'board'
 
-/** The text table laid out as Act 2: a whole game through its buttons, as readable as the first. */
+// How long a lunge takes, as on the 3D table.
+const LUNGE_MS = 240
+
+/**
+ * What stands in a lane as the moves play back: the card, arriving or lunging; a card on its way out, folding away
+ * toward its owner or offered up; and the numbers rising off it.
+ */
+function Occupant({
+  row,
+  lane,
+  unit,
+  playback,
+  empty = null,
+  tilted = false,
+}: {
+  row: BoardRow
+  lane: number
+  unit: Slot
+  playback: Playback
+  empty?: ReactNode
+  tilted?: boolean
+}) {
+  const lunge = unit ? playback.lunges.get(unit.uid) : undefined
+  // Keyed by when it began, a lunge plays once, the moment it is added.
+  const striking = lunge
+  const leaving = playback.leaving.filter((gone) => gone.row === row && gone.lane === lane)
+  const popups = playback.popups.filter(
+    (popup) => 'row' in popup.spot && popup.spot.row === row && popup.spot.lane === lane,
+  )
+  return (
+    <span className="relative block size-full">
+      {unit ? (
+        <span
+          key={unit.uid}
+          className={`block size-full transition-transform duration-200 ${tilted ? '-translate-y-1 rotate-6' : ''}`}
+          style={{ animation: `${row === 'board' ? 'arrive-up' : 'arrive-down'} 280ms ease-out` }}
+        >
+          <span
+            key={striking ? striking.at : 'still'}
+            className="block size-full"
+            style={
+              striking
+                ? { animation: `${row === 'board' ? 'lunge-up' : 'lunge-down'} ${LUNGE_MS}ms ease-in-out` }
+                : undefined
+            }
+          >
+            <PixelCard unit={unit} />
+          </span>
+        </span>
+      ) : (
+        empty
+      )}
+      {leaving.map((gone) => (
+        <span
+          key={`gone-${gone.unit.uid}`}
+          aria-hidden
+          className="absolute inset-0"
+          // Dead, it folds shut and goes toward its owner; sacrificed, it is offered up.
+          style={
+            {
+              animation: `${gone.how === 'sacrificed' ? 'offer-up' : 'fold-away'} 550ms ease-in forwards`,
+              '--away': row === 'board' ? '60%' : '-60%',
+            } as CSSProperties
+          }
+        >
+          <PixelCard unit={gone.unit} />
+        </span>
+      ))}
+      {popups.map((popup) => (
+        <Rising key={popup.id} text={popup.text} tone={popup.tone} />
+      ))}
+    </span>
+  )
+}
+
+function Rising({ text, tone, className = 'top-1/2 left-1/2' }: { text: string; tone: string; className?: string }) {
+  return (
+    <span
+      aria-hidden
+      className={`pointer-events-none absolute z-10 text-3xl whitespace-nowrap [text-shadow:0_0_6px_#000,0_0_2px_#000] ${className} ${tone === 'heal' ? 'text-p03' : tone === 'note' ? 'text-[#f2c14e]' : 'text-death'}`}
+      style={{ animation: 'rise 1s ease-out forwards' }}
+    >
+      {text}
+    </span>
+  )
+}
+
+/** The text table laid out as Act 2: a whole game through its buttons, played back one move at a time. */
 export function TerminalTable({
   game,
   onDemo,
@@ -182,7 +271,10 @@ export function TerminalTable({
   onClassic: () => void
 }) {
   const { state, act, result } = game
-  const legal = result ? [] : legalActions(state)
+  // The page shows the game as far as its playback has reached; moves come from the real state, and wait for it.
+  const { playback, busy } = usePlayback(game)
+  const view = playback.view
+  const legal = busy || result ? [] : legalActions(state)
   const summoning = state.summon ? state.player.hand.find((unit) => unit.uid === state.summon?.uid) : undefined
   const mustDraw = has(legal, { type: 'draw' })
   const [looking, setLooking] = useState<Unit | null>(null)
@@ -194,20 +286,28 @@ export function TerminalTable({
     onFocus: () => unit && setLooking(unit),
     onBlur: () => setLooking(null),
   })
-  // E rings the bell here too.
-  const canRing = has(legal, { type: 'ringBell' })
+  // Something tried that cannot be done yet shakes, and so does the prompt saying what comes first.
+  const [refused, setRefused] = useState({ what: '', count: 0 })
+  const refuse = (what: string) => setRefused((last) => ({ what, count: last.count + 1 }))
+  const shaking = (what: string): CSSProperties | undefined =>
+    refused.count && (refused.what === what || (what === 'piles' && mustDraw))
+      ? { animation: 'shake 0.45s' }
+      : undefined
+  // E presses the button here too.
+  const canPress = has(legal, { type: 'ringBell' })
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key.toLowerCase() !== 'e' || event.repeat || event.metaKey || event.ctrlKey || event.altKey) return
       if ((event.target as HTMLElement).tagName === 'INPUT') return
-      if (canRing) act({ type: 'ringBell' })
+      if (canPress) act({ type: 'ringBell' })
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [canRing, act])
+  }, [canPress, act])
 
-  const queueCell = <span className="text-5xl text-[#2f6b3d]">↓</span>
   const cell = 'flex aspect-[4/5] min-w-0 items-center justify-center rounded-md border-2 p-1'
+  const faces = playback.popups.filter((popup) => 'face' in popup.spot)
+  const over = result && !busy
 
   return (
     <div
@@ -218,18 +318,18 @@ export function TerminalTable({
     >
       <aside className="flex flex-col gap-3">
         <Panel className="flex items-center justify-between text-2xl">
-          <span className="text-p03">Turn {state.turn}</span>
+          <span className="text-p03">Turn {view.turn}</span>
           <span className="text-base text-p03-dim" aria-live="polite">
             {game.saving ? 'saving…' : game.unsaved ? `${game.unsaved} unsaved` : 'saved'}
           </span>
         </Panel>
         <Panel>
-          <Balance scale={state.scale} />
+          <Balance scale={view.scale} />
         </Panel>
         <button
           type="button"
           data-action="ringBell"
-          disabled={!canRing}
+          disabled={!canPress}
           onClick={() => act({ type: 'ringBell' })}
           aria-keyshortcuts="E"
           aria-label="Press the button"
@@ -239,16 +339,6 @@ export function TerminalTable({
           <span className="text-2xl tracking-widest">EXECUTE</span>
           <span className="text-sm text-p03-dim">press the button · E</span>
         </button>
-        {state.summon ? (
-          <button
-            type="button"
-            data-action="cancel"
-            onClick={() => act({ type: 'cancel' })}
-            className="rounded-md border-2 border-[#2f6b3d] p-2 text-p03 hover:bg-[#13261a]"
-          >
-            Cancel
-          </button>
-        ) : null}
         <div className="mt-auto flex flex-col gap-2">
           {fullScreen.supported ? (
             <button type="button" onClick={fullScreen.toggle} className={SIDE_BUTTON}>
@@ -276,35 +366,54 @@ export function TerminalTable({
       <section aria-label="The table" className="mx-auto flex w-full max-w-[38rem] flex-col gap-2">
         {onDemo ? <DemoNote /> : null}
         <Panel className="relative flex flex-col gap-2">
+          {/* P03's face above the board and the player's below it, where hits to either land. */}
+          {faces.map((popup) => (
+            <Rising
+              key={popup.id}
+              text={popup.text}
+              tone={popup.tone}
+              className={
+                'face' in popup.spot && popup.spot.face === 'opponent' ? 'top-0 left-1/2' : 'top-full left-1/2'
+              }
+            />
+          ))}
           <div className="grid grid-cols-4 gap-2" aria-label="P03's queue">
-            {state.opponent.back.map((unit, i) => (
+            {view.back.map((unit, i) => (
               <div
                 key={i}
                 {...look(unit)}
                 aria-label={unit ? `Queued in lane ${i + 1}: ${describe(unit)}` : `Lane ${i + 1}: nothing queued`}
                 className={`${cell} border-[#1f3a26] opacity-80`}
               >
-                {lane(unit, queueCell)}
+                <Occupant
+                  row="back"
+                  lane={i}
+                  unit={unit}
+                  playback={playback}
+                  empty={<span className="grid size-full place-items-center text-5xl text-[#2f6b3d]">↓</span>}
+                />
               </div>
             ))}
           </div>
           <div className="grid grid-cols-4 gap-2" aria-label="P03's row">
-            {state.opponent.front.map((unit, i) => (
+            {view.front.map((unit, i) => (
               <div
                 key={i}
                 {...look(unit)}
                 aria-label={unit ? `P03's lane ${i + 1}: ${describe(unit)}` : `P03's lane ${i + 1}: empty`}
                 className={`${cell} border-[#1f3a26]`}
               >
-                {lane(unit, null)}
+                <Occupant row="front" lane={i} unit={unit} playback={playback} />
               </div>
             ))}
           </div>
           <div className="border-t-2 border-death/50" />
           <div className="grid grid-cols-4 gap-2" aria-label="Your row">
-            {state.player.board.map((unit, i) => {
+            {view.board.map((unit, i) => {
               const action = laneAction(legal, i)
               const marked = state.summon?.marked.includes(i) ?? false
+              // Paid for: a marked lane is where the card goes, so it says so, over the card being given up.
+              const paid = marked && action?.type === 'place'
               const verb =
                 action?.type === 'mark'
                   ? 'Sacrifice'
@@ -315,14 +424,36 @@ export function TerminalTable({
                       : null
               const label = `Lane ${i + 1}: ${unit ? describe(unit) : 'empty'}${verb ? `. ${verb}` : ''}${marked ? ', marked for sacrifice' : ''}`
               // A dashed outline on what can be clicked, red where a card would be given up, as in Act 2.
-              const frame = marked
-                ? 'border-dashed border-death bg-[#2a1214]'
-                : action?.type === 'mark'
-                  ? 'border-dashed border-death/70 hover:border-death'
-                  : action
-                    ? 'border-dashed border-p03/60 hover:border-p03'
-                    : 'border-[#1f3a26]'
-              const body = lane(unit, verb ? <span className="text-base text-p03-dim">play here</span> : null)
+              const frame = paid
+                ? 'border-dashed border-p03'
+                : marked
+                  ? 'border-dashed border-death bg-[#2a1214]'
+                  : action?.type === 'mark'
+                    ? 'border-dashed border-death/70 hover:border-death'
+                    : action
+                      ? 'border-dashed border-p03/60 hover:border-p03'
+                      : 'border-[#1f3a26]'
+              const body = (
+                <>
+                  <Occupant
+                    row="board"
+                    lane={i}
+                    unit={unit}
+                    playback={playback}
+                    tilted={marked}
+                    empty={
+                      verb ? (
+                        <span className="grid size-full place-items-center text-base text-p03-dim">play here</span>
+                      ) : null
+                    }
+                  />
+                  {paid ? (
+                    <span className="absolute inset-x-1 bottom-1 z-10 rounded-sm bg-[#07130b]/90 py-0.5 text-center text-base text-p03">
+                      ↓ play here
+                    </span>
+                  ) : null}
+                </>
+              )
               return action ? (
                 <button
                   key={i}
@@ -332,29 +463,56 @@ export function TerminalTable({
                   data-lane={i}
                   onClick={() => act(action)}
                   {...look(unit)}
-                  className={`${cell} ${frame}`}
+                  className={`${cell} relative ${frame}`}
                 >
                   {body}
                 </button>
               ) : (
-                <div key={i} aria-label={label} {...look(unit)} className={`${cell} ${frame}`}>
+                <div
+                  key={i}
+                  aria-label={label}
+                  {...look(unit)}
+                  onClick={() => !busy && refuse(`lane-${i}`)}
+                  className={`${cell} relative ${frame}`}
+                  style={shaking(`lane-${i}`)}
+                >
                   {body}
                 </div>
               )
             })}
           </div>
-          {result ? (
+          {over ? (
             <div className="absolute inset-0 grid place-items-center bg-black/60 p-4">
               <GameOver result={result} className="w-full max-w-md bg-p03-ground/95 font-terminal text-xl" />
             </div>
           ) : null}
         </Panel>
-        <p className="text-p03-dim">
-          {prompt(mustDraw, summoning, summoning ? owed(summoning, state.player.board, state.summon?.marked ?? []) : 0)}
+        <p
+          key={refused.count}
+          className="text-p03-dim"
+          style={refused.count ? { animation: 'nudge 0.6s ease-out' } : undefined}
+        >
+          {busy
+            ? "P03's turn…"
+            : prompt(
+                mustDraw,
+                summoning,
+                summoning ? owed(summoning, state.player.board, state.summon?.marked ?? []) : 0,
+              )}
         </p>
       </section>
 
       <aside className="flex flex-col gap-3">
+        {/* Always in its place, shown only while summoning, so nothing moves when it comes and goes. */}
+        <button
+          type="button"
+          {...(state.summon ? { 'data-action': 'cancel' } : { 'aria-hidden': true, tabIndex: -1 })}
+          disabled={!state.summon}
+          onClick={() => act({ type: 'cancel' })}
+          className={`${SIDE_BUTTON} ${state.summon ? '' : 'invisible'}`}
+        >
+          Cancel
+        </button>
         <Panel className="flex min-h-[22rem] flex-col gap-2 bg-[#a9e7b8] text-[#0b1f12]">
           {inspected ? (
             <>
@@ -411,41 +569,55 @@ export function TerminalTable({
 
       <section aria-label="Your hand" className="col-span-3 flex items-end gap-4 border-t-2 border-[#2f6b3d] pt-3">
         <div className="flex min-w-0 flex-1 justify-center gap-2">
-          {state.player.hand.map((unit) => {
+          {view.hand.map((unit) => {
             const selected = unit.uid === state.summon?.uid
             const allowed = has(legal, { type: 'select', uid: unit.uid } as Partial<Action>)
             return (
-              // The pointer is watched here, since a disabled button hears nothing and every card should be readable.
-              <div key={unit.uid} {...look(unit)} className="w-28 shrink">
+              // The pointer is watched here, and the button is never disabled, so every card can be read and a card
+              // that cannot be played yet can say so by shaking.
+              <div
+                key={unit.uid}
+                {...look(unit)}
+                className="w-28 shrink"
+                style={{ animation: 'arrive-up 280ms ease-out' }}
+              >
                 <button
                   type="button"
-                  disabled={!allowed && !selected}
+                  aria-disabled={!allowed && !selected}
                   aria-pressed={selected}
                   aria-label={`${describe(unit)}, costs ${card(unit.card).cost}`}
                   data-action="select"
                   data-uid={unit.uid}
-                  onClick={() => allowed && act({ type: 'select', uid: unit.uid })}
-                  className={`w-full rounded-md p-1 transition-transform ${selected ? '-translate-y-3 outline-2 outline-p03 outline-dashed' : 'hover:-translate-y-1'} disabled:opacity-40`}
+                  onClick={() =>
+                    allowed ? act({ type: 'select', uid: unit.uid }) : !selected && !busy && refuse(`card-${unit.uid}`)
+                  }
+                  className={`w-full rounded-md p-1 transition-transform ${selected ? '-translate-y-3 outline-2 outline-p03 outline-dashed' : allowed ? 'hover:-translate-y-1' : 'opacity-40'}`}
                 >
-                  <PixelCard unit={unit} />
+                  <span
+                    key={refused.what === `card-${unit.uid}` ? refused.count : 0}
+                    className="block"
+                    style={shaking(`card-${unit.uid}`)}
+                  >
+                    <PixelCard unit={unit} />
+                  </span>
                 </button>
               </div>
             )
           })}
         </div>
-        <div className="flex shrink-0 gap-3">
+        <div key={refused.count} className="flex shrink-0 gap-3" style={shaking('piles')}>
           <button
             type="button"
             data-action="draw-deck"
             disabled={!mustDraw}
             onClick={() => act({ type: 'draw', from: 'deck' })}
-            aria-label={`Draw from the deck, ${state.player.deck.length} left`}
+            aria-label={`Draw from the deck, ${view.deck} left`}
             className="flex w-16 flex-col items-center gap-1 text-p03 disabled:opacity-40"
           >
             <span className="grid aspect-[4/5] w-full place-items-center rounded-md border-2 border-[#2f6b3d] bg-[#0b1f12] text-3xl shadow-[3px_3px_0_#1f3a26,6px_6px_0_#13261a]">
               ▦
             </span>
-            <span className="text-lg">x{state.player.deck.length}</span>
+            <span className="text-lg">x{view.deck}</span>
           </button>
           <button
             type="button"

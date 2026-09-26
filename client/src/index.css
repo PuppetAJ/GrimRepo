@@ -203,3 +203,99 @@
     url(/cursors/mark.svg) 2 2,
     pointer;
 }
+
+/* The Act 2 text table's moves, played back one at a time as on the 3D table. */
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-6px) rotate(-2deg);
+  }
+  40% {
+    transform: translateX(5px) rotate(2deg);
+  }
+  60% {
+    transform: translateX(-3px);
+  }
+  80% {
+    transform: translateX(2px);
+  }
+}
+@keyframes lunge-up {
+  50% {
+    transform: translateY(-38%);
+  }
+}
+@keyframes lunge-down {
+  50% {
+    transform: translateY(38%);
+  }
+}
+@keyframes rise {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -160%);
+  }
+}
+@keyframes arrive-up {
+  from {
+    opacity: 0;
+    transform: translateY(40%) scale(0.9);
+  }
+}
+@keyframes arrive-down {
+  from {
+    opacity: 0;
+    transform: translateY(-60%);
+  }
+}
+@keyframes fold-away {
+  45% {
+    transform: scaleY(0.68);
+    opacity: 1;
+  }
+  to {
+    transform: scaleY(0.68) translateY(var(--away, 60%));
+    opacity: 0;
+  }
+}
+@keyframes offer-up {
+  to {
+    transform: translateY(-40%) rotate(25deg) scale(0.3);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes shake {
+    50% {
+      opacity: 0.6;
+    }
+  }
+  @keyframes lunge-up {
+    50% {
+      opacity: 0.6;
+    }
+  }
+  @keyframes lunge-down {
+    50% {
+      opacity: 0.6;
+    }
+  }
+  @keyframes arrive-up {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes arrive-down {
+    from {
+      opacity: 0;
+    }
+  }
+}
