@@ -652,9 +652,9 @@ export function TerminalTable({
         </section>
 
         <aside className="relative z-10 flex min-h-0 flex-col gap-3 overflow-hidden">
-          {/* As tall as the card needs, up to a cap; when short, its art gives way down to a floor that still shows the
-              name and stats. The console below takes whatever is left. */}
-          <Panel className="flex max-h-[30rem] min-h-[15rem] shrink flex-col gap-2 bg-[#a9e7b8] text-[#0b1f12]">
+          {/* A box of its own size, whatever card it shows: it shares the column with the console evenly, up to a cap,
+              and the console has the rest. Inside it the art gives way to the name, sigils and stats. */}
+          <Panel className="flex max-h-[30rem] min-h-[15rem] flex-1 basis-0 flex-col gap-2 bg-[#a9e7b8] text-[#0b1f12]">
             {inspected ? (
               <>
                 <p className="flex items-start justify-between gap-2 text-3xl leading-none">
@@ -668,7 +668,7 @@ export function TerminalTable({
                   ) : null}
                 </p>
                 {/* The art large and the stats under it, as Act 2's inspector shows a card. */}
-                <div className="grid aspect-[5/4] min-h-16 shrink place-items-center rounded-sm border-2 border-[#0b1f12] bg-[#8fd3a0] bg-[repeating-linear-gradient(0deg,rgb(0_0_0/0.06)_0_1px,transparent_1px_3px)]">
+                <div className="grid min-h-16 flex-1 place-items-center rounded-sm border-2 border-[#0b1f12] bg-[#8fd3a0] bg-[repeating-linear-gradient(0deg,rgb(0_0_0/0.06)_0_1px,transparent_1px_3px)]">
                   <Art id={inspected.card} big />
                 </div>
                 {/* Only as tall as the sigils need, up to a limit, scrolling past it; the art takes the rest. */}
@@ -708,7 +708,7 @@ export function TerminalTable({
           </Panel>
           <section
             aria-label="P03's console"
-            className="flex min-h-16 flex-1 flex-col rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-2 text-base"
+            className="flex min-h-16 flex-1 basis-0 flex-col rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-2 text-base"
           >
             <ol aria-live="polite" className="flex min-h-0 flex-1 flex-col-reverse overflow-y-auto text-lg">
               {[...game.log].reverse().map((line, index) => (
