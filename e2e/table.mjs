@@ -199,31 +199,6 @@ section('The 3D table')
   await context.close()
 }
 
-section('The gems, while two are compared')
-{
-  const { context, page } = await freshPage(browser)
-  const player = await signUp(page, newPlayer('Gems'))
-  const gems = () => page.evaluate(() => localStorage.getItem('grimrepo:gems'))
-  await page.goto(`${BASE}/game`)
-  await tableReady(page)
-  check('the gems built in code are the default', (await gems()) === null)
-  await page.goto(`${BASE}/game?gems=module`)
-  await tableReady(page)
-  check('the gem module can be chosen, and the choice is kept', (await gems()) === 'module')
-  await page.getByRole('button', { name: 'Draw from the deck' }).click()
-  await page.getByRole('button', { name: 'Press the button' }).click()
-  await page.getByRole('button', { name: 'Draw from the deck' }).waitFor({ timeout: 30_000 })
-  check('a turn plays with it', true)
-  await page.goto(`${BASE}/game`)
-  await tableReady(page)
-  check('and it is still chosen after leaving and coming back', (await gems()) === 'module')
-  await page.goto(`${BASE}/game?gems=built`)
-  await tableReady(page)
-  check('?gems=built goes back', (await gems()) === 'built')
-  check('and the test player is removed afterwards', await deletePlayer(page, player))
-  await context.close()
-}
-
 section('Phones')
 {
   const { context, page } = await freshPage(browser, { width: 390, height: 844 })

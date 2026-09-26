@@ -428,13 +428,11 @@ export function TerminalTable({
   game,
   onDemo,
   on3d,
-  onClassic,
   layout = 'wide',
 }: {
   game: Ready
   onDemo: boolean
   on3d: () => void
-  onClassic: () => void
   /** Wide, three columns; mid, the board beside the reader; narrow, one column down to 320px. */
   layout?: 'wide' | 'mid' | 'narrow'
 }) {
@@ -898,9 +896,6 @@ export function TerminalTable({
       <div className="flex justify-between font-sans text-sm text-p03-dim">
         <button type="button" onClick={on3d} className="underline hover:text-p03">
           Play on the 3D table
-        </button>
-        <button type="button" onClick={onClassic} className="underline hover:text-p03">
-          First text table
         </button>
       </div>
     </div>

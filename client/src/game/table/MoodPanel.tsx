@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { TUNING, tune, useTuning, type Tuning } from './tuning.ts'
-import { chosenPalette } from './scene.ts'
 
 type Control = [keyof Tuning, string, number, number, number]
 
@@ -65,17 +64,11 @@ const GROUPS: [string, Control[]][] = [
 export function MoodPanel() {
   const mood = useTuning()
   const [copied, setCopied] = useState(false)
-  const palette = chosenPalette()
   const changed = Object.fromEntries(
     (Object.keys(TUNING) as (keyof Tuning)[]).filter((key) => mood[key] !== TUNING[key]).map((key) => [key, mood[key]]),
   )
-  const switchTo = (name: 'green' | 'cyan') => {
-    const params = new URLSearchParams(window.location.search)
-    params.set('palette', name)
-    window.location.search = params.toString()
-  }
   const copy = () => {
-    void navigator.clipboard.writeText(JSON.stringify({ palette, ...changed }, null, 2)).then(() => {
+    void navigator.clipboard.writeText(JSON.stringify(changed, null, 2)).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
     })
@@ -86,18 +79,6 @@ export function MoodPanel() {
       className="absolute top-14 right-3 z-50 max-h-[calc(100%-10rem)] w-72 overflow-y-auto rounded-md border border-[#2f6b3d] bg-p03-ground/95 p-3 font-mono text-xs text-foreground"
     >
       <summary className="cursor-pointer font-terminal text-base text-p03">Mood</summary>
-      <div className="mt-2 flex gap-2">
-        {(['green', 'cyan'] as const).map((name) => (
-          <button
-            key={name}
-            type="button"
-            onClick={() => switchTo(name)}
-            className={`flex-1 rounded border px-2 py-1 ${palette === name ? 'border-p03 text-p03' : 'border-border text-muted-foreground'}`}
-          >
-            {name}
-          </button>
-        ))}
-      </div>
       {GROUPS.map(([title, controls]) => (
         <fieldset key={title} className="mt-3">
           <legend className="mb-1 text-muted-foreground uppercase">{title}</legend>

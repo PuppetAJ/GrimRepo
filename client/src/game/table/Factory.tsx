@@ -15,7 +15,7 @@ import {
 } from '@react-three/postprocessing'
 import { easing } from 'maath'
 import { ToneMappingMode } from 'postprocessing'
-import { memo, Suspense, use, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactElement } from 'react'
+import { memo, Suspense, use, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { TIP } from 'shared'
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
@@ -23,7 +23,6 @@ import type { View } from '../view.ts'
 import { Nudge } from './Piles.tsx'
 import { TINT } from './palette.ts'
 import { tuning, useTuning } from './tuning.ts'
-import { chosenGems } from './scene.ts'
 import {
   BATTERY_CELLS,
   BELL,
@@ -38,9 +37,9 @@ import {
   type Vec3,
 } from './layout.ts'
 
-// P03's factory, after Inscryption's Act 3: dark metal in blue shadow, lit by cyan screens. Built here in code.
+// P03's factory, after Inscryption's Act 3: dark metal lit by P03's green screens. Built here in code.
 const X = -1.975
-// The light the factory is lit by: cyan or green, from the palette.
+// The light the factory is lit by, from the palette.
 const LIT = TINT.glow
 const GLOW = new THREE.Color(...TINT.glowHdr)
 // Glow is kept for what is brighter than white, so no lamp can make a lit card glow; these are pushed past it.
@@ -203,7 +202,7 @@ function Room() {
   )
 }
 
-/** The board, drawn onto the table as in Act 3: an off-shade field, slots outlined in cyan with three gears each, and arrows on P03's queue. */
+/** The board, drawn onto the table as in Act 3: an off-shade field, slots outlined in the palette's light with three gears each, and arrows on P03's queue. */
 export function TechBoard() {
   const width = (lanes.length - 1) * LANE_GAP + CARD.width + 0.5
   const depth = ROW_Z.board - ROW_Z.back + CARD.height + 0.5
@@ -416,7 +415,7 @@ function mergeStill(root: THREE.Object3D, keep: RegExp): number {
   return merged
 }
 
-/** Act 3's battery, hovering by the table: the scale fills its cells from the leader's end, cyan for the player and red for P03. */
+/** Act 3's battery, hovering by the table: the scale fills its cells from the leader's end, the player's colour from their end and red from P03's. */
 function Battery({ view }: { view: View }) {
   const { scene } = useGLTF('/models/battery.glb', false, false)
   const drone = useRef<THREE.Group>(null)
@@ -468,7 +467,7 @@ function Battery({ view }: { view: View }) {
   )
 }
 
-/** The gem module from the same drone, where the gems are: its gems stand behind a glass front, turned to the player's seat. */
+/** The three Mox gems, in the gem module from the battery's drone: its gems stand behind a glass front, turned to the player's seat. */
 function GemModule() {
   const { scene } = useGLTF('/models/gems.glb', false, false)
   useLayoutEffect(
@@ -489,35 +488,6 @@ function GemModule() {
   )
   // Turned to the seat, then tipped back a little, since the eye is just above it.
   return <primitive object={scene} position={[2.25, TABLE_Y, -12.4]} rotation={[-0.17, -0.48, 0, 'YXZ']} scale={0.9} />
-}
-
-/** The three Mox gems P03 keeps by the table, turning slowly on their bases. */
-function Gems() {
-  const group = useRef<THREE.Group>(null)
-  useFrame((_, delta) => group.current?.children.forEach((gem) => (gem.rotation.y += delta * 0.6)))
-  const gems: [string, ReactElement][] = [
-    ['#ff9a2e', <tetrahedronGeometry key="t" args={[0.16]} />],
-    ['#7dff9a', <octahedronGeometry key="o" args={[0.16]} />],
-    ['#3ea8ff', <icosahedronGeometry key="i" args={[0.15, 0]} />],
-  ]
-  return (
-    <group position={[2.25, TABLE_Y, -12.4]}>
-      {gems.map(([colour], i) => (
-        <mesh key={colour} position={[i * 0.42 - 0.42, 0.04, 0]}>
-          <cylinderGeometry args={[0.14, 0.17, 0.08, 16]} />
-          <meshStandardMaterial color="#23282d" metalness={0.8} roughness={0.4} />
-        </mesh>
-      ))}
-      <group ref={group} position={[0, 0.3, 0]}>
-        {gems.map(([colour, shape], i) => (
-          <mesh key={colour} position={[i * 0.42 - 0.42, 0, 0]}>
-            {shape}
-            <meshStandardMaterial color={colour} emissive={colour} emissiveIntensity={2.2} flatShading />
-          </mesh>
-        ))}
-      </group>
-    </group>
-  )
 }
 
 /** The lamp on the player's left: a post, an arm, and a bar of light that flickers now and then. */
@@ -858,7 +828,9 @@ const Fixtures = memo(function Fixtures() {
       <Lamp />
       <DrumRack />
       <Props />
-      <Suspense fallback={null}>{chosenGems() === 'module' ? <GemModule /> : <Gems />}</Suspense>
+      <Suspense fallback={null}>
+        <GemModule />
+      </Suspense>
       {/* Dust drifting in the light. */}
       {/* Remade when the count changes, which it cannot take in place. */}
       <Sparkles

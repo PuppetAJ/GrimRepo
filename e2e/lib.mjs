@@ -74,9 +74,6 @@ export async function resetRateLimits() {
 export async function freshPage(browser, { width = 1280, height = 900, table } = {}) {
   const context = await browser.newContext({ viewport: { width, height } })
   if (table) await context.addInitScript((mode) => localStorage.setItem('grimrepo:table', mode), table)
-  // E2E_TEXT=act2 plays the text suites through the Act 2 layout instead of the first text table.
-  if (process.env.E2E_TEXT)
-    await context.addInitScript((layout) => localStorage.setItem('grimrepo:text', layout), process.env.E2E_TEXT)
   const page = await context.newPage()
   page.setDefaultTimeout(20_000)
   return { context, page }

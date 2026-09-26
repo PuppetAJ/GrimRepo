@@ -3,9 +3,7 @@ import { Component, lazy, Suspense, useState, useSyncExternalStore, type ReactNo
 import { Button } from '@/components/ui/button.tsx'
 import { Failure, Loading } from '../components/States.tsx'
 import { Boot } from '../game/table/Boot.tsx'
-import { chooseText, chosenText } from '../game/table/scene.ts'
 import { TerminalTable } from '../game/TerminalTable.tsx'
-import { TextTable } from '../game/TextTable.tsx'
 import { useGame } from '../game/useGame.ts'
 import { authClient, DEMO } from '../lib/auth.ts'
 
@@ -86,7 +84,6 @@ export function Game() {
   const upright = useMedia(UPRIGHT_PHONE)
   const wide = useMedia(WIDE)
   const mid = useMedia(MID)
-  const [text, setText] = useState(chosenText)
 
   const choose = (next: Mode) => {
     setMode(next)
@@ -101,22 +98,16 @@ export function Game() {
   if (game.status === 'error') return <Failure title="The table is not ready" detail={game.message} />
 
   if (mode === 'text')
-    return text === 'act2' ? (
+    return (
       // Into most of the page's side padding, so the table has the width and only thin gutters remain.
       <div className="-mx-2 sm:-mx-9">
         <TerminalTable
           game={game}
           onDemo={onDemo}
           on3d={() => choose('3d')}
-          onClassic={() => {
-            chooseText('classic')
-            setText('classic')
-          }}
           layout={askedLayout() ?? (wide ? 'wide' : mid ? 'mid' : 'narrow')}
         />
       </div>
-    ) : (
-      <TextTable game={game} onDemo={onDemo} on3d={() => choose('3d')} />
     )
 
   return (
