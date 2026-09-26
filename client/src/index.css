@@ -302,21 +302,12 @@
 
 /* The Act 2 table's monitor: a faint circuit grid behind it, and glass over it. */
 .crt {
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cg fill='none' stroke='%237dff9a' stroke-opacity='0.07' stroke-width='1.5'%3E%3Cpath d='M0 40h40l20 20h60M80 0v30l20 20v60l-20 20v30M160 120h-50l-15 15h-40M20 160v-40l15-15'/%3E%3C/g%3E%3Cg fill='%237dff9a' fill-opacity='0.12'%3E%3Ccircle cx='40' cy='40' r='3'/%3E%3Ccircle cx='120' cy='60' r='3'/%3E%3Ccircle cx='100' cy='110' r='3'/%3E%3Ccircle cx='55' cy='135' r='3'/%3E%3C/g%3E%3C/svg%3E"),
-    linear-gradient(rgb(125 255 154 / 0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(125 255 154 / 0.025) 1px, transparent 1px),
-    repeating-linear-gradient(0deg, rgb(0 0 0 / 0.3) 0 1px, transparent 1px 3px);
-  background-size:
-    160px 160px,
-    32px 32px,
-    32px 32px,
-    auto;
+  background-image: repeating-linear-gradient(0deg, rgb(0 0 0 / 0.14) 0 1px, transparent 1px 3px);
 }
 .crt-glass {
   background:
     radial-gradient(ellipse at center, transparent 55%, rgb(0 0 0 / 0.55) 100%),
-    repeating-linear-gradient(0deg, rgb(0 0 0 / 0.22) 0 2px, transparent 2px 4px);
+    repeating-linear-gradient(0deg, rgb(0 0 0 / 0.1) 0 2px, transparent 2px 4px);
   animation: flicker 9s steps(1) infinite;
 }
 .crt-glass::after {

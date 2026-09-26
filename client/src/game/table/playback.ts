@@ -4,7 +4,14 @@ import { DECK, P03_HAND, PILE, slot, TABLE_Y, type Row, type Vec3 } from './layo
 
 /** Where a popup belongs on the board, for tables that lay it out as a page rather than in 3D. */
 export type Spot = { row: Row; lane: number } | { face: 'player' | 'opponent' }
-export type Popup = { id: number; text: string; tone: 'damage' | 'heal' | 'note'; position: Vec3; spot: Spot; at: number }
+export type Popup = {
+  id: number
+  text: string
+  tone: 'damage' | 'heal' | 'note'
+  position: Vec3
+  spot: Spot
+  at: number
+}
 export type Leaving = { unit: Unit; row: Row; lane: number; at: number; how: 'died' | 'sacrificed' }
 export type Lunge = { at: number; toward: 1 | -1 }
 
