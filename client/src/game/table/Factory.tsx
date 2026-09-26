@@ -23,7 +23,7 @@ import type { View } from '../view.ts'
 import { Nudge } from './Piles.tsx'
 import { TINT } from './palette.ts'
 import { MOOD } from './mood.ts'
-import { startHold, type Screen } from './reading.ts'
+import { holding, startHold, type Screen } from './reading.ts'
 import {
   BATTERY_CELLS,
   BELL,
@@ -327,6 +327,7 @@ const Monitor = memo(function Monitor({
   lines,
   onRead,
   onHold,
+  onTap,
 }: {
   screen: Screen
   position: Vec3
@@ -334,8 +335,10 @@ const Monitor = memo(function Monitor({
   lines: string[]
   onRead?: (screen: Screen, on: boolean) => void
   onHold?: (screen: Screen, x: number, y: number) => void
+  onTap?: (screen: Screen) => void
 }) {
   const cancelHold = useRef<(() => void) | null>(null)
+  const touched = useRef(false)
   const letGo = () => {
     cancelHold.current?.()
     cancelHold.current = null
@@ -367,12 +370,18 @@ const Monitor = memo(function Monitor({
       }}
       onPointerOut={(event) => event.pointerType !== 'touch' && onRead?.(screen, false)}
       onPointerDown={(event) => {
-        if (event.pointerType !== 'touch' || !onHold) return
+        touched.current = event.pointerType === 'touch'
+        if (!touched.current || !onHold) return
         letGo()
         cancelHold.current = startHold(event, (x, y) => onHold(screen, x, y))
       }}
       onPointerUp={letGo}
       onPointerCancel={letGo}
+      onClick={(event) => {
+        event.stopPropagation()
+        // A hold was a look; a finger's tap pins the readout.
+        if (!holding() && touched.current) onTap?.(screen)
+      }}
     >
       <mesh>
         <boxGeometry args={[2.9, 1.95, 0.22]} />
@@ -806,9 +815,9 @@ function scaleBar(scale: number): string {
   return `YOU[${' '.repeat(6 - you)}${'#'.repeat(you)}|${'#'.repeat(p03)}${' '.repeat(6 - p03)}]P03`
 }
 
-/** The left monitor: the battle log, the last eight lines of P03's console. */
-export function logLines(log: string[]): string[] {
-  return ['// P03 CONSOLE', ...log.slice(-8).map((line) => line.replace(/^P03> /, '> '))]
+/** The left monitor: the battle log, the last eight lines of P03's console, or as many as asked for. */
+export function logLines(log: string[], count = 8): string[] {
+  return ['// P03 CONSOLE', ...log.slice(-count).map((line) => line.replace(/^P03> /, '> '))]
 }
 
 /** The right monitor: the scale, the turn and the deck. */
@@ -829,9 +838,12 @@ export function Factory({
   log,
   onRead,
   onHold,
+  onTap,
 }: {
   view: View
   log: string[]
+  /** Told when a finger taps a screen, which pins its readout open. */
+  onTap?: (screen: Screen) => void
   /** Told when a mouse arrives on a screen to read it, and leaves. */
   onRead?: (screen: Screen, on: boolean) => void
   /** Told when a finger has held a screen, and where. */
@@ -874,8 +886,16 @@ export function Factory({
         distance={20}
       />
       <Fixtures />
-      <Monitor screen="log" position={LOG_AT} turn={0.3} lines={lines} onRead={onRead} onHold={onHold} />
-      <Monitor screen="status" position={STATUS_AT} turn={-0.3} lines={status} onRead={onRead} onHold={onHold} />
+      <Monitor screen="log" position={LOG_AT} turn={0.3} lines={lines} onRead={onRead} onHold={onHold} onTap={onTap} />
+      <Monitor
+        screen="status"
+        position={STATUS_AT}
+        turn={-0.3}
+        lines={status}
+        onRead={onRead}
+        onHold={onHold}
+        onTap={onTap}
+      />
       <Suspense fallback={null}>
         <Battery view={view} />
       </Suspense>

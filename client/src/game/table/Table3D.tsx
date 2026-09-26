@@ -35,10 +35,13 @@ import { CardBatch } from './Batch.tsx'
 import { Boot } from './Boot.tsx'
 import { claimCursor, cursorCss, onCursor, releaseCursor } from './cursor.ts'
 import { MOOD } from './mood.ts'
-import { released, type Target } from './reading.ts'
+import { released, type Screen, type Target } from './reading.ts'
 import { usePlayback } from './usePlayback.ts'
 
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
+
+// The most of P03's console a log readout holds.
+const LOG_READ = 200
 
 // A touch screen, where cards are read by holding them and a hand card is lifted before it is played.
 const COARSE = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
@@ -50,6 +53,8 @@ type Reader = {
   read: (target: Target | null) => void
   hold: (target: Target, x: number, y: number) => void
   lift: (unit: Unit | null) => void
+  /** Pins a screen's readout open, or closes it if it is the one pinned. */
+  pin: (screen: Screen) => void
 }
 
 /** What a reader shows: a card in full, or a screen's lines. */
@@ -217,6 +222,7 @@ function Scene({
             log={game.log}
             onRead={(screen, on) => reader.read(on ? { screen } : null)}
             onHold={(screen, x, y) => reader.hold({ screen }, x, y)}
+            onTap={(screen) => reader.pin(screen)}
           />
           <FactoryP03 view={view} busy={busy} outcome={busy ? undefined : game.result?.outcome} />
           <WarmUp onWarm={onWarm} />
@@ -512,8 +518,14 @@ function Hud({
   ring,
   hint,
   reading,
+  pinned,
+  onUnpin,
+  logBox,
 }: {
   reading: Readout | null
+  pinned: string[] | null
+  onUnpin: () => void
+  logBox: React.RefObject<HTMLDivElement | null>
   game: Ready
   view: View
   busy: boolean
@@ -534,15 +546,29 @@ function Hud({
   const ended = game.result && !busy
   return (
     <>
-      {/* Stops above the prompt, so the reader under the scale never runs over it. */}
-      <div className="pointer-events-none absolute top-0 bottom-24 left-0 flex flex-col items-start p-3 font-terminal sm:p-4">
+      {/* Stops above the prompt, so the reader under the scale never runs over it; above the monitors' text. */}
+      <div className="pointer-events-none absolute top-0 bottom-24 left-0 z-10 flex flex-col items-start p-3 font-terminal sm:p-4">
         <ScaleBar scale={view.scale} className="text-xl sm:text-2xl" />
         <span className="text-lg text-p03-dim sm:text-xl">
           Turn {view.turn} · Deck {view.deck}
         </span>
         {/* The card pointed at, read in full, or lying flat on a touch screen, where it was lifted by a tap; or a screen. */}
-        {!reading ? null : 'lines' in reading ? (
-          <ScreenReadout lines={reading.lines} className="mt-3 w-80 text-lg" label="Monitor readout" />
+        {pinned ? (
+          // Pinned by a tap: it takes the finger, to be scrolled, and closes with its button or a tap elsewhere.
+          <ScreenReadout
+            lines={pinned}
+            className="pointer-events-auto mt-2 h-52 max-h-full w-80 text-base"
+            label="Monitor readout"
+            scroll={logBox}
+            onClose={onUnpin}
+          />
+        ) : !reading ? null : 'lines' in reading ? (
+          <ScreenReadout
+            lines={reading.lines}
+            className="mt-3 max-h-80 min-h-0 w-80 text-lg"
+            label="Monitor readout"
+            scroll={logBox}
+          />
         ) : COARSE ? (
           <div
             role="region"
@@ -750,6 +776,10 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
   const [reading, setReading] = useState<Target | null>(null)
   const [peek, setPeek] = useState<number | null>(null)
   const [magnified, setMagnified] = useState<{ target: Target; x: number; y: number } | null>(null)
+  // A screen's readout pinned open by a tap, to be scrolled with a finger.
+  const [pinned, setPinned] = useState<Screen | null>(null)
+  // The log readout's scrolling box, which the mouse wheel moves while the log is pointed at.
+  const logBox = useRef<HTMLDivElement>(null)
   const fade = useRef<ReturnType<typeof setTimeout>>(undefined)
   const reader: Reader = {
     peek,
@@ -763,15 +793,34 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
     lift: (unit) => {
       setPeek(unit?.uid ?? null)
       setReading(unit ? { card: unit.uid } : null)
+      setPinned(null)
+    },
+    pin: (screen) => {
+      setPinned((last) => (last === screen ? null : screen))
+      setPeek(null)
+      setReading(null)
     },
   }
   const readout = (target: Target | null): Readout | null => {
     if (!target) return null
-    if ('screen' in target) return { lines: target.screen === 'log' ? logLines(game.log) : statusLines(playback.view) }
+    if ('screen' in target)
+      return { lines: target.screen === 'log' ? logLines(game.log, LOG_READ) : statusLines(playback.view) }
     const unit = unitOf(playback.view, target.card)
     return unit ? { unit } : null
   }
-  const read = readout(reading)
+  const read = readout(pinned ? null : reading)
+  const pin = readout(pinned && { screen: pinned })
+  // While the log is pointed at, the mouse wheel scrolls its readout instead of the page.
+  const readingLog = !pinned && reading !== null && 'screen' in reading && reading.screen === 'log'
+  useEffect(() => {
+    if (!readingLog) return
+    const wheel = (event: WheelEvent) => {
+      event.preventDefault()
+      logBox.current?.scrollBy({ top: event.deltaY })
+    }
+    window.addEventListener('wheel', wheel, { passive: false })
+    return () => window.removeEventListener('wheel', wheel)
+  }, [readingLog])
   const magnifiedRead = readout(magnified?.target ?? null)
 
   return (
@@ -790,7 +839,7 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
         fallback={<NoWebGL onText={onText} />}
         aria-hidden
         // A tap on nothing puts a lifted hand card back down.
-        onPointerMissed={() => peek !== null && reader.lift(null)}
+        onPointerMissed={() => (peek !== null || pinned !== null) && reader.lift(null)}
         // A held finger reads a card; the page's long-press menu would get in the way.
         onContextMenu={(event) => COARSE && event.preventDefault()}
       >
@@ -852,6 +901,9 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
           ring={() => act({ type: 'ringBell' })}
           hint={hint}
           reading={read}
+          pinned={pin && 'lines' in pin ? pin.lines : null}
+          onUnpin={() => setPinned(null)}
+          logBox={logBox}
         />
       ) : null}
       {magnifiedRead && magnified ? (
@@ -935,11 +987,29 @@ function TouchReader({
 }
 
 /**
- * A wall screen's lines, read up close: the screen's dark glass, glow and scanlines. Its heading stays at the top and
- * the newest line at the bottom; where there is no room, the oldest fade out under the heading.
+ * A wall screen's lines, read up close: the screen's dark glass, glow and scanlines. Its heading stays at the top; the
+ * lines scroll under it, opening at the newest and following new ones unless scrolled back.
  */
-function ScreenReadout({ lines, className = '', label }: { lines: string[]; className?: string; label?: string }) {
+function ScreenReadout({
+  lines,
+  className = '',
+  label,
+  scroll,
+  onClose,
+}: {
+  lines: string[]
+  className?: string
+  label?: string
+  /** Set to the scrolling box, so the mouse wheel can move it. */
+  scroll?: React.RefObject<HTMLDivElement | null>
+  onClose?: () => void
+}) {
   const [heading, ...rest] = lines
+  const box = useRef<HTMLDivElement | null>(null)
+  const following = useRef(true)
+  useLayoutEffect(() => {
+    if (box.current && following.current) box.current.scrollTop = box.current.scrollHeight
+  }, [rest.length])
   return (
     <div
       role={label ? 'region' : undefined}
@@ -947,13 +1017,33 @@ function ScreenReadout({ lines, className = '', label }: { lines: string[]; clas
       className={`p03-screen relative flex flex-col overflow-hidden rounded-md border-2 border-[#2f6b3d] px-3 py-2 font-terminal leading-snug ${className}`}
     >
       <span aria-hidden className="crt-glass pointer-events-none absolute inset-0" />
-      <p className="shrink-0">{heading}</p>
-      <div className="flex min-h-0 flex-1 flex-col justify-end overflow-hidden [mask-image:linear-gradient(to_bottom,transparent,black_1.25rem)]">
-        {rest.map((line, i) => (
-          <p key={i} className="shrink-0 whitespace-pre-wrap">
-            {line}
-          </p>
-        ))}
+      <p className="flex shrink-0 justify-between gap-2">
+        {heading}
+        {onClose ? (
+          <button type="button" onClick={onClose} aria-label="Close the readout" className="px-1 text-p03">
+            ✕
+          </button>
+        ) : null}
+      </p>
+      <div
+        ref={(element) => {
+          box.current = element
+          if (scroll) scroll.current = element
+        }}
+        onScroll={(event) => {
+          const { scrollTop, clientHeight, scrollHeight } = event.currentTarget
+          following.current = scrollTop + clientHeight >= scrollHeight - 4
+        }}
+        className="flex min-h-0 flex-1 touch-pan-y [scrollbar-width:none] flex-col overflow-y-auto overscroll-contain [mask-image:linear-gradient(to_bottom,transparent,black_1.25rem)]"
+      >
+        {/* Pushed to the bottom while the lines are fewer than the room. */}
+        <div className="mt-auto">
+          {rest.map((line, i) => (
+            <p key={i} className="whitespace-pre-wrap">
+              {line}
+            </p>
+          ))}
+        </div>
       </div>
     </div>
   )
