@@ -64,14 +64,14 @@ export function handPlace(
   const offset = summoning && selected ? 0 : index - (count - 1) / 2
   // While a card is being summoned the rest of the hand drops away, and it rises only a little, clear of the lanes.
   const raise = summoning ? (selected ? 0.04 : HAND.stowed) : selected ? HAND.raise : hovered ? HAND.hover : 0
-  // The ends droop only a little, so a full hand's numbers stay above the screen's edge.
-  const lift = raise - Math.abs(offset) * 0.012
+  // A fan: the outer cards drop and lean away along an arc, gently, so a full hand's numbers stay above the screen's edge.
+  const lift = raise - offset * offset * 0.006
   // Later cards sit a little nearer, so neighbours overlap the way a held hand does; a card being looked at comes forward.
-  // Each a disk's thickness nearer than the last, so where corners meet they overlap rather than pass through.
-  const near = index * 0.02 + (hovered || selected ? 0.04 : 0)
+  // The arc also runs back at the ends, so neighbours differ in depth and their corners never pass through each other.
+  const near = -offset * offset * 0.012 + (hovered || selected ? 0.04 : 0)
   // A full hand holds its cards a little smaller, so it stays clear of the board and the screen's edge.
   const scale = HAND.scale * (count > 5 ? 1 - (count - 5) * 0.05 : 1)
-  return { position: [offset * gap, HAND.y + lift, -HAND.distance + near], roll: -offset * 0.04, scale }
+  return { position: [offset * gap, HAND.y + lift, -HAND.distance + near], roll: -offset * 0.05, scale }
 }
 
 export type CameraView = 'table' | 'board'

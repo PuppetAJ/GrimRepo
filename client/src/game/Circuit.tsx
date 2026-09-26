@@ -3,6 +3,9 @@ import { useEffect, useRef } from 'react'
 // A printed circuit behind the Act 2 table: nodes on a grid joined by right-angled traces, made once for each size,
 // with a few faint signals wandering along them. After the circuit background on shadcn.io, drawn here in P03's green.
 const STEP = 36
+// One board, laid out once at this size; a smaller window shows part of it, anchored at the top left.
+const BOARD_W = 2880
+const BOARD_H = 1800
 const PULSES = 5
 // A signal's life, in seconds, the first and last of it spent fading in and out, so none appears or vanishes at once.
 const LIFE = 14
@@ -47,8 +50,10 @@ export function Circuit() {
     type Pulse = { edge: number; forward: boolean; at: number; speed: number; age: number }
     let pulses: Pulse[] = []
     const key = (x: number, y: number) => `${x},${y}`
+    // Only traces that start in view carry signals, since the board runs on past a small window.
+    let seen: number[] = []
     const born = (age = 0): Pulse => ({
-      edge: Math.floor(Math.random() * edges.length),
+      edge: seen[Math.floor(Math.random() * seen.length)] ?? 0,
       forward: Math.random() < 0.5,
       at: Math.random(),
       speed: 14 + Math.random() * 10,
@@ -74,8 +79,9 @@ export function Circuit() {
       const { clientWidth: w, clientHeight: h } = element
       element.width = board.width = w * ratio
       element.height = board.height = h * ratio
-      const made = traces(w, h)
+      const made = traces(BOARD_W, BOARD_H)
       edges = made.edges
+      seen = edges.flatMap(([x, y], i) => (x > 0 && y > 0 && x < w && y < h ? [i] : []))
       meeting = new Map()
       edges.forEach(([x0, y0, x1, y1], i) => {
         for (const point of [key(x0, y0), key(x1, y1)]) meeting.set(point, [...(meeting.get(point) ?? []), i])

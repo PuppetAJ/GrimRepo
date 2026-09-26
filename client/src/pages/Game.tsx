@@ -28,6 +28,8 @@ function savedMode(): Mode {
 const UPRIGHT_PHONE = '(orientation: portrait) and (max-width: 767px)'
 // The Act 2 layout's three columns need this much width; narrower, it stacks into one column.
 const WIDE = '(min-width: 1100px)'
+// Below that the board sits beside the card reader, down to this width; narrower still, one column.
+const MID = '(min-width: 700px)'
 
 function useMedia(media: string): boolean {
   return useSyncExternalStore(
@@ -76,6 +78,7 @@ export function Game() {
   const [mode, setMode] = useState<Mode>(savedMode)
   const upright = useMedia(UPRIGHT_PHONE)
   const wide = useMedia(WIDE)
+  const mid = useMedia(MID)
   const [text, setText] = useState(chosenText)
 
   const choose = (next: Mode) => {
@@ -102,7 +105,7 @@ export function Game() {
             chooseText('classic')
             setText('classic')
           }}
-          narrow={!wide}
+          layout={wide ? 'wide' : mid ? 'mid' : 'narrow'}
         />
       </div>
     ) : (

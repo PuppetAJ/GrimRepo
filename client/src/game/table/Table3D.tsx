@@ -335,10 +335,13 @@ function CursorSync() {
     const again = () => events.update?.()
     const shown = () => document.visibilityState === 'visible' && again()
     window.addEventListener('focus', again)
+    // Zooming resizes the window under a still pointer, so what it is over is looked up again.
+    window.addEventListener('resize', again)
     document.addEventListener('visibilitychange', shown)
     return () => {
       stop()
       window.removeEventListener('focus', again)
+      window.removeEventListener('resize', again)
       document.removeEventListener('visibilitychange', shown)
     }
   }, [gl, events])

@@ -146,7 +146,15 @@ export function scaleWords(scale: number): string {
 }
 
 /** The scale as a tug of war: a knot pulled from the middle toward whoever leads; at either end, the game is over. */
-export function ScaleBar({ scale, className = '' }: { scale: number; className?: string }) {
+export function ScaleBar({
+  scale,
+  className = '',
+  fluid = false,
+}: {
+  scale: number
+  className?: string
+  fluid?: boolean
+}) {
   const [shown, setShown] = useState({ scale, change: 0, key: 0 })
   if (shown.scale !== scale) setShown({ scale, change: scale - shown.scale, key: shown.key + 1 })
   const reach = (Math.min(TIP, Math.abs(scale)) / TIP) * 50
@@ -163,7 +171,9 @@ export function ScaleBar({ scale, className = '' }: { scale: number; className?:
       className={`flex items-center gap-2 font-terminal ${className}`}
     >
       <span className="text-foreground">You</span>
-      <span className="relative h-3 w-32 rounded-sm border border-p03-dim/60 sm:w-44">
+      <span
+        className={`relative h-3 rounded-sm border border-p03-dim/60 ${fluid ? 'min-w-12 flex-1' : 'w-32 sm:w-44'}`}
+      >
         <span
           aria-hidden
           className={`absolute inset-y-0 transition-all duration-300 ${scale > 0 ? 'bg-foreground' : 'bg-death'}`}
