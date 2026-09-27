@@ -6,12 +6,15 @@ import { Button } from '@/components/ui/button.tsx'
 import { Input } from '@/components/ui/input.tsx'
 import { Glass } from '../components/p03/Glass.tsx'
 import { PixelCard } from '../game/CardReader.tsx'
+import { WORST_CARD, withWorstCard } from '../game/fixtures.ts'
 
 // three.js loads only when someone opens a card in 3D.
 const CardViewer = lazy(() => import('../game/table/CardViewer.tsx'))
 
-// Every card a player can hold: the deck and the Boilerplate pile. Y2K is not spoken of.
-const DECK = Object.values(CARDS).filter((def) => def.id !== 'Y2K')
+// Every card a player can hold: the deck and the Boilerplate pile. Y2K is not spoken of. In development and test builds,
+// a worst-case card at the end, to check the layout against.
+const worst = withWorstCard()
+const DECK = Object.values(CARDS).filter((def) => def.id !== 'Y2K' && (worst || def.id !== WORST_CARD))
 
 const unitOf = (def: CardDef): Unit => ({
   uid: 0,
@@ -92,12 +95,13 @@ function Screen({ def, className = '' }: { def: CardDef; className?: string }) {
 }
 
 function Grid({ cards, onOpen }: { cards: CardDef[]; onOpen: (id: string) => void }) {
+  // As many columns as fit with room for a card's longest words; one card a row before they would squeeze.
   return (
-    <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    <ul className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,24rem),1fr))] items-start gap-4">
       {cards.map((def) => (
-        <li key={def.id} className="flex min-w-0 gap-4 rounded-lg border bg-card p-4">
+        <li key={def.id} className="flex min-w-0 items-center gap-4 rounded-lg border bg-card p-4">
           <Screen def={def} className="w-28 shrink-0 sm:w-32" />
-          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5 self-stretch">
             <h2 className="truncate font-semibold">{def.name}</h2>
             <Facts def={def} />
             <Button variant="outline" size="sm" className="mt-auto self-start" onClick={() => onOpen(def.id)}>
@@ -239,78 +243,83 @@ export function Cards() {
             className="pl-9"
           />
         </div>
-        {/* The sort and its direction move to the next line together when the search leaves no room for them. */}
-        <div className="flex items-center gap-2">
-          <label className="flex items-center gap-2 text-sm text-muted-foreground">
-            Sort:
-            <select
-              value={sort}
-              onChange={(event) => change({ sort: event.target.value === 'deck' ? null : event.target.value })}
-              className="h-8 rounded-md border border-input bg-transparent px-2 text-sm text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-            >
-              {Object.entries(SORTS).map(([key, label]) => (
-                <option key={key} value={key} className="bg-popover">
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <Button
-            variant="outline"
-            size="sm"
-            aria-label={descending ? 'Highest first' : 'Lowest first'}
-            title={descending ? 'Highest first' : 'Lowest first'}
-            onClick={() => change({ order: descending ? null : 'desc' })}
-          >
-            {descending ? <ArrowDownWideNarrow aria-hidden /> : <ArrowUpNarrowWide aria-hidden />}
-          </Button>
-        </div>
-        {/* One line down to a 320px phone: tighter buttons there rather than a wrap. */}
-        <div role="group" aria-label="Filter by cost" className="flex items-center gap-1">
-          <span className="mr-1 text-sm text-muted-foreground">Cost:</span>
-          {COSTS.map((cost) => {
-            const on = costs.includes(cost)
-            return (
-              <Button
-                key={cost}
-                variant="outline"
-                size="sm"
-                aria-pressed={on}
-                className={`max-sm:px-2 max-sm:[&_span]:tracking-normal ${on ? 'border-primary bg-primary/15' : ''}`}
-                onClick={() =>
-                  change({
-                    cost: (on ? costs.filter((c) => c !== cost) : [...costs, cost]).sort().join(',') || null,
-                  })
-                }
+        {/*
+          The settings are one group: beside the search while the whole line fits there, under it when not, and only
+          wrapping among themselves when even a line of their own is too narrow.
+        */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
+            <label className="flex items-center gap-2 text-sm text-muted-foreground">
+              Sort:
+              <select
+                value={sort}
+                onChange={(event) => change({ sort: event.target.value === 'deck' ? null : event.target.value })}
+                className="h-8 rounded-md border border-input bg-transparent px-2 text-sm text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               >
-                <Cost cost={cost} />
-              </Button>
-            )
-          })}
+                {Object.entries(SORTS).map(([key, label]) => (
+                  <option key={key} value={key} className="bg-popover">
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Button
+              variant="outline"
+              size="sm"
+              aria-label={descending ? 'Highest first' : 'Lowest first'}
+              title={descending ? 'Highest first' : 'Lowest first'}
+              onClick={() => change({ order: descending ? null : 'desc' })}
+            >
+              {descending ? <ArrowDownWideNarrow aria-hidden /> : <ArrowUpNarrowWide aria-hidden />}
+            </Button>
+          </div>
+          {/* One line down to a 320px phone: tighter buttons there rather than a wrap. */}
+          <div role="group" aria-label="Filter by cost" className="flex items-center gap-1">
+            <span className="mr-1 text-sm text-muted-foreground">Cost:</span>
+            {COSTS.map((cost) => {
+              const on = costs.includes(cost)
+              return (
+                <Button
+                  key={cost}
+                  variant="outline"
+                  size="sm"
+                  aria-pressed={on}
+                  className={`max-sm:px-2 max-sm:[&_span]:tracking-normal ${on ? 'border-primary bg-primary/15' : ''}`}
+                  onClick={() =>
+                    change({
+                      cost: (on ? costs.filter((c) => c !== cost) : [...costs, cost]).sort().join(',') || null,
+                    })
+                  }
+                >
+                  <Cost cost={cost} />
+                </Button>
+              )
+            })}
+          </div>
+          <div role="group" aria-label="View" className="flex overflow-hidden rounded-md border">
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-pressed={view === 'grid'}
+              className={`rounded-none ${view === 'grid' ? 'bg-muted' : ''}`}
+              onClick={() => change({ view: null })}
+            >
+              <LayoutGrid aria-hidden /> Cards
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-pressed={view === '3d'}
+              className={`rounded-none ${view === '3d' ? 'bg-muted' : ''}`}
+              onClick={() => change({ view: '3d' })}
+            >
+              <Box aria-hidden /> 3D
+            </Button>
+          </div>
+          <p role="status" className="text-sm text-muted-foreground">
+            {cards.length === DECK.length ? '' : `${cards.length} of ${DECK.length}`}
+          </p>
         </div>
-        <div role="group" aria-label="View" className="flex overflow-hidden rounded-md border">
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-pressed={view === 'grid'}
-            className={`rounded-none ${view === 'grid' ? 'bg-muted' : ''}`}
-            onClick={() => change({ view: null })}
-          >
-            <LayoutGrid aria-hidden /> Cards
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-pressed={view === '3d'}
-            className={`rounded-none ${view === '3d' ? 'bg-muted' : ''}`}
-            onClick={() => change({ view: '3d' })}
-          >
-            <Box aria-hidden /> 3D
-          </Button>
-        </div>
-        <p role="status" className="text-sm text-muted-foreground">
-          {cards.length === DECK.length ? '' : `${cards.length} of ${DECK.length}`}
-        </p>
       </div>
 
       {cards.length === 0 ? (

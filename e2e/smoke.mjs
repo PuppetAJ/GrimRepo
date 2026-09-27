@@ -104,13 +104,22 @@ section('The compendium')
   await page.goto(`${BASE}/cards`)
   await page.getByRole('heading', { name: 'Compendium' }).waitFor()
   const names = page.locator('main li h2')
-  check('every card a player can hold is listed', (await names.count()) === 26, String(await names.count()))
+  // Development and test builds add a worst-case card, for checking layouts against, at the end.
+  const listed = (await names.allInnerTexts()).filter((name) => name !== 'destroyEverything(everyone)')
+  check('every card a player can hold is listed', listed.length === 26, String(listed.length))
   await page.getByLabel('Sort').selectOption('attack')
   await page.getByRole('button', { name: 'Lowest first' }).click()
   check(
     'it sorts, highest attack first',
     await page
-      .waitForFunction(() => document.querySelector('main li h2')?.textContent === 'Mainframe', null, { timeout: 5000 })
+      .waitForFunction(
+        () =>
+          [...document.querySelectorAll('main li h2')]
+            .map((name) => name.textContent)
+            .find((name) => name !== 'destroyEverything(everyone)') === 'Mainframe',
+        null,
+        { timeout: 5000 },
+      )
       .then(
         () => true,
         () => false,

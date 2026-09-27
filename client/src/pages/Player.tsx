@@ -79,10 +79,16 @@ function Activity({ stats }: { stats: PlayerStats }) {
   const cells = grid(stats.days)
   const played = cells.reduce((sum, cell) => sum + cell.games, 0)
   const bad = cells.filter((cell) => cell.bad).length
-  // Opens on the latest weeks when the squares have reached their smallest and the grid scrolls.
+  // Kept on the latest weeks whenever the grid scrolls, at whatever size, as the card is resized too.
   const scroller = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    if (scroller.current) scroller.current.scrollLeft = scroller.current.scrollWidth
+    const element = scroller.current
+    if (!element) return
+    const toLatest = () => (element.scrollLeft = element.scrollWidth)
+    toLatest()
+    const observer = new ResizeObserver(toLatest)
+    observer.observe(element)
+    return () => observer.disconnect()
   }, [])
   return (
     // Side by side wherever the column fits the activity in two columns; one over the other only on a phone.
@@ -91,8 +97,8 @@ function Activity({ stats }: { stats: PlayerStats }) {
         <section className="@container flex min-w-0 flex-col gap-3 rounded-lg border bg-card p-5">
           {/* The legend at the top right where it fits beside the title, and under the grid where it does not. */}
           <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-            <h2 className="font-semibold">
-              {played} {played === 1 ? 'game' : 'games'}, 26 weeks
+            <h2 className="font-semibold whitespace-nowrap">
+              {played} {played === 1 ? 'game' : 'games'} <span className="text-muted-foreground">|</span> 26 weeks
             </h2>
             <div className="@max-[30rem]:hidden">
               <Legend />

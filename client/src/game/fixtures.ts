@@ -1,4 +1,4 @@
-import { card, PLAYER_DECK, SIGILS, TIP, type GameState, type SigilId, type Unit } from 'shared'
+import { card, CARDS, PLAYER_DECK, SIGILS, TIP, type GameState, type SigilId, type Unit } from 'shared'
 
 // Fixed states to lay the tables out against, loaded with ?fixture=<name> in development or a test build.
 export const FIXTURES_ON = import.meta.env.DEV || import.meta.env.VITE_TEST_HANDLE === '1'
@@ -76,4 +76,22 @@ export function fixture(): { name: string; state: GameState; log: string[] } | n
       `P03> ${i % 3 ? 'destroyEnemy(you) hit JSONFoorhees in lane 2 for 8, and it was destroyed.' : `Turn ${60 + i}. Draw.`}`,
   )
   return { name, state: make(), log: [`P03> Fixture "${name}": played here and never saved.`, ...log] }
+}
+
+/** A card as hard to lay out as any can be: the longest name, the top cost, huge numbers and every sigil. */
+export const WORST_CARD = 'WorstCase'
+
+/** Puts the worst-case card in the card table, in development and test builds only, for the compendium to show. */
+export function withWorstCard(): boolean {
+  if (!FIXTURES_ON) return false
+  CARDS[WORST_CARD] ??= {
+    id: WORST_CARD,
+    name: 'destroyEverything(everyone)',
+    tier: 'A',
+    attack: 2000,
+    health: 2000,
+    cost: 4,
+    sigils: EVERY_SIGIL,
+  }
+  return true
 }
