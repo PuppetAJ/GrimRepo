@@ -56,7 +56,7 @@ section("P03's terminal")
   check(
     'help lists the commands',
     await terminal
-      .getByText('the rules, since you clearly need them')
+      .getByText('The rules, since you clearly need them')
       .waitFor()
       .then(
         () => true,

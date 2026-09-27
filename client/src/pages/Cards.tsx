@@ -24,11 +24,16 @@ const unitOf = (def: CardDef): Unit => ({
 
 const squash = (text: string) => text.toLowerCase().replace(/[^a-z0-9]/g, '')
 
-/** A card matches its name, its sigils' names, "free", or a cost as "cost 2". */
+/** A card matches its name, its sigils' names, "sigil" if it has any, "free", or a cost as "cost 2". */
 function matches(def: CardDef, query: string): boolean {
   const wanted = squash(query)
   if (!wanted) return true
-  const words = [def.name, ...def.sigils.map((sigil) => SIGILS[sigil].name), def.cost ? `cost ${def.cost}` : 'free']
+  const words = [
+    def.name,
+    ...def.sigils.map((sigil) => SIGILS[sigil].name),
+    def.sigils.length ? 'sigils' : '',
+    def.cost ? `cost ${def.cost}` : 'free',
+  ].filter(Boolean)
   return words.some((word) => squash(word).includes(wanted))
 }
 

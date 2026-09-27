@@ -32,18 +32,18 @@ const PAGES: Record<string, string> = {
 }
 
 const HELP: [string, string][] = [
-  ['tutorial', 'the rules, since you clearly need them'],
-  ['cards', 'every card in your deck. Weak, all of them'],
-  ['card <name>', 'one card, up close'],
-  ['sigils', 'what the sigils do'],
-  ['rules', 'the whole game on one screen'],
-  ['top', 'the five who got lucky'],
-  ['whoami', 'who you are. Nobody, probably'],
-  ['p03', 'me. Obviously'],
-  ['play', 'sit down. Finally'],
-  ['cd <page>', 'readme, leaderboard, cards, game, account'],
-  ['history', 'everything you typed. I kept it'],
-  ['clear', 'wipe the screen. Not my memory'],
+  ['tutorial', 'The rules, since you clearly need them'],
+  ['cards', 'Every card in your deck. Weak, all of them'],
+  ['card <name>', 'One card, up close'],
+  ['sigils', 'What the sigils do'],
+  ['rules', 'The whole game on one screen'],
+  ['top', 'The five who got lucky'],
+  ['whoami', 'Who you are. Nobody, probably'],
+  ['p03', 'Me. Obviously'],
+  ['play', 'Sit down. Finally'],
+  ['cd <page>', 'Readme, leaderboard, cards, game, account'],
+  ['history', 'Everything you typed. I kept it'],
+  ['clear', 'Wipe the screen. Not my memory'],
 ]
 
 function Cost({ cost }: { cost: number }) {

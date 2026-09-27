@@ -68,16 +68,19 @@ export function PixelCard({ unit }: { unit: Unit }) {
       </span>
       <span
         // Allowed to shrink below the art's square, so a row of sigils never pushes the numbers off the card.
-        className={`relative mx-[6%] mt-[16%] flex min-h-0 flex-[1.3] items-center justify-center border-2 border-[#0b1f12]/70 ${rare ? 'bg-[#e8aea8]' : 'bg-[#8fd3a0]'}`}
+        className={`relative mx-[6%] mt-[16%] flex min-h-0 flex-[1.3] flex-col border-2 border-[#0b1f12]/70 ${rare ? 'bg-[#e8aea8]' : 'bg-[#8fd3a0]'}`}
       >
-        <Art id={unit.card} />
+        {/* The cost on a row of its own above the art, so however small the card, it never sits on the art. */}
         {def.cost ? (
-          <span className="absolute top-[4cqw] right-[4cqw] flex gap-[2cqw]" aria-hidden>
+          <span className="flex shrink-0 justify-end gap-[2cqw] px-[3cqw] pt-[3cqw]" aria-hidden>
             {[...Array(def.cost).keys()].map((i) => (
               <span key={i} className="size-[7cqw] bg-[#ff9a2e] outline outline-1 outline-[#0b1f12]" />
             ))}
           </span>
         ) : null}
+        <span className="flex min-h-0 flex-1 items-center justify-center">
+          <Art id={unit.card} />
+        </span>
       </span>
       {/* Many sigils share the card's width, and long numbers print smaller, so nothing runs off the card. */}
       <span

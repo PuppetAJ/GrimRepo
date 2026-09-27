@@ -1,4 +1,12 @@
-import React, { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import React, {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+  type Ref,
+} from 'react'
 import { card, HAND_LIMIT, legalActions, TIP, type Action, type Slot, type Unit } from 'shared'
 import {
   SeatNote,
@@ -101,8 +109,41 @@ function Balance({ scale }: { scale: number }) {
 const SIDE_BUTTON =
   'rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-2 font-terminal text-lg text-p03 hover:bg-[#13261a] hover:text-p03 aria-expanded:bg-[#13261a] aria-expanded:text-p03 dark:hover:bg-[#13261a] dark:aria-expanded:bg-[#13261a]'
 
-function Panel({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <div className={`rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-3 ${className}`}>{children}</div>
+function Panel({
+  children,
+  className = '',
+  ref,
+}: {
+  children: ReactNode
+  className?: string
+  ref?: Ref<HTMLDivElement>
+}) {
+  return (
+    <div ref={ref} className={`rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-3 ${className}`}>
+      {children}
+    </div>
+  )
+}
+
+/**
+ * Whether the reader should lie flat, the art beside the words: when the panel is too short for its width to stand
+ * the art above them at a fair size, as happens on a short, wide window.
+ */
+function useFlatReader(): [(element: HTMLDivElement | null) => void, boolean] {
+  const [box, setBox] = useState<HTMLDivElement | null>(null)
+  const [flat, setFlat] = useState(false)
+  useEffect(() => {
+    if (!box) return
+    const observer = new ResizeObserver(([entry]) => {
+      if (!entry) return
+      const { width, height } = entry.contentRect
+      // The name, a sigil and the stats take about 160px; the art wants at least half the width on top of that.
+      setFlat(height < width * 0.55 + 160)
+    })
+    observer.observe(box)
+    return () => observer.disconnect()
+  }, [box])
+  return [setBox, flat]
 }
 
 type BoardRow = 'back' | 'front' | 'board'
@@ -372,6 +413,7 @@ export function TerminalTable({
   // pointer, does not empty it. Pointing at an empty lane leaves it too.
   // On touch, holding a card magnifies it above the finger; letting go does not play it.
   const [magnified, setMagnified] = useState<{ unit: Unit; x: number; y: number } | null>(null)
+  const [readerBox, readerFlat] = useFlatReader()
   const hold = useRef<ReturnType<typeof setTimeout> | null>(null)
   const held = useRef(false)
   const letGo = () => {
@@ -637,10 +679,15 @@ export function TerminalTable({
   )
   const readerPanel = (
     <Panel
-      className={`@container flex flex-col gap-2 overflow-hidden bg-[#a9e7b8] text-[#0b1f12] ${layout === 'mid' ? 'h-[min(20rem,72%)] shrink-0' : narrow ? 'h-56' : 'max-h-[30rem] min-h-[15rem] flex-1 basis-0'}`}
+      ref={readerBox}
+      className={`@container flex gap-2 overflow-hidden bg-[#a9e7b8] text-[#0b1f12] ${readerFlat ? 'flex-row p-2' : 'flex-col'} ${layout === 'mid' ? 'h-[min(20rem,72%)] shrink-0' : narrow ? 'h-56' : 'max-h-[30rem] min-h-[15rem] flex-1 basis-0'}`}
     >
       {inspected ? (
-        <ReaderBody unit={inspected} />
+        readerFlat ? (
+          <FlatReaderBody unit={inspected} />
+        ) : (
+          <ReaderBody unit={inspected} />
+        )
       ) : (
         <p className="text-lg leading-snug">{narrow ? 'Tap' : 'Point at'} a card to read it.</p>
       )}
