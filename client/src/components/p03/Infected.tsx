@@ -7,6 +7,8 @@ const Terminal = lazy(loadTerminal)
 type Phase = 'clean' | 'glitch' | 'broken'
 
 const SEEN_KEY = 'grimrepo:infected'
+// Development only: the home page's replay button sends this to play the takeover again.
+export const REPLAY_EVENT = 'grimrepo:replay'
 const CLEAN_MS = 1100
 const GLITCH_MS = 900
 const TICK_MS = 140
@@ -43,6 +45,16 @@ export function Infected({ lines, user }: { lines: readonly string[] | null; use
   const [loaded, setLoaded] = useState(false)
   const [tick, setTick] = useState(0)
 
+  useEffect(() => {
+    if (!import.meta.env.DEV) return
+    const replay = () => {
+      setTick(0)
+      setPhase('clean')
+    }
+    window.addEventListener(REPLAY_EVENT, replay)
+    return () => window.removeEventListener(REPLAY_EVENT, replay)
+  }, [])
+
   // The takeover starts once the screenshot has been seen, or after a moment on a slow connection.
   useEffect(() => {
     if (phase !== 'clean') return
@@ -73,24 +85,9 @@ export function Infected({ lines, user }: { lines: readonly string[] | null; use
 
   return (
     <figure className="flex flex-col gap-2">
-      <div className="flex items-baseline justify-between gap-3">
-        <figcaption aria-hidden className={`font-mono text-sm ${broken ? 'text-p03-dim' : 'text-muted-foreground'}`}>
-          {caption}
-        </figcaption>
-        {/* Development only: plays the takeover again without a new visit. */}
-        {import.meta.env.DEV ? (
-          <button
-            type="button"
-            onClick={() => {
-              setTick(0)
-              setPhase('clean')
-            }}
-            className="font-mono text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
-          >
-            replay
-          </button>
-        ) : null}
-      </div>
+      <figcaption aria-hidden className={`font-mono text-sm ${broken ? 'text-p03-dim' : 'text-muted-foreground'}`}>
+        {caption}
+      </figcaption>
       <div className="relative h-80 sm:h-[22rem]">
         {broken ? (
           <>
@@ -111,7 +108,7 @@ export function Infected({ lines, user }: { lines: readonly string[] | null; use
               width={960}
               height={540}
               onLoad={() => setLoaded(true)}
-              className="size-full object-cover object-[50%_20%]"
+              className="size-full object-cover object-top"
             />
             {phase === 'glitch' ? <Tears tick={tick} /> : null}
           </div>
@@ -133,7 +130,7 @@ function Tears({ tick }: { tick: number }) {
             key={slice}
             src="/readme/table.webp"
             alt=""
-            className="absolute inset-0 size-full object-cover object-[50%_20%]"
+            className="absolute inset-0 size-full object-cover object-top"
             style={{
               clipPath: `inset(${(slice / SLICES) * 100}% 0 ${100 - ((slice + 1) / SLICES) * 100}% 0)`,
               transform: `translateX(${offset.toFixed(1)}px)`,

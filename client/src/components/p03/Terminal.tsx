@@ -140,10 +140,7 @@ export default function Terminal({ lines, user }: { lines: readonly string[]; us
             <Line key={entry.id} entry={entry} typed={typing?.id === entry.id ? typing.count : null} run={execute} />
           ))}
         </div>
-        <form
-          onSubmit={onSubmit}
-          className="flex items-baseline gap-2 border-b border-transparent focus-within:border-[#2f6b3d]"
-        >
+        <form onSubmit={onSubmit} className="flex items-baseline gap-2">
           <label htmlFor="p03-command" className="shrink-0">
             <Prompt who={who} path={pathOf(pathname)} />
             <span className="sr-only">Command for P03</span>

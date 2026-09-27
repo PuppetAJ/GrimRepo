@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button.tsx'
 import { Avatar } from '../components/Avatar.tsx'
 import { Corruption } from '../components/p03/Corruption.tsx'
 import { Glass } from '../components/p03/Glass.tsx'
-import { Infected } from '../components/p03/Infected.tsx'
+import { Infected, REPLAY_EVENT } from '../components/p03/Infected.tsx'
 import { api } from '../lib/api.ts'
 import { authClient } from '../lib/auth.ts'
 import { number } from '../lib/format.ts'
@@ -66,6 +66,12 @@ export function Home() {
             <Button asChild size="lg" variant="outline">
               <Link to="/leaderboard">Leaderboard</Link>
             </Button>
+            {/* Development only: plays P03's takeover of the screenshot again. */}
+            {import.meta.env.DEV ? (
+              <Button size="lg" variant="ghost" onClick={() => window.dispatchEvent(new Event(REPLAY_EVENT))}>
+                Replay takeover
+              </Button>
+            ) : null}
           </div>
 
           <Infected lines={lines} user={user} />
