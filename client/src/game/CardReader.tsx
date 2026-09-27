@@ -1,5 +1,5 @@
 import { card, SIGILS, type SigilId, type Unit } from 'shared'
-import { LEGACY_ART, PLACEHOLDER, SPRITE_SIZE, SPRITES } from './sprites.ts'
+import { SPRITE_SIZE, spriteOf } from './sprites.ts'
 import { ICONS, STAT_ICONS } from './table/icons.ts'
 
 // A card drawn for reading, in the text table's reader, its magnifier, and the 3D table's.
@@ -23,26 +23,8 @@ export function Sprite({ grid, className = '' }: { grid: readonly string[]; clas
   )
 }
 
-/** A card's sprite, the 2022 art for a kept card still waiting for one, or the placeholder. */
-export const spriteOf = (id: string): readonly string[] | null =>
-  SPRITES[id] ?? (LEGACY_ART.has(id) ? null : PLACEHOLDER)
-
-export function Art({ id, big = false }: { id: string; big?: boolean }) {
-  if (id === 'Boilerplate') return <span className={big ? 'text-4xl' : 'text-[15cqw]'}>{'<div>'}</span>
-  const sprite = spriteOf(id)
-  if (sprite) return <Sprite grid={sprite} className="h-[92%] w-[92%] text-[#0b1f12]" />
-  return (
-    <span
-      aria-hidden
-      className="block h-[92%] w-[92%] bg-[#0b1f12]"
-      style={{
-        maskImage: `url(/cards/${id}.webp)`,
-        maskSize: 'contain',
-        maskRepeat: 'no-repeat',
-        maskPosition: 'center',
-      }}
-    />
-  )
+export function Art({ id }: { id: string }) {
+  return <Sprite grid={spriteOf(id)} className="h-[92%] w-[92%] text-[#0b1f12]" />
 }
 
 /** One of the sigils' pixel icons, or the sword or the shield. */
@@ -72,7 +54,7 @@ export function Sigil({
  * A card as Act 2 draws it, shaped loosely like the 3D table's floppy disks: a clipped corner and a steel shutter at
  * the top, the art below it, sigils under that, the cost in the corner and attack and health at the foot.
  */
-export function PixelCard({ unit, big = false }: { unit: Unit; big?: boolean }) {
+export function PixelCard({ unit }: { unit: Unit }) {
   const def = card(unit.card)
   const rare = def.tier === 'S'
   return (
@@ -87,7 +69,7 @@ export function PixelCard({ unit, big = false }: { unit: Unit; big?: boolean }) 
       <span
         className={`relative mx-[6%] mt-[16%] flex flex-[1.3] items-center justify-center border-2 border-[#0b1f12]/70 ${rare ? 'bg-[#e8aea8]' : 'bg-[#8fd3a0]'}`}
       >
-        <Art id={unit.card} big={big} />
+        <Art id={unit.card} />
         {def.cost ? (
           <span className="absolute top-[4cqw] right-[4cqw] flex gap-[2cqw]" aria-hidden>
             {[...Array(def.cost).keys()].map((i) => (
@@ -137,7 +119,7 @@ export function ReaderBody({ unit }: { unit: Unit }) {
       </p>
       {/* The art large and the stats under it, as Act 2's inspector shows a card. */}
       <div className="grid min-h-8 flex-1 place-items-center overflow-hidden rounded-sm border-2 border-[#0b1f12] bg-[#8fd3a0] bg-[repeating-linear-gradient(0deg,rgb(0_0_0/0.06)_0_1px,transparent_1px_3px)]">
-        <Art id={unit.card} big />
+        <Art id={unit.card} />
       </div>
       {/* Only as tall as the sigils need, up to a limit, scrolling past it; the art takes the rest. */}
       <div className="flex max-h-40 min-h-0 flex-col gap-2 overflow-y-auto">
@@ -178,7 +160,7 @@ export function FlatReaderBody({ unit }: { unit: Unit }) {
   return (
     <>
       <div className="grid w-[38%] shrink-0 place-items-center rounded-sm border-2 border-[#0b1f12] bg-[#8fd3a0]">
-        <Art id={unit.card} big />
+        <Art id={unit.card} />
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <p className="flex items-start justify-between gap-1 text-xl leading-none">

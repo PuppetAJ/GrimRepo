@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react'
 import { CARDS, SIGILS, TIP, type CardDef } from 'shared'
 import { api } from '../../lib/api.ts'
-import { Sprite, spriteOf } from '../../game/CardReader.tsx'
+import { Sprite } from '../../game/CardReader.tsx'
+import { spriteOf } from '../../game/sprites.ts'
 import { number } from '../../lib/format.ts'
 
 export type Context = {
@@ -23,6 +24,7 @@ const PAGES: Record<string, string> = {
   '..': '/',
   readme: '/',
   leaderboard: '/leaderboard',
+  cards: '/cards',
   game: '/game',
   play: '/game',
   account: '/account',
@@ -39,7 +41,7 @@ const HELP: [string, string][] = [
   ['whoami', 'who you are. Nobody, probably'],
   ['p03', 'me. Obviously'],
   ['play', 'sit down. Finally'],
-  ['cd <page>', 'readme, leaderboard, game, account'],
+  ['cd <page>', 'readme, leaderboard, cards, game, account'],
   ['history', 'everything you typed. I kept it'],
   ['clear', 'wipe the screen. Not my memory'],
 ]
@@ -54,21 +56,10 @@ function Cost({ cost }: { cost: number }) {
 }
 
 function Art({ id, size = 'size-24' }: { id: string; size?: string }) {
-  if (id === 'Boilerplate') return null
-  const sprite = spriteOf(id)
-  if (sprite)
-    return (
-      <span className={`${size} flex shrink-0 items-center justify-center border border-[#2f6b3d] p-2 text-p03`}>
-        <Sprite grid={sprite} className="size-full" />
-      </span>
-    )
   return (
-    <img
-      src={`/cards/${id}.webp`}
-      alt=""
-      loading="lazy"
-      className={`${size} shrink-0 border border-[#2f6b3d] bg-[#8fd3a0] object-contain p-1 [image-rendering:pixelated]`}
-    />
+    <span className={`${size} flex shrink-0 items-center justify-center border border-[#2f6b3d] p-2 text-p03`}>
+      <Sprite grid={spriteOf(id)} className="size-full" />
+    </span>
   )
 }
 
