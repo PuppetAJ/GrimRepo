@@ -1,14 +1,18 @@
 import { betterAuth, type BetterAuthOptions } from 'better-auth'
 import { APIError, createAuthMiddleware, getSessionFromCtx } from 'better-auth/api'
-import { username } from 'better-auth/plugins'
+import { anonymous, username } from 'better-auth/plugins'
 import { pool } from '../config/db.ts'
 import { env } from '../config/env.ts'
 import { demoAccount } from './demo.ts'
+import { claimGuestGames, guestName } from './guests.ts'
 import { isOffensive, isReserved, NAME_REFUSED } from './names.ts'
 
 export const USERNAME_PATTERN = /^[A-Za-z0-9_]{3,20}$/
 
 export const CLIENT_IP_HEADER = 'x-grimrepo-client-ip'
+
+export const GUEST_IS_READ_ONLY =
+  "Guests can't change their name or password. Sign up to keep your games and make the account your own."
 
 export const DEMO_IS_READ_ONLY =
   'Everyone shares the demo account, so it cannot be renamed, deleted or given a new password. Make an account of your own to change these.'
@@ -39,15 +43,36 @@ export const authOptions = {
       displayUsernameValidator: (value) => USERNAME_PATTERN.test(value),
       schema: { user: { fields: { displayUsername: 'display_username' } } },
     }),
+    // One click to play, no form: a throwaway account, whose games follow the guest into a real one.
+    anonymous({
+      emailDomainName: 'guest.grimrepo.invalid',
+      generateName: guestName,
+      onLinkAccount: ({ anonymousUser, newUser }) => claimGuestGames(anonymousUser.user.id, newUser.user),
+      schema: { user: { fields: { isAnonymous: 'is_anonymous' } } },
+    }),
   ],
+
+  databaseHooks: {
+    user: {
+      create: {
+        // Every account needs a username; a guest's is the name it was given.
+        before: async (user) => {
+          if (!(user as { isAnonymous?: boolean }).isAnonymous) return
+          const name = user.name.toLowerCase()
+          return { data: { ...user, username: name, displayUsername: name } }
+        },
+      },
+    },
+  },
 
   hooks: {
     // The shown name is always the username as typed; otherwise a player could display as someone else.
     before: createAuthMiddleware(async (ctx) => {
       if (DEMO_LOCKED.has(ctx.path)) {
         const session = await getSessionFromCtx(ctx)
-        const user = session?.user as { username?: string } | undefined
+        const user = session?.user as { username?: string; isAnonymous?: boolean } | undefined
         if (user?.username === demoAccount.username) throw new APIError('FORBIDDEN', { message: DEMO_IS_READ_ONLY })
+        if (user?.isAnonymous) throw new APIError('FORBIDDEN', { message: GUEST_IS_READ_ONLY })
       }
       if (ctx.path !== '/sign-up/email' && ctx.path !== '/update-user') return
       const body = (ctx.body ?? {}) as Record<string, unknown>
@@ -138,6 +163,7 @@ export const authOptions = {
       '/sign-in/email': { window: 60, max: 5 },
       '/sign-in/username': { window: 60, max: 5 },
       '/sign-up/email': { window: 60, max: 5 },
+      '/sign-in/anonymous': { window: 60, max: 10 },
     },
   },
 } satisfies BetterAuthOptions

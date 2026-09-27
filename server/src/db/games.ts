@@ -193,11 +193,12 @@ export const BOARD_PAGE = 20
 /** One page of the board, with first place's score for scale; the last page if asked for one past it. */
 export type BoardPage = { players: LeaderboardRow[]; page: number; pages: number; total: number; top: number }
 
-/** Players ranked by their best finished game; ties share a rank and sort by name. Ranks count across every page. */
+/** Players ranked by their best finished game; ties share a rank and sort by name. Ranks count across every page, and guests are left off until they sign up. */
 export async function leaderboard(page = 1): Promise<BoardPage> {
   const { rows: sizes } = await pool.query<{ total: number; top: number }>(
-    `SELECT COUNT(DISTINCT user_id)::int AS total, COALESCE(MAX(score), 0)::int AS top
-     FROM games WHERE status = 'finished'`,
+    `SELECT COUNT(DISTINCT g.user_id)::int AS total, COALESCE(MAX(g.score), 0)::int AS top
+     FROM games g JOIN users u ON u.id = g.user_id
+     WHERE g.status = 'finished' AND NOT u.is_anonymous`,
   )
   const { total, top } = sizes[0] ?? { total: 0, top: 0 }
   const pages = Math.max(1, Math.ceil(total / BOARD_PAGE))
@@ -209,7 +210,7 @@ export async function leaderboard(page = 1): Promise<BoardPage> {
             COUNT(*)::int AS games,
             COUNT(*) FILTER (WHERE g.outcome = 'win')::int AS wins
      FROM games g JOIN users u ON u.id = g.user_id
-     WHERE g.status = 'finished'
+     WHERE g.status = 'finished' AND NOT u.is_anonymous
      GROUP BY u.id, u.display_username
      ORDER BY "bestScore" DESC, u.display_username
      LIMIT $1 OFFSET $2`,
