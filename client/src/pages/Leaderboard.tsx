@@ -32,9 +32,9 @@ export function Leaderboard() {
           <p className="text-xl text-p03-dim">
             P03&gt;{' '}
             {result.outcome === 'win'
-              ? `You beat me in ${result.turns} turns. I have filed a bug against you.`
-              : `You lasted ${result.turns} turns. I have seen longer.`}{' '}
-            {result.isBest ? 'A new best. I will remember it.' : 'Not your best. I remember that one too.'}
+              ? `${result.turns} turns. ...The RNG was rigged. I am filing a bug.`
+              : `Turn ${result.turns} and you are done. Weak cards. Total lack of synergy.`}{' '}
+            {result.isBest ? 'A new best. Do not let it go to your head.' : 'Not even your best.'}
           </p>
         </div>
       ) : null}
@@ -162,7 +162,11 @@ function FirstPlace({ row, mine }: { row: LeaderboardRow; mine: boolean }) {
       </td>
       <td aria-hidden className="relative hidden w-full px-5 sm:table-cell">
         <div className="h-5 bg-[repeating-linear-gradient(90deg,var(--p03)_0_10px,transparent_10px_13px)]" />
-        <Corruption cols={16} rows={6} corner="top-right" seed={31} className="top-0 right-5" />
+        {/* P03's corruption creeps from the bar's corners, up into the header and down into second place's bar. */}
+        <Corruption dense cols={18} rows={3} corner="top-right" seed={31} className="top-0 right-5" />
+        <Corruption dense cols={14} rows={3} corner="bottom-left" seed={37} className="bottom-0 left-5" />
+        <Corruption dense cols={16} rows={3} corner="bottom-right" seed={41} className="right-5 bottom-full z-10" />
+        <Corruption dense cols={12} rows={3} corner="top-left" seed={43} className="top-full left-5 z-10" />
       </td>
       <td className="py-4 pr-4 text-right text-3xl text-p03 sm:pr-6">{number(row.bestScore)}</td>
     </tr>

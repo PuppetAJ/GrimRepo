@@ -227,7 +227,8 @@ section('The 3D table')
   await page.getByRole('heading', { name: 'Contributors' }).waitFor()
   check(
     'the canvas and its handle go with the page',
-    await page.evaluate(() => !document.querySelector('canvas') && window.__game === undefined),
+    // The leaderboard has canvases of its own for P03's corruption; the table's lived in its frame.
+    await page.evaluate(() => !document.querySelector('[data-table] canvas') && window.__game === undefined),
   )
   check('and the test player is removed afterwards', await deletePlayer(page, player))
   await context.close()
