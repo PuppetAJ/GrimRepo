@@ -37,7 +37,7 @@ function corrupt(progress: number): string {
     .join('')
 }
 
-/** The README's gameplay screenshot, which P03 takes over: it tears, then boots into his terminal and breaks out. */
+/** The README's gameplay screenshot, which P03 takes over: it tears, then boots into his terminal. */
 export function Infected({ lines, user }: { lines: readonly string[] | null; user: string | undefined }) {
   const [phase, setPhase] = useState<Phase>(firstPhase)
   const [loaded, setLoaded] = useState(false)
@@ -91,9 +91,7 @@ export function Infected({ lines, user }: { lines: readonly string[] | null; use
           </button>
         ) : null}
       </div>
-      <div
-        className={`relative h-80 transition-[margin,rotate,translate] duration-500 ease-[steps(5)] motion-reduce:transition-none sm:h-[22rem] ${broken ? 'breakout' : ''}`}
-      >
+      <div className="relative h-80 sm:h-[22rem]">
         {broken ? (
           <>
             <div className="h-full overflow-hidden border border-[#2f6b3d] shadow-[0_0_40px_rgb(125_255_154/0.12)]">
@@ -101,8 +99,8 @@ export function Infected({ lines, user }: { lines: readonly string[] | null; use
                 <Terminal lines={lines ?? ['...']} user={user} />
               </Suspense>
             </div>
-            {/* Where it tore through the README's frame, the corruption spills out. */}
-            <Corruption cols={10} rows={5} corner="bottom-right" seed={53} className="-top-[60px] right-0" />
+            {/* Where P03 got in, the corruption spills out: into the title bar, and out under the frame. */}
+            <Corruption cols={12} rows={3} corner="top-right" seed={53} className="top-px right-px z-30" />
             <Corruption cols={12} rows={3} corner="top-left" seed={71} className="top-full left-0" />
           </>
         ) : (
@@ -111,9 +109,9 @@ export function Infected({ lines, user }: { lines: readonly string[] | null; use
               src="/readme/table.webp"
               alt="The 3D table: P03 behind a board of floppy-disk cards"
               width={960}
-              height={533}
+              height={540}
               onLoad={() => setLoaded(true)}
-              className="size-full object-cover"
+              className="size-full object-cover object-[50%_20%]"
             />
             {phase === 'glitch' ? <Tears tick={tick} /> : null}
           </div>
@@ -135,7 +133,7 @@ function Tears({ tick }: { tick: number }) {
             key={slice}
             src="/readme/table.webp"
             alt=""
-            className="absolute inset-0 size-full object-cover"
+            className="absolute inset-0 size-full object-cover object-[50%_20%]"
             style={{
               clipPath: `inset(${(slice / SLICES) * 100}% 0 ${100 - ((slice + 1) / SLICES) * 100}% 0)`,
               transform: `translateX(${offset.toFixed(1)}px)`,
