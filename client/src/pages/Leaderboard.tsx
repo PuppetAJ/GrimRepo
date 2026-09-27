@@ -235,7 +235,7 @@ function FirstPlace({ row, mine }: { row: LeaderboardRow; mine: boolean }) {
                 {mine ? <span className="sr-only"> (you)</span> : null}
               </Link>
               <span className="hidden bg-p03 px-1.5 text-base leading-snug text-p03-ground [text-shadow:none] md:inline">
-                WATCHED BY P03
+                FOR NOW
               </span>
             </div>
             <span className="font-mono text-sm text-p03-dim">

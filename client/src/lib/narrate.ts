@@ -54,7 +54,7 @@ export function narrate(before: GameState, events: GameEvent[]): string[] {
         return [`You played ${played.name} in ${lane(event.lane)}.${aside}`]
       }
       case 'wiped':
-        return [`Segfault?! ${event.uids.length} of my cards, gone. That's not a strategy, that's a crash.`]
+        return [`Segfault?! ${event.uids.length} of my cards, gone. That's not a strategy, that's just cheap.`]
       case 'hit': {
         const big = event.amount >= BIG_HIT
         return event.side === 'opponent'

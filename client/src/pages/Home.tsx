@@ -50,7 +50,7 @@ export function Home() {
             ))}
             <li className="p03-screen relative overflow-hidden border border-[#2f6b3d] px-2 py-0.5 font-terminal text-lg leading-none text-p03">
               <Glass flat />
-              P03: watching
+              P03: bored
             </li>
           </ul>
           <p className="max-w-2xl text-lg leading-relaxed text-foreground/85">
@@ -93,7 +93,7 @@ export function Home() {
               Y2K is not in the deck.{' '}
               <span className="relative overflow-hidden bg-p03-ground px-1.5 font-terminal text-xl whitespace-nowrap text-p03 [text-shadow:0_0_6px_rgb(125_255_154/0.5)]">
                 <Glass flat />
-                [P03: REDACTED]
+                [REDACTED: nothing to see here]
               </span>
             </li>
           </ul>
