@@ -23,7 +23,7 @@
   --font-terminal: 'VT323', ui-monospace, monospace;
 
   /* Where the player page's sidebar sits beside it; named so it sorts after the smaller breakpoints. */
-  --breakpoint-profile: 82.5rem;
+  --breakpoint-profile: 65.625rem;
 
   --color-ring: var(--ring);
   --color-input: var(--input);
