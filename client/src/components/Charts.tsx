@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react'
 import type { PlayerStats } from '../lib/api.ts'
-import { number } from '../lib/format.ts'
+import { ago, number } from '../lib/format.ts'
 
 type Game = PlayerStats['recent'][number]
 
@@ -9,6 +9,12 @@ const PAD = { top: 12, right: 8, bottom: 8, left: 44 }
 const colorOf = (game: Game) =>
   game.forfeited ? 'var(--muted-foreground)' : game.outcome === 'win' ? 'var(--primary)' : 'var(--death)'
 const resultOf = (game: Game) => (game.forfeited ? 'forfeited' : game.outcome === 'win' ? 'won' : 'lost')
+const ending = (game: Game) =>
+  game.forfeited
+    ? `Forfeited on turn ${game.turns}`
+    : game.outcome === 'win'
+      ? `Won in ${game.turns} turns`
+      : `Lost on turn ${game.turns}`
 
 /** The width a chart has to draw in, so it is drawn in real pixels and its dots stay round. */
 function useWidth() {
@@ -24,9 +30,17 @@ function useWidth() {
   return [box, width] as const
 }
 
-function Frame({ title, note, children }: { title: string; note?: string; children: React.ReactNode }) {
+/** Which game the pointer is over, by where it is across the chart; a tap counts as much as a hover. */
+function useHover(indexAt: (x: number) => number) {
+  const [hover, setHover] = useState<number | null>(null)
+  const track = (event: PointerEvent<SVGSVGElement>) =>
+    setHover(indexAt(event.clientX - event.currentTarget.getBoundingClientRect().left))
+  return { hover, handlers: { onPointerMove: track, onPointerDown: track, onPointerLeave: () => setHover(null) } }
+}
+
+function Frame({ title, note, children }: { title: string; note?: string; children: ReactNode }) {
   return (
-    <figure className="flex min-w-0 flex-col gap-3 rounded-lg border bg-card p-5">
+    <figure className="flex h-full min-w-0 flex-col gap-3 rounded-lg border bg-card p-5">
       <figcaption className="flex flex-wrap items-baseline justify-between gap-2">
         <span className="font-semibold">{title}</span>
         {note ? <span className="text-sm text-muted-foreground">{note}</span> : null}
@@ -66,6 +80,27 @@ function AsTable({ games, caption }: { games: Game[]; caption: string }) {
   )
 }
 
+/** The game under the pointer: which one, how it ended, what it scored and when. */
+function Tip({ game, index, count, x, width }: { game: Game; index: number; count: number; x: number; width: number }) {
+  // Beside the pointer, and to its left near the right edge, so it stays inside the chart.
+  const flip = x > width - 230
+  return (
+    <div
+      className="pointer-events-none absolute top-0 z-10 w-max rounded-md border bg-popover px-3 py-2 text-sm whitespace-nowrap shadow-lg"
+      style={flip ? { right: width - x + 12 } : { left: x + 12 }}
+    >
+      <p className="text-muted-foreground">
+        Game {index + 1} of {count} · {ago(game.playedAt)}
+      </p>
+      <p className="flex items-center gap-2">
+        <span className="size-2 shrink-0 rounded-full" style={{ background: colorOf(game) }} />
+        {ending(game)}
+      </p>
+      <p className="font-mono text-base">{number(game.score)} points</p>
+    </div>
+  )
+}
+
 /** Gridlines at nothing, half and the most, labelled on the left. */
 function Grid({ width, top, format }: { width: number; top: number; format: (value: number) => string }) {
   const span = HEIGHT - PAD.top - PAD.bottom
@@ -91,25 +126,51 @@ export function ScoreChart({ games }: { games: Game[] }) {
   const [box, width] = useWidth()
   const top = Math.max(1, ...games.map((game) => game.score))
   const span = HEIGHT - PAD.top - PAD.bottom
-  const x = (index: number) =>
-    PAD.left + (games.length === 1 ? 0.5 : index / (games.length - 1)) * (width - PAD.left - PAD.right)
+  const reach = width - PAD.left - PAD.right
+  const x = (index: number) => PAD.left + (games.length === 1 ? 0.5 : index / (games.length - 1)) * reach
   const y = (score: number) => PAD.top + span * (1 - score / top)
+  const step = games.length > 1 ? reach / (games.length - 1) : reach
+  const { hover, handlers } = useHover((at) =>
+    Math.max(0, Math.min(games.length - 1, Math.round((at - PAD.left) / step))),
+  )
+  const held = hover === null ? undefined : games[hover]
   const line = games
     .map((game, index) => `${index ? 'L' : 'M'}${x(index).toFixed(1)},${y(game.score).toFixed(1)}`)
     .join('')
   const area = `${line}L${x(games.length - 1).toFixed(1)},${PAD.top + span}L${x(0).toFixed(1)},${PAD.top + span}Z`
   return (
     <Frame title="Score per game" note={`last ${games.length}, oldest first`}>
-      <div ref={box} aria-hidden className="h-40">
+      <div ref={box} aria-hidden className="relative h-40">
         {width ? (
-          <svg width={width} height={HEIGHT}>
+          <svg width={width} height={HEIGHT} className="touch-pan-y" {...handlers}>
             <Grid width={width} top={top} format={number} />
             <path d={area} fill="var(--primary)" opacity={0.08} />
             <path d={line} fill="none" stroke="var(--primary)" strokeWidth={1.5} opacity={0.6} />
+            {hover !== null ? (
+              <line
+                x1={x(hover)}
+                x2={x(hover)}
+                y1={PAD.top}
+                y2={HEIGHT - PAD.bottom}
+                stroke="var(--muted-foreground)"
+                strokeDasharray="3 3"
+              />
+            ) : null}
             {games.map((game, index) => (
-              <circle key={game.playedAt} cx={x(index)} cy={y(game.score)} r={3.5} fill={colorOf(game)} />
+              <circle
+                key={game.playedAt}
+                cx={x(index)}
+                cy={y(game.score)}
+                r={index === hover ? 6 : 3.5}
+                fill={colorOf(game)}
+                stroke={index === hover ? 'var(--card)' : 'none'}
+                strokeWidth={2}
+              />
             ))}
           </svg>
+        ) : null}
+        {held && hover !== null ? (
+          <Tip game={held} index={hover} count={games.length} x={x(hover)} width={width} />
         ) : null}
       </div>
       <AsTable games={games} caption="Score per game, oldest first" />
@@ -123,12 +184,16 @@ export function TurnsChart({ games }: { games: Game[] }) {
   const [box, width] = useWidth()
   const top = Math.max(1, ...games.map((game) => game.turns))
   const span = HEIGHT - PAD.top - PAD.bottom
-  const slot = games.length ? (width - PAD.left - PAD.right) / games.length : 0
+  const slot = games.length ? (width - PAD.left - PAD.right) / games.length : 1
+  const { hover, handlers } = useHover((at) =>
+    Math.max(0, Math.min(games.length - 1, Math.floor((at - PAD.left) / slot))),
+  )
+  const held = hover === null ? undefined : games[hover]
   return (
     <Frame title="Turns per game" note="shorter wins score more">
-      <div ref={box} aria-hidden className="h-40">
+      <div ref={box} aria-hidden className="relative h-40">
         {width ? (
-          <svg width={width} height={HEIGHT}>
+          <svg width={width} height={HEIGHT} className="touch-pan-y" {...handlers}>
             <Grid width={width} top={top} format={String} />
             {games.map((game, index) => {
               const height = Math.max(2, (game.turns / top) * span)
@@ -141,10 +206,14 @@ export function TurnsChart({ games }: { games: Game[] }) {
                   height={height}
                   rx={1.5}
                   fill={colorOf(game)}
+                  opacity={hover === null || hover === index ? 1 : 0.45}
                 />
               )
             })}
           </svg>
+        ) : null}
+        {held && hover !== null ? (
+          <Tip game={held} index={hover} count={games.length} x={PAD.left + (hover + 0.5) * slot} width={width} />
         ) : null}
       </div>
       <AsTable games={games} caption="Turns per game, oldest first" />
@@ -153,33 +222,31 @@ export function TurnsChart({ games }: { games: Game[] }) {
   )
 }
 
-/** Wins, losses and forfeits of every game played, as one bar split three ways. */
-export function Split({ wins, losses, forfeits }: { wins: number; losses: number; forfeits: number }) {
+/** Wins, losses and forfeits of every game played, as three bars. */
+export function Outcomes({ wins, losses, forfeits }: { wins: number; losses: number; forfeits: number }) {
   const total = wins + losses + forfeits
   const parts = [
     { label: 'Won', count: wins, color: 'bg-primary' },
     { label: 'Lost', count: losses, color: 'bg-death' },
     { label: 'Forfeited', count: forfeits, color: 'bg-muted-foreground' },
   ]
+  const most = Math.max(1, ...parts.map((part) => part.count))
   const share = (count: number) => (total ? Math.round((count / total) * 100) : 0)
   return (
     <Frame title="Wins and losses" note={`${number(total)} ${total === 1 ? 'game' : 'games'}`}>
-      <div aria-hidden className="flex h-4 overflow-hidden rounded-full bg-accent">
-        {parts.map((part) =>
-          part.count ? (
-            <span key={part.label} className={part.color} style={{ width: `${share(part.count)}%` }} />
-          ) : null,
-        )}
-      </div>
-      <dl className="grid grid-cols-3 gap-2">
+      <dl className="grid min-h-44 flex-1 grid-cols-3 gap-4">
         {parts.map((part) => (
-          <div key={part.label} className="flex flex-col">
-            <dt className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span aria-hidden className={`size-2.5 rounded-full ${part.color}`} />
-              {part.label}
-            </dt>
-            <dd className="font-mono text-lg">
-              {number(part.count)} <span className="text-sm text-muted-foreground">{share(part.count)}%</span>
+          <div key={part.label} className="flex flex-col-reverse gap-2">
+            <dt className="text-center text-sm text-muted-foreground">{part.label}</dt>
+            <dd className="flex flex-1 flex-col justify-end gap-1.5">
+              <span className="text-center font-mono">
+                {number(part.count)} <span className="text-xs text-muted-foreground">{share(part.count)}%</span>
+              </span>
+              <span
+                aria-hidden
+                className={`mx-auto w-full max-w-16 rounded-t-sm ${part.color}`}
+                style={{ height: `${Math.max(2, (part.count / most) * 100)}%` }}
+              />
             </dd>
           </div>
         ))}

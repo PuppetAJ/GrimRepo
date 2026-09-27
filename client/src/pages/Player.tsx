@@ -1,14 +1,17 @@
-import { useEffect, useRef } from 'react'
+import { lazy, Suspense, useEffect, useRef } from 'react'
 import { Link, useParams } from 'react-router'
 import { TURN_LIMIT } from 'shared'
 import { Avatar } from '../components/Avatar.tsx'
-import { ScoreChart, Split, TurnsChart } from '../components/Charts.tsx'
+import { Outcomes, ScoreChart, TurnsChart } from '../components/Charts.tsx'
 import { Corruption } from '../components/p03/Corruption.tsx'
 import { Glass } from '../components/p03/Glass.tsx'
 import { Failure, Loading } from '../components/States.tsx'
 import { api, ApiError, type PlayerStats } from '../lib/api.ts'
 import { ago, number } from '../lib/format.ts'
 import { useAsync } from '../lib/useAsync.ts'
+
+// WebGL for P03's screen behind the stack trace arrives after the page.
+const FaultyScreen = lazy(() => import('../components/p03/FaultyScreen.tsx'))
 
 const DAYS = 26 * 7
 // The history lists the newest few; the charts take all the server sends.
@@ -52,7 +55,6 @@ function Activity({ stats }: { stats: PlayerStats }) {
         <h2 className="font-semibold">
           {played} {played === 1 ? 'game' : 'games'} in the last 26 weeks
         </h2>
-        <span className="text-sm text-muted-foreground">Outlined red: more lost than won that day</span>
       </div>
       <div
         ref={scroller}
@@ -68,6 +70,20 @@ function Activity({ stats }: { stats: PlayerStats }) {
             className={`size-3.5 rounded-[3px] ${cell.bad ? 'border-2 border-[#ffd2cf] bg-death' : levels[level(cell.games)]}`}
           />
         ))}
+      </div>
+      {/* What the shades mean, under the grid on its left. */}
+      <div aria-hidden className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
+        <span className="flex items-center gap-1">
+          Fewer
+          {levels.map((level) => (
+            <span key={level} className={`size-3 rounded-[3px] ${level}`} />
+          ))}
+          More
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="size-3 rounded-[3px] border-2 border-[#ffd2cf] bg-death" />
+          More lost than won
+        </span>
       </div>
     </section>
   )
@@ -127,7 +143,7 @@ export function Player() {
               <ScoreChart games={[...player.recent].reverse()} />
             </div>
             <TurnsChart games={[...player.recent].reverse()} />
-            <Split wins={player.wins} losses={player.losses - player.forfeits} forfeits={player.forfeits} />
+            <Outcomes wins={player.wins} losses={player.losses - player.forfeits} forfeits={player.forfeits} />
           </div>
         ) : null}
         <History games={player.recent.slice(0, HISTORY)} />
@@ -160,10 +176,24 @@ function Trace({ game }: { game: Game }) {
       ? [`at turn.limit(${TURN_LIMIT})`, 'at factory.table (ran out of time)']
       : ['at scale.tip(p03)', `at factory.table (turn ${game.turns})`, 'at deck.synergy() -> null']
   return (
-    <div className="relative mx-3 mt-3 sm:mx-4">
-      <Corruption dense cols={14} rows={3} corner="bottom-right" seed={43} className="right-2 bottom-full" />
-      <div className="p03-screen relative overflow-hidden border border-[#2f6b3d] px-4 py-3 font-terminal text-xl leading-tight sm:text-[1.35rem]">
+    // Room above and below for the corruption creeping out of its corners, as around the README's terminal.
+    <div className="relative mx-3 mt-3 mb-8 sm:mx-4">
+      <Corruption dense cols={14} rows={3} corner="bottom-right" seed={43} className="right-0 bottom-full" />
+      <Corruption dense cols={12} rows={2} corner="top-left" seed={71} className="top-full left-0" />
+      <Corruption dense cols={10} rows={2} corner="top-right" seed={89} className="top-full right-0" />
+      <div className="p03-screen relative isolate overflow-hidden border border-[#2f6b3d] px-4 py-3 font-terminal text-xl leading-tight sm:text-[1.35rem]">
+        <Suspense fallback={null}>
+          <FaultyScreen className="-z-10" />
+        </Suspense>
         <Glass />
+        <Corruption
+          dense
+          cols={16}
+          rows={2}
+          corner="bottom-right"
+          seed={29}
+          className="right-0 bottom-0 max-sm:hidden"
+        />
         <p className="flex flex-wrap justify-between gap-x-4">
           <span className="text-[#ff7a6b]">
             {game.forfeited ? 'SIGTERM' : 'FATAL'} game {game.forfeited ? 'abandoned' : 'lost'} on turn {game.turns}
@@ -202,7 +232,7 @@ function History({ games }: { games: Game[] }) {
       ) : (
         <>
           {lastLoss ? <Trace game={lastLoss} /> : null}
-          <ol className="mt-3">
+          <ol className={lastLoss ? '' : 'mt-3'}>
             {games.map((game) => (
               <li key={game.playedAt} className="flex items-center gap-4 border-t px-6 py-3.5">
                 <span
