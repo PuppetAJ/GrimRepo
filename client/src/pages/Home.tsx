@@ -1,7 +1,6 @@
 import { Link } from 'react-router'
 import { Button } from '@/components/ui/button.tsx'
 import { Avatar } from '../components/Avatar.tsx'
-import { Corruption } from '../components/p03/Corruption.tsx'
 import { Glass } from '../components/p03/Glass.tsx'
 import { Infected, REPLAY_EVENT } from '../components/p03/Infected.tsx'
 import { api } from '../lib/api.ts'
@@ -39,7 +38,6 @@ export function Home() {
   return (
     <div className="flex flex-col gap-10 lg:flex-row lg:items-start">
       <article className="relative min-w-0 flex-1 rounded-lg border bg-card">
-        <Corruption cols={16} rows={9} corner="top-right" seed={7} className="top-0 right-0 max-sm:hidden" />
         <div className="border-b px-5 py-3 font-mono text-sm text-muted-foreground">README.md</div>
         <div className="flex flex-col gap-6 px-6 py-8 sm:px-11">
           <h1 className="font-display text-7xl leading-none sm:text-8xl">Grim Repo</h1>
