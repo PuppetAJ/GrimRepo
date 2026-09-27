@@ -157,8 +157,8 @@ async function finish(
   return { outcome, turns, score, best, isBest: score >= best }
 }
 
-// Enough for the stats page's charts; its history pages through every game.
-export const RECENT_GAMES = 30
+// The charts show the last twenty games, so they stay a readable width; the history pages through every game.
+export const RECENT_GAMES = 20
 export const HISTORY_PAGE = 10
 
 /** A page of a player's history, the last page if asked for one past it; null for a player who does not exist. */

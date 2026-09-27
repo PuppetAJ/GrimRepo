@@ -64,41 +64,47 @@ function Activity({ stats }: { stats: PlayerStats }) {
   return (
     // Side by side where the column has room, which also keeps the heatmap from growing huge; one over the other where not.
     <div className="@container">
-      <div className="grid gap-5 @4xl:grid-cols-[minmax(0,36rem)_minmax(32rem,1fr)]">
-        <section className="flex min-w-0 flex-col gap-3 rounded-lg border bg-card p-5">
+      <div className="grid gap-5 @[54rem]:grid-cols-[minmax(0,36rem)_minmax(28rem,1fr)]">
+        <section className="@container flex min-w-0 flex-col gap-3 rounded-lg border bg-card p-5">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="font-semibold">
               {played} {played === 1 ? 'game' : 'games'} in the last 26 weeks
             </h2>
           </div>
-          <div
-            role="img"
-            aria-label={`${played} games over the last 26 weeks, ${bad} days with more losses than wins`}
-            // The squares fill the card's width, whatever it is, so it never scrolls or leaves a gap.
-            className="grid grid-flow-col grid-rows-7 gap-[2px] sm:gap-1"
-            style={{ gridAutoColumns: 'minmax(0, 1fr)' }}
-          >
-            {cells.map((cell) => (
-              <span
-                key={cell.key}
-                title={`${cell.key}: ${cell.games} ${cell.games === 1 ? 'game' : 'games'}`}
-                className={`aspect-square w-full rounded-[20%] ${cell.bad ? 'border-2 border-[#ffd2cf] bg-death' : levels[level(cell.games)]}`}
-              />
-            ))}
-          </div>
-          {/* What the shades mean, under the grid on its left. */}
-          <div aria-hidden className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1">
-              Fewer
-              {levels.map((level) => (
-                <span key={level} className={`size-3 rounded-[3px] ${level}`} />
+          {/* Given a whole row, the grid stops growing at a comfortable size and the legend takes the room beside it. */}
+          <div className="flex flex-col gap-3 @[40rem]:flex-row @[40rem]:items-end @[40rem]:gap-8">
+            <div
+              role="img"
+              aria-label={`${played} games over the last 26 weeks, ${bad} days with more losses than wins`}
+              // The squares fill the card's width, whatever it is, so it never scrolls or leaves a gap.
+              className="grid w-full grid-flow-col grid-rows-7 gap-[2px] sm:gap-1 @[40rem]:max-w-[34rem]"
+              style={{ gridAutoColumns: 'minmax(0, 1fr)' }}
+            >
+              {cells.map((cell) => (
+                <span
+                  key={cell.key}
+                  title={`${cell.key}: ${cell.games} ${cell.games === 1 ? 'game' : 'games'}`}
+                  className={`aspect-square w-full rounded-[20%] ${cell.bad ? 'border-2 border-[#ffd2cf] bg-death' : levels[level(cell.games)]}`}
+                />
               ))}
-              More
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="size-3 rounded-[3px] border-2 border-[#ffd2cf] bg-death" />
-              Losing trend
-            </span>
+            </div>
+            {/* What the shades mean: under the grid on its left, or beside it where the grid has stopped growing. */}
+            <div
+              aria-hidden
+              className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground @[40rem]:flex-col @[40rem]:items-start"
+            >
+              <span className="flex items-center gap-1">
+                Fewer
+                {levels.map((level) => (
+                  <span key={level} className={`size-3 rounded-[3px] ${level}`} />
+                ))}
+                More
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="size-3 rounded-[3px] border-2 border-[#ffd2cf] bg-death" />
+                Losing trend
+              </span>
+            </div>
           </div>
         </section>
         <Contributions stats={stats} cells={cells} />
@@ -173,7 +179,7 @@ function Contributions({ stats, cells }: { stats: PlayerStats; cells: Cell[] }) 
     <section className="@container flex min-w-0 flex-col gap-3 rounded-lg border bg-card p-5">
       <h2 className="font-semibold">Contribution activity</h2>
       {/* Two columns of three where there is room, about as tall as the heatmap beside it; one on a phone. */}
-      <ul className="grid gap-x-6 gap-y-3 @[27rem]:grid-cols-2">
+      <ul className="grid gap-x-6 gap-y-3 @[24rem]:grid-cols-2">
         {items.map((item) => (
           <li key={item.title} className="flex items-start gap-3">
             <item.icon aria-hidden className={`mt-0.5 size-4 shrink-0 ${item.tone}`} />
@@ -224,7 +230,15 @@ export function Player() {
             <div className="min-w-0">
               <h1 className="truncate text-3xl font-semibold">{player.username}</h1>
               <p className="text-muted-foreground">
-                Joined {new Date(player.joinedAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                Joined {/* The month in full where there is room, shortened where not. */}
+                <span className="@max-[20rem]:hidden">
+                  {new Date(player.joinedAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </span>
+                <span className="@min-[20rem]:hidden">
+                  {new Date(player.joinedAt)
+                    .toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+                    .replace(' ', '. ')}
+                </span>
               </p>
             </div>
           </div>

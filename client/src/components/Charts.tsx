@@ -261,10 +261,10 @@ function streaks(recent: Game[]): { current: number; winning: boolean; wins: num
 /** A streak as a sports table writes it: W3, L2. */
 function Streak({ label, count, win }: { label: string; count: number; win: boolean }) {
   return (
-    <div className="flex items-baseline justify-between gap-3 @md:flex-col @md:justify-start @md:gap-0">
+    <div className="flex items-baseline justify-between gap-3 @[16rem]:flex-col @[16rem]:justify-start @[16rem]:gap-0">
       <dt className="text-xs whitespace-nowrap text-muted-foreground">{label}</dt>
       <dd
-        className={`font-mono text-lg @md:text-xl ${count ? (win ? 'text-primary' : 'text-death') : 'text-muted-foreground'}`}
+        className={`font-mono text-lg @[16rem]:text-xl ${count ? (win ? 'text-primary' : 'text-death') : 'text-muted-foreground'}`}
       >
         {count ? `${win ? 'W' : 'L'}${count}` : '-'}
       </dd>
@@ -325,11 +325,11 @@ export function Outcomes({
       {recent.length ? (
         <dl
           // Three across where the card is wide enough to keep each label on one line; rows beneath one another where not.
-          className="mt-auto grid gap-1.5 border-t pt-3 @md:grid-cols-3 @md:gap-3"
+          className="mt-auto grid gap-1.5 border-t pt-3 @[16rem]:grid-cols-3 @[16rem]:gap-3"
         >
           <Streak label="Current streak" count={streak.current} win={streak.winning} />
-          <Streak label="Longest win streak" count={streak.wins} win />
-          <Streak label="Longest loss streak" count={streak.losses} win={false} />
+          <Streak label="Longest win" count={streak.wins} win />
+          <Streak label="Longest loss" count={streak.losses} win={false} />
         </dl>
       ) : null}
     </Frame>
