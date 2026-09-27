@@ -122,21 +122,6 @@
   }
 }
 
-/* P03's corruption: each pixel appears once, nearest the corner first; reduced motion shows it whole. */
-.corruption rect {
-  animation: corrupt 0.01s steps(1) both;
-}
-@keyframes corrupt {
-  from {
-    opacity: 0;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .corruption rect {
-    animation: none;
-  }
-}
-
 /* A change on the scale's readout, rising and fading; reduced motion keeps only the fade. */
 @keyframes health-change {
   from {
@@ -324,6 +309,9 @@
     radial-gradient(ellipse at center, transparent 55%, rgb(0 0 0 / 0.55) 100%),
     repeating-linear-gradient(0deg, rgb(0 0 0 / 0.05) 0 2px, transparent 2px 4px);
   animation: flicker 9s steps(1) infinite;
+}
+.crt-glass.flat {
+  background: repeating-linear-gradient(0deg, rgb(0 0 0 / 0.08) 0 2px, transparent 2px 4px);
 }
 .crt-glass::after {
   content: '';

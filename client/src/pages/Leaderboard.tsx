@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router'
 import { Avatar } from '../components/Avatar.tsx'
 import { Corruption } from '../components/p03/Corruption.tsx'
+import { Glass } from '../components/p03/Glass.tsx'
 import { useP03Says } from '../components/p03/says.ts'
 import { Failure } from '../components/States.tsx'
 import { Skeleton } from '@/components/ui/skeleton.tsx'
@@ -37,7 +38,11 @@ export function Leaderboard() {
   return (
     <div className="flex flex-col gap-6">
       {result ? (
-        <div role="status" className="p03-screen rounded-md border border-[#2f6b3d] px-5 py-4 font-terminal text-2xl">
+        <div
+          role="status"
+          className="p03-screen relative overflow-hidden rounded-md border border-[#2f6b3d] px-5 py-4 font-terminal text-2xl"
+        >
+          <Glass />
           {result.outcome === 'win' ? `You win in ${result.turns} turns.` : `You lose on turn ${result.turns}.`}{' '}
           {number(result.score)} points
           {result.isBest ? '. A new best.' : '.'}
@@ -135,8 +140,9 @@ function Played({ row }: { row: LeaderboardRow }) {
 /** First place, taken over by P03: he keeps an eye on whoever is winning. */
 function FirstPlace({ row, mine }: { row: LeaderboardRow; mine: boolean }) {
   return (
-    <tr className="p03-screen border-b border-[#2f6b3d] font-terminal">
+    <tr className="p03-screen relative border-b border-[#2f6b3d] font-terminal">
       <td className="py-4 pr-4 pl-4 text-xl text-p03-dim sm:pr-5 sm:pl-6">
+        <Glass />
         <span aria-hidden>0x01</span>
         <span className="sr-only">1</span>
       </td>

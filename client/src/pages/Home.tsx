@@ -2,6 +2,7 @@ import { Link } from 'react-router'
 import { Button } from '@/components/ui/button.tsx'
 import { Avatar } from '../components/Avatar.tsx'
 import { Corruption } from '../components/p03/Corruption.tsx'
+import { Glass } from '../components/p03/Glass.tsx'
 import { useP03Says } from '../components/p03/says.ts'
 import { api } from '../lib/api.ts'
 import { number } from '../lib/format.ts'
@@ -48,7 +49,8 @@ export function Home() {
                 <span className={`${badge.color} px-2 py-1 font-medium text-background`}>{badge.value}</span>
               </li>
             ))}
-            <li className="p03-screen border border-[#2f6b3d] px-2 py-0.5 font-terminal text-lg leading-none text-p03">
+            <li className="p03-screen relative overflow-hidden border border-[#2f6b3d] px-2 py-0.5 font-terminal text-lg leading-none text-p03">
+              <Glass flat />
               P03: watching
             </li>
           </ul>
@@ -82,7 +84,8 @@ export function Home() {
             <li>FourOhFour removes everything on the other side of the table. Working as intended.</li>
             <li>
               Y2K is not in the deck.{' '}
-              <span className="bg-p03-ground px-1.5 font-terminal text-xl whitespace-nowrap text-p03 [text-shadow:0_0_6px_rgb(125_255_154/0.5)]">
+              <span className="relative overflow-hidden bg-p03-ground px-1.5 font-terminal text-xl whitespace-nowrap text-p03 [text-shadow:0_0_6px_rgb(125_255_154/0.5)]">
+                <Glass flat />
                 [P03: REDACTED]
               </span>
             </li>

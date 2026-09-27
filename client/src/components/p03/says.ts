@@ -1,21 +1,23 @@
 import { useEffect, useSyncExternalStore } from 'react'
 
-// What P03 is saying on the page open now; each page sets its own lines.
-let lines: readonly string[] = []
+export type Said = { lines: readonly string[]; path: string }
+
+// What P03 is saying on the page open now, and where; each page sets its own lines.
+let said: Said = { lines: [], path: '/' }
 const listeners = new Set<() => void>()
 
-function set(next: readonly string[]) {
-  lines = next
+function set(lines: readonly string[]) {
+  said = { lines, path: window.location.pathname }
   for (const listener of listeners) listener()
 }
 
-export function useP03Lines(): readonly string[] {
+export function useP03Lines(): Said {
   return useSyncExternalStore(
     (changed) => {
       listeners.add(changed)
       return () => listeners.delete(changed)
     },
-    () => lines,
+    () => said,
   )
 }
 
