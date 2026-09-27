@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef } from 'react'
+import { Suspense, useEffect, useRef } from 'react'
 import {
   CalendarDays,
   ChevronLeft,
@@ -21,9 +21,7 @@ import { Failure, Loading } from '../components/States.tsx'
 import { api, ApiError, type PlayerStats } from '../lib/api.ts'
 import { ago, number } from '../lib/format.ts'
 import { useAsync } from '../lib/useAsync.ts'
-
-// WebGL for P03's screen behind the stack trace arrives after the page.
-const FaultyScreen = lazy(() => import('../components/p03/FaultyScreen.tsx'))
+import { FaultyScreen } from '../components/p03/faultyScreen.ts'
 
 const DAYS = 26 * 7
 // Games on a page of the history, as the server sends them.

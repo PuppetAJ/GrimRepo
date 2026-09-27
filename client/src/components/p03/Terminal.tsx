@@ -1,11 +1,11 @@
-import { lazy, Suspense, useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react'
+import { Suspense, useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import type { Commands } from './commands.tsx'
 import { Glass } from './Glass.tsx'
 import { pathOf, Prompt } from './Prompt.tsx'
+import { FaultyScreen } from './faultyScreen.ts'
 
-// WebGL and the commands load after the terminal, so it appears at once.
-const FaultyScreen = lazy(() => import('./FaultyScreen.tsx'))
+// The commands load once someone means to type, so the terminal appears at once.
 const loadCommands = () => import('./commands.tsx')
 
 type Entry =

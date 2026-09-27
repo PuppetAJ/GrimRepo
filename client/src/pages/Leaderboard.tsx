@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { Suspense } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Link, useLocation, useSearchParams } from 'react-router'
 import { Button } from '@/components/ui/button.tsx'
@@ -11,9 +11,7 @@ import { api, type Finished, type LeaderboardRow } from '../lib/api.ts'
 import { authClient } from '../lib/auth.ts'
 import { initials, number } from '../lib/format.ts'
 import { useAsync } from '../lib/useAsync.ts'
-
-// WebGL for first place's screen arrives after the board, so the first load stays light.
-const FaultyScreen = lazy(() => import('../components/p03/FaultyScreen.tsx'))
+import { FaultyScreen } from '../components/p03/faultyScreen.ts'
 
 export function Leaderboard() {
   const [search, setSearch] = useSearchParams()

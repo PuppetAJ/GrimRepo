@@ -1,8 +1,7 @@
-import { lazy, Suspense } from 'react'
+import { Suspense } from 'react'
 import { Link } from 'react-router'
 import { Glass } from '../components/p03/Glass.tsx'
-
-const FaultyScreen = lazy(() => import('../components/p03/FaultyScreen.tsx'))
+import { FaultyScreen } from '../components/p03/faultyScreen.ts'
 
 export function NotFound() {
   return (
