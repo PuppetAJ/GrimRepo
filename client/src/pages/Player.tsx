@@ -8,6 +8,12 @@ import {
   GitCommitHorizontal,
   GitMerge,
   GitPullRequestClosed,
+  Gamepad2,
+  Percent,
+  Star,
+  Timer,
+  Trophy,
+  Zap,
 } from 'lucide-react'
 import { Link, useParams, useSearchParams } from 'react-router'
 import { TURN_LIMIT } from 'shared'
@@ -61,45 +67,48 @@ function Activity({ stats }: { stats: PlayerStats }) {
   const played = cells.reduce((sum, cell) => sum + cell.games, 0)
   const bad = cells.filter((cell) => cell.bad).length
   return (
-    <section className="grid gap-6 rounded-lg border bg-card p-5 lg:grid-cols-[auto_minmax(0,1fr)] lg:gap-10">
-      <div className="flex min-w-0 flex-col gap-3">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="font-semibold">
-            {played} {played === 1 ? 'game' : 'games'} in the last 26 weeks
-          </h2>
-        </div>
-        <div
-          ref={scroller}
-          role="img"
-          aria-label={`${played} games over the last 26 weeks, ${bad} days with more losses than wins`}
-          className="grid grid-flow-col grid-rows-7 gap-1 overflow-x-auto"
-          style={{ gridAutoColumns: '14px' }}
-        >
-          {cells.map((cell) => (
-            <span
-              key={cell.key}
-              title={`${cell.key}: ${cell.games} ${cell.games === 1 ? 'game' : 'games'}`}
-              className={`size-3.5 rounded-[3px] ${cell.bad ? 'border-2 border-[#ffd2cf] bg-death' : levels[level(cell.games)]}`}
-            />
-          ))}
-        </div>
-        {/* What the shades mean, under the grid on its left. */}
-        <div aria-hidden className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1">
-            Fewer
-            {levels.map((level) => (
-              <span key={level} className={`size-3 rounded-[3px] ${level}`} />
+    // Two cards, side by side only where the column has room for both, each as tall as its own content.
+    <div className="@container">
+      <div className="grid gap-5 @4xl:grid-cols-[auto_minmax(0,1fr)]">
+        <section className="flex min-w-0 flex-col gap-3 rounded-lg border bg-card p-5">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="font-semibold">
+              {played} {played === 1 ? 'game' : 'games'} in the last 26 weeks
+            </h2>
+          </div>
+          <div
+            ref={scroller}
+            role="img"
+            aria-label={`${played} games over the last 26 weeks, ${bad} days with more losses than wins`}
+            className="grid grid-flow-col grid-rows-7 gap-1 overflow-x-auto"
+            style={{ gridAutoColumns: '14px' }}
+          >
+            {cells.map((cell) => (
+              <span
+                key={cell.key}
+                title={`${cell.key}: ${cell.games} ${cell.games === 1 ? 'game' : 'games'}`}
+                className={`size-3.5 rounded-[3px] ${cell.bad ? 'border-2 border-[#ffd2cf] bg-death' : levels[level(cell.games)]}`}
+              />
             ))}
-            More
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="size-3 rounded-[3px] border-2 border-[#ffd2cf] bg-death" />
-            More lost than won
-          </span>
-        </div>
+          </div>
+          {/* What the shades mean, under the grid on its left. */}
+          <div aria-hidden className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1">
+              Fewer
+              {levels.map((level) => (
+                <span key={level} className={`size-3 rounded-[3px] ${level}`} />
+              ))}
+              More
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="size-3 rounded-[3px] border-2 border-[#ffd2cf] bg-death" />
+              More lost than won
+            </span>
+          </div>
+        </section>
+        <Contributions stats={stats} cells={cells} />
       </div>
-      <Contributions stats={stats} cells={cells} />
-    </section>
+    </div>
   )
 }
 
@@ -166,9 +175,10 @@ function Contributions({ stats, cells }: { stats: PlayerStats; cells: Cell[] }) 
     },
   ]
   return (
-    <div className="flex min-w-0 flex-col gap-3 lg:border-l lg:pl-10">
-      <h3 className="font-semibold">Contribution activity</h3>
-      <ul className="grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+    <section className="flex min-w-0 flex-col gap-3 rounded-lg border bg-card p-5">
+      <h2 className="font-semibold">Contribution activity</h2>
+      {/* As many columns as fit at a readable width, so it never narrows to a word a line. */}
+      <ul className="grid grid-cols-[repeat(auto-fill,minmax(13rem,1fr))] gap-x-6 gap-y-3">
         {items.map((item) => (
           <li key={item.title} className="flex items-start gap-3">
             <item.icon aria-hidden className={`mt-0.5 size-4 shrink-0 ${item.tone}`} />
@@ -179,7 +189,7 @@ function Contributions({ stats, cells }: { stats: PlayerStats; cells: Cell[] }) 
           </li>
         ))}
       </ul>
-    </div>
+    </section>
   )
 }
 
@@ -200,12 +210,12 @@ export function Player() {
 
   const player = stats.data
   const facts = [
-    ['Games', number(player.games)],
-    ['Wins', number(player.wins)],
-    ['Win rate', player.winRate === null ? '-' : `${Math.round(player.winRate * 100)}%`],
-    ['Best score', number(player.bestScore)],
-    ['Fastest win', player.bestWinTurns === null ? '-' : `${player.bestWinTurns} turns`],
-    ['Average game', player.averageTurns === null ? '-' : `${player.averageTurns} turns`],
+    { icon: Gamepad2, value: number(player.games), label: player.games === 1 ? 'game' : 'games' },
+    { icon: Trophy, value: number(player.wins), label: player.wins === 1 ? 'win' : 'wins' },
+    { icon: Percent, value: player.winRate === null ? '-' : `${Math.round(player.winRate * 100)}%`, label: 'win rate' },
+    { icon: Star, value: number(player.bestScore), label: 'best' },
+    { icon: Zap, value: player.bestWinTurns === null ? '-' : String(player.bestWinTurns), label: 'turn fastest win' },
+    { icon: Timer, value: player.averageTurns === null ? '-' : String(player.averageTurns), label: 'turns a game' },
   ]
 
   return (
@@ -222,14 +232,15 @@ export function Player() {
             </p>
           </div>
         </div>
-        <dl className="flex flex-col gap-2.5 border-t pt-5 text-sm">
-          {facts.map(([label, value]) => (
-            <div key={label} className="flex justify-between">
-              <dt className="text-muted-foreground">{label}</dt>
-              <dd className="font-mono">{value}</dd>
-            </div>
+        {/* One line that wraps, as GitHub shows a profile's followers, rather than a column of rows. */}
+        <ul className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
+          {facts.map((fact) => (
+            <li key={fact.label} className="flex items-center gap-1.5 whitespace-nowrap">
+              <fact.icon aria-hidden className="size-4" />
+              <span className="font-semibold text-foreground">{fact.value}</span> {fact.label}
+            </li>
           ))}
-        </dl>
+        </ul>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col gap-7">
