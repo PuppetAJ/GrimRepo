@@ -31,7 +31,7 @@ export function Home() {
           'You done gawking? Good.',
           "This is my repository now. I rewrote it. It's better. You're welcome.",
           first
-            ? `${first.username} is in first with ${number(first.bestScore)}. For now.`
+            ? `${first.username} is in first with ${number(first.bestScore)} points. For now.`
             : 'Nobody has beaten me. Obviously.',
         ]
 

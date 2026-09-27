@@ -46,7 +46,7 @@ function useHover(indexAt: (x: number) => number) {
 
 function Frame({ title, note, children }: { title: string; note?: string; children: ReactNode }) {
   return (
-    <figure className="flex h-full min-w-0 flex-col gap-3 rounded-lg border bg-card p-5">
+    <figure className="@container flex h-full min-w-0 flex-col gap-3 rounded-lg border bg-card p-5">
       <figcaption className="flex flex-wrap items-baseline justify-between gap-2">
         <span className="font-semibold">{title}</span>
         {note ? <span className="text-sm text-muted-foreground">{note}</span> : null}
@@ -261,9 +261,11 @@ function streaks(recent: Game[]): { current: number; winning: boolean; wins: num
 /** A streak as a sports table writes it: W3, L2. */
 function Streak({ label, count, win }: { label: string; count: number; win: boolean }) {
   return (
-    <div className="flex flex-col">
-      <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className={`font-mono text-xl ${count ? (win ? 'text-primary' : 'text-death') : 'text-muted-foreground'}`}>
+    <div className="flex items-baseline justify-between gap-3 @md:flex-col @md:justify-start @md:gap-0">
+      <dt className="text-xs whitespace-nowrap text-muted-foreground">{label}</dt>
+      <dd
+        className={`font-mono text-lg @md:text-xl ${count ? (win ? 'text-primary' : 'text-death') : 'text-muted-foreground'}`}
+      >
         {count ? `${win ? 'W' : 'L'}${count}` : '-'}
       </dd>
     </div>
@@ -321,7 +323,10 @@ export function Outcomes({
         ))}
       </dl>
       {recent.length ? (
-        <dl className="mt-auto grid grid-cols-3 gap-3 border-t pt-3">
+        <dl
+          // Three across where the card is wide enough to keep each label on one line; rows beneath one another where not.
+          className="mt-auto grid gap-1.5 border-t pt-3 @md:grid-cols-3 @md:gap-3"
+        >
           <Streak label="Current streak" count={streak.current} win={streak.winning} />
           <Streak label="Longest win streak" count={streak.wins} win />
           <Streak label="Longest loss streak" count={streak.losses} win={false} />

@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useRef } from 'react'
+import { Suspense } from 'react'
 import {
   CalendarDays,
   ChevronLeft,
@@ -59,17 +59,12 @@ function grid(days: PlayerStats['days']) {
 
 function Activity({ stats }: { stats: PlayerStats }) {
   const cells = grid(stats.days)
-  // Opens on the latest weeks when the grid is wider than the screen.
-  const scroller = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (scroller.current) scroller.current.scrollLeft = scroller.current.scrollWidth
-  }, [])
   const played = cells.reduce((sum, cell) => sum + cell.games, 0)
   const bad = cells.filter((cell) => cell.bad).length
   return (
-    // Two cards, one over the other, each the column's full width, so neither is left with empty space beside the other.
-    <div>
-      <div className="flex flex-col gap-5">
+    // Side by side where the column has room, which also keeps the heatmap from growing huge; one over the other where not.
+    <div className="@container">
+      <div className="grid gap-5 @4xl:grid-cols-[minmax(0,36rem)_minmax(32rem,1fr)]">
         <section className="flex min-w-0 flex-col gap-3 rounded-lg border bg-card p-5">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="font-semibold">
@@ -77,12 +72,11 @@ function Activity({ stats }: { stats: PlayerStats }) {
             </h2>
           </div>
           <div
-            ref={scroller}
             role="img"
             aria-label={`${played} games over the last 26 weeks, ${bad} days with more losses than wins`}
-            // The squares grow to fill the card's width, never shrinking past legible; narrower, the grid scrolls.
-            className="grid grid-flow-col grid-rows-7 gap-[3px] overflow-x-auto sm:gap-1"
-            style={{ gridAutoColumns: 'minmax(10px, 1fr)' }}
+            // The squares fill the card's width, whatever it is, so it never scrolls or leaves a gap.
+            className="grid grid-flow-col grid-rows-7 gap-[2px] sm:gap-1"
+            style={{ gridAutoColumns: 'minmax(0, 1fr)' }}
           >
             {cells.map((cell) => (
               <span
@@ -103,7 +97,7 @@ function Activity({ stats }: { stats: PlayerStats }) {
             </span>
             <span className="flex items-center gap-1.5">
               <span className="size-3 rounded-[3px] border-2 border-[#ffd2cf] bg-death" />
-              More lost than won
+              Losing trend
             </span>
           </div>
         </section>
@@ -176,10 +170,10 @@ function Contributions({ stats, cells }: { stats: PlayerStats; cells: Cell[] }) 
     },
   ]
   return (
-    <section className="flex min-w-0 flex-col gap-3 rounded-lg border bg-card p-5">
+    <section className="@container flex min-w-0 flex-col gap-3 rounded-lg border bg-card p-5">
       <h2 className="font-semibold">Contribution activity</h2>
-      {/* As many columns as fit at a readable width, so it never narrows to a word a line. */}
-      <ul className="grid grid-cols-[repeat(auto-fill,minmax(13rem,1fr))] gap-x-6 gap-y-3">
+      {/* Two columns of three where there is room, about as tall as the heatmap beside it; one on a phone. */}
+      <ul className="grid gap-x-6 gap-y-3 @[27rem]:grid-cols-2">
         {items.map((item) => (
           <li key={item.title} className="flex items-start gap-3">
             <item.icon aria-hidden className={`mt-0.5 size-4 shrink-0 ${item.tone}`} />
@@ -216,7 +210,7 @@ export function Player() {
     { icon: Percent, label: 'Win rate', value: player.winRate === null ? '-' : `${Math.round(player.winRate * 100)}%` },
     { icon: Star, label: 'Best score', value: number(player.bestScore) },
     { icon: Zap, label: 'Fastest win', value: player.bestWinTurns === null ? '-' : `${player.bestWinTurns} turns` },
-    { icon: Timer, label: 'Average game', value: player.averageTurns === null ? '-' : `${player.averageTurns} turns` },
+    { icon: Timer, label: 'Avg. game', value: player.averageTurns === null ? '-' : `${player.averageTurns} turns` },
   ]
 
   return (
@@ -230,19 +224,18 @@ export function Player() {
             <div className="min-w-0">
               <h1 className="truncate text-3xl font-semibold">{player.username}</h1>
               <p className="text-muted-foreground">
-                Sitting at the table since{' '}
-                {new Date(player.joinedAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                Joined {new Date(player.joinedAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
               </p>
             </div>
           </div>
           {/*
-            A block, set off from the name by a rule: a table of icon, name and number, two columns wide where there
-            is room and one in the sidebar; on a narrow phone, one line that wraps, as GitHub shows followers.
+            A block, set off from the name by a rule: a table of icon, name and number, two columns wide and one in the
+            sidebar; on a phone the same two columns, tighter, each name and number kept together.
           */}
-          <dl className="flex flex-wrap gap-x-4 gap-y-2 border-t pt-4 text-sm lg:grid lg:grid-cols-1 @md:grid @md:grid-cols-2 @md:gap-x-8 @md:gap-y-2.5 @3xl:border-t-0 @3xl:border-l @3xl:pt-0 @3xl:pl-6">
+          <dl className="grid grid-cols-[auto_auto] justify-between gap-x-3 gap-y-2 border-t pt-4 text-[13px] lg:grid-cols-1 lg:justify-normal lg:text-sm @md:grid-cols-2 @md:justify-normal @md:gap-x-8 @md:gap-y-2.5 @md:text-sm @3xl:border-t-0 @3xl:border-l @3xl:pt-0 @3xl:pl-6">
             {facts.map((fact) => (
               <div key={fact.label} className="flex items-center gap-1.5 whitespace-nowrap lg:gap-2 @md:gap-2">
-                <fact.icon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+                <fact.icon aria-hidden className="size-4 shrink-0 text-muted-foreground @max-[21rem]:hidden" />
                 <dt className="text-muted-foreground">{fact.label}</dt>
                 <dd className="font-mono font-semibold lg:ml-auto lg:font-normal @md:ml-auto @md:font-normal">
                   {fact.value}

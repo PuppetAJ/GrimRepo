@@ -1,6 +1,6 @@
 import { ChevronDown, LogIn, LogOut, Menu, Settings, UserPlus, UserRound } from 'lucide-react'
 import { Suspense } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button.tsx'
 import {
@@ -25,6 +25,7 @@ const tabs = [
 
 export function Layout() {
   const session = authClient.useSession()
+  const playing = useLocation().pathname.startsWith('/game')
   const navigate = useNavigate()
   const user = session.data?.user as { displayUsername?: string; username?: string; isAnonymous?: boolean } | undefined
   const name = user?.displayUsername ?? user?.username
@@ -122,8 +123,8 @@ export function Layout() {
 
       <nav
         aria-label="Sections"
-        // On a phone the tabs spread evenly across the width.
-        className="flex gap-2 overflow-x-auto border-b px-4 text-sm max-[380px]:px-2 max-sm:justify-between max-sm:gap-0 sm:px-12"
+        // On the narrowest phones the tabs spread evenly across the width.
+        className="flex gap-2 overflow-x-auto border-b px-4 text-sm max-[400px]:justify-between max-[400px]:gap-0 max-[400px]:px-2 sm:px-12"
       >
         {tabs.map((tab) => (
           <NavLink
@@ -131,7 +132,7 @@ export function Layout() {
             to={tab.to}
             end={tab.end}
             className={({ isActive }) =>
-              `border-b-2 px-3 py-3.5 whitespace-nowrap max-[380px]:px-2 ${isActive ? 'border-death font-semibold text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`
+              `border-b-2 px-3 py-3.5 whitespace-nowrap max-[400px]:px-2 ${isActive ? 'border-death font-semibold text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`
             }
           >
             {tab.label}
@@ -140,9 +141,12 @@ export function Layout() {
       </nav>
 
       <main className="flex-1 px-4 py-8 sm:px-12">
-        <Suspense fallback={<Loading label="Loading" />}>
-          <Outlet />
-        </Suspense>
+        {/* Every page's content capped and centred on a wide screen; the game's table is left to fill it. */}
+        <div className={playing ? '' : 'mx-auto w-full max-w-7xl'}>
+          <Suspense fallback={<Loading label="Loading" />}>
+            <Outlet />
+          </Suspense>
+        </div>
       </main>
 
       <footer className="border-t px-4 py-6 text-sm text-muted-foreground sm:px-12">
