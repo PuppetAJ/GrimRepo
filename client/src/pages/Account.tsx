@@ -129,11 +129,7 @@ function DemoNotice() {
       <section className="flex flex-col gap-3 rounded-lg border bg-card p-6">
         <h2 className="text-xl font-semibold">You are using the demo account</h2>
         <p className="text-muted-foreground">
-          Everyone trying Grim Repo shares this account, so its name and password are fixed and it cannot be deleted.
-          Its games and scores are shared too.
-        </p>
-        <p className="text-muted-foreground">
-          Make an account of your own to keep your games and your place on the leaderboard.
+          Everyone shares it, so it can&apos;t be renamed or deleted. Make your own to keep your games and scores.
         </p>
         <Button asChild className="self-start">
           <Link to="/signup">Create an account</Link>
@@ -151,8 +147,7 @@ function GuestNotice({ name }: { name: string }) {
       <section className="flex flex-col gap-3 rounded-lg border bg-card p-6">
         <h2 className="text-xl font-semibold">You are playing as a guest, {name}</h2>
         <p className="text-muted-foreground">
-          A guest account is kept for a week and stays off the leaderboard. Sign up to keep your games for good and put
-          your best score on the board. Everything you have played comes with you.
+          Guest accounts last a week and stay off the leaderboard. Sign up to keep your games; they come with you.
         </p>
         <div className="flex flex-wrap gap-3">
           <Button asChild>

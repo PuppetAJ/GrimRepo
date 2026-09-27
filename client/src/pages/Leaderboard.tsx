@@ -71,9 +71,6 @@ export function Leaderboard() {
         <h1 className="font-display text-6xl leading-none">Contributors</h1>
         <p className="font-mono text-sm text-muted-foreground">git shortlog --quick-battles --since="last reset"</p>
       </div>
-      <p className="text-sm text-muted-foreground">
-        Each score is a replayed game, checked move by move by the server. A win scores more the sooner it comes.
-      </p>
 
       {/* At least the rest of the screen tall, so the rows arriving push nothing on screen down. */}
       <div className="min-h-[65dvh]">
@@ -188,7 +185,7 @@ function Played({ row }: { row: LeaderboardRow }) {
 function FirstPlace({ row, mine }: { row: LeaderboardRow; mine: boolean }) {
   return (
     // Isolated, so P03's screen can sit behind the row's words and in front of its ground.
-    <tr className="p03-screen relative isolate border-b border-[#2f6b3d] font-terminal">
+    <tr className="p03-screen relative isolate border-y border-[#2f6b3d] font-terminal">
       <td className="py-4 pr-4 pl-4 text-xl text-p03-dim sm:pr-5 sm:pl-6">
         <Suspense fallback={null}>
           <FaultyScreen className="-z-10" />

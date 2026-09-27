@@ -139,7 +139,7 @@ function Contributions({ stats, cells }: { stats: PlayerStats; cells: Cell[] }) 
       icon: GitMerge,
       tone: 'text-primary',
       title: `${plural(played - lost, 'win')} merged`,
-      note: 'into the leaderboard',
+      note: 'games won',
     },
     {
       icon: GitPullRequestClosed,

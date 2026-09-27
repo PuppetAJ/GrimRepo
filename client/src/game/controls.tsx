@@ -131,8 +131,7 @@ export function SeatNote({ seat }: { seat: Exclude<Seat, null> }) {
     >
       {seat === 'demo' ? (
         <p className="text-foreground">
-          You are on the shared demo account, so anyone else using it plays this same game. Make an account of your own
-          to play undisturbed.
+          This is the shared demo account, so others may be playing this game too. Make your own to play undisturbed.
         </p>
       ) : (
         <p className="text-foreground">
