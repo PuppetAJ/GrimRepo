@@ -63,7 +63,7 @@ section("P03's terminal")
         () => false,
       ),
   )
-  await run('card jack')
+  await run('card mainframe')
   check(
     'a card can be read up close',
     await terminal

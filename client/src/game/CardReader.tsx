@@ -1,12 +1,36 @@
 import { card, SIGILS, type SigilId, type Unit } from 'shared'
+import { LEGACY_ART, PLACEHOLDER, SPRITE_SIZE, SPRITES } from './sprites.ts'
 import { ICONS, STAT_ICONS } from './table/icons.ts'
 
 // A card drawn for reading, in the text table's reader, its magnifier, and the 3D table's.
 const INK = '#0b1f12'
 
 /** A card's 2022 art in ink: the drawing is ink on a clear ground, so it serves as a mask, sharp at any size. */
+/** A card's sprite as crisp pixels in the text's colour, at any size. */
+export function Sprite({ grid, className = '' }: { grid: readonly string[]; className?: string }) {
+  return (
+    <svg
+      viewBox={`0 0 ${SPRITE_SIZE} ${SPRITE_SIZE}`}
+      shapeRendering="crispEdges"
+      aria-hidden
+      className={className}
+      fill="currentColor"
+    >
+      {grid.flatMap((row, y) =>
+        [...row].map((bit, x) => (bit === '#' ? <rect key={`${x},${y}`} x={x} y={y} width={1} height={1} /> : null)),
+      )}
+    </svg>
+  )
+}
+
+/** A card's sprite, the 2022 art for a kept card still waiting for one, or the placeholder. */
+export const spriteOf = (id: string): readonly string[] | null =>
+  SPRITES[id] ?? (LEGACY_ART.has(id) ? null : PLACEHOLDER)
+
 export function Art({ id, big = false }: { id: string; big?: boolean }) {
   if (id === 'Boilerplate') return <span className={big ? 'text-4xl' : 'text-[15cqw]'}>{'<div>'}</span>
+  const sprite = spriteOf(id)
+  if (sprite) return <Sprite grid={sprite} className="h-[92%] w-[92%] text-[#0b1f12]" />
   return (
     <span
       aria-hidden

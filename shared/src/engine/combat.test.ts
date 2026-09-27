@@ -11,38 +11,38 @@ const hits = (events: GameEvent[], side: 'player' | 'opponent') =>
 
 describe('combat', () => {
   it('hits the opponent directly through an empty lane', () => {
-    const { state, events } = bell(table({ board: ['GoogleFu'] }))
+    const { state, events } = bell(table({ board: ['CopyPaste'] }))
     assert.equal(hits(events, 'opponent'), 3)
     assert.equal(state.scale, 3, 'and tips the scale toward the player')
   })
 
   it("lets P03's hits tip the scale back, so a lead can be lost", () => {
-    const { state } = bell(table({ front: ['GoogleFu'], scale: 5 }))
+    const { state } = bell(table({ front: ['CopyPaste'], scale: 5 }))
     assert.equal(state.scale, 2)
   })
 
   it('damages the card opposite instead, and leaves it wounded', () => {
-    const { state } = bell(table({ board: ['GoogleFu'], front: ['Firewall'] }))
+    const { state } = bell(table({ board: ['CopyPaste'], front: ['Firewall'] }))
     assert.equal(state.opponent.front[0]?.health, 3)
     assert.equal(state.scale, 0)
   })
 
   it('kills a card whose health runs out', () => {
-    const { state, events } = bell(table({ board: ['GitSome'], front: ['GrimRepo'] }))
+    const { state, events } = bell(table({ board: ['ZeroDay'], front: ['GrimRepo'] }))
     assert.ok(events.some((event) => event.type === 'killed' && event.side === 'opponent'))
     assert.equal(state.scale, 0, 'a card that dies still blocks the hit')
   })
 
   it('carries overkill into the card queued behind', () => {
-    // JACK deals 13 to a Loop with 2 health: 11 carries on into the Bug behind it, which has 8.
-    const { events } = bell(table({ board: ['JACK'], front: ['Loop'], back: ['Bug'] }))
+    // Mainframe deals 13 to a InfiniteLoop with 2 health: 11 carries on into the Bug behind it, which has 8.
+    const { events } = bell(table({ board: ['Mainframe'], front: ['InfiniteLoop'], back: ['Bug'] }))
     const overkill = events.find((event) => event.type === 'overkill')
     assert.equal(overkill?.type === 'overkill' && overkill.amount, 11)
     assert.ok(events.some((event) => event.type === 'killed' && event.row === 'back'))
   })
 
   it('never lets overkill reach a player', () => {
-    const { state } = bell(table({ board: ['JACK'], front: ['Loop'] }))
+    const { state } = bell(table({ board: ['Mainframe'], front: ['InfiniteLoop'] }))
     assert.equal(state.scale, 0)
   })
 
@@ -52,7 +52,7 @@ describe('combat', () => {
   })
 
   it('lets Bypass hit the opponent over a card in the way', () => {
-    const state = table({ board: ['GoogleFu'], front: ['Bug'] })
+    const state = table({ board: ['CopyPaste'], front: ['Bug'] })
     ;(state.player.board[0] as { sigils: string[] }).sigils.push('bypass')
     const after = bell(state).state
     assert.equal(after.scale, 3)
@@ -60,7 +60,7 @@ describe('combat', () => {
   })
 
   it('lets Fork strike the lanes either side instead of the one opposite', () => {
-    const state = table({ board: [null, 'GoogleFu'], front: ['Bug', 'Bug', 'Bug'] })
+    const state = table({ board: [null, 'CopyPaste'], front: ['Bug', 'Bug', 'Bug'] })
     ;(state.player.board[1] as { sigils: string[] }).sigils.push('fork')
     const after = bell(state).state
     assert.deepEqual(
@@ -70,11 +70,11 @@ describe('combat', () => {
   })
 
   it('makes an attacker pay for hitting a Rate Limiter, even to death', () => {
-    const state = table({ board: ['GitSome'], front: ['Firewall'] })
+    const state = table({ board: ['ZeroDay'], front: ['Firewall'] })
     ;(state.opponent.front[0] as { sigils: string[] }).sigils.push('rate_limiter')
     const { state: after, events } = bell(state)
     assert.ok(events.some((event) => event.type === 'struckBack'))
-    assert.equal(cardAt(after.player.board, 0), null, 'GitSome has 1 health, so the strike back kills it')
+    assert.equal(cardAt(after.player.board, 0), null, 'ZeroDay has 1 health, so the strike back kills it')
   })
 
   it('heals Hotfix cards by one at the end of the turn, never past full', () => {

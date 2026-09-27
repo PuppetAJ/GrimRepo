@@ -26,7 +26,7 @@ function worst(): GameState {
     unit('FourOhFour', { sigils: EVERY_SIGIL }),
     unit('DestroyEnemyYou', { sigils: EVERY_SIGIL }),
     unit('Y2K'),
-    unit('JACK', { hurt: 9 }),
+    unit('Mainframe', { hurt: 9 }),
     unit('Documentation', { sigils: ['technical_debt', 'try_catch', 'rate_limiter'] }),
     unit('JSONFoorhees'),
     unit('RubberDuck', { sigils: EVERY_SIGIL }),
@@ -43,7 +43,7 @@ function worst(): GameState {
       deck: [...PLAYER_DECK, ...PLAYER_DECK].slice(0, 42),
       hand,
       board: [
-        unit('JACK', { sigils: EVERY_SIGIL, hurt: 10 }),
+        unit('Mainframe', { sigils: EVERY_SIGIL, hurt: 10 }),
         unit('DestroyEnemyYou', { sigils: ['fork', 'bypass'] }),
         unit('Documentation', { sigils: EVERY_SIGIL }),
         unit('Y2K', { hurt: 1999 }),
@@ -56,7 +56,7 @@ function worst(): GameState {
         unit('Documentation'),
         unit('RubberDuck', { sigils: ['hotfix', 'rate_limiter'] }),
       ],
-      back: [unit('DeathNode'), unit('JACK', { sigils: EVERY_SIGIL }), unit('BootStrapped'), unit('Bug')],
+      back: [unit('ForkBomb'), unit('Mainframe', { sigils: EVERY_SIGIL }), unit('Sandbox'), unit('Bug')],
     },
     // Halfway through summoning the dearest card, so the prompt, the marks and a lifted card all show.
     summon: { uid: hand[0]!.uid, marked: [1] },

@@ -1,5 +1,6 @@
 import { card, CARDS, type Unit } from 'shared'
 import { CanvasTexture, SRGBColorSpace, type Texture } from 'three'
+import { LEGACY_ART, PLACEHOLDER, SPRITE_SIZE, SPRITES } from '../sprites.ts'
 import { ICONS, STAT_ICONS } from './icons.ts'
 import { TINT } from './palette.ts'
 import { CORNER_HOLES, DISK, RECESS, SCREEN_DIVIDER, SECTIONS, SIGIL_BAND } from './layout.ts'
@@ -24,7 +25,7 @@ let assets: Promise<Assets> | null = null
 /** The art and the font every face needs, loaded once for the page. */
 export function loadCardAssets(): Promise<Assets> {
   assets ??= (async () => {
-    const withArt = Object.keys(CARDS).filter((id) => id !== 'Boilerplate')
+    const withArt = Object.keys(CARDS).filter((id) => LEGACY_ART.has(id) && !SPRITES[id])
     const [art] = await Promise.all([
       Promise.all(withArt.map((id) => image(`/cards/${id}.webp`))),
       document.fonts.load('48px VT323'),
@@ -208,6 +209,54 @@ function hologram(
   context.restore()
 }
 
+const sprites = new Map<string, HTMLCanvasElement>()
+
+/** A sprite at a whole-pixel scale, scanlined like the holograms, made once per sprite, colour and size. */
+function spriteLayer(grid: readonly string[], scale: number, colour: string): HTMLCanvasElement {
+  const key = `${grid.join('')}:${colour}:${scale}`
+  let layer = sprites.get(key)
+  if (layer) return layer
+  layer = document.createElement('canvas')
+  layer.width = layer.height = SPRITE_SIZE * scale
+  const paint = layer.getContext('2d') as CanvasRenderingContext2D
+  pixels(
+    paint,
+    grid.map((row) => row.replaceAll('#', '1')),
+    0,
+    0,
+    scale,
+    colour,
+  )
+  paint.globalCompositeOperation = 'destination-out'
+  paint.fillStyle = 'rgb(0 0 0 / 0.35)'
+  for (let line = 1; line < layer.height; line += 3) paint.fillRect(0, line, layer.width, 1)
+  sprites.set(key, layer)
+  return layer
+}
+
+/** A sprite centred in its area, as large as whole pixels allow, glowing like the rest of the screen. */
+function sprite(
+  context: CanvasRenderingContext2D,
+  grid: readonly string[],
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  palette: Palette,
+) {
+  const scale = Math.max(1, Math.floor(Math.min(w, h) / SPRITE_SIZE))
+  const size = SPRITE_SIZE * scale
+  context.save()
+  context.shadowColor = palette.line
+  context.shadowBlur = 5
+  context.drawImage(
+    spriteLayer(grid, scale, palette.line),
+    Math.round(x + (w - size) / 2),
+    Math.round(y + (h - size) / 2),
+  )
+  context.restore()
+}
+
 type Layer = 'base' | 'content' | 'lights'
 
 /**
@@ -261,7 +310,9 @@ function drawFace(context: CanvasRenderingContext2D, unit: Unit, loaded: Assets,
   // The art above the divider, the sigils below it, the cost in the top-right corner.
   const divider = SCREEN_DIVIDER * H
   const art = loaded.art.get(unit.card)
-  if (art) hologram(context, art, sx + sw * 0.03, sy + sh * 0.08, sw * 0.94, divider - sy - sh * 0.1, palette)
+  const drawn = SPRITES[unit.card] ?? (art || unit.card === 'Boilerplate' ? null : PLACEHOLDER)
+  if (drawn) sprite(context, drawn, sx + sw * 0.03, sy + sh * 0.08, sw * 0.94, divider - sy - sh * 0.1, palette)
+  else if (art) hologram(context, art, sx + sw * 0.03, sy + sh * 0.08, sw * 0.94, divider - sy - sh * 0.1, palette)
   else {
     context.save()
     context.shadowColor = palette.line

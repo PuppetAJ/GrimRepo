@@ -17,17 +17,17 @@ const queuedBy = (state: GameState, count: number, turn = 12, seed = 1) => {
 
 describe('P03', () => {
   it('deletes a wall of its own that blocks its queue and guards nothing, so the queued card moves up', () => {
-    const { state, events } = play(table({ front: [null, null, 'Bug'], back: [null, null, 'GoogleFu'] }), {
+    const { state, events } = play(table({ front: [null, null, 'Bug'], back: [null, null, 'CopyPaste'] }), {
       type: 'ringBell',
     })
     assert.ok(events.some((event) => event.type === 'retired' && event.lane === 2))
-    assert.equal(state.opponent.front[2]?.card, 'GoogleFu')
+    assert.equal(state.opponent.front[2]?.card, 'CopyPaste')
     assert.equal(state.scale, -3, 'and it attacks the turn it arrives')
   })
 
   it('keeps a wall that is holding back one of the player’s attackers', () => {
     const { state, events } = play(
-      table({ board: [null, null, 'GoogleFu'], front: [null, null, 'Bug'], back: [null, null, 'Loop'] }),
+      table({ board: [null, null, 'CopyPaste'], front: [null, null, 'Bug'], back: [null, null, 'InfiniteLoop'] }),
       {
         type: 'ringBell',
       },
