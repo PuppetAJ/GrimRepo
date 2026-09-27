@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { after, beforeEach, describe, it } from 'node:test'
 import { apply, createGame, playOut, scoreBattle, summary, type Action, type GameState } from 'shared'
 import { pool } from '../config/db.ts'
+import { RECENT_GAMES } from '../db/games.ts'
 import { newPlayer, startApp } from '../test/http.ts'
 import { insertGame, insertOldGame, resetDatabase } from '../test/support.ts'
 
@@ -175,6 +176,7 @@ describe('a game', () => {
 
     const stats = await app.call('GET', `/api/players/${player.username}/stats`)
     assert.equal(stats.body.recent[0].forfeited, true)
+    assert.equal(stats.body.forfeits, 1)
     const fresh = await start(player.cookie)
     assert.notEqual(fresh.id, game.id)
   })
@@ -299,6 +301,14 @@ describe('a player’s stats', () => {
       [20, 9, 4, 12],
       'newest first',
     )
+  })
+
+  it('keep the newest games, enough for the charts and no more', async () => {
+    const player = await signedIn()
+    for (let day = 0; day < RECENT_GAMES + 5; day++) await insertGame(player.username, 'loss', 5 + day, day)
+    const { body } = await app.call('GET', `/api/players/${player.username}/stats`)
+    assert.equal(body.recent.length, RECENT_GAMES)
+    assert.equal(body.recent[0].turns, 5, 'the newest first')
   })
 
   it('count games per day for the activity grid', async () => {

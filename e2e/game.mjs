@@ -68,8 +68,8 @@ section('A whole game')
   check(
     'their record has the game',
     expected.outcome === 'win'
-      ? history.includes(`Win in ${expected.turns} turns`)
-      : history.includes(`Lose on turn ${expected.turns}`),
+      ? history.includes(`Beat P03 in ${expected.turns} turns`)
+      : history.includes(`Lose to P03 on turn ${expected.turns}`),
     history,
   )
   check('and the test player is removed afterwards', await deletePlayer(page, player))
@@ -87,7 +87,7 @@ section('Resuming')
   const consoleRegion = page.getByRole('region', { name: "P03's console" })
   const before = (await consoleRegion.innerText())
     .split('\n')
-    .filter((line) => line.startsWith('P03>') && !line.includes('Welcome back'))
+    .filter((line) => line.startsWith('P03>') && !line.includes('You came back'))
   await page.reload()
   await page.locator('[data-seed]').waitFor()
   check(
@@ -95,7 +95,7 @@ section('Resuming')
     (await page.locator('[data-seed]').getAttribute('data-seed')) === seed,
   )
   check('and picks it up at the same turn', (await visibleText(page)).includes(`Turn ${state.turn}`))
-  check('P03 notices', /Welcome back/.test(await visibleText(page)))
+  check('P03 notices', /You came back/.test(await visibleText(page)))
   const after = (await consoleRegion.innerText()).split('\n')
   check(
     'and the whole history is still in the console',

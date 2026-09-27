@@ -1,11 +1,18 @@
+import { useEffect, useRef } from 'react'
 import { Link, useParams } from 'react-router'
+import { TURN_LIMIT } from 'shared'
 import { Avatar } from '../components/Avatar.tsx'
+import { ScoreChart, Split, TurnsChart } from '../components/Charts.tsx'
+import { Corruption } from '../components/p03/Corruption.tsx'
+import { Glass } from '../components/p03/Glass.tsx'
 import { Failure, Loading } from '../components/States.tsx'
 import { api, ApiError, type PlayerStats } from '../lib/api.ts'
 import { ago, number } from '../lib/format.ts'
 import { useAsync } from '../lib/useAsync.ts'
 
 const DAYS = 26 * 7
+// The history lists the newest few; the charts take all the server sends.
+const HISTORY = 10
 const levels = ['bg-muted', 'bg-[#2b4a2a]', 'bg-[#3f7a3b]', 'bg-[#62a95a]', 'bg-primary']
 
 function level(games: number): number {
@@ -32,6 +39,11 @@ function grid(days: PlayerStats['days']) {
 
 function Activity({ stats }: { stats: PlayerStats }) {
   const cells = grid(stats.days)
+  // Opens on the latest weeks when the grid is wider than the screen.
+  const scroller = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (scroller.current) scroller.current.scrollLeft = scroller.current.scrollWidth
+  }, [])
   const played = cells.reduce((sum, cell) => sum + cell.games, 0)
   const bad = cells.filter((cell) => cell.bad).length
   return (
@@ -43,6 +55,7 @@ function Activity({ stats }: { stats: PlayerStats }) {
         <span className="text-sm text-muted-foreground">Outlined red: more lost than won that day</span>
       </div>
       <div
+        ref={scroller}
         role="img"
         aria-label={`${played} games over the last 26 weeks, ${bad} days with more losses than wins`}
         className="grid grid-flow-col grid-rows-7 gap-1 overflow-x-auto"
@@ -108,41 +121,107 @@ export function Player() {
 
       <div className="flex min-w-0 flex-1 flex-col gap-7">
         <Activity stats={player} />
-        <section className="overflow-hidden rounded-lg border bg-card">
-          <h2 className="border-b px-6 py-3.5 font-semibold">Game history</h2>
-          {player.recent.length === 0 ? (
-            <p className="px-6 py-5 text-muted-foreground">
-              No games yet.{' '}
-              <Link to="/game" className="text-primary hover:underline">
-                Play one
-              </Link>
-              .
-            </p>
-          ) : (
-            <ol>
-              {player.recent.map((game) => (
-                <li key={game.playedAt} className="flex items-center gap-4 border-t px-6 py-3.5 first:border-t-0">
-                  <span
-                    aria-hidden
-                    className={`size-2.5 shrink-0 rounded-full ${game.outcome === 'win' ? 'bg-primary' : 'bg-death'}`}
-                  />
-                  <div className="flex min-w-0 flex-1 flex-col">
-                    <span>
-                      {game.forfeited
-                        ? `Forfeited on turn ${game.turns}`
-                        : game.outcome === 'win'
-                          ? `Win in ${game.turns} turns`
-                          : `Lose on turn ${game.turns}`}
-                    </span>
-                    <span className="text-sm text-muted-foreground">{ago(game.playedAt)}</span>
-                  </div>
-                  <span className="font-mono">{number(game.score)}</span>
-                </li>
-              ))}
-            </ol>
-          )}
-        </section>
+        {player.recent.length ? (
+          <div className="grid gap-5 md:grid-cols-2">
+            <div className="md:col-span-2">
+              <ScoreChart games={[...player.recent].reverse()} />
+            </div>
+            <TurnsChart games={[...player.recent].reverse()} />
+            <Split wins={player.wins} losses={player.losses - player.forfeits} forfeits={player.forfeits} />
+          </div>
+        ) : null}
+        <History games={player.recent.slice(0, HISTORY)} />
       </div>
     </div>
+  )
+}
+
+type Game = PlayerStats['recent'][number]
+
+/** A short commit hash from when the game ended, so each game has one and keeps it. */
+function hashOf(game: Game): string {
+  let hash = 2166136261
+  for (const letter of game.playedAt) hash = Math.imul(hash ^ letter.charCodeAt(0), 16777619)
+  return (hash >>> 0).toString(16).padStart(8, '0').slice(0, 7)
+}
+
+const messageOf = (game: Game) =>
+  game.forfeited
+    ? `Forfeit to P03 on turn ${game.turns}`
+    : game.outcome === 'win'
+      ? `Beat P03 in ${game.turns} turns`
+      : `Lose to P03 on turn ${game.turns}`
+
+/** The newest loss, as P03 prints it: a stack trace. */
+function Trace({ game }: { game: Game }) {
+  const frames = game.forfeited
+    ? ['at you.forfeit()', `at factory.table (turn ${game.turns})`]
+    : game.turns >= TURN_LIMIT
+      ? [`at turn.limit(${TURN_LIMIT})`, 'at factory.table (ran out of time)']
+      : ['at scale.tip(p03)', `at factory.table (turn ${game.turns})`, 'at deck.synergy() -> null']
+  return (
+    <div className="relative mx-3 mt-3 sm:mx-4">
+      <Corruption dense cols={14} rows={3} corner="bottom-right" seed={43} className="right-2 bottom-full" />
+      <div className="p03-screen relative overflow-hidden border border-[#2f6b3d] px-4 py-3 font-terminal text-xl leading-tight sm:text-[1.35rem]">
+        <Glass />
+        <p className="flex flex-wrap justify-between gap-x-4">
+          <span className="text-[#ff7a6b]">
+            {game.forfeited ? 'SIGTERM' : 'FATAL'} game {game.forfeited ? 'abandoned' : 'lost'} on turn {game.turns}
+          </span>
+          <span className="text-p03-dim">
+            {hashOf(game)} · {number(game.score)}
+          </span>
+        </p>
+        {frames.map((frame) => (
+          <p key={frame} className="pl-6 text-p03-dim">
+            {frame}
+          </p>
+        ))}
+        <p className="mt-1">
+          <span className="text-p03">P03&gt;</span>{' '}
+          {game.forfeited ? 'Walking away? Typical.' : 'Weak cards. Total lack of synergy.'}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function History({ games }: { games: Game[] }) {
+  const lastLoss = games.find((game) => game.outcome === 'loss')
+  return (
+    <section className="overflow-hidden rounded-lg border bg-card">
+      <h2 className="border-b px-6 py-3.5 font-semibold">Game history</h2>
+      {games.length === 0 ? (
+        <p className="px-6 py-5 text-muted-foreground">
+          No games yet.{' '}
+          <Link to="/game" className="text-primary hover:underline">
+            Play one
+          </Link>
+          .
+        </p>
+      ) : (
+        <>
+          {lastLoss ? <Trace game={lastLoss} /> : null}
+          <ol className="mt-3">
+            {games.map((game) => (
+              <li key={game.playedAt} className="flex items-center gap-4 border-t px-6 py-3.5">
+                <span
+                  aria-hidden
+                  className={`size-2.5 shrink-0 rounded-full ${game.forfeited ? 'bg-muted-foreground' : game.outcome === 'win' ? 'bg-primary' : 'bg-death'}`}
+                />
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <span>{messageOf(game)}</span>
+                  <span className="text-sm text-muted-foreground">{ago(game.playedAt)}</span>
+                </div>
+                <span className="hidden rounded-md border border-input px-2 py-0.5 font-mono text-sm text-muted-foreground sm:inline">
+                  {hashOf(game)}
+                </span>
+                <span className="w-16 text-right font-mono">{number(game.score)}</span>
+              </li>
+            ))}
+          </ol>
+        </>
+      )}
+    </section>
   )
 }

@@ -10,6 +10,8 @@ export type PlayerStats = {
   games: number
   wins: number
   losses: number
+  // Counted among the losses too.
+  forfeits: number
   winRate: number | null
   bestScore: number
   bestWinTurns: number | null
@@ -151,6 +153,9 @@ async function finish(
 }
 
 /** Players ranked by their best finished game; ties share a rank and sort by name. */
+// Enough for the stats page's charts; its history lists the newest few of them.
+export const RECENT_GAMES = 30
+
 export async function leaderboard(limit = 50): Promise<LeaderboardRow[]> {
   const { rows } = await pool.query<LeaderboardRow>(
     `SELECT RANK() OVER (ORDER BY MAX(g.score) DESC)::int AS rank,
@@ -176,6 +181,7 @@ export async function playerStats(username: string): Promise<PlayerStats | null>
     joinedAt: Date
     games: number
     wins: number
+    forfeits: number
     bestScore: number
     bestWinTurns: number | null
     averageTurns: number | null
@@ -183,6 +189,7 @@ export async function playerStats(username: string): Promise<PlayerStats | null>
     `SELECT u.id, u.display_username AS username, u.created_at AS "joinedAt",
             COUNT(g.id)::int AS games,
             COUNT(g.id) FILTER (WHERE g.outcome = 'win')::int AS wins,
+            COUNT(g.id) FILTER (WHERE g.forfeited)::int AS forfeits,
             COALESCE(MAX(g.score), 0)::int AS "bestScore",
             MIN(g.turns) FILTER (WHERE g.outcome = 'win')::int AS "bestWinTurns",
             ROUND(AVG(g.turns), 1)::float AS "averageTurns"
@@ -197,8 +204,8 @@ export async function playerStats(username: string): Promise<PlayerStats | null>
   const [recent, days] = await Promise.all([
     pool.query<{ outcome: Outcome; turns: number; score: number; forfeited: boolean; playedAt: Date }>(
       `SELECT outcome, turns, score, forfeited, played_at AS "playedAt"
-       FROM games WHERE user_id = $1 AND status = 'finished' ORDER BY played_at DESC, id DESC LIMIT 10`,
-      [player.id],
+       FROM games WHERE user_id = $1 AND status = 'finished' ORDER BY played_at DESC, id DESC LIMIT $2`,
+      [player.id, RECENT_GAMES],
     ),
     // Half a year of days, for the activity grid on the stats page.
     pool.query<{ date: string; games: number; losses: number }>(
@@ -217,6 +224,7 @@ export async function playerStats(username: string): Promise<PlayerStats | null>
     games: player.games,
     wins: player.wins,
     losses: player.games - player.wins,
+    forfeits: player.forfeits,
     winRate: player.games ? Math.round((player.wins / player.games) * 1000) / 1000 : null,
     bestScore: player.bestScore,
     bestWinTurns: player.bestWinTurns,

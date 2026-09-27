@@ -8,6 +8,8 @@ export type PlayerStats = {
   games: number
   wins: number
   losses: number
+  // Counted among the losses too.
+  forfeits: number
   winRate: number | null
   bestScore: number
   bestWinTurns: number | null
