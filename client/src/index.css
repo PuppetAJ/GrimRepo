@@ -122,6 +122,13 @@
   }
 }
 
+/* The terminal's cursor: lit, then dark, about once a second. */
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
 /* A change on the scale's readout, rising and fading; reduced motion keeps only the fade. */
 @keyframes health-change {
   from {

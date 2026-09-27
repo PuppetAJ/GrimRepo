@@ -28,6 +28,10 @@ export default function Terminal({ lines, user }: { lines: readonly string[]; us
   const [entries, setEntries] = useState<Entry[]>([])
   const [typing, setTyping] = useState<{ id: number; count: number; total: number } | null>(null)
   const [text, setText] = useState('')
+  // Where the cursor sits in the text, and whether the prompt has focus, for the drawn cursor.
+  const [caret, setCaret] = useState(0)
+  const [focused, setFocused] = useState(false)
+  const mirror = useRef<HTMLParagraphElement>(null)
   const history = useRef<string[]>([])
   const recall = useRef(0)
   const commands = useRef<Commands | null>(null)
@@ -89,10 +93,22 @@ export default function Terminal({ lines, user }: { lines: readonly string[]; us
     }
   }
 
+  // Text set from here leaves the cursor at its end, as the browser does.
+  function type(next: string) {
+    setText(next)
+    setCaret(next.length)
+  }
+
+  // The drawn text follows the input as it scrolls sideways under a long command.
+  function follow(field: HTMLInputElement) {
+    setCaret(field.selectionStart ?? field.value.length)
+    if (mirror.current) mirror.current.scrollLeft = field.scrollLeft
+  }
+
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     void execute(text)
-    setText('')
+    type('')
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
@@ -100,7 +116,17 @@ export default function Terminal({ lines, user }: { lines: readonly string[]; us
     if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
       event.preventDefault()
       recall.current = Math.max(0, Math.min(past.length, recall.current + (event.key === 'ArrowUp' ? -1 : 1)))
-      setText(past[recall.current] ?? '')
+      type(past[recall.current] ?? '')
+    } else if (
+      event.key === 'Home' ||
+      event.key === 'End' ||
+      (event.ctrlKey && (event.key === 'a' || event.key === 'e'))
+    ) {
+      // To the start or the end, as a shell does; a Mac text field otherwise ignores Home and End.
+      event.preventDefault()
+      const to = event.key === 'Home' || event.key === 'a' ? 0 : text.length
+      event.currentTarget.setSelectionRange(to, to)
+      follow(event.currentTarget)
     } else if (event.key === 'l' && event.ctrlKey) {
       event.preventDefault()
       setEntries([])
@@ -109,7 +135,7 @@ export default function Terminal({ lines, user }: { lines: readonly string[]; us
       const completed = commands.current?.complete(text)
       if (completed && completed !== text) {
         event.preventDefault()
-        setText(completed)
+        type(completed)
       }
     }
   }
@@ -145,21 +171,46 @@ export default function Terminal({ lines, user }: { lines: readonly string[]; us
             <Prompt who={who} path={pathOf(pathname)} />
             <span className="sr-only">Command for P03</span>
           </label>
-          <input
-            id="p03-command"
-            ref={input}
-            value={text}
-            onChange={(event) => setText(event.target.value)}
-            onKeyDown={onKeyDown}
-            // The commands start loading as soon as someone means to type.
-            onFocus={() => void loadCommands().then((loaded) => (commands.current = loaded))}
-            autoComplete="off"
-            autoCapitalize="off"
-            autoCorrect="off"
-            spellCheck={false}
-            enterKeyHint="send"
-            className="min-w-0 flex-1 bg-transparent text-[#e6ffe9] caret-p03 outline-none"
-          />
+          {/* The input takes the typing, invisibly; the text and a thick block cursor are drawn over it. */}
+          <div className="relative min-w-0 flex-1">
+            <p ref={mirror} aria-hidden className="overflow-hidden whitespace-pre text-[#e6ffe9]">
+              <span className="relative">
+                {text || ' '}
+                <span
+                  // Typing restarts the blink, so the cursor stays lit while keys are going.
+                  key={`${text}:${caret}`}
+                  className={`absolute top-[0.1em] h-[1.05em] w-[0.55ch] ${focused ? 'animate-[blink_1.06s_steps(1)_infinite] bg-p03 motion-reduce:animate-none' : 'bg-p03/35'}`}
+                  style={{ left: `${caret}ch` }}
+                />
+              </span>
+            </p>
+            <input
+              id="p03-command"
+              ref={input}
+              value={text}
+              onChange={(event) => {
+                setText(event.target.value)
+                follow(event.target)
+              }}
+              // Select alone misses some moves, such as Home and End, so key-ups and clicks are followed too.
+              onSelect={(event) => follow(event.currentTarget)}
+              onKeyUp={(event) => follow(event.currentTarget)}
+              onMouseUp={(event) => follow(event.currentTarget)}
+              onKeyDown={onKeyDown}
+              onFocus={() => {
+                setFocused(true)
+                // The commands start loading as soon as someone means to type.
+                void loadCommands().then((loaded) => (commands.current = loaded))
+              }}
+              onBlur={() => setFocused(false)}
+              autoComplete="off"
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck={false}
+              enterKeyHint="send"
+              className="absolute inset-0 w-full bg-transparent text-transparent caret-transparent outline-none selection:bg-p03/30"
+            />
+          </div>
         </form>
       </div>
     </section>
