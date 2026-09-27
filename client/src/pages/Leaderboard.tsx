@@ -2,7 +2,6 @@ import { Link, useLocation } from 'react-router'
 import { Avatar } from '../components/Avatar.tsx'
 import { Corruption } from '../components/p03/Corruption.tsx'
 import { Glass } from '../components/p03/Glass.tsx'
-import { useP03Says } from '../components/p03/says.ts'
 import { Failure } from '../components/States.tsx'
 import { Skeleton } from '@/components/ui/skeleton.tsx'
 import { api, type Finished, type LeaderboardRow } from '../lib/api.ts'
@@ -16,24 +15,6 @@ export function Leaderboard() {
   const me = (session.data?.user as { username?: string } | undefined)?.username
   // Set by the game page when a game ends, so the result greets the player here.
   const result = (useLocation().state as { result?: Finished } | null)?.result
-  const first = board.status === 'ready' ? board.data[0] : undefined
-  useP03Says(
-    board.status === 'loading'
-      ? null
-      : result
-        ? [
-            result.outcome === 'win'
-              ? `You beat me in ${result.turns} turns. I have filed a bug against you.`
-              : `You lasted ${result.turns} turns. I have seen longer.`,
-            result.isBest ? 'A new best. I will remember it.' : 'Not your best. I remember that one too.',
-          ]
-        : first
-          ? [
-              `${first.username} is first. I am watching ${first.username}.`,
-              'Everyone else: I am watching you as well.',
-            ]
-          : ['An empty board. Nobody has finished a game against me.'],
-  )
 
   return (
     <div className="flex flex-col gap-6">
@@ -43,9 +24,18 @@ export function Leaderboard() {
           className="p03-screen relative overflow-hidden rounded-md border border-[#2f6b3d] px-5 py-4 font-terminal text-2xl"
         >
           <Glass />
-          {result.outcome === 'win' ? `You win in ${result.turns} turns.` : `You lose on turn ${result.turns}.`}{' '}
-          {number(result.score)} points
-          {result.isBest ? '. A new best.' : '.'}
+          <p>
+            {result.outcome === 'win' ? `You win in ${result.turns} turns.` : `You lose on turn ${result.turns}.`}{' '}
+            {number(result.score)} points
+            {result.isBest ? '. A new best.' : '.'}
+          </p>
+          <p className="text-xl text-p03-dim">
+            P03&gt;{' '}
+            {result.outcome === 'win'
+              ? `You beat me in ${result.turns} turns. I have filed a bug against you.`
+              : `You lasted ${result.turns} turns. I have seen longer.`}{' '}
+            {result.isBest ? 'A new best. I will remember it.' : 'Not your best. I remember that one too.'}
+          </p>
         </div>
       ) : null}
       <div className="flex flex-col gap-2">

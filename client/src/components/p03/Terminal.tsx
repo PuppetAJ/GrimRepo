@@ -1,12 +1,10 @@
-import { Maximize2, Minimize2 } from 'lucide-react'
 import { lazy, Suspense, useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import type { Commands } from './commands.tsx'
 import { Glass } from './Glass.tsx'
 import { pathOf, Prompt } from './Prompt.tsx'
-import { useP03Lines } from './says.ts'
 
-// WebGL and the commands load after the page, so the first load stays light.
+// WebGL and the commands load after the terminal, so it appears at once.
 const FaultyScreen = lazy(() => import('./FaultyScreen.tsx'))
 const loadCommands = () => import('./commands.tsx')
 
@@ -16,62 +14,40 @@ type Entry =
   | { id: number; kind: 'output'; node: ReactNode }
   | { id: number; kind: 'hint' }
 
-const OPEN_KEY = 'grimrepo:console'
 const TYPE_MS = 28
 const KEEP = 200
 let nextId = 0
 
-function startsOpen(): boolean {
-  try {
-    const saved = localStorage.getItem(OPEN_KEY)
-    if (saved) return saved === 'open'
-  } catch {
-    // Storage refused in a private window; fall back to the screen size.
-  }
-  // Open on a laptop, tucked away on a phone, where it would take a fifth of the screen.
-  return window.matchMedia('(min-width: 640px)').matches
-}
-
 const still = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-/** P03's terminal docked under the page: it greets each page, takes commands, and folds down to a button. */
-export function Console({ user, onHeight }: { user: string | undefined; onHeight: (height: number) => void }) {
-  const said = useP03Lines()
-  const key = said.lines.join('\n')
+/** P03's terminal: it reads out its lines once, then takes commands. */
+export default function Terminal({ lines, user }: { lines: readonly string[]; user: string | undefined }) {
+  const key = lines.join('\n')
   const { pathname } = useLocation()
   const navigate = useNavigate()
-  const [open, setOpen] = useState(startsOpen)
-  const [tall, setTall] = useState(false)
   const [entries, setEntries] = useState<Entry[]>([])
-  const [unread, setUnread] = useState(0)
   const [typing, setTyping] = useState<{ id: number; count: number; total: number } | null>(null)
   const [text, setText] = useState('')
   const history = useRef<string[]>([])
   const recall = useRef(0)
   const commands = useRef<Commands | null>(null)
-  const greeted = useRef(false)
-  const lastGreeting = useRef('')
-  const opened = useRef(open)
-  const box = useRef<HTMLElement>(null)
   const scroller = useRef<HTMLDivElement>(null)
   const input = useRef<HTMLInputElement>(null)
   const who = user ?? 'guest'
 
   const add = (...added: Entry[]) => setEntries((list) => [...list, ...added].slice(-KEEP))
 
-  // Each page's lines arrive as P03 reading out its motd; typed out if the console is open to see it.
+  // The lines arrive as P03 reading out his motd, typed out once, then a hint of what to type.
   useEffect(() => {
-    // The same page saying the same again (a page setting its lines twice) is not a new greeting.
-    if (!key || lastGreeting.current === `${said.path}\n${key}`) return
-    lastGreeting.current = `${said.path}\n${key}`
     const id = nextId++
-    const lines = key.split('\n')
-    const hint: Entry[] = greeted.current ? [] : [{ id: nextId++, kind: 'hint' }]
-    greeted.current = true
-    setEntries((list) => [...list, { id, kind: 'motd' as const, path: pathOf(said.path), lines }, ...hint].slice(-KEEP))
-    if (!opened.current) setUnread((count) => count + lines.length)
-    else if (!still()) setTyping({ id, count: 0, total: key.length })
-  }, [key, said.path])
+    setEntries([
+      { id, kind: 'motd', path: pathOf(pathname), lines: key.split('\n') },
+      { id: nextId++, kind: 'hint' },
+    ])
+    if (!still()) setTyping({ id, count: 0, total: key.length })
+    // Only new lines are read out again; moving away unmounts the terminal anyway.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key])
 
   const typingId = typing?.id
   useEffect(() => {
@@ -90,30 +66,7 @@ export function Console({ user, onHeight }: { user: string | undefined; onHeight
   useEffect(() => {
     const element = scroller.current
     if (element) element.scrollTop = element.scrollHeight
-  }, [entries, typing, open, tall])
-
-  const silent = said.lines.length === 0 && entries.length === 0
-  useEffect(() => {
-    const element = box.current
-    if (!element) return onHeight(0)
-    const observer = new ResizeObserver(() => onHeight(element.offsetHeight))
-    observer.observe(element)
-    return () => {
-      observer.disconnect()
-      onHeight(0)
-    }
-  }, [onHeight, open, silent])
-
-  const toggle = (next: boolean) => {
-    setOpen(next)
-    opened.current = next
-    if (next) setUnread(0)
-    try {
-      localStorage.setItem(OPEN_KEY, next ? 'open' : 'closed')
-    } catch {
-      // Remembered until the page closes.
-    }
-  }
+  }, [entries, typing])
 
   async function execute(raw: string) {
     const command = raw.trim()
@@ -129,8 +82,6 @@ export function Console({ user, onHeight }: { user: string | undefined; onHeight
         history: history.current,
         navigate: (to) => void navigate(to),
         clear: () => setEntries([]),
-        fold: () => toggle(false),
-        tall: setTall,
       })
       if (node !== null) add({ id: nextId++, kind: 'output', node })
     } catch (error) {
@@ -163,54 +114,17 @@ export function Console({ user, onHeight }: { user: string | undefined; onHeight
     }
   }
 
-  if (silent) return null
-
-  if (!open)
-    return (
-      <aside ref={box} aria-label="P03's console" className="fixed right-4 bottom-4 z-30 sm:right-8 sm:bottom-6">
-        <button
-          type="button"
-          aria-expanded={false}
-          onClick={() => toggle(true)}
-          className="p03-screen relative overflow-hidden border border-[#2f6b3d] px-4 py-2 font-terminal text-xl text-p03 hover:border-p03 focus-visible:outline-2 focus-visible:outline-p03"
-        >
-          P03 &gt; {unread ? `${unread} new ${unread === 1 ? 'message' : 'messages'}` : 'console'}
-          <Glass />
-        </button>
-      </aside>
-    )
-
   return (
-    <aside
-      ref={box}
-      aria-label="P03's console"
-      className="fixed inset-x-0 bottom-0 z-30 flex flex-col overflow-hidden border-t border-[#2f6b3d] bg-p03-ground font-terminal text-[#b8f5c4] [text-shadow:0_0_8px_rgb(125_255_154/0.35)]"
+    <section
+      aria-label="P03's terminal"
+      className="relative flex h-full flex-col overflow-hidden bg-p03-ground font-terminal text-[#b8f5c4] [text-shadow:0_0_8px_rgb(125_255_154/0.35)]"
     >
       <Suspense fallback={null}>
         <FaultyScreen />
       </Suspense>
       <Glass />
-      <div className="relative z-10 flex items-center justify-between gap-3 border-b border-[#2f6b3d]/70 bg-p03-ground/80 px-4 py-1 sm:px-12">
-        <span className="truncate text-lg text-p03-dim">p03@factory: ~/grim-repo</span>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            aria-label={tall ? 'Make the console smaller' : 'Make the console taller'}
-            onClick={() => setTall(!tall)}
-            className="flex size-7 items-center justify-center border border-[#2f6b3d] text-p03 hover:border-p03 focus-visible:outline-2 focus-visible:outline-p03"
-          >
-            {tall ? <Minimize2 className="size-3.5" aria-hidden /> : <Maximize2 className="size-3.5" aria-hidden />}
-          </button>
-          <button
-            type="button"
-            aria-expanded
-            aria-label="Fold P03's console away"
-            onClick={() => toggle(false)}
-            className="flex size-7 items-center justify-center border border-[#2f6b3d] leading-none text-p03 hover:border-p03 focus-visible:outline-2 focus-visible:outline-p03"
-          >
-            _
-          </button>
-        </div>
+      <div className="relative z-10 border-b border-[#2f6b3d]/70 bg-p03-ground/80 px-4 py-1 text-lg text-p03-dim sm:px-6">
+        p03@factory: ~/grim-repo
       </div>
       <div
         ref={scroller}
@@ -219,9 +133,9 @@ export function Console({ user, onHeight }: { user: string | undefined; onHeight
           const target = event.target as HTMLElement
           if (!window.getSelection()?.toString() && !target.closest('button, a, input')) input.current?.focus()
         }}
-        className={`relative z-10 overflow-y-auto overscroll-contain px-4 py-2 text-xl leading-snug sm:px-12 sm:text-2xl ${tall ? 'h-[70dvh]' : 'max-h-[min(19rem,38dvh)]'}`}
+        className="relative z-10 min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-2 text-xl leading-snug sm:px-6"
       >
-        <div role="log" aria-label="P03's console output" className="flex flex-col gap-1">
+        <div role="log" aria-label="P03's terminal output" className="flex flex-col gap-1">
           {entries.map((entry) => (
             <Line key={entry.id} entry={entry} typed={typing?.id === entry.id ? typing.count : null} run={execute} />
           ))}
@@ -251,7 +165,7 @@ export function Console({ user, onHeight }: { user: string | undefined; onHeight
           />
         </form>
       </div>
-    </aside>
+    </section>
   )
 }
 

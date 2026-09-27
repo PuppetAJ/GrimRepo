@@ -36,15 +36,18 @@ section('The home page')
   check('the client reaches the API', reached)
 }
 
-section("P03's console")
+section("P03's terminal")
 {
-  const console = page.getByRole('complementary', { name: "P03's console" })
-  await console.getByText('Another visitor').first().waitFor()
+  const readme = page.getByRole('img', { name: /The 3D table/ })
+  check('the README shows a gameplay screenshot first', await readme.isVisible())
+  const terminal = page.getByRole('region', { name: "P03's terminal" })
+  await terminal.getByText('Another visitor').first().waitFor()
+  check('then P03 takes it over with his terminal', !(await readme.isVisible()))
   check(
-    'P03 greets the home page, once',
-    (await console.locator('.sr-only', { hasText: 'Another visitor' }).count()) === 1,
+    'and greets the visitor once',
+    (await terminal.locator('.sr-only', { hasText: 'Another visitor' }).count()) === 1,
   )
-  const prompt = console.getByLabel('Command for P03')
+  const prompt = terminal.getByLabel('Command for P03')
   const run = async (command) => {
     await prompt.fill(command)
     await prompt.press('Enter')
@@ -52,7 +55,7 @@ section("P03's console")
   await run('help')
   check(
     'help lists the commands',
-    await console
+    await terminal
       .getByText('learn the game, a step at a time')
       .waitFor()
       .then(
@@ -61,12 +64,20 @@ section("P03's console")
       ),
   )
   await run('card jack')
-  await console.getByText('attack 13').waitFor()
-  check('a card can be read up close', true)
+  check(
+    'a card can be read up close',
+    await terminal
+      .getByText('attack 13')
+      .waitFor()
+      .then(
+        () => true,
+        () => false,
+      ),
+  )
   await run('nonsense')
   check(
     'an unknown command says so',
-    await console
+    await terminal
       .getByText('command not found: nonsense')
       .waitFor()
       .then(
@@ -74,23 +85,18 @@ section("P03's console")
         () => false,
       ),
   )
-  await run('cd leaderboard')
-  await page.waitForURL(/\/leaderboard$/)
-  await console.getByText('I am watching').first().waitFor()
-  check('cd moves to another page, and P03 greets it', true)
-  await console.getByRole('button', { name: "Fold P03's console away" }).click()
   await page.reload()
   check(
-    'folded, it stays folded after a reload',
-    await page
-      .getByRole('button', { name: /^P03 >/ })
-      .waitFor()
-      .then(
-        () => true,
-        () => false,
-      ),
+    'on the same visit, the README is already infected',
+    await terminal.waitFor({ timeout: 1500 }).then(
+      () => true,
+      () => false,
+    ),
   )
-  await page.getByRole('button', { name: /^P03 >/ }).click()
+  await run('cd leaderboard')
+  await page.waitForURL(/\/leaderboard$/)
+  check('cd moves to another page', true)
+  await page.goto(BASE)
 }
 
 section('Accounts and scores')

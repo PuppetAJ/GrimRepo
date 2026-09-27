@@ -3,8 +3,9 @@ import { Button } from '@/components/ui/button.tsx'
 import { Avatar } from '../components/Avatar.tsx'
 import { Corruption } from '../components/p03/Corruption.tsx'
 import { Glass } from '../components/p03/Glass.tsx'
-import { useP03Says } from '../components/p03/says.ts'
+import { Infected } from '../components/p03/Infected.tsx'
 import { api } from '../lib/api.ts'
+import { authClient } from '../lib/auth.ts'
 import { number } from '../lib/format.ts'
 import { useAsync } from '../lib/useAsync.ts'
 
@@ -23,7 +24,8 @@ const turn = [
 export function Home() {
   const top = useAsync(() => api.leaderboard().then((rows) => rows.slice(0, 3)), 'top')
   const first = top.status === 'ready' ? top.data[0] : undefined
-  useP03Says(
+  const user = (authClient.useSession().data?.user as { displayUsername?: string } | undefined)?.displayUsername
+  const lines =
     top.status === 'loading'
       ? null
       : [
@@ -32,12 +34,11 @@ export function Home() {
           first
             ? `${first.username} holds first place with ${number(first.bestScore)}. For now.`
             : 'Nobody has beaten me yet.',
-        ],
-  )
+        ]
 
   return (
     <div className="flex flex-col gap-10 lg:flex-row lg:items-start">
-      <article className="relative min-w-0 flex-1 overflow-hidden rounded-lg border bg-card">
+      <article className="relative min-w-0 flex-1 rounded-lg border bg-card">
         <Corruption cols={16} rows={9} corner="top-right" seed={7} className="top-0 right-0 max-sm:hidden" />
         <div className="border-b px-5 py-3 font-mono text-sm text-muted-foreground">README.md</div>
         <div className="flex flex-col gap-6 px-6 py-8 sm:px-11">
@@ -66,6 +67,8 @@ export function Home() {
               <Link to="/leaderboard">Leaderboard</Link>
             </Button>
           </div>
+
+          <Infected lines={lines} user={user} />
 
           <h2 className="mt-4 border-b pb-2 text-2xl font-semibold">Installation</h2>
           <p className="text-foreground/85">There is no installation. There is only the table. Each turn:</p>

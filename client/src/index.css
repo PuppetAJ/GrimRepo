@@ -122,6 +122,19 @@
   }
 }
 
+/* The README's infected screenshot, broken out past the README's frame into the page's margins. */
+.breakout {
+  --break: 1.75rem;
+  margin-inline: calc(var(--break) * -1);
+  rotate: -0.6deg;
+  translate: 0 -0.25rem;
+}
+@media (min-width: 40rem) {
+  .breakout {
+    --break: 4.25rem;
+  }
+}
+
 /* A change on the scale's readout, rising and fading; reduced motion keeps only the fade. */
 @keyframes health-change {
   from {

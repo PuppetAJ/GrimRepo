@@ -8,8 +8,6 @@ export type Context = {
   history: readonly string[]
   navigate: (to: string) => void
   clear: () => void
-  fold: () => void
-  tall: (tall: boolean) => void
 }
 export type Commands = typeof import('./commands.tsx')
 
@@ -43,7 +41,6 @@ const HELP: [string, string][] = [
   ['cd <page>', 'readme, leaderboard, game, account'],
   ['history', 'what you have typed'],
   ['clear', 'a clean screen'],
-  ['exit', 'fold me away'],
 ]
 
 function Cost({ cost }: { cost: number }) {
@@ -179,7 +176,6 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
       )
     case 'tutorial':
     case 'man':
-      context.tall(true)
       return tutorial(argument ? Number(argument) - 1 || 0 : 0)
     case 'next':
     case 'n':
@@ -188,7 +184,6 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
     case 'b':
       return tutorial(step - 1)
     case 'rules':
-      context.tall(true)
       return (
         <ol className="flex max-w-4xl list-decimal flex-col gap-1 pl-8">
           {STEPS.map((lesson) => (
@@ -300,9 +295,7 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
       return null
     case 'exit':
     case 'quit':
-      context.tall(false)
-      context.fold()
-      return null
+      return <p>There is no exit. There is only the table.</p>
     case 'echo':
       return <p>{argument}</p>
     case 'sudo':

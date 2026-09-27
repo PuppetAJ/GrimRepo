@@ -1,6 +1,6 @@
 import { ChevronDown, LogOut, Settings, UserRound } from 'lucide-react'
-import { lazy, Suspense, useState } from 'react'
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
+import { Suspense } from 'react'
+import { NavLink, Outlet, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button.tsx'
 import {
@@ -15,9 +15,6 @@ import { Avatar } from './Avatar.tsx'
 import { Logo } from './Logo.tsx'
 import { Loading } from './States.tsx'
 
-// P03's console is not needed to read the page, so it arrives just after it.
-const Console = lazy(() => import('./p03/Console.tsx').then((module) => ({ default: module.Console })))
-
 const tabs = [
   { to: '/', label: 'README', end: true },
   { to: '/leaderboard', label: 'Leaderboard' },
@@ -29,9 +26,6 @@ export function Layout() {
   const navigate = useNavigate()
   const user = session.data?.user as { displayUsername?: string; username?: string } | undefined
   const name = user?.displayUsername ?? user?.username
-  // The game has its own console on the table, so P03's dock stays out of it.
-  const playing = useLocation().pathname.startsWith('/game')
-  const [docked, setDocked] = useState(0)
 
   async function signOut() {
     await authClient.signOut()
@@ -40,8 +34,7 @@ export function Layout() {
   }
 
   return (
-    // Room under the footer for the docked console, so it never covers the end of the page.
-    <div className="flex min-h-screen flex-col" style={docked && !playing ? { paddingBottom: docked + 16 } : undefined}>
+    <div className="flex min-h-screen flex-col">
       <header className="flex items-center justify-between gap-3 border-b bg-chrome px-4 py-3 sm:px-12">
         <div className="flex items-center gap-3">
           <Logo />
@@ -112,11 +105,6 @@ export function Layout() {
       <footer className="border-t px-4 py-6 text-sm text-muted-foreground sm:px-12">
         A tribute to Inscryption. Built by Adrian Jimenez.
       </footer>
-      {playing ? null : (
-        <Suspense fallback={null}>
-          <Console user={name} onHeight={setDocked} />
-        </Suspense>
-      )}
     </div>
   )
 }
