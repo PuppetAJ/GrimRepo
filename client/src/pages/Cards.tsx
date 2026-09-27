@@ -5,7 +5,7 @@ import { CARDS, SIGILS, type CardDef, type Unit } from 'shared'
 import { Button } from '@/components/ui/button.tsx'
 import { Input } from '@/components/ui/input.tsx'
 import { Glass } from '../components/p03/Glass.tsx'
-import { PixelCard } from '../game/CardReader.tsx'
+import { PixelCard, Sigil } from '../game/CardReader.tsx'
 import { WORST_CARD, withWorstCard } from '../game/fixtures.ts'
 
 // three.js loads only when someone opens a card in 3D.
@@ -72,11 +72,25 @@ function Facts({ def }: { def: CardDef }) {
         <span>Attack: {def.attack}</span>
         <span>Health: {def.health}</span>
       </p>
-      {def.sigils.map((sigil) => (
-        <p key={sigil} className="text-sm text-muted-foreground">
-          <span className="text-foreground">{SIGILS[sigil].name}.</span> {SIGILS[sigil].text}
-        </p>
-      ))}
+      {/* Each sigil beside its icon; past a few, the list scrolls rather than stretching the card. */}
+      {def.sigils.length ? (
+        <ul
+          tabIndex={0}
+          aria-label={`${def.name}'s sigils`}
+          className="flex max-h-28 flex-col gap-1 overflow-y-auto pr-1 focus-visible:outline-2 focus-visible:outline-ring"
+        >
+          {def.sigils.map((sigil) => (
+            <li key={sigil} className="flex gap-2 text-sm text-muted-foreground">
+              <span className="shrink-0 pt-0.5 text-foreground">
+                <Sigil id={sigil} size={14} colour="currentColor" />
+              </span>
+              <span>
+                <span className="text-foreground">{SIGILS[sigil].name}.</span> {SIGILS[sigil].text}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
       {def.id === 'Boilerplate' ? (
         <p className="text-sm text-muted-foreground">From the pile that never runs out. Worth one sacrifice.</p>
       ) : null}
@@ -296,29 +310,32 @@ export function Cards() {
               )
             })}
           </div>
-          <div role="group" aria-label="View" className="flex overflow-hidden rounded-md border">
-            <Button
-              variant="ghost"
-              size="sm"
-              aria-pressed={view === 'grid'}
-              className={`rounded-none ${view === 'grid' ? 'bg-muted' : ''}`}
-              onClick={() => change({ view: null })}
-            >
-              <LayoutGrid aria-hidden /> Cards
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              aria-pressed={view === '3d'}
-              className={`rounded-none ${view === '3d' ? 'bg-muted' : ''}`}
-              onClick={() => change({ view: '3d' })}
-            >
-              <Box aria-hidden /> 3D
-            </Button>
+          {/* The view and the count move to the next line together. */}
+          <div className="flex items-center gap-3">
+            <div role="group" aria-label="View" className="flex overflow-hidden rounded-md border">
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-pressed={view === 'grid'}
+                className={`rounded-none ${view === 'grid' ? 'bg-muted' : ''}`}
+                onClick={() => change({ view: null })}
+              >
+                <LayoutGrid aria-hidden /> Cards
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-pressed={view === '3d'}
+                className={`rounded-none ${view === '3d' ? 'bg-muted' : ''}`}
+                onClick={() => change({ view: '3d' })}
+              >
+                <Box aria-hidden /> 3D
+              </Button>
+            </div>
+            <p role="status" className="text-sm whitespace-nowrap text-muted-foreground">
+              {cards.length === DECK.length ? '' : `${cards.length} of ${DECK.length}`}
+            </p>
           </div>
-          <p role="status" className="text-sm text-muted-foreground">
-            {cards.length === DECK.length ? '' : `${cards.length} of ${DECK.length}`}
-          </p>
         </div>
       </div>
 

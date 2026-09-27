@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useRef } from 'react'
+import { Suspense } from 'react'
 import {
   CalendarDays,
   ChevronLeft,
@@ -79,17 +79,6 @@ function Activity({ stats }: { stats: PlayerStats }) {
   const cells = grid(stats.days)
   const played = cells.reduce((sum, cell) => sum + cell.games, 0)
   const bad = cells.filter((cell) => cell.bad).length
-  // Kept on the latest weeks whenever the grid scrolls, at whatever size, as the card is resized too.
-  const scroller = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const element = scroller.current
-    if (!element) return
-    const toLatest = () => (element.scrollLeft = element.scrollWidth)
-    toLatest()
-    const observer = new ResizeObserver(toLatest)
-    observer.observe(element)
-    return () => observer.disconnect()
-  }, [])
   return (
     // Side by side wherever the column fits the activity in two columns; one over the other only on a phone.
     <div className="@container">
@@ -104,21 +93,27 @@ function Activity({ stats }: { stats: PlayerStats }) {
               <Legend />
             </div>
           </div>
+          {/* Laid out from the right, so where the grid scrolls it starts at the latest weeks, with no script to put it there. */}
           <div
-            ref={scroller}
-            role="img"
-            aria-label={`${played} games over the last 26 weeks, ${bad} days with more losses than wins`}
-            // The squares fill the card's width down to a legible size; past that, the grid scrolls sideways.
-            className="grid grid-flow-col grid-rows-7 gap-[3px] overflow-x-auto pb-1 sm:gap-1"
-            style={{ gridAutoColumns: 'minmax(12px, 1fr)' }}
+            tabIndex={0}
+            aria-label="Activity grid, scrolls sideways"
+            className="flex flex-row-reverse overflow-x-auto pb-1 focus-visible:outline-2 focus-visible:outline-ring"
           >
-            {cells.map((cell) => (
-              <span
-                key={cell.key}
-                title={`${cell.key}: ${cell.games} ${cell.games === 1 ? 'game' : 'games'}`}
-                className={`aspect-square w-full rounded-[20%] ${cell.bad ? 'border-2 border-[#ffd2cf] bg-death' : levels[level(cell.games)]}`}
-              />
-            ))}
+            <div
+              role="img"
+              aria-label={`${played} games over the last 26 weeks, ${bad} days with more losses than wins`}
+              // The squares fill the card's width down to a legible size; past that, the grid scrolls sideways.
+              className="grid shrink-0 grow grid-flow-col grid-rows-7 gap-[3px] sm:gap-1"
+              style={{ gridAutoColumns: 'minmax(12px, 1fr)' }}
+            >
+              {cells.map((cell) => (
+                <span
+                  key={cell.key}
+                  title={`${cell.key}: ${cell.games} ${cell.games === 1 ? 'game' : 'games'}`}
+                  className={`aspect-square w-full rounded-[20%] ${cell.bad ? 'border-2 border-[#ffd2cf] bg-death' : levels[level(cell.games)]}`}
+                />
+              ))}
+            </div>
           </div>
           <div className="@min-[30rem]:hidden">
             <Legend />
