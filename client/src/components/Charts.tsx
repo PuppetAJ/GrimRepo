@@ -4,7 +4,8 @@ import { ago, number } from '../lib/format.ts'
 
 type Game = PlayerStats['recent'][number]
 
-const HEIGHT = 160
+// The least a chart is drawn at; given more room by its card, it takes it.
+const MIN_HEIGHT = 160
 const PAD = { top: 12, right: 8, bottom: 8, left: 44 }
 const colorOf = (game: Game) =>
   game.forfeited ? 'var(--muted-foreground)' : game.outcome === 'win' ? 'var(--primary)' : 'var(--death)'
@@ -16,18 +17,23 @@ const ending = (game: Game) =>
       ? `Won in ${game.turns} turns`
       : `Lost on turn ${game.turns}`
 
-/** The width a chart has to draw in, so it is drawn in real pixels and its dots stay round. */
-function useWidth() {
+/**
+ * The room a chart has to draw in, so it is drawn in real pixels and its dots stay round. The drawing sits over its box
+ * rather than in it, so it never holds the box open: the box follows the card, and the drawing follows the box.
+ */
+function useSize() {
   const box = useRef<HTMLDivElement>(null)
-  const [width, setWidth] = useState(0)
+  const [size, setSize] = useState({ width: 0, height: MIN_HEIGHT })
   useEffect(() => {
     const element = box.current
     if (!element) return
-    const observer = new ResizeObserver(() => setWidth(element.clientWidth))
+    const observer = new ResizeObserver(() =>
+      setSize({ width: element.clientWidth, height: Math.max(MIN_HEIGHT, element.clientHeight) }),
+    )
     observer.observe(element)
     return () => observer.disconnect()
   }, [])
-  return [box, width] as const
+  return [box, size.width, size.height] as const
 }
 
 /** Which game the pointer is over, by where it is across the chart; a tap counts as much as a hover. */
@@ -102,8 +108,18 @@ function Tip({ game, index, count, x, width }: { game: Game; index: number; coun
 }
 
 /** Gridlines at nothing, half and the most, labelled on the left. */
-function Grid({ width, top, format }: { width: number; top: number; format: (value: number) => string }) {
-  const span = HEIGHT - PAD.top - PAD.bottom
+function Grid({
+  width,
+  height,
+  top,
+  format,
+}: {
+  width: number
+  height: number
+  top: number
+  format: (value: number) => string
+}) {
+  const span = height - PAD.top - PAD.bottom
   return (
     <g>
       {[0, 0.5, 1].map((share) => {
@@ -123,9 +139,9 @@ function Grid({ width, top, format }: { width: number; top: number; format: (val
 
 /** Each game's score, oldest on the left, dotted in the colour of how it ended. */
 export function ScoreChart({ games }: { games: Game[] }) {
-  const [box, width] = useWidth()
+  const [box, width, height] = useSize()
   const top = Math.max(1, ...games.map((game) => game.score))
-  const span = HEIGHT - PAD.top - PAD.bottom
+  const span = height - PAD.top - PAD.bottom
   const reach = width - PAD.left - PAD.right
   const x = (index: number) => PAD.left + (games.length === 1 ? 0.5 : index / (games.length - 1)) * reach
   const y = (score: number) => PAD.top + span * (1 - score / top)
@@ -140,10 +156,10 @@ export function ScoreChart({ games }: { games: Game[] }) {
   const area = `${line}L${x(games.length - 1).toFixed(1)},${PAD.top + span}L${x(0).toFixed(1)},${PAD.top + span}Z`
   return (
     <Frame title="Score per game" note="shorter games score more, oldest first">
-      <div ref={box} aria-hidden className="relative h-40">
+      <div ref={box} aria-hidden className="relative min-h-40 flex-1">
         {width ? (
-          <svg width={width} height={HEIGHT} className="touch-pan-y" {...handlers}>
-            <Grid width={width} top={top} format={number} />
+          <svg width={width} height={height} className="absolute inset-0 touch-pan-y" {...handlers}>
+            <Grid width={width} height={height} top={top} format={number} />
             <path d={area} fill="var(--primary)" opacity={0.08} />
             <path d={line} fill="none" stroke="var(--primary)" strokeWidth={1.5} opacity={0.6} />
             {hover !== null ? (
@@ -151,7 +167,7 @@ export function ScoreChart({ games }: { games: Game[] }) {
                 x1={x(hover)}
                 x2={x(hover)}
                 y1={PAD.top}
-                y2={HEIGHT - PAD.bottom}
+                y2={height - PAD.bottom}
                 stroke="var(--muted-foreground)"
                 strokeDasharray="3 3"
               />
@@ -181,9 +197,9 @@ export function ScoreChart({ games }: { games: Game[] }) {
 
 /** How many turns each game lasted, as bars in the colour of how it ended. */
 export function TurnsChart({ games }: { games: Game[] }) {
-  const [box, width] = useWidth()
+  const [box, width, height] = useSize()
   const top = Math.max(1, ...games.map((game) => game.turns))
-  const span = HEIGHT - PAD.top - PAD.bottom
+  const span = height - PAD.top - PAD.bottom
   const slot = games.length ? (width - PAD.left - PAD.right) / games.length : 1
   const { hover, handlers } = useHover((at) =>
     Math.max(0, Math.min(games.length - 1, Math.floor((at - PAD.left) / slot))),
@@ -191,10 +207,10 @@ export function TurnsChart({ games }: { games: Game[] }) {
   const held = hover === null ? undefined : games[hover]
   return (
     <Frame title={`Turns per last ${games.length} ${games.length === 1 ? 'game' : 'games'}`} note="oldest first">
-      <div ref={box} aria-hidden className="relative h-40">
+      <div ref={box} aria-hidden className="relative min-h-40 flex-1">
         {width ? (
-          <svg width={width} height={HEIGHT} className="touch-pan-y" {...handlers}>
-            <Grid width={width} top={top} format={String} />
+          <svg width={width} height={height} className="absolute inset-0 touch-pan-y" {...handlers}>
+            <Grid width={width} height={height} top={top} format={String} />
             {games.map((game, index) => {
               const height = Math.max(2, (game.turns / top) * span)
               return (

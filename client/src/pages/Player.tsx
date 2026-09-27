@@ -67,9 +67,9 @@ function Activity({ stats }: { stats: PlayerStats }) {
   const played = cells.reduce((sum, cell) => sum + cell.games, 0)
   const bad = cells.filter((cell) => cell.bad).length
   return (
-    // Two cards, side by side only where the column has room for both, each as tall as its own content.
-    <div className="@container">
-      <div className="grid gap-5 @4xl:grid-cols-[auto_minmax(0,1fr)]">
+    // Two cards, one over the other, each the column's full width, so neither is left with empty space beside the other.
+    <div>
+      <div className="flex flex-col gap-5">
         <section className="flex min-w-0 flex-col gap-3 rounded-lg border bg-card p-5">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="font-semibold">
@@ -80,14 +80,15 @@ function Activity({ stats }: { stats: PlayerStats }) {
             ref={scroller}
             role="img"
             aria-label={`${played} games over the last 26 weeks, ${bad} days with more losses than wins`}
-            className="grid grid-flow-col grid-rows-7 gap-1 overflow-x-auto"
-            style={{ gridAutoColumns: '14px' }}
+            // The squares grow to fill the card's width, never shrinking past legible; narrower, the grid scrolls.
+            className="grid grid-flow-col grid-rows-7 gap-[3px] overflow-x-auto sm:gap-1"
+            style={{ gridAutoColumns: 'minmax(10px, 1fr)' }}
           >
             {cells.map((cell) => (
               <span
                 key={cell.key}
                 title={`${cell.key}: ${cell.games} ${cell.games === 1 ? 'game' : 'games'}`}
-                className={`size-3.5 rounded-[3px] ${cell.bad ? 'border-2 border-[#ffd2cf] bg-death' : levels[level(cell.games)]}`}
+                className={`aspect-square w-full rounded-[20%] ${cell.bad ? 'border-2 border-[#ffd2cf] bg-death' : levels[level(cell.games)]}`}
               />
             ))}
           </div>
@@ -210,37 +211,46 @@ export function Player() {
 
   const player = stats.data
   const facts = [
-    { icon: Gamepad2, value: number(player.games), label: player.games === 1 ? 'game' : 'games' },
-    { icon: Trophy, value: number(player.wins), label: player.wins === 1 ? 'win' : 'wins' },
-    { icon: Percent, value: player.winRate === null ? '-' : `${Math.round(player.winRate * 100)}%`, label: 'win rate' },
-    { icon: Star, value: number(player.bestScore), label: 'best' },
-    { icon: Zap, value: player.bestWinTurns === null ? '-' : String(player.bestWinTurns), label: 'turn fastest win' },
-    { icon: Timer, value: player.averageTurns === null ? '-' : String(player.averageTurns), label: 'turns a game' },
+    { icon: Gamepad2, label: 'Games', value: number(player.games) },
+    { icon: Trophy, label: 'Wins', value: number(player.wins) },
+    { icon: Percent, label: 'Win rate', value: player.winRate === null ? '-' : `${Math.round(player.winRate * 100)}%` },
+    { icon: Star, label: 'Best score', value: number(player.bestScore) },
+    { icon: Zap, label: 'Fastest win', value: player.bestWinTurns === null ? '-' : `${player.bestWinTurns} turns` },
+    { icon: Timer, label: 'Average game', value: player.averageTurns === null ? '-' : `${player.averageTurns} turns` },
   ]
 
   return (
     <div className="flex flex-col gap-10 lg:flex-row lg:items-start">
-      <aside className="flex w-full flex-col gap-5 lg:w-72">
-        {/* Stacked, the picture sits beside the name, as GitHub lays a profile out on a phone; beside the page, above it. */}
-        <div className="flex items-center gap-5 lg:flex-col lg:items-start">
-          <Avatar name={player.username} size="lg" />
-          <div className="min-w-0">
-            <h1 className="truncate text-3xl font-semibold">{player.username}</h1>
-            <p className="text-muted-foreground">
-              Sitting at the table since{' '}
-              {new Date(player.joinedAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-            </p>
+      {/* Measured by its own width, so the stats sit beside the name, under it, or on one line as room allows. */}
+      <aside className="@container w-full lg:w-72">
+        <div className="grid gap-5 @3xl:grid-cols-[minmax(0,1fr)_minmax(0,32rem)] @3xl:items-center">
+          {/* Stacked, the picture sits beside the name, as GitHub lays a profile out on a phone; beside the page, above it. */}
+          <div className="flex items-center gap-5 lg:flex-col lg:items-start">
+            <Avatar name={player.username} size="lg" />
+            <div className="min-w-0">
+              <h1 className="truncate text-3xl font-semibold">{player.username}</h1>
+              <p className="text-muted-foreground">
+                Sitting at the table since{' '}
+                {new Date(player.joinedAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </p>
+            </div>
           </div>
+          {/*
+            A block, set off from the name by a rule: a table of icon, name and number, two columns wide where there
+            is room and one in the sidebar; on a narrow phone, one line that wraps, as GitHub shows followers.
+          */}
+          <dl className="flex flex-wrap gap-x-4 gap-y-2 border-t pt-4 text-sm lg:grid lg:grid-cols-1 @md:grid @md:grid-cols-2 @md:gap-x-8 @md:gap-y-2.5 @3xl:border-t-0 @3xl:border-l @3xl:pt-0 @3xl:pl-6">
+            {facts.map((fact) => (
+              <div key={fact.label} className="flex items-center gap-1.5 whitespace-nowrap lg:gap-2 @md:gap-2">
+                <fact.icon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+                <dt className="text-muted-foreground">{fact.label}</dt>
+                <dd className="font-mono font-semibold lg:ml-auto lg:font-normal @md:ml-auto @md:font-normal">
+                  {fact.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
         </div>
-        {/* One line that wraps, as GitHub shows a profile's followers, rather than a column of rows. */}
-        <ul className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
-          {facts.map((fact) => (
-            <li key={fact.label} className="flex items-center gap-1.5 whitespace-nowrap">
-              <fact.icon aria-hidden className="size-4" />
-              <span className="font-semibold text-foreground">{fact.value}</span> {fact.label}
-            </li>
-          ))}
-        </ul>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col gap-7">
