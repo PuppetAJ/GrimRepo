@@ -1,4 +1,4 @@
-import { ArrowDownWideNarrow, ArrowUpNarrowWide, Box, LayoutGrid, Pause, Play, Search } from 'lucide-react'
+import { ArrowDownWideNarrow, ArrowUpNarrowWide, Box, LayoutGrid, Pause, Play, Search, X } from 'lucide-react'
 import { lazy, Suspense, useId, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { CARDS, SIGILS, type CardDef, type Unit } from 'shared'
@@ -113,11 +113,13 @@ function Grid({ cards, onOpen }: { cards: CardDef[]; onOpen: (id: string) => voi
 function Viewer({ cards, chosen, onChoose }: { cards: CardDef[]; chosen: CardDef; onChoose: (id: string) => void }) {
   const [open, setOpen] = useState(true)
   const [turn, setTurn] = useState(false)
+  const [flat, setFlat] = useState(true)
   return (
     <div className="grid gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]">
       <ul
         aria-label="Cards"
-        className="flex max-h-[28rem] flex-col overflow-y-auto rounded-lg border bg-card lg:max-h-[36rem]"
+        // Shorter stacked over the 3D view, so the card is not pushed far down; beside it, as tall as the view.
+        className="flex max-h-80 flex-col overflow-y-auto rounded-lg border bg-card lg:max-h-[36rem]"
       >
         {cards.map((def) => (
           <li key={def.id}>
@@ -148,10 +150,24 @@ function Viewer({ cards, chosen, onChoose }: { cards: CardDef[]; chosen: CardDef
         >
           <CardViewer unit={unitOf(chosen)} open={open} turn={turn} />
         </Suspense>
-        {/* The same card as the text table draws it, in the corner. */}
-        <div className="absolute top-3 right-3 w-24 sm:w-32">
-          <Screen def={chosen} />
-        </div>
+        {/* The same card as the text table draws it, in the corner, dismissed with its cross and brought back after. */}
+        {flat ? (
+          <div className="absolute top-3 right-3 w-24 sm:w-32">
+            <Screen def={chosen} />
+            <button
+              type="button"
+              aria-label="Hide the 2D card"
+              onClick={() => setFlat(false)}
+              className="absolute -top-2 -right-2 z-30 grid size-6 place-items-center rounded-full border bg-popover text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+            >
+              <X aria-hidden className="size-3.5" />
+            </button>
+          </div>
+        ) : (
+          <Button variant="outline" size="sm" className="absolute top-3 right-3" onClick={() => setFlat(true)}>
+            2D card
+          </Button>
+        )}
         <p className="pointer-events-none absolute top-3 left-4 text-xs text-muted-foreground">
           Drag to turn it, scroll to zoom.
         </p>
@@ -223,29 +239,32 @@ export function Cards() {
             className="pl-9"
           />
         </div>
-        <label className="flex items-center gap-2 text-sm text-muted-foreground">
-          Sort:
-          <select
-            value={sort}
-            onChange={(event) => change({ sort: event.target.value === 'deck' ? null : event.target.value })}
-            className="h-8 rounded-md border border-input bg-transparent px-2 text-sm text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+        {/* The sort and its direction move to the next line together when the search leaves no room for them. */}
+        <div className="flex items-center gap-2">
+          <label className="flex items-center gap-2 text-sm text-muted-foreground">
+            Sort:
+            <select
+              value={sort}
+              onChange={(event) => change({ sort: event.target.value === 'deck' ? null : event.target.value })}
+              className="h-8 rounded-md border border-input bg-transparent px-2 text-sm text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            >
+              {Object.entries(SORTS).map(([key, label]) => (
+                <option key={key} value={key} className="bg-popover">
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <Button
+            variant="outline"
+            size="sm"
+            aria-label={descending ? 'Highest first' : 'Lowest first'}
+            title={descending ? 'Highest first' : 'Lowest first'}
+            onClick={() => change({ order: descending ? null : 'desc' })}
           >
-            {Object.entries(SORTS).map(([key, label]) => (
-              <option key={key} value={key} className="bg-popover">
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <Button
-          variant="outline"
-          size="sm"
-          aria-label={descending ? 'Highest first' : 'Lowest first'}
-          title={descending ? 'Highest first' : 'Lowest first'}
-          onClick={() => change({ order: descending ? null : 'desc' })}
-        >
-          {descending ? <ArrowDownWideNarrow aria-hidden /> : <ArrowUpNarrowWide aria-hidden />}
-        </Button>
+            {descending ? <ArrowDownWideNarrow aria-hidden /> : <ArrowUpNarrowWide aria-hidden />}
+          </Button>
+        </div>
         {/* One line down to a 320px phone: tighter buttons there rather than a wrap. */}
         <div role="group" aria-label="Filter by cost" className="flex items-center gap-1">
           <span className="mr-1 text-sm text-muted-foreground">Cost:</span>

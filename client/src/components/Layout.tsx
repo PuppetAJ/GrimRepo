@@ -124,7 +124,7 @@ export function Layout() {
       <nav
         aria-label="Sections"
         // On the narrowest phones the tabs spread evenly across the width.
-        className="flex gap-2 overflow-x-auto border-b px-4 text-sm max-[400px]:justify-between max-[400px]:gap-0 max-[400px]:px-2 sm:px-12"
+        className="flex gap-2 overflow-x-auto border-b px-4 text-sm max-[350px]:justify-between max-[350px]:gap-0 max-[350px]:px-2 sm:px-12"
       >
         {tabs.map((tab) => (
           <NavLink
@@ -132,7 +132,7 @@ export function Layout() {
             to={tab.to}
             end={tab.end}
             className={({ isActive }) =>
-              `border-b-2 px-3 py-3.5 whitespace-nowrap max-[400px]:px-2 ${isActive ? 'border-death font-semibold text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`
+              `border-b-2 px-3 py-3.5 whitespace-nowrap max-[350px]:px-2 ${isActive ? 'border-death font-semibold text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`
             }
           >
             {tab.label}

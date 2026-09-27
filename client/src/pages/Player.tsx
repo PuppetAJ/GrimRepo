@@ -214,12 +214,12 @@ export function Player() {
   ]
 
   return (
-    <div className="flex flex-col gap-10 lg:flex-row lg:items-start">
-      {/* Measured by its own width, so the stats sit beside the name, under it, or on one line as room allows. */}
-      <aside className="@container w-full lg:w-72">
+    <div className="flex flex-col gap-10 min-[1320px]:flex-row min-[1320px]:items-start">
+      {/* Beside the page from 1320px, where the column left fits the heatmap and activity side by side; above it before. */}
+      <aside className="@container w-full min-[1320px]:w-72">
         <div className="grid gap-5 @3xl:grid-cols-[minmax(0,1fr)_minmax(0,32rem)] @3xl:items-center">
           {/* Stacked, the picture sits beside the name, as GitHub lays a profile out on a phone; beside the page, above it. */}
-          <div className="flex items-center gap-5 lg:flex-col lg:items-start">
+          <div className="flex items-center gap-5 min-[1320px]:flex-col min-[1320px]:items-start">
             <Avatar name={player.username} size="lg" />
             <div className="min-w-0">
               <h1 className="truncate text-3xl font-semibold">{player.username}</h1>
@@ -232,12 +232,15 @@ export function Player() {
             A block, set off from the name by a rule: a table of icon, name and number, two columns wide and one in the
             sidebar; on a phone the same two columns, tighter, each name and number kept together.
           */}
-          <dl className="grid grid-cols-[auto_auto] justify-between gap-x-3 gap-y-2 border-t pt-4 text-[13px] lg:grid-cols-1 lg:justify-normal lg:text-sm @md:grid-cols-2 @md:justify-normal @md:gap-x-8 @md:gap-y-2.5 @md:text-sm @3xl:border-t-0 @3xl:border-l @3xl:pt-0 @3xl:pl-6">
+          <dl className="grid grid-cols-[auto_auto] justify-between gap-x-3 gap-y-2 border-t pt-4 text-[13px] min-[1320px]:grid-cols-1 min-[1320px]:justify-normal min-[1320px]:text-sm @md:grid-cols-2 @md:justify-normal @md:gap-x-8 @md:gap-y-2.5 @md:text-sm @3xl:border-t-0 @3xl:border-l @3xl:pt-0 @3xl:pl-6">
             {facts.map((fact) => (
-              <div key={fact.label} className="flex items-center gap-1.5 whitespace-nowrap lg:gap-2 @md:gap-2">
+              <div
+                key={fact.label}
+                className="flex items-center gap-1.5 whitespace-nowrap min-[1320px]:gap-2 @md:gap-2"
+              >
                 <fact.icon aria-hidden className="size-4 shrink-0 text-muted-foreground @max-[21rem]:hidden" />
                 <dt className="text-muted-foreground">{fact.label}</dt>
-                <dd className="font-mono font-semibold lg:ml-auto lg:font-normal @md:ml-auto @md:font-normal">
+                <dd className="font-mono font-semibold min-[1320px]:ml-auto min-[1320px]:font-normal @md:ml-auto @md:font-normal">
                   {fact.value}
                 </dd>
               </div>
