@@ -239,7 +239,7 @@ function Rising({ text, tone, className = 'top-1/2 left-1/2' }: { text: string; 
 }
 
 /** The largest lane that fits the space given, four across and three down: the board takes the window's height. */
-function useLaneSize(narrow: boolean, hand: HTMLElement | null, aside = 0) {
+function useLaneSize(narrow: boolean, hand: HTMLElement | null, aside = 0, floor = 40) {
   const [area, setArea] = useState<HTMLDivElement | null>(null)
   const [size, setSize] = useState(96)
   const current = useRef(96)
@@ -257,7 +257,10 @@ function useLaneSize(narrow: boolean, hand: HTMLElement | null, aside = 0) {
       const height = narrow
         ? current.current + room / (3 * CARD_RATIO)
         : (area.clientHeight - 28 - 3 * 8 - 2) / 3 / CARD_RATIO
-      current.current = Math.max(40, Math.floor(Math.min(width, height)))
+      // Never smaller than the floor, so a short landscape phone still has a board to play on (the page scrolls to the
+      // hand); never taller than the window, so it can still be seen whole.
+      const tallest = (window.innerHeight - 24 - 28 - 3 * 4 - 2) / 3 / CARD_RATIO
+      current.current = Math.floor(Math.min(width, Math.max(floor, Math.min(height, tallest))))
       setSize(current.current)
     }
     fit()
@@ -269,7 +272,7 @@ function useLaneSize(narrow: boolean, hand: HTMLElement | null, aside = 0) {
       observer.disconnect()
       window.removeEventListener('resize', fit)
     }
-  }, [area, narrow, hand, aside])
+  }, [area, narrow, hand, aside, floor])
   return { setArea, lane: { width: size, height: size * CARD_RATIO } }
 }
 
@@ -498,7 +501,12 @@ export function TerminalTable({
 
   // A lane's size comes from the board's height, so the whole table fits the window.
   const [handSection, setHandSection] = useState<HTMLElement | null>(null)
-  const { setArea, lane: laneSize } = useLaneSize(narrow, handSection, layout === 'mid' ? 13 * 16 + 12 : 0)
+  const { setArea, lane: laneSize } = useLaneSize(
+    narrow,
+    handSection,
+    layout === 'mid' ? 13 * 16 + 12 : 0,
+    layout === 'mid' ? 76 : 40,
+  )
   const cell =
     'flex shrink-0 select-none items-center justify-center rounded-md border-2 p-1 [-webkit-touch-callout:none]'
   const faces = playback.popups.filter((popup) => 'face' in popup.spot)
@@ -748,7 +756,7 @@ export function TerminalTable({
       {...(state.summon ? { 'data-action': 'cancel' } : { 'aria-hidden': true, tabIndex: -1 })}
       disabled={!state.summon}
       onClick={() => act({ type: 'cancel' })}
-      className={`${SIDE_BUTTON} w-full ${state.summon ? '' : 'invisible'}`}
+      className={`${SIDE_BUTTON} w-full ${narrow ? 'mt-1' : ''} ${state.summon ? '' : 'invisible'}`}
     >
       Cancel
     </button>
