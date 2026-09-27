@@ -10,10 +10,10 @@ const lane = (index: number) => `lane ${index + 1}`
 const pick = (lines: string[], key: number) => lines[Math.abs(key) % lines.length] as string
 const BIG_HIT = 5
 const TAUNTS = ['Now THAT is synergy.', 'Feel that?', 'Leshy never hit that hard.', 'Too easy.']
-const EXCUSES = ['Lucky.', 'Ugh. RNG.', 'Gah! Rigged.', 'That one does not count.']
+const EXCUSES = ['Lucky.', 'RNG.', 'Rigged.', "That one doesn't count."]
 const LOSSES = ['RNG.', 'Pure luck.', 'I meant to do that.', '']
-const PLAYS = ['Oh, NOW you are trying.', 'Finally, a real card.', 'Cute.']
-const PATIENCE = ['Hurry up.', 'We have Transcending to do.', 'Any day now, challenger.', 'Still here? Fine.']
+const PLAYS = ["Oh, NOW you're trying.", 'Finally, a real card.', 'Cute.']
+const PATIENCE = ['Hurry up.', "We've got Transcending to do.", 'Any day now, challenger.', 'Still here? Fine.']
 
 /** Every unit either state knows about, so an event can name a card that has since died. */
 function names(before: GameState, events: GameEvent[]): Map<number, string> {
@@ -54,7 +54,7 @@ export function narrate(before: GameState, events: GameEvent[]): string[] {
         return [`You played ${played.name} in ${lane(event.lane)}.${aside}`]
       }
       case 'wiped':
-        return [`Segfault?! ${event.uids.length} of my cards, gone. That is not a strategy, that is a crash.`]
+        return [`Segfault?! ${event.uids.length} of my cards, gone. That's not a strategy, that's a crash.`]
       case 'hit': {
         const big = event.amount >= BIG_HIT
         return event.side === 'opponent'

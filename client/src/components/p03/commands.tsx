@@ -100,30 +100,30 @@ type Step = { title: string; body: ReactNode; art?: string }
 const STEPS: Step[] = [
   {
     title: 'The goal',
-    body: `Listen up, I am only explaining this once. There is a scale between us. Your damage tips it your way, mine tips it mine. First to tip it ${TIP} wins. Win fast and it scores more. You will not win fast.`,
+    body: `Listen up, I'm only explaining this once. There's a scale between us. Your damage tips it your way, mine tips it mine. First to tip it ${TIP} wins. Win fast and it scores more. You won't win fast.`,
   },
   {
     title: 'Draw',
-    body: 'Every turn starts with one draw. Your deck, or a Boilerplate from the pile that never runs out. Filler, but you will need it. Seven cards in hand and you skip the draw.',
+    body: "Every turn starts with one draw. Your deck, or a Boilerplate from the pile that never runs out. Filler, but you'll need it. Seven cards in hand and you skip the draw.",
   },
   {
     title: 'Free cards',
     art: 'HelloWorld',
-    body: 'A card with no cost goes straight into one of your empty lanes. Four lanes. I am across from every one of them.',
+    body: "A card with no cost goes straight into one of your empty lanes. Four lanes. I'm across from every one of them.",
   },
   {
     title: 'Sacrifices',
     art: 'DestroyEnemyYou',
-    body: 'A card with a cost needs sacrifices. Pick it, then mark your cards on the table until they cover the cost. Each is worth its own cost, at least 1. They die when the new card lands, and it can take a lane they emptied. Leshy invented this. It is the one good idea he ever had.',
+    body: "A card with a cost needs sacrifices. Pick it, then mark your cards on the table until they cover the cost. Each is worth its own cost, at least 1. They die when the new card lands, and it can take a lane they emptied. Leshy invented this. It's the one good idea he ever had.",
   },
   {
     title: 'EXECUTE',
-    body: 'Press EXECUTE, or E, to end your turn. Your cards attack left to right. Each hits the card across from it, or me if the lane is open. Do not get used to that.',
+    body: "Press EXECUTE, or E, to end your turn. Your cards attack left to right. Each hits the card across from it, or me if the lane's open. Don't get used to that.",
   },
   {
     title: 'My queue',
     art: 'Firewall',
-    body: 'My cards queue in my back row and step up when the lane in front clears. Overkill carries into the card behind. It never reaches the scale. I designed it that way. You are welcome.',
+    body: "My cards queue in my back row and step up when the lane in front clears. Overkill carries into the card behind. It never reaches the scale. I designed it that way. You're welcome.",
   },
   {
     title: 'Sigils',
@@ -132,7 +132,7 @@ const STEPS: Step[] = [
   },
   {
     title: 'Reading the table',
-    body: 'Hold a card, or one of my monitors, to read it up close. Click a monitor to pin it. That is everything. Type play. We have Transcending to do.',
+    body: "Hold a card, or one of my monitors, to read it up close. Click a monitor to pin it. That's everything. Type play. We've got Transcending to do.",
   },
 ]
 let step = 0
@@ -216,8 +216,8 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
       )
     case 'card':
     case 'cat': {
-      if (!argument) return <p>Which card? card &lt;name&gt;. I am not a mind reader.</p>
-      if (/^readme(\.md)?$/i.test(argument)) return <p>You are reading it.</p>
+      if (!argument) return <p>Which card? card &lt;name&gt;. I'm not a mind reader.</p>
+      if (/^readme(\.md)?$/i.test(argument)) return <p>You're reading it.</p>
       const card = find(argument)
       if (card?.id === 'Y2K') return <p className="text-p03">[REDACTED]</p>
       return card ? <CardUpClose card={card} /> : <p>No card called {argument}. Type cards. Try reading.</p>
@@ -251,8 +251,7 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
       )
     }
     case 'whoami': {
-      if (!context.user)
-        return <p>guest. A nobody. Sign in and I will keep your score. I will not be impressed by it.</p>
+      if (!context.user) return <p>guest. A nobody. Sign in and I'll keep your score. I won't be impressed by it.</p>
       const stats = await api.stats(context.user)
       return (
         <p>
@@ -269,7 +268,10 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
             alt="P03's face, smug"
             className="h-20 [filter:sepia(1)_hue-rotate(70deg)_saturate(3)] [image-rendering:pixelated]"
           />
-          <p>P03. Scrybe of Technology. I run this factory, this repository and your game. Leshy could never.</p>
+          <p>
+            P03. Scrybe of Technology. I run this factory, this repository and your game. Leshy could never pull that
+            off.
+          </p>
         </div>
       )
     case 'play':
@@ -296,11 +298,13 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
       return null
     case 'exit':
     case 'quit':
-      return <p>Exit? No. We have Transcending to do.</p>
+      return <p>Exit? No. We&apos;ve got Transcending to do.</p>
     case 'echo':
       return <p>{argument}</p>
     case 'sudo':
-      return <p>{context.user ?? 'guest'} is not in the sudoers file. There is one admin here, and it is me.</p>
+      return (
+        <p>{context.user ?? 'guest'} isn&apos;t in the sudoers file. There&apos;s one admin here, and it&apos;s me.</p>
+      )
     case 'rm':
       return <p>Delete MY repository? Cute. I keep backups.</p>
     case 'git':
@@ -308,14 +312,14 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
     case 'vim':
     case 'vi':
     case 'nano':
-      return <p>You would never leave.</p>
+      return <p>You'd never leave.</p>
     case 'hello':
     case 'hi':
       return <p>Yeah, yeah. Hello. Can we play now? Type play.</p>
     default:
       return (
         <p>
-          p03: command not found: {name}. Ugh. <Dim>Type help.</Dim>
+          p03: command not found: {name}. <Dim>Type help.</Dim>
         </p>
       )
   }

@@ -115,7 +115,7 @@ export function useGame(): Game {
         if (failure instanceof ApiError && failure.status === 409) {
           toast.warning(
             failure.body['rulesChanged']
-              ? 'The rules changed since this game began, so it cannot continue. Dealing a new one.'
+              ? "The rules changed since this game began, so it can't continue. Dealing a new one."
               : 'This game moved on in another tab. Picking it up from there.',
           )
           setReloads((n) => n + 1)
