@@ -222,24 +222,39 @@ export function TurnsChart({ games }: { games: Game[] }) {
   )
 }
 
-/** The run the newest games are on, and the longest run of wins among them. */
-function runs(recent: Game[]): { now: number; winning: boolean; best: number } {
-  const first = recent[0]
-  let now = 0
+/** Streaks over the newest games: the one they're on, and the longest of wins and of losses. */
+function streaks(recent: Game[]): { current: number; winning: boolean; wins: number; losses: number } {
+  const winning = recent[0]?.outcome === 'win'
+  let current = 0
   for (const game of recent) {
-    if (game.outcome !== first?.outcome) break
-    now++
+    if ((game.outcome === 'win') !== winning) break
+    current++
   }
-  let best = 0
-  let run = 0
-  for (const game of recent) {
-    run = game.outcome === 'win' ? run + 1 : 0
-    best = Math.max(best, run)
+  const longest = (outcome: Game['outcome']) => {
+    let best = 0
+    let run = 0
+    for (const game of recent) {
+      run = game.outcome === outcome ? run + 1 : 0
+      best = Math.max(best, run)
+    }
+    return best
   }
-  return { now, winning: first?.outcome === 'win', best }
+  return { current, winning, wins: longest('win'), losses: longest('loss') }
 }
 
-/** Every game played, won, lost and forfeited: the win rate, wins against losses, and the runs of late. */
+/** A streak as a sports table writes it: W3, L2. */
+function Streak({ label, count, win }: { label: string; count: number; win: boolean }) {
+  return (
+    <div className="flex flex-col">
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className={`font-mono text-xl ${count ? (win ? 'text-primary' : 'text-death') : 'text-muted-foreground'}`}>
+        {count ? `${win ? 'W' : 'L'}${count}` : '-'}
+      </dd>
+    </div>
+  )
+}
+
+/** Every game played, won, lost and forfeited: the win rate, wins against losses, and streaks over the newest games. */
 export function Outcomes({
   wins,
   losses,
@@ -259,8 +274,7 @@ export function Outcomes({
   ]
   const share = (count: number) => (total ? Math.round((count / total) * 100) : 0)
   const lost = losses + forfeits
-  const { now, winning, best } = runs(recent)
-  const games = (count: number) => `${count} ${count === 1 ? 'game' : 'games'}`
+  const streak = streaks(recent)
   return (
     <Frame title="Wins and losses" note={`${number(total)} ${total === 1 ? 'game' : 'games'}`}>
       <div className="flex flex-wrap items-end gap-x-8 gap-y-2">
@@ -291,9 +305,11 @@ export function Outcomes({
         ))}
       </dl>
       {recent.length ? (
-        <p className="mt-auto border-t pt-3 text-sm text-muted-foreground">
-          On {winning ? 'a winning' : 'a losing'} run of {games(now)}. Best run of wins lately: {games(best)}.
-        </p>
+        <dl className="mt-auto grid grid-cols-3 gap-3 border-t pt-3">
+          <Streak label="Current streak" count={streak.current} win={streak.winning} />
+          <Streak label="Longest win streak" count={streak.wins} win />
+          <Streak label="Longest loss streak" count={streak.losses} win={false} />
+        </dl>
       ) : null}
     </Frame>
   )
