@@ -139,7 +139,7 @@ export function ScoreChart({ games }: { games: Game[] }) {
     .join('')
   const area = `${line}L${x(games.length - 1).toFixed(1)},${PAD.top + span}L${x(0).toFixed(1)},${PAD.top + span}Z`
   return (
-    <Frame title="Score per game" note={`last ${games.length}, oldest first`}>
+    <Frame title="Score per game" note="shorter games score more, oldest first">
       <div ref={box} aria-hidden className="relative h-40">
         {width ? (
           <svg width={width} height={HEIGHT} className="touch-pan-y" {...handlers}>
@@ -190,7 +190,7 @@ export function TurnsChart({ games }: { games: Game[] }) {
   )
   const held = hover === null ? undefined : games[hover]
   return (
-    <Frame title="Turns per game" note="shorter wins score more">
+    <Frame title={`Turns per last ${games.length} ${games.length === 1 ? 'game' : 'games'}`} note="oldest first">
       <div ref={box} aria-hidden className="relative h-40">
         {width ? (
           <svg width={width} height={HEIGHT} className="touch-pan-y" {...handlers}>
@@ -222,35 +222,79 @@ export function TurnsChart({ games }: { games: Game[] }) {
   )
 }
 
-/** Wins, losses and forfeits of every game played, as three bars. */
-export function Outcomes({ wins, losses, forfeits }: { wins: number; losses: number; forfeits: number }) {
+/** The run the newest games are on, and the longest run of wins among them. */
+function runs(recent: Game[]): { now: number; winning: boolean; best: number } {
+  const first = recent[0]
+  let now = 0
+  for (const game of recent) {
+    if (game.outcome !== first?.outcome) break
+    now++
+  }
+  let best = 0
+  let run = 0
+  for (const game of recent) {
+    run = game.outcome === 'win' ? run + 1 : 0
+    best = Math.max(best, run)
+  }
+  return { now, winning: first?.outcome === 'win', best }
+}
+
+/** Every game played, won, lost and forfeited: the win rate, wins against losses, and the runs of late. */
+export function Outcomes({
+  wins,
+  losses,
+  forfeits,
+  recent,
+}: {
+  wins: number
+  losses: number
+  forfeits: number
+  recent: Game[]
+}) {
   const total = wins + losses + forfeits
   const parts = [
     { label: 'Won', count: wins, color: 'bg-primary' },
     { label: 'Lost', count: losses, color: 'bg-death' },
     { label: 'Forfeited', count: forfeits, color: 'bg-muted-foreground' },
   ]
-  const most = Math.max(1, ...parts.map((part) => part.count))
   const share = (count: number) => (total ? Math.round((count / total) * 100) : 0)
+  const lost = losses + forfeits
+  const { now, winning, best } = runs(recent)
+  const games = (count: number) => `${count} ${count === 1 ? 'game' : 'games'}`
   return (
     <Frame title="Wins and losses" note={`${number(total)} ${total === 1 ? 'game' : 'games'}`}>
-      <dl className="grid min-h-44 flex-1 grid-cols-3 gap-4">
+      <div className="flex flex-wrap items-end gap-x-8 gap-y-2">
+        <p className="flex flex-col">
+          <span className="font-mono text-4xl leading-none">{share(wins)}%</span>
+          <span className="text-sm text-muted-foreground">win rate</span>
+        </p>
+        <p className="flex flex-col">
+          <span className="font-mono text-2xl leading-none">
+            {lost ? (wins / lost).toFixed(2) : wins ? `${wins}:0` : '-'}
+          </span>
+          <span className="text-sm text-muted-foreground">
+            W/L, {number(wins)} to {number(lost)}
+          </span>
+        </p>
+      </div>
+      <dl className="flex flex-col gap-2.5">
         {parts.map((part) => (
-          <div key={part.label} className="flex flex-col-reverse gap-2">
-            <dt className="text-center text-sm text-muted-foreground">{part.label}</dt>
-            <dd className="flex flex-1 flex-col justify-end gap-1.5">
-              <span className="text-center font-mono">
-                {number(part.count)} <span className="text-xs text-muted-foreground">{share(part.count)}%</span>
-              </span>
-              <span
-                aria-hidden
-                className={`mx-auto w-full max-w-16 rounded-t-sm ${part.color}`}
-                style={{ height: `${Math.max(2, (part.count / most) * 100)}%` }}
-              />
+          <div key={part.label} className="grid grid-cols-[5.5rem_minmax(0,1fr)_4.5rem] items-center gap-3">
+            <dt className="text-sm text-muted-foreground">{part.label}</dt>
+            <dd aria-hidden className="h-2.5 rounded-full bg-accent">
+              <div className={`h-2.5 rounded-full ${part.color}`} style={{ width: `${share(part.count)}%` }} />
+            </dd>
+            <dd className="text-right font-mono text-sm">
+              {number(part.count)} <span className="text-muted-foreground">{share(part.count)}%</span>
             </dd>
           </div>
         ))}
       </dl>
+      {recent.length ? (
+        <p className="mt-auto border-t pt-3 text-sm text-muted-foreground">
+          On {winning ? 'a winning' : 'a losing'} run of {games(now)}. Best run of wins lately: {games(best)}.
+        </p>
+      ) : null}
     </Frame>
   )
 }

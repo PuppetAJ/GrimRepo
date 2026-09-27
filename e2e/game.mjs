@@ -64,7 +64,10 @@ section('A whole game')
 
   await page.goto(`${BASE}/players/${player.username}`)
   await page.getByRole('heading', { name: player.username }).waitFor()
-  const history = await page.locator('section ol li').first().innerText()
+  // The history loads after the page; its placeholder rows are a list too, marked as loading.
+  const rows = page.locator('section ol:not([role="status"]) > li')
+  await rows.first().waitFor()
+  const history = await rows.first().innerText()
   check(
     'their record has the game',
     expected.outcome === 'win'

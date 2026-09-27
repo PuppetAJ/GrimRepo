@@ -15,8 +15,11 @@ export type PlayerStats = {
   bestWinTurns: number | null
   averageTurns: number | null
   days: { date: string; games: number; losses: number }[]
-  recent: { outcome: Outcome; turns: number; score: number; forfeited: boolean; playedAt: string }[]
+  recent: FinishedGame[]
 }
+
+export type FinishedGame = { outcome: Outcome; turns: number; score: number; forfeited: boolean; playedAt: string }
+export type GamesPage = { games: FinishedGame[]; page: number; pages: number; total: number }
 
 export type OpenGame = { id: number; seed: number; actions: Action[]; resumed: boolean; rulesChanged: boolean }
 
@@ -54,6 +57,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   leaderboard: () => request<{ players: LeaderboardRow[] }>('/api/leaderboard').then((body) => body.players),
   stats: (username: string) => request<PlayerStats>(`/api/players/${encodeURIComponent(username)}/stats`),
+  games: (username: string, page: number) =>
+    request<GamesPage>(`/api/players/${encodeURIComponent(username)}/games?page=${page}`),
   startGame: () => request<OpenGame>('/api/games', { method: 'POST' }),
   saveMoves: (id: number, from: number, actions: Action[]) =>
     request<Saved>(`/api/games/${id}/moves`, { method: 'POST', body: JSON.stringify({ from, actions }) }),
