@@ -112,17 +112,22 @@ function Viewer({ cards, chosen, onChoose }: { cards: CardDef[]; chosen: CardDef
           </li>
         ))}
       </ul>
-      <section aria-label={chosen.name} className="flex min-w-0 flex-col gap-3">
-        <div className="relative h-[28rem] overflow-hidden rounded-lg border bg-[#02070c] lg:h-[36rem]">
-          <Suspense fallback={<p className="p-4 font-terminal text-xl text-p03">P03&gt; loading the disk…</p>}>
-            <CardViewer unit={unitOf(chosen)} open={open} turn={turn} />
-          </Suspense>
-          {/* The same card as the text table draws it, in the corner. */}
-          <div className="absolute top-3 right-3 w-24 sm:w-32">
-            <Screen def={chosen} />
-          </div>
+      <section
+        aria-label={chosen.name}
+        className="relative h-[28rem] min-w-0 overflow-hidden rounded-lg border bg-[#02070c] lg:h-[36rem]"
+      >
+        <Suspense fallback={<p className="p-4 font-terminal text-xl text-p03">P03&gt; loading the disk…</p>}>
+          <CardViewer unit={unitOf(chosen)} open={open} turn={turn} />
+        </Suspense>
+        {/* The same card as the text table draws it, in the corner. */}
+        <div className="absolute top-3 right-3 w-24 sm:w-32">
+          <Screen def={chosen} />
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="pointer-events-none absolute top-3 left-4 text-xs text-muted-foreground">
+          Drag to turn it, scroll to zoom.
+        </p>
+        {/* Over the foot of the canvas, on a fade so it reads against the factory's dark. */}
+        <div className="absolute inset-x-0 bottom-0 flex flex-wrap items-end justify-between gap-3 bg-gradient-to-t from-[#02070c] via-[#02070c]/85 to-transparent px-4 pt-10 pb-4">
           <div className="flex min-w-0 flex-col gap-1">
             <h2 className="font-semibold">{chosen.name}</h2>
             <Facts def={chosen} />
@@ -136,7 +141,6 @@ function Viewer({ cards, chosen, onChoose }: { cards: CardDef[]; chosen: CardDef
             </Button>
           </div>
         </div>
-        <p className="text-sm text-muted-foreground">Drag to turn it, scroll to zoom.</p>
       </section>
     </div>
   )
@@ -182,7 +186,7 @@ export function Cards() {
             type="search"
             value={query}
             onChange={(event) => change({ q: event.target.value || null })}
-            placeholder="Name, sigil, free or cost 2"
+            placeholder="Name, sigil or cost"
             className="pl-9"
           />
         </div>

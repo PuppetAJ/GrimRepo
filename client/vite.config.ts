@@ -1,5 +1,6 @@
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { gzipSync } from 'node:zlib'
 import { defineConfig, type Plugin } from 'vite'
@@ -14,6 +15,38 @@ const mockupsSlash: Plugin = {
     server.middlewares.use((req, _res, next) => {
       if (req.url === '/mockups') req.url = '/mockups/'
       next()
+    })
+  },
+}
+
+// The mockup page's sprite editor saves one card's sprite into sprites.ts; development only, and nothing but a sprite.
+const SPRITES_FILE = fileURLToPath(new URL('./src/game/sprites.ts', import.meta.url))
+const spriteEditor: Plugin = {
+  name: 'sprite-editor',
+  apply: 'serve',
+  configureServer(server) {
+    server.middlewares.use('/__mockups/sprite', (req, res) => {
+      if (req.method !== 'POST') return void res.writeHead(405).end()
+      let body = ''
+      req.on('data', (chunk: Buffer) => (body += chunk))
+      req.on('end', () => {
+        const refuse = (why: string) => void res.writeHead(400, { 'content-type': 'text/plain' }).end(why)
+        let sent: { id?: unknown; rows?: unknown }
+        try {
+          sent = JSON.parse(body)
+        } catch {
+          return refuse('not JSON')
+        }
+        const { id, rows } = sent
+        if (typeof id !== 'string' || !/^[A-Za-z0-9]+$/.test(id)) return refuse('no such card')
+        if (!Array.isArray(rows) || rows.length !== 24 || !rows.every((row) => /^[#.]{24}$/.test(String(row))))
+          return refuse('a sprite is 24 rows of 24 # or .')
+        const file = readFileSync(SPRITES_FILE, 'utf8')
+        const block = new RegExp(`(\\n  ${id}: \\[\\n)(?:    '[#.]{24}',\\n){24}(  \\],)`)
+        if (!block.test(file)) return refuse('no such card')
+        writeFileSync(SPRITES_FILE, file.replace(block, `$1${rows.map((row) => `    '${row}',\n`).join('')}$2`))
+        res.writeHead(204).end()
+      })
     })
   },
 }
@@ -38,7 +71,7 @@ const budget: Plugin = {
 }
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), mockupsSlash, budget],
+  plugins: [react(), tailwindcss(), mockupsSlash, spriteEditor, budget],
 
   // Mirrors the "@/*" alias in tsconfig.json for shadcn/ui's components.
   resolve: {
