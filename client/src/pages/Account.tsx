@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input.tsx'
 import { Label } from '@/components/ui/label.tsx'
 import { PasswordInput } from '../components/PasswordInput.tsx'
 import { authClient, authError, DEMO } from '../lib/auth.ts'
+import { P03Line } from '../components/p03/P03Line.tsx'
 
 export function Account() {
   const session = authClient.useSession()
@@ -49,8 +50,9 @@ export function Account() {
 
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-10">
-      <div>
+      <div className="flex flex-col gap-3">
         <h1 className="font-display text-5xl">Account</h1>
+        <P03Line>Rename yourself all you like. I remember every loss either way.</P03Line>
         <p className="text-muted-foreground">Signed in as {user?.email}.</p>
       </div>
 
@@ -126,6 +128,7 @@ function DemoNotice() {
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-4">
       <h1 className="font-display text-5xl">Account</h1>
+      <P03Line>Everyone shares this one. I can&apos;t tell any of you apart. Not that I try.</P03Line>
       <section className="flex flex-col gap-3 rounded-lg border bg-card p-6">
         <h2 className="text-xl font-semibold">You are using the demo account</h2>
         <p className="text-muted-foreground">
@@ -144,6 +147,7 @@ function GuestNotice({ name }: { name: string }) {
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-4">
       <h1 className="font-display text-5xl">Account</h1>
+      <P03Line>A guest. You&apos;ll be gone in a week, and so will your record. Unless you sign up.</P03Line>
       <section className="flex flex-col gap-3 rounded-lg border bg-card p-6">
         <h2 className="text-xl font-semibold">You are playing as a guest, {name}</h2>
         <p className="text-muted-foreground">
