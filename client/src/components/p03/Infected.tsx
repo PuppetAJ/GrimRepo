@@ -98,6 +98,7 @@ export function Infected({ lines, user }: { lines: readonly string[] | null; use
             </div>
             {/* Where P03 got in, the corruption creeps out from every corner, clear of the words around it. */}
             <Corruption
+              dense
               cols={26}
               rows={3}
               corner="top-right"
@@ -113,6 +114,8 @@ export function Infected({ lines, user }: { lines: readonly string[] | null; use
               className="top-px right-px z-30 sm:hidden"
             />
             <Corruption
+              dense
+              fast
               cols={18}
               rows={4}
               corner="bottom-right"
@@ -120,6 +123,7 @@ export function Infected({ lines, user }: { lines: readonly string[] | null; use
               className="right-0 bottom-full max-sm:hidden"
             />
             <Corruption
+              fast
               dense
               cols={8}
               rows={3}
@@ -127,9 +131,11 @@ export function Infected({ lines, user }: { lines: readonly string[] | null; use
               seed={29}
               className="right-0 bottom-full sm:hidden"
             />
-            <Corruption dense cols={16} rows={3} corner="top-left" seed={71} className="top-full left-0" />
-            <Corruption dense cols={12} rows={3} corner="top-right" seed={89} className="top-full right-0" />
+            <Corruption dense fast cols={16} rows={3} corner="top-left" seed={71} className="top-full left-0" />
+            <Corruption dense fast cols={12} rows={3} corner="top-right" seed={89} className="top-full right-0" />
             <Corruption
+              dense
+              fast
               cols={4}
               rows={12}
               corner="bottom-right"
@@ -137,6 +143,7 @@ export function Infected({ lines, user }: { lines: readonly string[] | null; use
               className="right-full bottom-0 max-sm:hidden"
             />
             <Corruption
+              fast
               dense
               cols={4}
               rows={10}

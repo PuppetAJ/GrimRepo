@@ -12,6 +12,9 @@ const BLOCKS = '█▓▒'
 // The cluster reaches its far edge after this long; each cell glitches for a moment as it arrives, then settles.
 const GROWTH = 2.4
 const SETTLE = 0.6
+// Clusters breaking out of a frame move faster than those creeping inside one.
+const FAST_GROWTH = 1
+const FAST_SETTLE = 0.3
 const FRAME_MS = 100
 // Once settled, a few characters at a time keep changing, so each one turns over every few seconds.
 const SHIMMER_MS = 160
@@ -20,7 +23,7 @@ const SHIMMER_SHARE = 0.04
 type Cell = { x: number; y: number; color: string; block: boolean; final: string; arrives: number }
 
 /** A fixed pattern for a seed, so a cluster looks the same on every visit and never shifts the page. */
-function cells(cols: number, rows: number, corner: Corner, seed: number, falloff: number): Cell[] {
+function cells(cols: number, rows: number, corner: Corner, seed: number, falloff: number, growth: number): Cell[] {
   let state = seed
   const random = () => {
     state = (state * 1103515245 + 12345) % 2147483648
@@ -46,7 +49,7 @@ function cells(cols: number, rows: number, corner: Corner, seed: number, falloff
           : ((shade < 0.8 ? DECAY[0] : DECAY[1]) as string)
       const glyphs = block ? BLOCKS : LETTERS
       const final = glyphs[Math.floor(random() * glyphs.length)] as string
-      found.push({ x: col * CELL_W, y: row * CELL_H, color, block, final, arrives: distance * GROWTH })
+      found.push({ x: col * CELL_W, y: row * CELL_H, color, block, final, arrives: distance * growth })
     }
   return found
 }
@@ -58,6 +61,7 @@ export function Corruption({
   corner,
   seed,
   dense = false,
+  fast = false,
   className = '',
 }: {
   cols: number
@@ -66,6 +70,7 @@ export function Corruption({
   seed: number
   // Dense keeps more of the cluster lit away from its corner.
   dense?: boolean
+  fast?: boolean
   className?: string
 }) {
   const canvas = useRef<HTMLCanvasElement>(null)
@@ -79,14 +84,16 @@ export function Corruption({
     element.height = rows * CELL_H * ratio
     context.scale(ratio, ratio)
     context.textBaseline = 'top'
-    const pattern = cells(cols, rows, corner, seed, dense ? 1.1 : 2.2)
-    const end = GROWTH + SETTLE
+    const growth = fast ? FAST_GROWTH : GROWTH
+    const settle = fast ? FAST_SETTLE : SETTLE
+    const pattern = cells(cols, rows, corner, seed, dense ? 1.1 : 2.2, growth)
+    const end = growth + settle
 
     const draw = (seconds: number) => {
       context.clearRect(0, 0, cols * CELL_W, rows * CELL_H)
       for (const cell of pattern) {
         if (seconds < cell.arrives) continue
-        const settled = seconds >= cell.arrives + SETTLE
+        const settled = seconds >= cell.arrives + settle
         const glyphs = cell.block ? BLOCKS : LETTERS
         const glyph = settled ? cell.final : (glyphs[Math.floor(Math.random() * glyphs.length)] as string)
         context.fillStyle = cell.color
@@ -145,7 +152,7 @@ export function Corruption({
       cancelAnimationFrame(frame)
       stop()
     }
-  }, [cols, rows, corner, seed, dense])
+  }, [cols, rows, corner, seed, dense, fast])
 
   return (
     <canvas
