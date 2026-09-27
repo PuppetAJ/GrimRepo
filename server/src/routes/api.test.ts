@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { after, beforeEach, describe, it } from 'node:test'
 import { apply, createGame, playOut, scoreBattle, summary, type Action, type GameState } from 'shared'
 import { pool } from '../config/db.ts'
-import { RECENT_GAMES } from '../db/games.ts'
+import { HISTORY_PAGE, RECENT_GAMES } from '../db/games.ts'
 import { newPlayer, startApp } from '../test/http.ts'
 import { insertGame, insertOldGame, resetDatabase } from '../test/support.ts'
 
@@ -309,6 +309,24 @@ describe('a player’s stats', () => {
     const { body } = await app.call('GET', `/api/players/${player.username}/stats`)
     assert.equal(body.recent.length, RECENT_GAMES)
     assert.equal(body.recent[0].turns, 5, 'the newest first')
+  })
+
+  it('page through a player’s history, newest first, ten at a time', async () => {
+    const player = await signedIn()
+    for (let day = 0; day < 25; day++) await insertGame(player.username, 'loss', 5 + day, day)
+    const first = await app.call('GET', `/api/players/${player.username}/games`)
+    assert.equal(first.status, 200)
+    assert.deepEqual([first.body.page, first.body.pages, first.body.total], [1, 3, 25])
+    assert.equal(first.body.games.length, HISTORY_PAGE)
+    assert.equal(first.body.games[0].turns, 5, 'the newest first')
+    const last = await app.call('GET', `/api/players/${player.username}/games?page=3`)
+    assert.deepEqual([last.body.page, last.body.games.length, last.body.games[4].turns], [3, 5, 29])
+    const past = await app.call('GET', `/api/players/${player.username}/games?page=99`)
+    assert.equal(past.body.page, 3, 'a page past the end is the last one')
+    const nonsense = await app.call('GET', `/api/players/${player.username}/games?page=abc`)
+    assert.equal(nonsense.body.page, 1)
+    const nobody = await app.call('GET', '/api/players/nobody_at_all/games')
+    assert.equal(nobody.status, 404)
   })
 
   it('count games per day for the activity grid', async () => {

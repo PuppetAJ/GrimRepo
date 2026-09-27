@@ -3,7 +3,7 @@ import { rateLimit } from 'express-rate-limit'
 import { z } from 'zod'
 import { USERNAME_PATTERN } from '../auth/auth.ts'
 import { requireUser, type SignedIn } from '../auth/session.ts'
-import { forfeitGame, GameError, leaderboard, playerStats, recordMoves, startGame } from '../db/games.ts'
+import { forfeitGame, GameError, leaderboard, playerGames, playerStats, recordMoves, startGame } from '../db/games.ts'
 
 export const api = express.Router()
 
@@ -84,6 +84,19 @@ api.post('/games/:id/forfeit', requireUser, movesLimiter, async (req, res) => {
     if (!(error instanceof GameError)) throw error
     res.status(error.status).json(error.body)
   }
+})
+
+// A page number from the address; anything that is not one is the first page.
+const pageQuery = z.coerce.number().int().min(1).catch(1)
+
+api.get('/players/:username/games', async (req, res) => {
+  const page = pageQuery.parse(req.query['page'] ?? 1)
+  const games = USERNAME_PATTERN.test(req.params.username) ? await playerGames(req.params.username, page) : null
+  if (!games) {
+    res.status(404).json({ error: 'No such player' })
+    return
+  }
+  res.json(games)
 })
 
 api.get('/players/:username/stats', async (req, res) => {

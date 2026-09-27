@@ -4,6 +4,11 @@ import { pool } from '../config/db.ts'
 
 export type LeaderboardRow = { rank: number; username: string; bestScore: number; games: number; wins: number }
 
+export type FinishedGame = { outcome: Outcome; turns: number; score: number; forfeited: boolean; playedAt: string }
+
+/** One page of a player's finished games, newest first. */
+export type GamesPage = { games: FinishedGame[]; page: number; pages: number; total: number }
+
 export type PlayerStats = {
   username: string
   joinedAt: string
@@ -17,7 +22,7 @@ export type PlayerStats = {
   bestWinTurns: number | null
   averageTurns: number | null
   days: { date: string; games: number; losses: number }[]
-  recent: { outcome: Outcome; turns: number; score: number; forfeited: boolean; playedAt: string }[]
+  recent: FinishedGame[]
 }
 
 export type OpenGame = { id: number; seed: number; actions: Action[]; resumed: boolean; rulesChanged: boolean }
@@ -153,8 +158,36 @@ async function finish(
 }
 
 /** Players ranked by their best finished game; ties share a rank and sort by name. */
-// Enough for the stats page's charts; its history lists the newest few of them.
+// Enough for the stats page's charts; its history pages through every game.
 export const RECENT_GAMES = 30
+export const HISTORY_PAGE = 10
+
+/** A page of a player's history, the last page if asked for one past it; null for a player who does not exist. */
+export async function playerGames(username: string, page: number): Promise<GamesPage | null> {
+  const { rows } = await pool.query<{ id: string; total: number }>(
+    `SELECT u.id, COUNT(g.id)::int AS total
+     FROM users u LEFT JOIN games g ON g.user_id = u.id AND g.status = 'finished'
+     WHERE u.username = LOWER($1)
+     GROUP BY u.id`,
+    [username],
+  )
+  const player = rows[0]
+  if (!player) return null
+  const pages = Math.max(1, Math.ceil(player.total / HISTORY_PAGE))
+  const at = Math.min(Math.max(1, page), pages)
+  const games = await pool.query<Omit<FinishedGame, 'playedAt'> & { playedAt: Date }>(
+    `SELECT outcome, turns, score, forfeited, played_at AS "playedAt"
+     FROM games WHERE user_id = $1 AND status = 'finished'
+     ORDER BY played_at DESC, id DESC LIMIT $2 OFFSET $3`,
+    [player.id, HISTORY_PAGE, (at - 1) * HISTORY_PAGE],
+  )
+  return {
+    games: games.rows.map((game) => ({ ...game, playedAt: game.playedAt.toISOString() })),
+    page: at,
+    pages,
+    total: player.total,
+  }
+}
 
 export async function leaderboard(limit = 50): Promise<LeaderboardRow[]> {
   const { rows } = await pool.query<LeaderboardRow>(
