@@ -17,7 +17,7 @@ const FRAME_MS = 100
 type Cell = { x: number; y: number; color: string; block: boolean; final: string; arrives: number }
 
 /** A fixed pattern for a seed, so a cluster looks the same on every visit and never shifts the page. */
-function cells(cols: number, rows: number, corner: Corner, seed: number): Cell[] {
+function cells(cols: number, rows: number, corner: Corner, seed: number, falloff: number): Cell[] {
   let state = seed
   const random = () => {
     state = (state * 1103515245 + 12345) % 2147483648
@@ -29,10 +29,18 @@ function cells(cols: number, rows: number, corner: Corner, seed: number): Cell[]
       const dx = corner.endsWith('right') ? (cols - 1 - col) / cols : col / cols
       const dy = corner.startsWith('bottom') ? (rows - 1 - row) / rows : row / rows
       const distance = Math.min(1, Math.hypot(dx, dy))
-      if (random() >= (1 - distance) ** 2.2) continue
+      if (random() >= (1 - distance) ** falloff) continue
       // Solid blocks and holes near the corner, letters decaying further out.
       const block = random() < 1 - distance
-      const color = block ? (random() < 0.5 ? BRIGHT : GROUND) : (DECAY[random() < 0.5 ? 0 : 1] as string)
+      // Mostly lit, with a few dark holes among the blocks and fading letters further out.
+      const shade = random()
+      const color = block
+        ? shade < 0.75
+          ? BRIGHT
+          : GROUND
+        : shade < 0.3
+          ? BRIGHT
+          : ((shade < 0.8 ? DECAY[0] : DECAY[1]) as string)
       const glyphs = block ? BLOCKS : LETTERS
       const final = glyphs[Math.floor(random() * glyphs.length)] as string
       found.push({ x: col * CELL_W, y: row * CELL_H, color, block, final, arrives: distance * GROWTH })
@@ -46,12 +54,15 @@ export function Corruption({
   rows,
   corner,
   seed,
+  dense = false,
   className = '',
 }: {
   cols: number
   rows: number
   corner: Corner
   seed: number
+  // Dense keeps more of the cluster lit away from its corner.
+  dense?: boolean
   className?: string
 }) {
   const canvas = useRef<HTMLCanvasElement>(null)
@@ -65,7 +76,7 @@ export function Corruption({
     element.height = rows * CELL_H * ratio
     context.scale(ratio, ratio)
     context.textBaseline = 'top'
-    const pattern = cells(cols, rows, corner, seed)
+    const pattern = cells(cols, rows, corner, seed, dense ? 1.1 : 2.2)
     const end = GROWTH + SETTLE
 
     const draw = (seconds: number) => {
@@ -105,7 +116,7 @@ export function Corruption({
       cancelled = true
       cancelAnimationFrame(frame)
     }
-  }, [cols, rows, corner, seed])
+  }, [cols, rows, corner, seed, dense])
 
   return (
     <canvas

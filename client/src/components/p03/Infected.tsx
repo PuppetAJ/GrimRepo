@@ -96,9 +96,54 @@ export function Infected({ lines, user }: { lines: readonly string[] | null; use
                 <Terminal lines={lines ?? ['...']} user={user} />
               </Suspense>
             </div>
-            {/* Where P03 got in, the corruption spills out: into the title bar, and out under the frame. */}
-            <Corruption cols={12} rows={3} corner="top-right" seed={53} className="top-px right-px z-30" />
-            <Corruption cols={12} rows={3} corner="top-left" seed={71} className="top-full left-0" />
+            {/* Where P03 got in, the corruption creeps out from every corner, clear of the words around it. */}
+            <Corruption
+              cols={26}
+              rows={3}
+              corner="top-right"
+              seed={53}
+              className="top-px right-px z-30 max-sm:hidden"
+            />
+            <Corruption
+              dense
+              cols={12}
+              rows={3}
+              corner="top-right"
+              seed={53}
+              className="top-px right-px z-30 sm:hidden"
+            />
+            <Corruption
+              cols={18}
+              rows={4}
+              corner="bottom-right"
+              seed={29}
+              className="right-0 bottom-full max-sm:hidden"
+            />
+            <Corruption
+              dense
+              cols={8}
+              rows={3}
+              corner="bottom-right"
+              seed={29}
+              className="right-0 bottom-full sm:hidden"
+            />
+            <Corruption dense cols={16} rows={3} corner="top-left" seed={71} className="top-full left-0" />
+            <Corruption dense cols={12} rows={3} corner="top-right" seed={89} className="top-full right-0" />
+            <Corruption
+              cols={4}
+              rows={12}
+              corner="bottom-right"
+              seed={97}
+              className="right-full bottom-0 max-sm:hidden"
+            />
+            <Corruption
+              dense
+              cols={4}
+              rows={10}
+              corner="top-left"
+              seed={61}
+              className="top-0 left-full max-sm:hidden"
+            />
           </>
         ) : (
           <div className="relative h-full overflow-hidden rounded-md border">

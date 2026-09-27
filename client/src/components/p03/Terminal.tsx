@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import type { Commands } from './commands.tsx'
-import { garble, useBursts, type Burst } from './bursts.ts'
 import { Glass } from './Glass.tsx'
 import { pathOf, Prompt } from './Prompt.tsx'
 
@@ -33,7 +32,6 @@ export default function Terminal({ lines, user }: { lines: readonly string[]; us
   const [caret, setCaret] = useState(0)
   const [focused, setFocused] = useState(false)
   const mirror = useRef<HTMLParagraphElement>(null)
-  const [burst, fire] = useBursts()
   const history = useRef<string[]>([])
   const recall = useRef(0)
   const commands = useRef<Commands | null>(null)
@@ -77,8 +75,6 @@ export default function Terminal({ lines, user }: { lines: readonly string[]; us
   async function execute(raw: string) {
     const command = raw.trim()
     setTyping(null)
-    // Every command jolts the screen a little.
-    fire()
     add({ id: nextId++, kind: 'input', who, path: pathOf(pathname), text: raw })
     if (!command) return
     history.current = [...history.current, command].slice(-50)
@@ -153,96 +149,73 @@ export default function Terminal({ lines, user }: { lines: readonly string[]; us
         <FaultyScreen />
       </Suspense>
       <Glass />
-      <Interference burst={burst} />
-      {/* In a burst the picture jolts sideways and splits into red and cyan. */}
+      <div className="relative z-10 border-b border-[#2f6b3d]/70 bg-p03-ground/80 px-4 py-1 text-lg text-p03-dim sm:px-6">
+        p03@factory: ~/grim-repo
+      </div>
       <div
-        className={`relative z-10 flex min-h-0 flex-1 flex-col ${burst ? '[text-shadow:-2px_0_rgb(255_40_90/0.6),2px_0_rgb(40_220_255/0.6)]' : ''}`}
-        style={burst ? { transform: `translate(${burst.jolt.toFixed(1)}px, ${burst.slip}px)` } : undefined}
+        ref={scroller}
+        // A click on the screen puts the cursor back in the prompt, unless it was choosing text or pressing something.
+        onClick={(event) => {
+          const target = event.target as HTMLElement
+          if (!window.getSelection()?.toString() && !target.closest('button, a, input')) input.current?.focus()
+        }}
+        className="relative z-10 min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-2 text-xl leading-snug sm:px-6"
       >
-        <div className="border-b border-[#2f6b3d]/70 bg-p03-ground/80 px-4 py-1 text-lg text-p03-dim sm:px-6">
-          {burst ? garble('p03@factory: ~/grim-repo') : 'p03@factory: ~/grim-repo'}
+        <div role="log" aria-label="P03's terminal output" className="flex flex-col gap-1">
+          {entries.map((entry) => (
+            <Line key={entry.id} entry={entry} typed={typing?.id === entry.id ? typing.count : null} run={execute} />
+          ))}
         </div>
-        <div
-          ref={scroller}
-          // A click on the screen puts the cursor back in the prompt, unless it was choosing text or pressing something.
-          onClick={(event) => {
-            const target = event.target as HTMLElement
-            if (!window.getSelection()?.toString() && !target.closest('button, a, input')) input.current?.focus()
-          }}
-          className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-2 text-xl leading-snug sm:px-6"
-        >
-          <div role="log" aria-label="P03's terminal output" className="flex flex-col gap-1">
-            {entries.map((entry) => (
-              <Line key={entry.id} entry={entry} typed={typing?.id === entry.id ? typing.count : null} run={execute} />
-            ))}
+        <form onSubmit={onSubmit} className="flex items-baseline gap-2">
+          <label htmlFor="p03-command" className="shrink-0">
+            <Prompt who={who} path={pathOf(pathname)} />
+            <span className="sr-only">Command for P03</span>
+          </label>
+          {/* The input takes the typing, invisibly; the text and a thick block cursor are drawn over it. */}
+          <div className="relative min-w-0 flex-1">
+            <p ref={mirror} aria-hidden className="overflow-hidden whitespace-pre text-[#e6ffe9]">
+              <span className="relative">
+                {text || ' '}
+                {focused ? (
+                  <span
+                    // Typing restarts the blink, so the cursor stays lit while keys are going.
+                    key={`${text}:${caret}`}
+                    className="absolute top-[0.21em] h-[0.64em] w-[0.55ch] animate-[blink_1.06s_steps(1)_infinite] bg-p03 motion-reduce:animate-none"
+                    style={{ left: `${caret}ch` }}
+                  />
+                ) : null}
+              </span>
+            </p>
+            <input
+              id="p03-command"
+              ref={input}
+              value={text}
+              onChange={(event) => {
+                setText(event.target.value)
+                follow(event.target)
+              }}
+              // Select alone misses some moves, such as Home and End, so key-ups and clicks are followed too.
+              onSelect={(event) => follow(event.currentTarget)}
+              onKeyUp={(event) => follow(event.currentTarget)}
+              onMouseUp={(event) => follow(event.currentTarget)}
+              onKeyDown={onKeyDown}
+              onFocus={() => {
+                setFocused(true)
+                // The commands start loading as soon as someone means to type.
+                void loadCommands().then((loaded) => (commands.current = loaded))
+              }}
+              onBlur={() => setFocused(false)}
+              autoComplete="off"
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck={false}
+              enterKeyHint="send"
+              className="absolute inset-0 w-full bg-transparent text-transparent caret-transparent outline-none selection:bg-p03/30"
+            />
           </div>
-          <form onSubmit={onSubmit} className="flex items-baseline gap-2">
-            <label htmlFor="p03-command" className="shrink-0">
-              <Prompt who={who} path={pathOf(pathname)} />
-              <span className="sr-only">Command for P03</span>
-            </label>
-            {/* The input takes the typing, invisibly; the text and a thick block cursor are drawn over it. */}
-            <div className="relative min-w-0 flex-1">
-              <p ref={mirror} aria-hidden className="overflow-hidden whitespace-pre text-[#e6ffe9]">
-                <span className="relative">
-                  {text || ' '}
-                  {focused ? (
-                    <span
-                      // Typing restarts the blink, so the cursor stays lit while keys are going.
-                      key={`${text}:${caret}`}
-                      className="absolute top-[0.25em] h-[0.56em] w-[0.55ch] animate-[blink_1.06s_steps(1)_infinite] bg-p03 motion-reduce:animate-none"
-                      style={{ left: `${caret}ch` }}
-                    />
-                  ) : null}
-                </span>
-              </p>
-              <input
-                id="p03-command"
-                ref={input}
-                value={text}
-                onChange={(event) => {
-                  setText(event.target.value)
-                  follow(event.target)
-                }}
-                // Select alone misses some moves, such as Home and End, so key-ups and clicks are followed too.
-                onSelect={(event) => follow(event.currentTarget)}
-                onKeyUp={(event) => follow(event.currentTarget)}
-                onMouseUp={(event) => follow(event.currentTarget)}
-                onKeyDown={onKeyDown}
-                onFocus={() => {
-                  setFocused(true)
-                  // The commands start loading as soon as someone means to type.
-                  void loadCommands().then((loaded) => (commands.current = loaded))
-                }}
-                onBlur={() => setFocused(false)}
-                autoComplete="off"
-                autoCapitalize="off"
-                autoCorrect="off"
-                spellCheck={false}
-                enterKeyHint="send"
-                className="absolute inset-0 w-full bg-transparent text-transparent caret-transparent outline-none selection:bg-p03/30"
-              />
-            </div>
-          </form>
-        </div>
+        </form>
       </div>
     </section>
-  )
-}
-
-/** Thin bands of bad signal across the screen for the length of a burst. */
-function Interference({ burst }: { burst: Burst | null }) {
-  if (!burst) return null
-  return (
-    <span aria-hidden className="pointer-events-none absolute inset-0 z-[15] overflow-hidden">
-      {burst.bands.map((band, index) => (
-        <span
-          key={index}
-          className="absolute inset-x-0 bg-p03/20 backdrop-brightness-150 backdrop-hue-rotate-15"
-          style={{ top: `${band.top}%`, height: band.height, transform: `translateX(${band.shift.toFixed(1)}px)` }}
-        />
-      ))}
-    </span>
   )
 }
 
