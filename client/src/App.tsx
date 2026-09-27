@@ -42,7 +42,7 @@ export default function App() {
         <Route
           path="game"
           element={
-            <RequireAuth>
+            <RequireAuth guest>
               <Game />
             </RequireAuth>
           }

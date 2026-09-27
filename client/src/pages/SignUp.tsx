@@ -65,11 +65,17 @@ export function SignUp() {
     </div>
   )
 
+  const guest = Boolean((authClient.useSession().data?.user as { isAnonymous?: boolean } | undefined)?.isAnonymous)
   const describedBy = (name: Field) => (errors[name] ? `${name}-error` : `${name}-hint`)
 
   return (
     <div className="mx-auto flex w-full max-w-sm flex-col gap-6">
       <h1 className="font-display text-5xl">Create an account</h1>
+      {guest ? (
+        <p className="-mt-3 text-sm text-muted-foreground">
+          Your guest games come with you, and your best goes on the board.
+        </p>
+      ) : null}
       <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
         {field(
           'username',

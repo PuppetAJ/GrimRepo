@@ -58,9 +58,14 @@ export function SignIn() {
         </Button>
       </form>
       <div className="flex flex-col gap-3 border-t pt-5">
-        <p className="text-sm text-muted-foreground">Just looking? The demo account is shared by everyone.</p>
+        <p className="text-sm text-muted-foreground">
+          Just looking? The demo account is shared by everyone, and comes with a history to look through.
+        </p>
         <Button variant="outline" disabled={busy} onClick={() => void signIn(DEMO.username, DEMO.password)}>
           Play as the demo account
+        </Button>
+        <Button asChild variant="ghost" disabled={busy}>
+          <Link to="/game">Or play a game of your own as a guest</Link>
         </Button>
       </div>
       <p className="text-sm text-muted-foreground">

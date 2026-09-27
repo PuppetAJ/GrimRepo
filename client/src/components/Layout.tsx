@@ -24,7 +24,7 @@ const tabs = [
 export function Layout() {
   const session = authClient.useSession()
   const navigate = useNavigate()
-  const user = session.data?.user as { displayUsername?: string; username?: string } | undefined
+  const user = session.data?.user as { displayUsername?: string; username?: string; isAnonymous?: boolean } | undefined
   const name = user?.displayUsername ?? user?.username
 
   async function signOut() {
@@ -48,27 +48,35 @@ export function Layout() {
             Sign in
           </Button>
         ) : name ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" aria-label="Account menu" className="gap-2">
-                <Avatar name={name} size="sm" />
-                <span className="hidden sm:inline">{name}</span>
-                <ChevronDown aria-hidden />
+          <div className="flex gap-2">
+            {/* A guest's way to keep what they've played, always in reach. */}
+            {user?.isAnonymous ? (
+              <Button asChild>
+                <NavLink to="/signup">Sign up</NavLink>
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={() => navigate(`/players/${name}`)}>
-                <UserRound aria-hidden /> Your stats
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => navigate('/account')}>
-                <Settings aria-hidden /> Account
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={signOut}>
-                <LogOut aria-hidden /> Sign out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            ) : null}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" aria-label="Account menu" className="gap-2">
+                  <Avatar name={name} size="sm" />
+                  <span className="hidden sm:inline">{name}</span>
+                  <ChevronDown aria-hidden />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={() => navigate(`/players/${name}`)}>
+                  <UserRound aria-hidden /> Your stats
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => navigate('/account')}>
+                  <Settings aria-hidden /> Account
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={signOut}>
+                  <LogOut aria-hidden /> Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         ) : (
           <div className="flex gap-2">
             <Button asChild variant="outline">

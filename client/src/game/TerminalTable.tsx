@@ -1,7 +1,8 @@
 import React, { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { card, HAND_LIMIT, legalActions, TIP, type Action, type Slot, type Unit } from 'shared'
 import {
-  DemoNote,
+  SeatNote,
+  type Seat,
   describe,
   GameOver,
   has,
@@ -332,12 +333,12 @@ function Processes() {
 /** The text table laid out as Act 2: a whole game through its buttons, played back one move at a time. */
 export function TerminalTable({
   game,
-  onDemo,
+  seat,
   on3d,
   layout = 'wide',
 }: {
   game: Ready
-  onDemo: boolean
+  seat: Seat
   on3d: () => void
   /** Wide, three columns; mid, the board beside the reader; narrow, one column down to 320px. */
   layout?: 'wide' | 'mid' | 'narrow'
@@ -826,7 +827,7 @@ export function TerminalTable({
             <Processes />
           </aside>
           <section aria-label="The table" className="relative z-10 flex min-h-0 flex-col items-center gap-2">
-            {onDemo ? <DemoNote /> : null}
+            {seat ? <SeatNote seat={seat} /> : null}
             <div ref={setArea} className="flex min-h-0 w-full flex-1 items-center justify-center">
               {boardPanel}
             </div>
@@ -871,7 +872,7 @@ export function TerminalTable({
       {topStrip}
       <div ref={setArea} className="relative z-10 flex justify-center gap-3">
         <section aria-label="The table" className="flex flex-none flex-col items-center gap-2">
-          {onDemo ? <DemoNote /> : null}
+          {seat ? <SeatNote seat={seat} /> : null}
           {boardPanel}
         </section>
         {layout === 'mid' ? (

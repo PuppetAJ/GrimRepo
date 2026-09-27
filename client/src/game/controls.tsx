@@ -1,6 +1,6 @@
 import { X } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { card, costOf, SIGILS, TIP, worthOf, type Action, type Slot, type Unit } from 'shared'
 import {
   AlertDialog,
@@ -101,13 +101,16 @@ export function Forfeit({
   )
 }
 
-const DEMO_NOTE = 'grimrepo:demo-note'
+/** Who is at the table, when that needs saying: the shared demo account, or a guest who has not signed up. */
+export type Seat = 'demo' | 'guest' | null
 
-/** The shared account's warning; once closed, it stays closed in this browser. */
-export function DemoNote() {
+const NOTE_KEY = { demo: 'grimrepo:demo-note', guest: 'grimrepo:guest-note' }
+
+/** The demo account's or a guest's note; once closed, it stays closed in this browser. */
+export function SeatNote({ seat }: { seat: Exclude<Seat, null> }) {
   const [open, setOpen] = useState(() => {
     try {
-      return localStorage.getItem(DEMO_NOTE) !== 'closed'
+      return localStorage.getItem(NOTE_KEY[seat]) !== 'closed'
     } catch {
       return true
     }
@@ -116,17 +119,30 @@ export function DemoNote() {
   const close = () => {
     setOpen(false)
     try {
-      localStorage.setItem(DEMO_NOTE, 'closed')
+      localStorage.setItem(NOTE_KEY[seat], 'closed')
     } catch {
       // Storage can be refused in a private window; it stays closed until the page reloads.
     }
   }
   return (
-    <div role="note" className="flex items-start gap-2 rounded border border-death/60 py-2 pr-2 pl-3 font-sans text-sm">
-      <p className="text-foreground">
-        You are on the shared demo account, so anyone else using it plays this same game. Make an account of your own to
-        play undisturbed.
-      </p>
+    <div
+      role="note"
+      className={`flex items-start gap-2 rounded border py-2 pr-2 pl-3 font-sans text-sm ${seat === 'demo' ? 'border-death/60' : 'border-primary/50'}`}
+    >
+      {seat === 'demo' ? (
+        <p className="text-foreground">
+          You are on the shared demo account, so anyone else using it plays this same game. Make an account of your own
+          to play undisturbed.
+        </p>
+      ) : (
+        <p className="text-foreground">
+          You are playing as a guest.{' '}
+          <Link to="/signup" className="text-primary underline underline-offset-2">
+            Sign up
+          </Link>{' '}
+          to keep this game and put your scores on the leaderboard.
+        </p>
+      )}
       <button
         type="button"
         onClick={close}

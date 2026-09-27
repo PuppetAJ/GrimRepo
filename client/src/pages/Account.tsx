@@ -45,6 +45,7 @@ export function Account() {
   }
 
   if (user?.username === DEMO.username) return <DemoNotice />
+  if ((user as { isAnonymous?: boolean } | undefined)?.isAnonymous) return <GuestNotice name={user?.username ?? ''} />
 
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-10">
@@ -137,6 +138,30 @@ function DemoNotice() {
         <Button asChild className="self-start">
           <Link to="/signup">Create an account</Link>
         </Button>
+      </section>
+    </div>
+  )
+}
+
+/** Shown to a guest instead of the forms: what a guest account is, and how to keep what they've played. */
+function GuestNotice({ name }: { name: string }) {
+  return (
+    <div className="mx-auto flex w-full max-w-lg flex-col gap-4">
+      <h1 className="font-display text-5xl">Account</h1>
+      <section className="flex flex-col gap-3 rounded-lg border bg-card p-6">
+        <h2 className="text-xl font-semibold">You are playing as a guest, {name}</h2>
+        <p className="text-muted-foreground">
+          A guest account is kept for a week and stays off the leaderboard. Sign up to keep your games for good and put
+          your best score on the board. Everything you have played comes with you.
+        </p>
+        <div className="flex flex-wrap gap-3">
+          <Button asChild>
+            <Link to="/signup">Sign up</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link to="/login">I already have an account</Link>
+          </Button>
+        </div>
       </section>
     </div>
   )

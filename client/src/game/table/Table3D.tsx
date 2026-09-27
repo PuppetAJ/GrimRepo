@@ -8,7 +8,7 @@ import { Link } from 'react-router'
 import { HAND_LIMIT, legalActions, PLAYER_DECK, type Action, type GameState, type Unit } from 'shared'
 import * as THREE from 'three'
 import { Button } from '@/components/ui/button.tsx'
-import { DemoNote, GameOver, has, laneAction, owed, prompt, ScaleBar, Forfeit } from '../controls.tsx'
+import { GameOver, SeatNote, type Seat, has, laneAction, owed, prompt, ScaleBar, Forfeit } from '../controls.tsx'
 import { useFullScreen } from '../fullScreen.ts'
 import type { Ready } from '../useGame.ts'
 import type { View } from '../view.ts'
@@ -508,7 +508,7 @@ function Hud({
   skip,
   camera,
   setCamera,
-  onDemo,
+  seat,
   onText,
   fullScreen,
   ring,
@@ -526,7 +526,7 @@ function Hud({
   skip: () => void
   camera: CameraView
   setCamera: (view: CameraView) => void
-  onDemo: boolean
+  seat: Seat
   onText: () => void
   fullScreen: ReturnType<typeof useFullScreen>
   ring: () => void
@@ -610,9 +610,9 @@ function Hud({
             </Forfeit>
           )}
         </div>
-        {onDemo ? (
+        {seat ? (
           <div className="mt-1 w-72 max-w-[40vw]">
-            <DemoNote />
+            <SeatNote seat={seat} />
           </div>
         ) : null}
       </div>
@@ -687,7 +687,7 @@ function Hud({
 }
 
 /** The 3D table: the 2022 room and board, with every card drawn from data and every move played back. */
-export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo: boolean; onText: () => void }) {
+export default function Table3D({ game, seat, onText }: { game: Ready; seat: Seat; onText: () => void }) {
   const assets = use(loadCardAssets())
   const { active, progress, item } = useProgress()
   // The files as they arrive, for the boot screen to list.
@@ -848,7 +848,7 @@ export default function Table3D({ game, onDemo, onText }: { game: Ready; onDemo:
           skip={skip}
           camera={camera}
           setCamera={setCamera}
-          onDemo={onDemo}
+          seat={seat}
           onText={onText}
           fullScreen={fullScreen}
           ring={() => act({ type: 'ringBell' })}

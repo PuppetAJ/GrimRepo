@@ -31,6 +31,7 @@ export function Leaderboard() {
     )
   const session = authClient.useSession()
   const me = (session.data?.user as { username?: string } | undefined)?.username
+  const guest = Boolean((session.data?.user as { isAnonymous?: boolean } | undefined)?.isAnonymous)
   // Set by the game page when a game ends, so the result greets the player here.
   const result = (useLocation().state as { result?: Finished } | null)?.result
 
@@ -54,6 +55,16 @@ export function Leaderboard() {
               : `Turn ${result.turns} and you're done. Weak cards. Total lack of synergy.`}{' '}
             {result.isBest ? "A new best. Don't let it go to your head." : 'Not even your best.'}
           </p>
+          {/* A guest's score is kept, but off the board until they sign up. */}
+          {guest ? (
+            <p className="relative z-30 mt-2 font-sans text-sm text-foreground">
+              You&apos;re playing as a guest, so this score isn&apos;t on the board.{' '}
+              <Link to="/signup" className="text-p03 underline underline-offset-2">
+                Sign up
+              </Link>{' '}
+              to put it there; your games come with you.
+            </p>
+          ) : null}
         </div>
       ) : null}
       <div className="flex flex-col gap-2">

@@ -2,6 +2,7 @@ import { RotateCw } from 'lucide-react'
 import { Component, lazy, Suspense, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button.tsx'
 import { Failure, Loading } from '../components/States.tsx'
+import type { Seat } from '../game/controls.tsx'
 import { Boot } from '../game/table/Boot.tsx'
 import { TerminalTable } from '../game/TerminalTable.tsx'
 import { useGame } from '../game/useGame.ts'
@@ -78,8 +79,8 @@ function TurnSideways({ onText }: { onText: () => void }) {
 
 export function Game() {
   const game = useGame()
-  const user = authClient.useSession().data?.user as { username?: string } | undefined
-  const onDemo = user?.username === DEMO.username
+  const user = authClient.useSession().data?.user as { username?: string; isAnonymous?: boolean } | undefined
+  const seat: Seat = user?.username === DEMO.username ? 'demo' : user?.isAnonymous ? 'guest' : null
   const [mode, setMode] = useState<Mode>(savedMode)
   const upright = useMedia(UPRIGHT_PHONE)
   const wide = useMedia(WIDE)
@@ -103,7 +104,7 @@ export function Game() {
       <div className="-mx-2 sm:-mx-9">
         <TerminalTable
           game={game}
-          onDemo={onDemo}
+          seat={seat}
           on3d={() => choose('3d')}
           layout={askedLayout() ?? (wide ? 'wide' : mid ? 'mid' : 'narrow')}
         />
@@ -119,7 +120,7 @@ export function Game() {
         <TableFailed onText={() => choose('text')}>
           <Suspense fallback={<Boot stage="code" />}>
             {/* A new deal or a reload sets the table again from the state as it is. */}
-            <Table3D key={game.generation} game={game} onDemo={onDemo} onText={() => choose('text')} />
+            <Table3D key={game.generation} game={game} seat={seat} onText={() => choose('text')} />
           </Suspense>
         </TableFailed>
       )}
