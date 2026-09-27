@@ -159,7 +159,7 @@ export default function Terminal({ lines, user }: { lines: readonly string[]; us
           const target = event.target as HTMLElement
           if (!window.getSelection()?.toString() && !target.closest('button, a, input')) input.current?.focus()
         }}
-        className="relative z-10 min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-2 text-xl leading-snug sm:px-6"
+        className="relative z-10 min-h-0 flex-1 overflow-y-auto px-4 py-2 text-xl leading-snug sm:px-6"
       >
         <div role="log" aria-label="P03's terminal output" className="flex flex-col gap-1">
           {entries.map((entry) => (
