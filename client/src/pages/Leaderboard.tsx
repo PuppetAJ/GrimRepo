@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { Link, useLocation } from 'react-router'
 import { Avatar } from '../components/Avatar.tsx'
 import { Corruption } from '../components/p03/Corruption.tsx'
@@ -8,6 +9,9 @@ import { api, type Finished, type LeaderboardRow } from '../lib/api.ts'
 import { authClient } from '../lib/auth.ts'
 import { initials, number } from '../lib/format.ts'
 import { useAsync } from '../lib/useAsync.ts'
+
+// WebGL for first place's screen arrives after the board, so the first load stays light.
+const FaultyScreen = lazy(() => import('../components/p03/FaultyScreen.tsx'))
 
 export function Leaderboard() {
   const board = useAsync(api.leaderboard, 'leaderboard')
@@ -32,9 +36,9 @@ export function Leaderboard() {
           <p className="text-xl text-p03-dim">
             P03&gt;{' '}
             {result.outcome === 'win'
-              ? `${result.turns} turns. ...The RNG was rigged. I am filing a bug.`
-              : `Turn ${result.turns} and you are done. Weak cards. Total lack of synergy.`}{' '}
-            {result.isBest ? 'A new best. Do not let it go to your head.' : 'Not even your best.'}
+              ? `${result.turns} turns. ...The RNG was rigged. I'm filing a bug.`
+              : `Turn ${result.turns} and you're done. Weak cards. Total lack of synergy.`}{' '}
+            {result.isBest ? "A new best. Don't let it go to your head." : 'Not even your best.'}
           </p>
         </div>
       ) : null}
@@ -130,9 +134,18 @@ function Played({ row }: { row: LeaderboardRow }) {
 /** First place, taken over by P03: he keeps an eye on whoever is winning. */
 function FirstPlace({ row, mine }: { row: LeaderboardRow; mine: boolean }) {
   return (
-    <tr className="p03-screen relative border-b border-[#2f6b3d] font-terminal">
+    // Isolated, so P03's screen can sit behind the row's words and in front of its ground.
+    <tr className="p03-screen relative isolate border-b border-[#2f6b3d] font-terminal">
       <td className="py-4 pr-4 pl-4 text-xl text-p03-dim sm:pr-5 sm:pl-6">
+        <Suspense fallback={null}>
+          <FaultyScreen className="-z-10" />
+        </Suspense>
         <Glass />
+        {/* P03's corruption creeps in from the row's four corners, above and below the rank and the score. */}
+        <Corruption dense cols={12} rows={2} corner="top-left" seed={37} className="top-0 left-0" />
+        <Corruption dense cols={9} rows={2} corner="bottom-left" seed={43} className="bottom-0 left-0" />
+        <Corruption dense cols={14} rows={2} corner="top-right" seed={31} className="top-0 right-0" />
+        <Corruption dense cols={10} rows={2} corner="bottom-right" seed={41} className="right-0 bottom-0" />
         <span aria-hidden>0x01</span>
         <span className="sr-only">1</span>
       </td>
@@ -160,13 +173,8 @@ function FirstPlace({ row, mine }: { row: LeaderboardRow; mine: boolean }) {
           </div>
         </div>
       </td>
-      <td aria-hidden className="relative hidden w-full px-5 sm:table-cell">
+      <td aria-hidden className="hidden w-full px-5 sm:table-cell">
         <div className="h-5 bg-[repeating-linear-gradient(90deg,var(--p03)_0_10px,transparent_10px_13px)]" />
-        {/* P03's corruption creeps from the bar's corners, up into the header and down into second place's bar. */}
-        <Corruption dense cols={18} rows={3} corner="top-right" seed={31} className="top-0 right-5" />
-        <Corruption dense cols={14} rows={3} corner="bottom-left" seed={37} className="bottom-0 left-5" />
-        <Corruption dense cols={16} rows={3} corner="bottom-right" seed={41} className="right-5 bottom-full z-10" />
-        <Corruption dense cols={12} rows={3} corner="top-left" seed={43} className="top-full left-5 z-10" />
       </td>
       <td className="py-4 pr-4 text-right text-3xl text-p03 sm:pr-6">{number(row.bestScore)}</td>
     </tr>
