@@ -211,13 +211,16 @@ export function Player() {
   return (
     <div className="flex flex-col gap-10 lg:flex-row lg:items-start">
       <aside className="flex w-full flex-col gap-5 lg:w-72">
-        <Avatar name={player.username} size="lg" />
-        <div>
-          <h1 className="text-3xl font-semibold">{player.username}</h1>
-          <p className="text-muted-foreground">
-            Sitting at the table since{' '}
-            {new Date(player.joinedAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-          </p>
+        {/* Stacked, the picture sits beside the name, as GitHub lays a profile out on a phone; beside the page, above it. */}
+        <div className="flex items-center gap-5 lg:flex-col lg:items-start">
+          <Avatar name={player.username} size="lg" />
+          <div className="min-w-0">
+            <h1 className="truncate text-3xl font-semibold">{player.username}</h1>
+            <p className="text-muted-foreground">
+              Sitting at the table since{' '}
+              {new Date(player.joinedAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+            </p>
+          </div>
         </div>
         <dl className="flex flex-col gap-2.5 border-t pt-5 text-sm">
           {facts.map(([label, value]) => (

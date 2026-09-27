@@ -246,7 +246,8 @@ export function Cards() {
         >
           {descending ? <ArrowDownWideNarrow aria-hidden /> : <ArrowUpNarrowWide aria-hidden />}
         </Button>
-        <div role="group" aria-label="Filter by cost" className="flex flex-wrap items-center gap-1">
+        {/* One line down to a 320px phone: tighter buttons there rather than a wrap. */}
+        <div role="group" aria-label="Filter by cost" className="flex items-center gap-1">
           <span className="mr-1 text-sm text-muted-foreground">Cost:</span>
           {COSTS.map((cost) => {
             const on = costs.includes(cost)
@@ -256,7 +257,7 @@ export function Cards() {
                 variant="outline"
                 size="sm"
                 aria-pressed={on}
-                className={on ? 'border-primary bg-primary/15' : ''}
+                className={`max-sm:px-2 max-sm:[&_span]:tracking-normal ${on ? 'border-primary bg-primary/15' : ''}`}
                 onClick={() =>
                   change({
                     cost: (on ? costs.filter((c) => c !== cost) : [...costs, cost]).sort().join(',') || null,

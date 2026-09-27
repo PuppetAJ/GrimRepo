@@ -229,18 +229,21 @@ function Line({ entry, typed, run }: { entry: Entry; typed: number | null; run: 
   if (entry.kind === 'output') return <div className="pb-1">{entry.node}</div>
   if (entry.kind === 'hint')
     return (
-      <p className="flex flex-wrap items-baseline gap-x-2 pb-1 text-p03-dim">
-        <span>// type help, or try</span>
-        {['tutorial', 'cards', 'top'].map((command) => (
-          <button
-            key={command}
-            type="button"
-            onClick={() => run(command)}
-            className="border border-[#2f6b3d] px-2 leading-tight text-p03 hover:border-p03 focus-visible:outline-2 focus-visible:outline-p03"
-          >
-            {command}
-          </button>
-        ))}
+      <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1 pb-1 text-p03-dim">
+        <span>// type help, or try:</span>
+        {/* The buttons move to the next line together, never one at a time. */}
+        <span className="flex gap-2">
+          {['tutorial', 'cards', 'top'].map((command) => (
+            <button
+              key={command}
+              type="button"
+              onClick={() => run(command)}
+              className="border border-[#2f6b3d] px-2 leading-tight text-p03 hover:border-p03 focus-visible:outline-2 focus-visible:outline-p03"
+            >
+              {command}
+            </button>
+          ))}
+        </span>
       </p>
     )
   // Each line shows as much as has been typed so far: what was typed, less the lines before it.

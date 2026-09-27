@@ -1,6 +1,10 @@
 import { initials } from '../lib/format.ts'
 
-const sizes = { sm: 'size-6 text-[10px]', md: 'size-9 text-xs', lg: 'size-40 text-6xl sm:size-56 sm:text-8xl' }
+const sizes = {
+  sm: 'size-6 text-[10px]',
+  md: 'size-9 text-xs',
+  lg: 'size-20 text-4xl sm:size-24 sm:text-5xl lg:size-56 lg:text-8xl',
+}
 
 /** Initials in a circle; the only picture a player has for now. */
 export function Avatar({ name, size = 'md' }: { name: string; size?: keyof typeof sizes }) {

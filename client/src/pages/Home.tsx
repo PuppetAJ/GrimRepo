@@ -98,8 +98,9 @@ export function Home() {
             <li>The dealer does not lose on purpose.</li>
             <li>FourOhFour removes everything on the other side of the table. Working as intended.</li>
             <li>
-              Y2K is not in the deck.{' '}
-              <span className="p03-text-glow relative overflow-hidden bg-p03-ground px-1.5 font-terminal text-xl text-p03 sm:whitespace-nowrap">
+              {/* P03 has struck it out, and his redaction moves to the next line whole rather than breaking. */}
+              <s>Y2K is not in the deck.</s>{' '}
+              <span className="p03-text-glow relative inline-block overflow-hidden bg-p03-ground px-1.5 font-terminal text-lg whitespace-nowrap text-p03 sm:text-xl">
                 <Glass flat />
                 [REDACTED: nothing to see here]
               </span>
