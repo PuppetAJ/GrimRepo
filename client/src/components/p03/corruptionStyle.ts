@@ -1,8 +1,12 @@
 import { useSyncExternalStore } from 'react'
 
-// Development only, to compare: corruption inside the frames and out past them, inside only, or inside with the frames
-// themselves damaged. Everywhere else it is always 'out'.
-export type CorruptionStyle = 'out' | 'in' | 'frame'
+// Development only, to compare: corruption in and out past the frames, inside only, inside with the frames damaged, or
+// both out and damaged. Everywhere else it is always 'out'.
+export type CorruptionStyle = 'out' | 'in' | 'frame' | 'both'
+
+/** Whether the corruption spills out past its frames, and whether the frames are broken, for a style. */
+export const spills = (style: CorruptionStyle) => style === 'out' || style === 'both'
+export const breaks = (style: CorruptionStyle) => style === 'frame' || style === 'both'
 
 const KEY = 'grimrepo:corruption'
 const listeners = new Set<() => void>()
@@ -11,7 +15,7 @@ function read(): CorruptionStyle {
   if (!import.meta.env.DEV) return 'out'
   try {
     const saved = localStorage.getItem(KEY)
-    return saved === 'in' || saved === 'frame' ? saved : 'out'
+    return saved === 'in' || saved === 'frame' || saved === 'both' ? saved : 'out'
   } catch {
     return 'out'
   }

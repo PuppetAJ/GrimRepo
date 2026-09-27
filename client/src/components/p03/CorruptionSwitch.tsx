@@ -4,6 +4,7 @@ const STYLES: [CorruptionStyle, string][] = [
   ['out', 'In and out'],
   ['in', 'Inside only'],
   ['frame', 'Damaged frame'],
+  ['both', 'Both'],
 ]
 
 /** Development only: switches between the ways P03's corruption could look, to compare them on any page. */

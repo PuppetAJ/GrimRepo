@@ -116,7 +116,7 @@ export function PixelCard({ unit }: { unit: Unit }) {
 export function ReaderBody({ unit }: { unit: Unit }) {
   return (
     <>
-      <p className="flex items-start justify-between gap-2 text-[clamp(1.25rem,12cqi,1.875rem)] leading-none">
+      <p className="flex shrink-0 items-start justify-between gap-2 text-[clamp(1.25rem,12cqi,1.875rem)] leading-none">
         <span className="min-w-0 [overflow-wrap:anywhere]">{card(unit.card).name}</span>
         {card(unit.card).cost ? (
           <span className="flex shrink-0 gap-1 pt-1" aria-label={`Costs ${card(unit.card).cost}`}>
@@ -126,12 +126,12 @@ export function ReaderBody({ unit }: { unit: Unit }) {
           </span>
         ) : null}
       </p>
-      {/* The art at a height set by the reader's width, never squeezed by a short window, as Act 2's inspector shows a card. */}
-      <div className="grid h-[clamp(5rem,45cqi,13rem)] shrink-0 place-items-center overflow-hidden rounded-sm border-2 border-[#0b1f12] bg-[#8fd3a0] bg-[repeating-linear-gradient(0deg,rgb(0_0_0/0.06)_0_1px,transparent_1px_3px)]">
+      {/* The art gives way first when the reader is short, down to a floor, and never grows past a cap. */}
+      <div className="grid h-[min(13rem,45cqi)] min-h-16 place-items-center overflow-hidden rounded-sm border-2 border-[#0b1f12] bg-[#8fd3a0] bg-[repeating-linear-gradient(0deg,rgb(0_0_0/0.06)_0_1px,transparent_1px_3px)]">
         <Art id={unit.card} />
       </div>
       {/* Room kept for the sigils whether a card has any or not, so nothing moves between cards; it scrolls past two. */}
-      <div className="flex h-24 shrink-0 flex-col gap-2 overflow-y-auto">
+      <div className="flex h-24 min-h-12 flex-col gap-2 overflow-y-auto">
         {unit.sigils.map((sigil) => (
           <p key={sigil} className="flex gap-2 text-xl leading-tight">
             <span className="shrink-0 pt-0.5">

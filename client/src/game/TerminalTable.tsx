@@ -677,7 +677,7 @@ export function TerminalTable({
   const readerPanel = (
     <Panel
       ref={readerBox}
-      className={`@container flex gap-2 bg-[#a9e7b8] text-[#0b1f12] ${readerFlat ? 'flex-row overflow-hidden p-2' : 'flex-col overflow-y-auto'} ${narrow ? (layout === 'mid' ? (readerFlat ? 'h-[min(20rem,72%)] shrink-0' : 'max-h-[80%] shrink-0') : 'h-56') : 'max-h-[70%] shrink-0'}`}
+      className={`@container flex gap-2 bg-[#a9e7b8] text-[#0b1f12] ${readerFlat ? 'flex-row overflow-hidden p-2' : 'flex-col overflow-hidden'} ${narrow ? (layout === 'mid' ? (readerFlat ? 'h-[min(20rem,72%)] shrink-0' : 'max-h-[80%] shrink-0') : 'h-56') : 'max-h-[70%] shrink-0'}`}
     >
       {inspected ? (
         readerFlat ? (

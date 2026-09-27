@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { useCorruptionStyle } from './corruptionStyle.ts'
+import { spills, useCorruptionStyle } from './corruptionStyle.ts'
 
 type Corner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
 
@@ -73,13 +73,13 @@ export function Corruption({
   // Dense keeps more of the cluster lit away from its corner.
   dense?: boolean
   fast?: boolean
-  // Out past its frame, rather than on it: left out of the 'in' and 'frame' styles.
+  // Out past its frame, rather than on it: shown only in the styles that spill.
   outside?: boolean
   className?: string
 }) {
   const canvas = useRef<HTMLCanvasElement>(null)
   const style = useCorruptionStyle()
-  const hidden = outside && style !== 'out'
+  const hidden = outside && !spills(style)
 
   useEffect(() => {
     const element = canvas.current
