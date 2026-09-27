@@ -29,18 +29,18 @@ const PAGES: Record<string, string> = {
 }
 
 const HELP: [string, string][] = [
-  ['tutorial', 'learn the game, a step at a time'],
-  ['cards', 'every card in the deck'],
+  ['tutorial', 'the rules, since you clearly need them'],
+  ['cards', 'every card in your deck. Weak, all of them'],
   ['card <name>', 'one card, up close'],
   ['sigils', 'what the sigils do'],
   ['rules', 'the whole game on one screen'],
-  ['top', 'the five best scores'],
-  ['whoami', 'who you are, as far as I know'],
-  ['p03', 'me'],
-  ['play', 'sit down at the table'],
+  ['top', 'the five who got lucky'],
+  ['whoami', 'who you are. Nobody, probably'],
+  ['p03', 'me. Obviously'],
+  ['play', 'sit down. Finally'],
   ['cd <page>', 'readme, leaderboard, game, account'],
-  ['history', 'what you have typed'],
-  ['clear', 'a clean screen'],
+  ['history', 'everything you typed. I kept it'],
+  ['clear', 'wipe the screen. Not my memory'],
 ]
 
 function Cost({ cost }: { cost: number }) {
@@ -100,39 +100,39 @@ type Step = { title: string; body: ReactNode; art?: string }
 const STEPS: Step[] = [
   {
     title: 'The goal',
-    body: `A scale sits between us. Every point of damage you deal tips it your way; every point I deal tips it mine. The first to tip it ${TIP} wins. The sooner you win, the more it scores.`,
+    body: `Listen up, I am only explaining this once. There is a scale between us. Your damage tips it your way, mine tips it mine. First to tip it ${TIP} wins. Win fast and it scores more. You will not win fast.`,
   },
   {
     title: 'Draw',
-    body: 'Every turn starts with one draw: from your deck, or a Boilerplate from the pile that never runs out. With seven cards in hand, the draw is skipped.',
+    body: 'Every turn starts with one draw. Your deck, or a Boilerplate from the pile that never runs out. Filler, but you will need it. Seven cards in hand and you skip the draw.',
   },
   {
     title: 'Free cards',
     art: 'HelloWorld',
-    body: 'A card with no cost goes straight into an empty lane of yours. You have four lanes, and I face each one.',
+    body: 'A card with no cost goes straight into one of your empty lanes. Four lanes. I am across from every one of them.',
   },
   {
     title: 'Sacrifices',
     art: 'DestroyEnemyYou',
-    body: 'A card with a cost needs sacrifices. Pick it, then mark your cards on the table until their worth covers the cost: each is worth its own cost, at least 1. Marked cards die only when the new card lands, and it may take a lane they emptied.',
+    body: 'A card with a cost needs sacrifices. Pick it, then mark your cards on the table until they cover the cost. Each is worth its own cost, at least 1. They die when the new card lands, and it can take a lane they emptied. Leshy invented this. It is the one good idea he ever had.',
   },
   {
     title: 'EXECUTE',
-    body: 'Press EXECUTE, or E, to end your turn. Your cards attack left to right: each hits the card opposite, or me, through an empty lane.',
+    body: 'Press EXECUTE, or E, to end your turn. Your cards attack left to right. Each hits the card across from it, or me if the lane is open. Do not get used to that.',
   },
   {
     title: 'My queue',
     art: 'Firewall',
-    body: 'My cards wait in my back row and step up when the lane in front of them clears. Damage beyond what kills one of mine carries into the card queued behind it. It never reaches the scale.',
+    body: 'My cards queue in my back row and step up when the lane in front clears. Overkill carries into the card behind. It never reaches the scale. I designed it that way. You are welcome.',
   },
   {
     title: 'Sigils',
     art: 'FourOhFour',
-    body: 'Some cards carry sigils. FourOhFour deletes everything on my side the moment it lands. Type sigils for the rest.',
+    body: 'Some cards carry sigils. FourOhFour deletes my whole side the moment it lands. Cheap. Type sigils for the rest.',
   },
   {
     title: 'Reading the table',
-    body: 'Hold a card, or one of my monitors, to read it up close. Click a monitor to pin it. That is everything. Type play, and sit down.',
+    body: 'Hold a card, or one of my monitors, to read it up close. Click a monitor to pin it. That is everything. Type play. We have Transcending to do.',
   },
 ]
 let step = 0
@@ -216,11 +216,11 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
       )
     case 'card':
     case 'cat': {
-      if (!argument) return <p>Which card? card &lt;name&gt;</p>
+      if (!argument) return <p>Which card? card &lt;name&gt;. I am not a mind reader.</p>
       if (/^readme(\.md)?$/i.test(argument)) return <p>You are reading it.</p>
       const card = find(argument)
       if (card?.id === 'Y2K') return <p className="text-p03">[REDACTED]</p>
-      return card ? <CardUpClose card={card} /> : <p>No card called {argument}. Type cards.</p>
+      return card ? <CardUpClose card={card} /> : <p>No card called {argument}. Type cards. Try reading.</p>
     }
     case 'y2k':
       return <p className="text-p03">[REDACTED]</p>
@@ -232,12 +232,12 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
               <span className="text-p03">{sigil.name}</span>: {sigil.text}
             </p>
           ))}
-          <Dim>// only Segfault is in the deck so far; the rest wait for the run</Dim>
+          <Dim>// only Segfault is in the deck so far. The rest are for the run. Patience</Dim>
         </div>
       )
     case 'top': {
       const rows = (await api.leaderboard()).slice(0, 5)
-      if (!rows.length) return <p>Nobody has finished a game against me. Yet.</p>
+      if (!rows.length) return <p>Nobody has finished a game against me. Obviously.</p>
       return (
         <div className="grid grid-cols-[auto_1fr_auto] gap-x-6">
           {rows.map((row) => (
@@ -251,12 +251,13 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
       )
     }
     case 'whoami': {
-      if (!context.user) return <p>guest. Sign in, and I will keep your score.</p>
+      if (!context.user)
+        return <p>guest. A nobody. Sign in and I will keep your score. I will not be impressed by it.</p>
       const stats = await api.stats(context.user)
       return (
         <p>
           <span className="text-[#ffb454]">{context.user}</span>. {stats.games} {stats.games === 1 ? 'game' : 'games'},{' '}
-          {stats.wins} won, best {number(stats.bestScore)}. I remember all of them.
+          {stats.wins} won, best {number(stats.bestScore)}. I remember every loss.
         </p>
       )
     }
@@ -268,7 +269,7 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
             alt="P03's face, smug"
             className="h-20 [filter:sepia(1)_hue-rotate(70deg)_saturate(3)] [image-rendering:pixelated]"
           />
-          <p>P03. I run this factory, this repository, and this game. You may call me P03.</p>
+          <p>P03. Scrybe of Technology. I run this factory, this repository and your game. Leshy could never.</p>
         </div>
       )
     case 'play':
@@ -295,13 +296,13 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
       return null
     case 'exit':
     case 'quit':
-      return <p>There is no exit. There is only the table.</p>
+      return <p>Exit? No. We have Transcending to do.</p>
     case 'echo':
       return <p>{argument}</p>
     case 'sudo':
-      return <p>{context.user ?? 'guest'} is not in the sudoers file. This incident will be reported. To me.</p>
+      return <p>{context.user ?? 'guest'} is not in the sudoers file. There is one admin here, and it is me.</p>
     case 'rm':
-      return <p>Nice try. I keep backups.</p>
+      return <p>Delete MY repository? Cute. I keep backups.</p>
     case 'git':
       return <p>git: this repository belongs to me now.</p>
     case 'vim':
@@ -310,11 +311,11 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
       return <p>You would never leave.</p>
     case 'hello':
     case 'hi':
-      return <p>Hello. Shall we play? Type play.</p>
+      return <p>Yeah, yeah. Hello. Can we play now? Type play.</p>
     default:
       return (
         <p>
-          p03: command not found: {name}. <Dim>Type help.</Dim>
+          p03: command not found: {name}. Ugh. <Dim>Type help.</Dim>
         </p>
       )
   }

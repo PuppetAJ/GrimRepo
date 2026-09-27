@@ -40,9 +40,9 @@ function open(game: OpenGame): Table {
   if (!rebuilt) throw new Error('This game could not be replayed. Forfeit it to start another.')
   const lines = rebuilt.lines.map((line) => `P03> ${line}`)
   // A resumed game with no moves is still a new deal, as when two requests race to start it.
-  if (game.resumed && game.actions.length) lines.push(`P03> Welcome back. Turn ${rebuilt.state.turn}.`)
+  if (game.resumed && game.actions.length) lines.push(`P03> Oh. You came back. Turn ${rebuilt.state.turn}. Draw.`)
   if (game.rulesChanged)
-    lines.unshift('P03> I rewrote the rules since your last game. It could not continue, so here is a new deal.')
+    lines.unshift('P03> I patched the rules since your last game. Your old save is incompatible. New deal.')
   generations += 1
   return { id: game.id, generation: generations, state: rebuilt.state, log: lines.slice(-LOG_LINES) }
 }

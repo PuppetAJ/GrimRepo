@@ -28,11 +28,11 @@ export function Home() {
     top.status === 'loading'
       ? null
       : [
-          'Another visitor. Sit down; the table is set.',
-          'I have rewritten this repository. You are welcome.',
+          'You done gawking? Good.',
+          'This is my repository now. I rewrote it. It is better. You are welcome.',
           first
-            ? `${first.username} holds first place with ${number(first.bestScore)}. For now.`
-            : 'Nobody has beaten me yet.',
+            ? `${first.username} is in first with ${number(first.bestScore)}. For now.`
+            : 'Nobody has beaten me. Obviously.',
         ]
 
   return (

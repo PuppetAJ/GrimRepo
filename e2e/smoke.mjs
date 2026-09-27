@@ -41,11 +41,11 @@ section("P03's terminal")
   const readme = page.getByRole('img', { name: /The 3D table/ })
   check('the README shows a gameplay screenshot first', await readme.isVisible())
   const terminal = page.getByRole('region', { name: "P03's terminal" })
-  await terminal.getByText('Another visitor').first().waitFor()
+  await terminal.getByText('You done gawking').first().waitFor()
   check('then P03 takes it over with his terminal', !(await readme.isVisible()))
   check(
     'and greets the visitor once',
-    (await terminal.locator('.sr-only', { hasText: 'Another visitor' }).count()) === 1,
+    (await terminal.locator('.sr-only', { hasText: 'You done gawking' }).count()) === 1,
   )
   const prompt = terminal.getByLabel('Command for P03')
   const run = async (command) => {
@@ -56,7 +56,7 @@ section("P03's terminal")
   check(
     'help lists the commands',
     await terminal
-      .getByText('learn the game, a step at a time')
+      .getByText('the rules, since you clearly need them')
       .waitFor()
       .then(
         () => true,

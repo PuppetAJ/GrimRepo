@@ -12,7 +12,7 @@ export function NotFound() {
       </Suspense>
       <Glass />
       <h1 className="relative z-10 text-5xl text-p03">404</h1>
-      <p className="relative z-10">P03&gt; There is nothing here. I checked twice.</p>
+      <p className="relative z-10">P03&gt; There is nothing here. You broke it, didn't you.</p>
       <Link to="/" className="relative z-10 self-start text-p03 underline underline-offset-4">
         cd ~
       </Link>
