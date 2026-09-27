@@ -82,7 +82,8 @@ export function Leaderboard() {
           </p>
         ) : null}
         {board.status === 'ready' && board.data.length > 0 ? (
-          <div className="overflow-hidden rounded-lg border bg-card">
+          // Not clipped, so first place's corruption can creep out past the board's edges.
+          <div className="rounded-lg border bg-card">
             <table className="w-full border-collapse text-left">
               <caption className="sr-only">Players by their best score</caption>
               <thead className="text-xs tracking-wide text-muted-foreground uppercase">
@@ -146,6 +147,25 @@ function FirstPlace({ row, mine }: { row: LeaderboardRow; mine: boolean }) {
         <Corruption dense cols={9} rows={2} corner="bottom-left" seed={43} className="bottom-0 left-0" />
         <Corruption dense cols={14} rows={2} corner="top-right" seed={31} className="top-0 right-0" />
         <Corruption dense cols={10} rows={2} corner="bottom-right" seed={41} className="right-0 bottom-0" />
+        {/* And out past both ends of the board, into the page's margins, where there is room for it. */}
+        <Corruption
+          dense
+          fast
+          cols={4}
+          rows={6}
+          corner="top-right"
+          seed={53}
+          className="top-0 right-full max-sm:hidden"
+        />
+        <Corruption
+          dense
+          fast
+          cols={4}
+          rows={6}
+          corner="bottom-left"
+          seed={59}
+          className="bottom-0 left-full max-sm:hidden"
+        />
         <span aria-hidden>0x01</span>
         <span className="sr-only">1</span>
       </td>
