@@ -46,8 +46,8 @@ function Facts({ def }: { def: CardDef }) {
     <>
       <p className="flex flex-wrap items-center gap-x-3 text-sm">
         <Cost cost={def.cost} />
-        <span>attack {def.attack}</span>
-        <span>health {def.health}</span>
+        <span>Attack: {def.attack}</span>
+        <span>Health: {def.health}</span>
       </p>
       {def.sigils.map((sigil) => (
         <p key={sigil} className="text-sm text-muted-foreground">
@@ -116,7 +116,13 @@ function Viewer({ cards, chosen, onChoose }: { cards: CardDef[]; chosen: CardDef
         aria-label={chosen.name}
         className="relative h-[28rem] min-w-0 overflow-hidden rounded-lg border bg-[#02070c] lg:h-[36rem]"
       >
-        <Suspense fallback={<p className="p-4 font-terminal text-xl text-p03">P03&gt; loading the disk…</p>}>
+        <Suspense
+          fallback={
+            <p className="absolute inset-0 grid place-items-center font-terminal text-xl text-p03">
+              P03&gt; loading the disk…
+            </p>
+          }
+        >
           <CardViewer unit={unitOf(chosen)} open={open} turn={turn} />
         </Suspense>
         {/* The same card as the text table draws it, in the corner. */}
@@ -186,7 +192,7 @@ export function Cards() {
             type="search"
             value={query}
             onChange={(event) => change({ q: event.target.value || null })}
-            placeholder="Name, sigil or cost"
+            placeholder="Name, Sigil, or Cost"
             className="pl-9"
           />
         </div>

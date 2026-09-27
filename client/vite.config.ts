@@ -21,9 +21,14 @@ const mockupsSlash: Plugin = {
 
 // The mockup page's sprite editor saves one card's sprite into sprites.ts; development only, and nothing but a sprite.
 const SPRITES_FILE = fileURLToPath(new URL('./src/game/sprites.ts', import.meta.url))
+let saving = 0
 const spriteEditor: Plugin = {
   name: 'sprite-editor',
   apply: 'serve',
+  // The editor already shows what it saved, so its own save reloads nothing; the next page load reads the new file.
+  handleHotUpdate({ file }) {
+    if (file === SPRITES_FILE && Date.now() - saving < 2000) return []
+  },
   configureServer(server) {
     server.middlewares.use('/__mockups/sprite', (req, res) => {
       if (req.method !== 'POST') return void res.writeHead(405).end()
@@ -44,6 +49,7 @@ const spriteEditor: Plugin = {
         const file = readFileSync(SPRITES_FILE, 'utf8')
         const block = new RegExp(`(\\n  ${id}: \\[\\n)(?:    '[#.]{24}',\\n){24}(  \\],)`)
         if (!block.test(file)) return refuse('no such card')
+        saving = Date.now()
         writeFileSync(SPRITES_FILE, file.replace(block, `$1${rows.map((row) => `    '${row}',\n`).join('')}$2`))
         res.writeHead(204).end()
       })
