@@ -50,9 +50,13 @@ export function Sigil({
   )
 }
 
+// A card's height to its width, the shape every flat card is drawn at: a playing card's, near enough.
+export const CARD_RATIO = 7 / 5
+
 /**
  * A card as Act 2 draws it, shaped loosely like the 3D table's floppy disks: a clipped corner and a steel shutter at
- * the top, the art below it, sigils under that, the cost in the corner and attack and health at the foot.
+ * the top, then the art, the sigils and the numbers, each in a band of fixed height. A card without sigils keeps
+ * their band empty, so every card is laid out the same and nothing moves between them.
  */
 export function PixelCard({ unit }: { unit: Unit }) {
   const def = card(unit.card)
@@ -60,15 +64,15 @@ export function PixelCard({ unit }: { unit: Unit }) {
   return (
     <span
       // Its print is sized from its own width, so a small card on a short window stays legible.
-      className={`@container relative flex aspect-[4/5] w-full flex-col overflow-hidden text-[#0b1f12] [clip-path:polygon(0_0,86%_0,100%_9%,100%_100%,0_100%)] ${rare ? 'bg-[#f3c6c0]' : 'bg-[#a9e7b8]'} bg-[repeating-linear-gradient(0deg,rgb(0_0_0/0.07)_0_1px,transparent_1px_3px)]`}
+      className={`@container relative flex aspect-[5/7] w-full flex-col overflow-hidden text-[#0b1f12] [clip-path:polygon(0_0,86%_0,100%_9%,100%_100%,0_100%)] ${rare ? 'bg-[#f3c6c0]' : 'bg-[#a9e7b8]'} bg-[repeating-linear-gradient(0deg,rgb(0_0_0/0.07)_0_1px,transparent_1px_3px)]`}
     >
       {/* The shutter, and its window. */}
-      <span aria-hidden className="absolute top-0 left-[22%] z-10 h-[9%] w-[46%] rounded-b-sm bg-[#b9c3c8]">
+      <span aria-hidden className="absolute top-0 left-[22%] z-10 h-[7%] w-[46%] rounded-b-sm bg-[#b9c3c8]">
         <span className="absolute top-[18%] right-[16%] h-[62%] w-[20%] bg-[#0b1f12]" />
       </span>
+      <span className="h-[11%] shrink-0" />
       <span
-        // Allowed to shrink below the art's square, so a row of sigils never pushes the numbers off the card.
-        className={`relative mx-[6%] mt-[16%] flex min-h-0 flex-[1.3] flex-col border-2 border-[#0b1f12]/70 ${rare ? 'bg-[#e8aea8]' : 'bg-[#8fd3a0]'}`}
+        className={`mx-[6%] flex h-[50%] shrink-0 flex-col border-2 border-[#0b1f12]/70 ${rare ? 'bg-[#e8aea8]' : 'bg-[#8fd3a0]'}`}
       >
         {/* The cost on a row of its own above the art, so however small the card, it never sits on the art. */}
         {def.cost ? (
@@ -82,17 +86,15 @@ export function PixelCard({ unit }: { unit: Unit }) {
           <Art id={unit.card} />
         </span>
       </span>
-      {/* Many sigils share the card's width, and long numbers print smaller, so nothing runs off the card. */}
-      <span
-        // Only a card with sigils gives up art space for them; without, the band is a thin gap.
-        className={`flex items-center justify-center gap-[2cqw] ${unit.sigils.length ? 'flex-1' : 'flex-[0.25]'}`}
-      >
+      {/* Many sigils share the band's width; without any, the band stays, empty. */}
+      <span className="flex h-[19%] shrink-0 items-center justify-center gap-[2cqw]">
         {unit.sigils.map((sigil) => (
           <Sigil key={sigil} id={sigil} size={`${Math.min(20, 86 / unit.sigils.length - 2)}cqw`} />
         ))}
       </span>
+      {/* Long numbers print smaller, so nothing runs off the card. */}
       <span
-        className="flex justify-between px-[5cqw] pb-[2cqw] leading-none"
+        className="flex flex-1 items-end justify-between px-[5cqw] pb-[3cqw] leading-none"
         style={{
           fontSize: `${Math.min(21, 44 / Math.max(String(unit.attack).length, String(unit.health).length))}cqw`,
         }}
@@ -124,26 +126,22 @@ export function ReaderBody({ unit }: { unit: Unit }) {
           </span>
         ) : null}
       </p>
-      {/* The art large and the stats under it, as Act 2's inspector shows a card. */}
-      <div className="grid min-h-8 flex-1 place-items-center overflow-hidden rounded-sm border-2 border-[#0b1f12] bg-[#8fd3a0] bg-[repeating-linear-gradient(0deg,rgb(0_0_0/0.06)_0_1px,transparent_1px_3px)]">
+      {/* The art at a height set by the reader's width, never squeezed by a short window, as Act 2's inspector shows a card. */}
+      <div className="grid h-[clamp(5rem,45cqi,13rem)] shrink-0 place-items-center overflow-hidden rounded-sm border-2 border-[#0b1f12] bg-[#8fd3a0] bg-[repeating-linear-gradient(0deg,rgb(0_0_0/0.06)_0_1px,transparent_1px_3px)]">
         <Art id={unit.card} />
       </div>
-      {/* Only as tall as the sigils need, up to a limit, scrolling past it; the art takes the rest. */}
-      <div className="flex max-h-40 min-h-0 flex-col gap-2 overflow-y-auto">
-        {unit.sigils.length ? (
-          unit.sigils.map((sigil) => (
-            <p key={sigil} className="flex gap-2 text-xl leading-tight">
-              <span className="shrink-0 pt-0.5">
-                <Sigil id={sigil} size={20} />
-              </span>
-              <span>
-                <strong>{SIGILS[sigil].name}.</strong> {SIGILS[sigil].text}
-              </span>
-            </p>
-          ))
-        ) : (
-          <p className="text-lg">No sigils.</p>
-        )}
+      {/* Room kept for the sigils whether a card has any or not, so nothing moves between cards; it scrolls past two. */}
+      <div className="flex h-24 shrink-0 flex-col gap-2 overflow-y-auto">
+        {unit.sigils.map((sigil) => (
+          <p key={sigil} className="flex gap-2 text-xl leading-tight">
+            <span className="shrink-0 pt-0.5">
+              <Sigil id={sigil} size={20} />
+            </span>
+            <span>
+              <strong>{SIGILS[sigil].name}.</strong> {SIGILS[sigil].text}
+            </span>
+          </p>
+        ))}
       </div>
       <p className="mt-auto flex shrink-0 justify-between border-t-2 border-[#0b1f12]/40 pt-1 text-3xl">
         <span aria-label={`Attack ${unit.attack}`} className="flex items-center gap-1">
@@ -181,13 +179,11 @@ export function FlatReaderBody({ unit }: { unit: Unit }) {
           ) : null}
         </p>
         <div className="min-h-0 flex-1 overflow-y-auto text-base leading-tight">
-          {unit.sigils.length
-            ? unit.sigils.map((sigil) => (
-                <p key={sigil}>
-                  <strong>{SIGILS[sigil].name}.</strong> {SIGILS[sigil].text}
-                </p>
-              ))
-            : 'No sigils.'}
+          {unit.sigils.map((sigil) => (
+            <p key={sigil}>
+              <strong>{SIGILS[sigil].name}.</strong> {SIGILS[sigil].text}
+            </p>
+          ))}
         </div>
         <p className="flex justify-between border-t-2 border-[#0b1f12]/40 pt-0.5 text-2xl leading-none">
           <span aria-label={`Attack ${unit.attack}`} className="flex items-center gap-1">

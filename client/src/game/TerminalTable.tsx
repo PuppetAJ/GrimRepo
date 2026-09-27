@@ -23,7 +23,7 @@ import {
 } from './controls.tsx'
 import type { Playback } from './table/playback.ts'
 import { usePlayback } from './table/usePlayback.ts'
-import { FlatReaderBody, PixelCard, ReaderBody } from './CardReader.tsx'
+import { CARD_RATIO, FlatReaderBody, PixelCard, ReaderBody } from './CardReader.tsx'
 import FaultyScreen from '../components/p03/FaultyScreen.tsx'
 import { useFullScreen } from './fullScreen.ts'
 import type { Ready } from './useGame.ts'
@@ -125,21 +125,16 @@ function Panel({
   )
 }
 
-/**
- * Whether the reader should lie flat, the art beside the words: when the panel is too short for its width to stand
- * the art above them at a fair size, as happens on a short, wide window.
- */
+// From this wide, the reader has room for the art beside the words, and lies flat; narrower, it stands them in a column.
+const FLAT_READER = 416
+
+/** Whether the reader lies flat, decided by the reader's own width rather than the window's. */
 function useFlatReader(): [(element: HTMLDivElement | null) => void, boolean] {
   const [box, setBox] = useState<HTMLDivElement | null>(null)
   const [flat, setFlat] = useState(false)
   useEffect(() => {
     if (!box) return
-    const observer = new ResizeObserver(([entry]) => {
-      if (!entry) return
-      const { width, height } = entry.contentRect
-      // The name, a sigil and the stats take about 160px; the art wants at least half the width on top of that.
-      setFlat(height < width * 0.55 + 160)
-    })
+    const observer = new ResizeObserver(([entry]) => entry && setFlat(entry.contentRect.width >= FLAT_READER))
     observer.observe(box)
     return () => observer.disconnect()
   }, [box])
@@ -259,7 +254,9 @@ function useLaneSize(narrow: boolean, hand: HTMLElement | null, aside = 0) {
       const fixed = table ? getComputedStyle(table).position === 'fixed' : false
       const scrolled = (fixed ? 0 : window.scrollY) + (table?.scrollTop ?? 0)
       const room = hand ? window.innerHeight - 12 - (hand.getBoundingClientRect().bottom + scrolled) : 0
-      const height = narrow ? current.current + room / (3 * 1.25) : ((area.clientHeight - 28 - 3 * 8 - 2) / 3) * 0.8
+      const height = narrow
+        ? current.current + room / (3 * CARD_RATIO)
+        : (area.clientHeight - 28 - 3 * 8 - 2) / 3 / CARD_RATIO
       current.current = Math.max(40, Math.floor(Math.min(width, height)))
       setSize(current.current)
     }
@@ -273,7 +270,7 @@ function useLaneSize(narrow: boolean, hand: HTMLElement | null, aside = 0) {
       window.removeEventListener('resize', fit)
     }
   }, [area, narrow, hand, aside])
-  return { setArea, lane: { width: size, height: size * 1.25 } }
+  return { setArea, lane: { width: size, height: size * CARD_RATIO } }
 }
 
 // The widest the table grows, and how tall it may be for its width, so a big window does not stretch it into a tower.
@@ -680,7 +677,7 @@ export function TerminalTable({
   const readerPanel = (
     <Panel
       ref={readerBox}
-      className={`@container flex gap-2 overflow-hidden bg-[#a9e7b8] text-[#0b1f12] ${readerFlat ? 'flex-row p-2' : 'flex-col'} ${layout === 'mid' ? 'h-[min(20rem,72%)] shrink-0' : narrow ? 'h-56' : 'max-h-[30rem] min-h-[15rem] flex-1 basis-0'}`}
+      className={`@container flex gap-2 bg-[#a9e7b8] text-[#0b1f12] ${readerFlat ? 'flex-row overflow-hidden p-2' : 'flex-col overflow-y-auto'} ${narrow ? (layout === 'mid' ? (readerFlat ? 'h-[min(20rem,72%)] shrink-0' : 'max-h-[80%] shrink-0') : 'h-56') : 'max-h-[70%] shrink-0'}`}
     >
       {inspected ? (
         readerFlat ? (
@@ -724,7 +721,7 @@ export function TerminalTable({
       className="pointer-events-none fixed z-[60] w-40 drop-shadow-[0_0_12px_rgb(0_0_0/0.8)]"
       style={{
         left: Math.min(Math.max(8, magnified.x - 80), window.innerWidth - 168),
-        top: Math.max(8, magnified.y - 230),
+        top: Math.max(8, magnified.y - 250),
       }}
     >
       <PixelCard unit={magnified.unit} />
@@ -787,7 +784,7 @@ export function TerminalTable({
           <div
             key={unit.uid}
             {...look({ uid: unit.uid }, unit)}
-            className={`shrink-0 select-none [-webkit-touch-callout:none] ${narrow ? (layout === 'mid' ? 'w-[clamp(5rem,6.5vw,6.5rem)]' : 'w-14') : 'aspect-[4/5] h-full'}`}
+            className={`shrink-0 select-none [-webkit-touch-callout:none] ${narrow ? (layout === 'mid' ? 'w-[clamp(5rem,6.5vw,6.5rem)]' : 'w-14') : 'aspect-[5/7] h-full'}`}
             style={fresh(unit.uid) ? { animation: 'arrive-up 280ms ease-out' } : undefined}
           >
             <button
@@ -827,7 +824,7 @@ export function TerminalTable({
         aria-label={`Draw from the deck, ${view.deck} left`}
         className={`flex flex-col items-center gap-1 text-p03 disabled:brightness-50 disabled:saturate-50 ${narrow ? 'w-12 sm:w-16' : 'w-20'}`}
       >
-        <span className="grid aspect-[4/5] w-full place-items-center rounded-md border-2 border-[#2f6b3d] bg-[#0b1f12] text-3xl shadow-[3px_3px_0_#1f3a26,6px_6px_0_#13261a]">
+        <span className="grid aspect-[5/7] w-full place-items-center rounded-md border-2 border-[#2f6b3d] bg-[#0b1f12] text-3xl shadow-[3px_3px_0_#1f3a26,6px_6px_0_#13261a]">
           ▦
         </span>
         <span className="text-lg">x{view.deck}</span>
@@ -842,7 +839,7 @@ export function TerminalTable({
         aria-label="Take a Boilerplate"
         className={`flex flex-col items-center gap-1 text-p03 disabled:brightness-50 disabled:saturate-50 ${narrow ? 'w-12 sm:w-16' : 'w-20'}`}
       >
-        <span className="grid aspect-[4/5] w-full place-items-center rounded-md border-2 border-[#0b1f12] bg-[#a9e7b8] text-lg text-[#0b1f12] shadow-[3px_3px_0_#1f3a26,6px_6px_0_#13261a]">
+        <span className="grid aspect-[5/7] w-full place-items-center rounded-md border-2 border-[#0b1f12] bg-[#a9e7b8] text-lg text-[#0b1f12] shadow-[3px_3px_0_#1f3a26,6px_6px_0_#13261a]">
           {'</>'}
         </span>
         <span className="text-lg">∞</span>
@@ -919,7 +916,12 @@ export function TerminalTable({
       {topStrip}
       <div ref={setArea} className="relative z-10 flex justify-center gap-3">
         <section aria-label="The table" className="flex flex-none flex-col items-center gap-2">
-          {seat ? <SeatNote seat={seat} /> : null}
+          {/* As wide as the board and no wider, so its words wrap instead of pushing the reader off the table. */}
+          {seat ? (
+            <div className="w-0 min-w-full">
+              <SeatNote seat={seat} />
+            </div>
+          ) : null}
           {boardPanel}
         </section>
         {layout === 'mid' ? (
