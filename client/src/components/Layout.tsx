@@ -18,6 +18,7 @@ import { Loading } from './States.tsx'
 const tabs = [
   { to: '/', label: 'README', end: true },
   { to: '/leaderboard', label: 'Leaderboard' },
+  { to: '/cards', label: 'Cards' },
   { to: '/game', label: 'Play' },
 ]
 

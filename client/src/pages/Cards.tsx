@@ -1,0 +1,223 @@
+import { Box, LayoutGrid, Pause, Play, Search } from 'lucide-react'
+import { lazy, Suspense, useId, useState } from 'react'
+import { useSearchParams } from 'react-router'
+import { CARDS, SIGILS, type CardDef, type Unit } from 'shared'
+import { Button } from '@/components/ui/button.tsx'
+import { Input } from '@/components/ui/input.tsx'
+import { Glass } from '../components/p03/Glass.tsx'
+import { PixelCard } from '../game/CardReader.tsx'
+
+// three.js loads only when someone opens a card in 3D.
+const CardViewer = lazy(() => import('../game/table/CardViewer.tsx'))
+
+// Every card a player can hold: the deck and the Boilerplate pile. Y2K is not spoken of.
+const DECK = Object.values(CARDS).filter((def) => def.id !== 'Y2K')
+
+const unitOf = (def: CardDef): Unit => ({
+  uid: 0,
+  card: def.id,
+  attack: def.attack,
+  health: def.health,
+  maxHealth: def.health,
+  sigils: def.sigils,
+})
+
+const squash = (text: string) => text.toLowerCase().replace(/[^a-z0-9]/g, '')
+
+/** A card matches its name, its sigils' names, "free", or a cost as "cost 2". */
+function matches(def: CardDef, query: string): boolean {
+  const wanted = squash(query)
+  if (!wanted) return true
+  const words = [def.name, ...def.sigils.map((sigil) => SIGILS[sigil].name), def.cost ? `cost ${def.cost}` : 'free']
+  return words.some((word) => squash(word).includes(wanted))
+}
+
+function Cost({ cost }: { cost: number }) {
+  if (!cost) return <span className="text-muted-foreground">free</span>
+  return (
+    <span aria-label={`costs ${cost}`} className="tracking-widest text-[#ff9a2e]">
+      {'◆'.repeat(cost)}
+    </span>
+  )
+}
+
+function Facts({ def }: { def: CardDef }) {
+  return (
+    <>
+      <p className="flex flex-wrap items-center gap-x-3 text-sm">
+        <Cost cost={def.cost} />
+        <span>attack {def.attack}</span>
+        <span>health {def.health}</span>
+      </p>
+      {def.sigils.map((sigil) => (
+        <p key={sigil} className="text-sm text-muted-foreground">
+          <span className="text-foreground">{SIGILS[sigil].name}.</span> {SIGILS[sigil].text}
+        </p>
+      ))}
+      {def.id === 'Boilerplate' ? (
+        <p className="text-sm text-muted-foreground">From the pile that never runs out. Worth one sacrifice.</p>
+      ) : null}
+    </>
+  )
+}
+
+/** A card as the text table draws it, on P03's screen. */
+function Screen({ def, className = '' }: { def: CardDef; className?: string }) {
+  return (
+    <div className={`p03-screen relative overflow-hidden border border-[#2f6b3d] p-2 font-terminal ${className}`}>
+      <PixelCard unit={unitOf(def)} />
+      <Glass flat />
+    </div>
+  )
+}
+
+function Grid({ cards, onOpen }: { cards: CardDef[]; onOpen: (id: string) => void }) {
+  return (
+    <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      {cards.map((def) => (
+        <li key={def.id} className="flex min-w-0 gap-4 rounded-lg border bg-card p-4">
+          <Screen def={def} className="w-28 shrink-0 sm:w-32" />
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <h2 className="truncate font-semibold">{def.name}</h2>
+            <Facts def={def} />
+            <Button variant="outline" size="sm" className="mt-auto self-start" onClick={() => onOpen(def.id)}>
+              <Box aria-hidden /> View in 3D
+            </Button>
+          </div>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function Viewer({ cards, chosen, onChoose }: { cards: CardDef[]; chosen: CardDef; onChoose: (id: string) => void }) {
+  const [open, setOpen] = useState(true)
+  const [turn, setTurn] = useState(false)
+  return (
+    <div className="grid gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]">
+      <ul
+        aria-label="Cards"
+        className="flex max-h-[28rem] flex-col overflow-y-auto rounded-lg border bg-card lg:max-h-[36rem]"
+      >
+        {cards.map((def) => (
+          <li key={def.id}>
+            <button
+              type="button"
+              aria-current={def.id === chosen.id}
+              onClick={() => onChoose(def.id)}
+              className={`w-full border-t px-4 py-2 text-left text-sm first:border-t-0 hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring ${def.id === chosen.id ? 'bg-muted font-semibold' : ''}`}
+            >
+              {def.name}
+            </button>
+          </li>
+        ))}
+      </ul>
+      <section aria-label={chosen.name} className="flex min-w-0 flex-col gap-3">
+        <div className="relative h-[28rem] overflow-hidden rounded-lg border bg-[#02070c] lg:h-[36rem]">
+          <Suspense fallback={<p className="p-4 font-terminal text-xl text-p03">P03&gt; loading the disk…</p>}>
+            <CardViewer unit={unitOf(chosen)} open={open} turn={turn} />
+          </Suspense>
+          {/* The same card as the text table draws it, in the corner. */}
+          <div className="absolute top-3 right-3 w-24 sm:w-32">
+            <Screen def={chosen} />
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-col gap-1">
+            <h2 className="font-semibold">{chosen.name}</h2>
+            <Facts def={chosen} />
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setOpen(!open)}>
+              {open ? 'Close the disk' : 'Open the disk'}
+            </Button>
+            <Button variant="outline" size="sm" aria-pressed={turn} onClick={() => setTurn(!turn)}>
+              {turn ? <Pause aria-hidden /> : <Play aria-hidden />} Turn
+            </Button>
+          </div>
+        </div>
+        <p className="text-sm text-muted-foreground">Drag to turn it, scroll to zoom.</p>
+      </section>
+    </div>
+  )
+}
+
+/** Every card in the factory, searchable, as a grid or one at a time on its disk. */
+export function Cards() {
+  const [search, setSearch] = useSearchParams()
+  const query = search.get('q') ?? ''
+  const view = search.get('view') === '3d' ? '3d' : 'grid'
+  const cards = DECK.filter((def) => matches(def, query))
+  const chosen = cards.find((def) => def.id === search.get('card')) ?? cards[0] ?? DECK[0]!
+  const field = useId()
+
+  const change = (changes: Record<string, string | null>) =>
+    setSearch(
+      (now) => {
+        const next = new URLSearchParams(now)
+        for (const [key, value] of Object.entries(changes)) {
+          if (value) next.set(key, value)
+          else next.delete(key)
+        }
+        return next
+      },
+      { replace: true, preventScrollReset: true },
+    )
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-2">
+        <h1 className="font-display text-6xl leading-none">Compendium</h1>
+        <p className="font-mono text-sm text-muted-foreground">ls ./cards · {DECK.length} cards</p>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <label htmlFor={field} className="sr-only">
+          Search the cards
+        </label>
+        <div className="relative w-full max-w-sm">
+          <Search aria-hidden className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            id={field}
+            type="search"
+            value={query}
+            onChange={(event) => change({ q: event.target.value || null })}
+            placeholder="Name, sigil, free or cost 2"
+            className="pl-9"
+          />
+        </div>
+        <div role="group" aria-label="View" className="flex overflow-hidden rounded-md border">
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-pressed={view === 'grid'}
+            className={`rounded-none ${view === 'grid' ? 'bg-muted' : ''}`}
+            onClick={() => change({ view: null })}
+          >
+            <LayoutGrid aria-hidden /> Cards
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-pressed={view === '3d'}
+            className={`rounded-none ${view === '3d' ? 'bg-muted' : ''}`}
+            onClick={() => change({ view: '3d' })}
+          >
+            <Box aria-hidden /> 3D
+          </Button>
+        </div>
+        <p role="status" className="text-sm text-muted-foreground">
+          {cards.length === DECK.length ? '' : `${cards.length} of ${DECK.length}`}
+        </p>
+      </div>
+
+      {cards.length === 0 ? (
+        <p className="font-terminal text-xl text-p03">P03&gt; No card called that. Try reading.</p>
+      ) : view === 'grid' ? (
+        <Grid cards={cards} onOpen={(id) => change({ view: '3d', card: id })} />
+      ) : (
+        <Viewer cards={cards} chosen={chosen} onChoose={(id) => change({ card: id })} />
+      )}
+    </div>
+  )
+}

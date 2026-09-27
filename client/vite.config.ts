@@ -18,8 +18,8 @@ const mockupsSlash: Plugin = {
   },
 }
 
-// Gzipped kilobytes each chunk may reach before the build fails: every page's code, the 3D table's, and any other.
-const BUDGET = { entry: 150, Table3D: 400, other: 40 }
+// Gzipped kilobytes each chunk may reach before the build fails: every page's code, the 3D code, and any other.
+const BUDGET = { entry: 150, three: 400, other: 40 }
 
 const budget: Plugin = {
   name: 'bundle-budget',
@@ -27,7 +27,9 @@ const budget: Plugin = {
   generateBundle(_options, bundle) {
     const over = Object.values(bundle).flatMap((chunk) => {
       if (chunk.type !== 'chunk') return []
-      const limit = chunk.isEntry ? BUDGET.entry : chunk.name === 'Table3D' ? BUDGET.Table3D : BUDGET.other
+      // three.js and the factory share one chunk between the table and the compendium; it is the 3D budget.
+      const three = chunk.moduleIds.some((id) => id.includes('/node_modules/three/'))
+      const limit = chunk.isEntry ? BUDGET.entry : three ? BUDGET.three : BUDGET.other
       const size = gzipSync(chunk.code).length / 1024
       return size > limit ? [`${chunk.fileName}: ${size.toFixed(1)} KB gzipped, over its ${limit} KB budget`] : []
     })
