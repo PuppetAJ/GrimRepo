@@ -3,7 +3,7 @@ import { initials } from '../lib/format.ts'
 const sizes = {
   sm: 'size-6 text-[10px]',
   md: 'size-9 text-xs',
-  lg: 'size-20 text-4xl sm:size-24 sm:text-5xl min-[1320px]:size-56 min-[1320px]:text-8xl',
+  lg: 'size-20 text-4xl sm:size-24 sm:text-5xl profile:size-56 profile:text-8xl',
 }
 
 /** Initials in a circle; the only picture a player has for now. */
