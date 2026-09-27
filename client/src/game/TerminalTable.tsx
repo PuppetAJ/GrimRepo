@@ -15,7 +15,7 @@ import {
 import type { Playback } from './table/playback.ts'
 import { usePlayback } from './table/usePlayback.ts'
 import { FlatReaderBody, PixelCard, ReaderBody } from './CardReader.tsx'
-import { Circuit } from './Circuit.tsx'
+import FaultyScreen from '../components/p03/FaultyScreen.tsx'
 import { useFullScreen } from './fullScreen.ts'
 import type { Ready } from './useGame.ts'
 
@@ -816,8 +816,8 @@ export function TerminalTable({
           style={size}
           className={`p03-screen crt grid grid-cols-[17rem_minmax(0,1fr)_22rem] grid-rows-[minmax(0,1fr)_auto] gap-4 overflow-hidden rounded-lg border border-[#2f6b3d] p-4 font-terminal text-2xl ${fullScreen.on ? 'fixed z-50' : 'relative mx-auto'}`}
         >
-          {/* The glass over it all: scanlines with a band rolling down, dark corners, and a rare flicker. */}
-          <Circuit />
+          {/* P03's faulty screen behind it all, and the glass over it: scanlines, a rolling band and dark corners. */}
+          <FaultyScreen />
           <span aria-hidden className="crt-glass pointer-events-none absolute inset-0 z-30" />
           <aside className="relative z-10 flex min-h-0 flex-col gap-3 overflow-hidden">
             {turnPanel}
@@ -866,7 +866,7 @@ export function TerminalTable({
       }}
       className={`p03-screen crt mx-auto flex w-full max-w-[1792px] flex-col gap-2 overflow-hidden border border-[#2f6b3d] p-2 font-terminal text-xl sm:gap-3 sm:p-3 ${fullScreen.on ? 'fixed inset-0 z-50 overflow-y-auto' : 'relative rounded-lg'}`}
     >
-      <Circuit />
+      <FaultyScreen />
       <span aria-hidden className="crt-glass pointer-events-none absolute inset-0 z-30" />
       {topStrip}
       <div ref={setArea} className="relative z-10 flex justify-center gap-3">
