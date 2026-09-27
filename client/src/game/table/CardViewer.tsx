@@ -82,6 +82,7 @@ export default function CardViewer({ unit, open, turn }: { unit: Unit; open: boo
       camera={{ position: [0, 0.3, 2.2], fov: 45 }}
       dpr={[1, 2]}
       gl={{ toneMapping: THREE.ACESFilmicToneMapping }}
+      role="img"
       aria-label={`${card(unit.card).name} on its disk`}
     >
       <color attach="background" args={['#02070c']} />

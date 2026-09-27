@@ -90,14 +90,17 @@ export function Layout() {
         )}
       </header>
 
-      <nav aria-label="Sections" className="flex gap-2 overflow-x-auto border-b px-4 text-sm sm:px-12">
+      <nav
+        aria-label="Sections"
+        className="flex gap-2 overflow-x-auto border-b px-4 text-sm max-[380px]:gap-0 max-[380px]:px-2.5 sm:px-12"
+      >
         {tabs.map((tab) => (
           <NavLink
             key={tab.to}
             to={tab.to}
             end={tab.end}
             className={({ isActive }) =>
-              `border-b-2 px-3 py-3.5 whitespace-nowrap ${isActive ? 'border-death font-semibold text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`
+              `border-b-2 px-3 py-3.5 whitespace-nowrap max-[380px]:px-1.5 ${isActive ? 'border-death font-semibold text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`
             }
           >
             {tab.label}

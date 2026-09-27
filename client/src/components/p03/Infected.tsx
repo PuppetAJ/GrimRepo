@@ -89,7 +89,7 @@ export function Infected({ lines, user }: { lines: readonly string[] | null; use
       <figcaption aria-hidden className={`font-mono text-sm ${broken ? 'text-p03-dim' : 'text-muted-foreground'}`}>
         {caption}
       </figcaption>
-      <div className="relative h-80 sm:h-[22rem]">
+      <div className="relative h-[26rem] sm:h-[22rem]">
         {broken ? (
           <>
             <div className="p03-glow h-full overflow-hidden border border-[#2f6b3d]">
@@ -98,7 +98,7 @@ export function Infected({ lines, user }: { lines: readonly string[] | null; use
               </Suspense>
             </div>
             <FrameDamage frame="terminal" />
-            {/* Where P03 got in, the corruption creeps out from every corner, clear of the words around it. */}
+            {/* Where P03 got in, the corruption creeps out from every corner; on a phone, where it would cover words, only the title bar's. */}
             <Corruption
               dense
               cols={26}
@@ -125,16 +125,23 @@ export function Infected({ lines, user }: { lines: readonly string[] | null; use
               className="right-0 bottom-full max-sm:hidden"
             />
             <Corruption
-              fast
               dense
-              cols={8}
+              fast
+              cols={16}
               rows={3}
-              corner="bottom-right"
-              seed={29}
-              className="right-0 bottom-full sm:hidden"
+              corner="top-left"
+              seed={71}
+              className="top-full left-0 max-sm:hidden"
             />
-            <Corruption dense fast cols={16} rows={3} corner="top-left" seed={71} className="top-full left-0" />
-            <Corruption dense fast cols={12} rows={3} corner="top-right" seed={89} className="top-full right-0" />
+            <Corruption
+              dense
+              fast
+              cols={12}
+              rows={3}
+              corner="top-right"
+              seed={89}
+              className="top-full right-0 max-sm:hidden"
+            />
             <Corruption
               dense
               fast

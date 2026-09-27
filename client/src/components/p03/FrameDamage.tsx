@@ -89,7 +89,12 @@ function Along({ edge, at, children }: { edge: Edge; at: number; children: React
     right: { style: { top: 0, right: -1, width: 1, height: '100%' }, x: '0', y: place, turn: 'rotate(90)' },
   }[edge]
   return (
-    <svg className="absolute overflow-visible" style={box.style} shapeRendering="crispEdges">
+    // A phone keeps the breaks along the top and bottom; ones down the sides would crowd the words beside the frame.
+    <svg
+      className={`absolute overflow-visible ${edge === 'left' || edge === 'right' ? 'max-sm:hidden' : ''}`}
+      style={box.style}
+      shapeRendering="crispEdges"
+    >
       <svg x={box.x} y={box.y} overflow="visible">
         <g transform={box.turn}>{children}</g>
       </svg>

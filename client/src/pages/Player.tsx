@@ -343,7 +343,7 @@ function History({ username, lastLoss }: { username: string; lastLoss: Game | un
       {history.status === 'ready' && history.data.total === 0 ? (
         <p className="px-6 py-5 text-muted-foreground">
           No games yet.{' '}
-          <Link to="/game" className="text-primary hover:underline">
+          <Link to="/game" className="text-primary underline underline-offset-2">
             Play one
           </Link>
           .

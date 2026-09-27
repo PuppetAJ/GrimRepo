@@ -96,7 +96,7 @@ export function Leaderboard() {
         {board.status === 'ready' && board.data.players.length === 0 ? (
           <p className="text-muted-foreground">
             Nobody has finished a game yet.{' '}
-            <Link to="/game" className="text-primary hover:underline">
+            <Link to="/game" className="text-primary underline underline-offset-2">
               Be the first
             </Link>
             .
@@ -153,7 +153,8 @@ export function Leaderboard() {
                   <ChevronLeft aria-hidden /> Higher
                 </Button>
                 <span className="text-sm text-muted-foreground">
-                  Page {board.data.page} of {board.data.pages} · {number(board.data.total)} players
+                  Page {board.data.page} of {board.data.pages}
+                  <span className="max-sm:hidden"> · {number(board.data.total)} players</span>
                 </span>
                 <Button
                   variant="outline"
@@ -220,7 +221,7 @@ function FirstPlace({ row, mine }: { row: LeaderboardRow; mine: boolean }) {
         <span aria-hidden>0x01</span>
         <span className="sr-only">1</span>
       </td>
-      <td className="py-4">
+      <td className="py-4 max-sm:w-full max-sm:max-w-0">
         <div className="flex items-center gap-3 sm:gap-4">
           <span
             aria-hidden
@@ -238,7 +239,7 @@ function FirstPlace({ row, mine }: { row: LeaderboardRow; mine: boolean }) {
                 FOR NOW
               </span>
             </div>
-            <span className="font-mono text-sm text-p03-dim">
+            <span className="truncate font-mono text-sm text-p03-dim">
               <Played row={row} />
             </span>
           </div>
@@ -247,7 +248,7 @@ function FirstPlace({ row, mine }: { row: LeaderboardRow; mine: boolean }) {
       <td aria-hidden className="hidden w-full px-5 sm:table-cell">
         <div className="h-5 bg-[repeating-linear-gradient(90deg,var(--p03)_0_10px,transparent_10px_13px)]" />
       </td>
-      <td className="py-4 pr-4 text-right text-3xl text-p03 sm:pr-6">{number(row.bestScore)}</td>
+      <td className="py-4 pr-4 text-right text-2xl text-p03 sm:pr-6 sm:text-3xl">{number(row.bestScore)}</td>
     </tr>
   )
 }
@@ -256,7 +257,7 @@ function Row({ row, top, mine }: { row: LeaderboardRow; top: number; mine: boole
   return (
     <tr className={`border-t first:border-t-0 ${mine ? 'bg-muted' : ''}`}>
       <td className="py-3.5 pr-4 pl-4 font-mono text-muted-foreground sm:pr-5 sm:pl-6">#{row.rank}</td>
-      <td className="py-3.5">
+      <td className="py-3.5 max-sm:w-full max-sm:max-w-0">
         <div className="flex items-center gap-3 sm:gap-4">
           <Avatar name={row.username} />
           <div className="flex min-w-0 flex-col">
