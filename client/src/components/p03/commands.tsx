@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { CARDS, SIGILS, TIP, type CardDef } from 'shared'
 import { api } from '../../lib/api.ts'
+import { Sprite, spriteOf } from '../../game/CardReader.tsx'
 import { number } from '../../lib/format.ts'
 
 export type Context = {
@@ -54,6 +55,13 @@ function Cost({ cost }: { cost: number }) {
 
 function Art({ id, size = 'size-24' }: { id: string; size?: string }) {
   if (id === 'Boilerplate') return null
+  const sprite = spriteOf(id)
+  if (sprite)
+    return (
+      <span className={`${size} flex shrink-0 items-center justify-center border border-[#2f6b3d] p-2 text-p03`}>
+        <Sprite grid={sprite} className="size-full" />
+      </span>
+    )
   return (
     <img
       src={`/cards/${id}.webp`}
@@ -232,7 +240,6 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
               <span className="text-p03">{sigil.name}</span>: {sigil.text}
             </p>
           ))}
-          <Dim>// only Segfault is in the deck so far. The rest are for the run. Patience</Dim>
         </div>
       )
     case 'top': {

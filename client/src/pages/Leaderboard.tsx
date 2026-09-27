@@ -192,7 +192,7 @@ function FirstPlace({ row, mine }: { row: LeaderboardRow; mine: boolean }) {
         </Suspense>
         <Glass />
         {/* The halo, from a layer, since a table row does not reliably take a shadow of its own. */}
-        <span aria-hidden className="p03-glow pointer-events-none absolute inset-0 -z-20" />
+        <span aria-hidden className="p03-glow-soft pointer-events-none absolute inset-0 -z-20" />
         {/* P03's corruption creeps in from the row's four corners, above and below the rank and the score. */}
         <Corruption dense cols={12} rows={2} corner="top-left" seed={37} className="top-0 left-0" />
         <Corruption dense cols={9} rows={2} corner="bottom-left" seed={43} className="bottom-0 left-0" />

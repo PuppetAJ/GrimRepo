@@ -283,7 +283,7 @@ function Trace({ game }: { game: Game }) {
       <Corruption dense fast cols={8} rows={1} corner="top-right" seed={89} className="top-full right-0" />
       <Corruption dense fast cols={3} rows={9} corner="top-right" seed={17} className="top-0 right-full" />
       <Corruption dense fast cols={3} rows={9} corner="bottom-left" seed={23} className="bottom-0 left-full" />
-      <div className="p03-screen p03-glow relative isolate overflow-hidden border border-[#2f6b3d] px-4 py-3 font-terminal text-xl leading-tight sm:text-[1.35rem]">
+      <div className="p03-screen p03-glow-soft relative isolate overflow-hidden border border-[#2f6b3d] px-4 py-3 font-terminal text-xl leading-tight sm:text-[1.35rem]">
         <Suspense fallback={null}>
           <FaultyScreen className="-z-10" />
         </Suspense>
