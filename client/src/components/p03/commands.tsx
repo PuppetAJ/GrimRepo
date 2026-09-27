@@ -100,21 +100,21 @@ type Step = { title: string; body: ReactNode; art?: string }
 const STEPS: Step[] = [
   {
     title: 'The goal',
-    body: `Listen up, I'm only explaining this once. There's a scale between us. Your damage tips it your way, mine tips it mine. First to tip it ${TIP} wins. Win fast and it scores more. You won't win fast.`,
+    body: `Listen up, I'm only explaining this once. There's a scale between us. Your damage tips it your way, mine tips it mine. First to tip it to ${TIP} wins. Win fast and it scores more, but I won't let you win quickly.`,
   },
   {
     title: 'Draw',
-    body: "Every turn starts with one draw. Your deck, or a Boilerplate from the pile that never runs out. Filler, but you'll need it. Seven cards in hand and you skip the draw.",
+    body: "Every turn starts with one draw. Your deck, or a Boilerplate from the pile that never runs out. Filler, but you'll need it. If your hand is full with 7 cards, you can't draw anymore.",
   },
   {
     title: 'Free cards',
     art: 'HelloWorld',
-    body: "A card with no cost goes straight into one of your empty lanes. Four lanes. I'm across from every one of them.",
+    body: "You can play a card with no cost whenever you want into one of the four lanes. I'll be playing across from you.",
   },
   {
     title: 'Sacrifices',
     art: 'DestroyEnemyYou',
-    body: "A card with a cost needs sacrifices. Pick it, then mark your cards on the table until they cover the cost. Each is worth its own cost, at least 1. They die when the new card lands, and it can take a lane they emptied. Leshy invented this. It's the one good idea he ever had.",
+    body: "A card with a cost needs sacrifices. Pick it, then mark your cards on the table until they cover the cost. Each card is worth its own cost. Cards with no cost are still worth 1. They die when the new card lands, and it can take a lane they emptied. Leshy invented this. It's the one good idea he ever had.",
   },
   {
     title: 'EXECUTE',
@@ -128,11 +128,11 @@ const STEPS: Step[] = [
   {
     title: 'Sigils',
     art: 'FourOhFour',
-    body: 'Some cards carry sigils. FourOhFour deletes my whole side the moment it lands. Cheap. Type sigils for the rest.',
+    body: "Some cards carry sigils. FourOhFour deletes the opposing side every time it's played. Cheap, I'd never use something like that. Type sigils for a list of the rest of them.",
   },
   {
     title: 'Reading the table',
-    body: "Hold a card, or one of my monitors, to read it up close. Click a monitor to pin it. That's everything. Type play. We've got Transcending to do.",
+    body: "Hold left click on a card or monitor to read it up close. Click a monitor to pin it. That's everything. Type play. We've got Transcending to do.",
   },
 ]
 let step = 0
@@ -148,7 +148,7 @@ function Lesson({ at }: { at: number }) {
         {lesson.art ? <Art id={lesson.art} /> : null}
         <p className="max-w-3xl">{lesson.body}</p>
       </div>
-      <Dim>{at + 1 < STEPS.length ? '// next, back, or tutorial <step>' : '// back, or play'}</Dim>
+      <Dim>{at + 1 < STEPS.length ? '// next (n), back (b), or tutorial <step>' : '// back (b), or play'}</Dim>
     </div>
   )
 }
@@ -266,7 +266,8 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
           <img
             src="/p03/happy.png"
             alt="P03's face, smug"
-            className="h-20 [filter:sepia(1)_hue-rotate(70deg)_saturate(3)] [image-rendering:pixelated]"
+            // The faces pack stores them upside down, as the model's texture reads them.
+            className="h-20 -scale-y-100 [filter:sepia(1)_hue-rotate(70deg)_saturate(3)] [image-rendering:pixelated]"
           />
           <p>
             P03. Scrybe of Technology. I run this factory, this repository and your game. Leshy could never pull that
