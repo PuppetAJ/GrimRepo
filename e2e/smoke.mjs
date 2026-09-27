@@ -105,6 +105,17 @@ section('The compendium')
   await page.getByRole('heading', { name: 'Compendium' }).waitFor()
   const names = page.locator('main li h2')
   check('every card a player can hold is listed', (await names.count()) === 26, String(await names.count()))
+  await page.getByLabel('Sort').selectOption('attack')
+  await page.getByRole('button', { name: 'Lowest first' }).click()
+  check(
+    'it sorts, highest attack first',
+    await page
+      .waitForFunction(() => document.querySelector('main li h2')?.textContent === 'Mainframe', null, { timeout: 5000 })
+      .then(
+        () => true,
+        () => false,
+      ),
+  )
   await page.getByLabel('Search the cards').fill('duck')
   check('a search narrows it down', (await names.allInnerTexts()).join() === 'RubberDuck')
   await page.getByRole('button', { name: 'View in 3D' }).click()

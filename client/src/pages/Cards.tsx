@@ -1,4 +1,4 @@
-import { Box, LayoutGrid, Pause, Play, Search } from 'lucide-react'
+import { ArrowDownWideNarrow, ArrowUpNarrowWide, Box, LayoutGrid, Pause, Play, Search } from 'lucide-react'
 import { lazy, Suspense, useId, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { CARDS, SIGILS, type CardDef, type Unit } from 'shared'
@@ -30,6 +30,21 @@ function matches(def: CardDef, query: string): boolean {
   if (!wanted) return true
   const words = [def.name, ...def.sigils.map((sigil) => SIGILS[sigil].name), def.cost ? `cost ${def.cost}` : 'free']
   return words.some((word) => squash(word).includes(wanted))
+}
+
+const SORTS = { deck: 'Deck order', name: 'Name', cost: 'Cost', attack: 'Attack', health: 'Health' } as const
+type Sort = keyof typeof SORTS
+const COSTS = [...new Set(DECK.map((def) => def.cost))].sort((a, b) => a - b)
+
+/** The cards in the order asked for; ties, and deck order itself, keep the order the deck deals them in. */
+function sorted(cards: CardDef[], sort: Sort, descending: boolean): CardDef[] {
+  if (sort === 'deck') return descending ? [...cards].reverse() : cards
+  const value = (def: CardDef) => (sort === 'name' ? def.name.toLowerCase() : def[sort])
+  return [...cards].sort((a, b) => {
+    const [x, y] = [value(a), value(b)]
+    const order = x < y ? -1 : x > y ? 1 : 0
+    return descending ? -order : order
+  })
 }
 
 function Cost({ cost }: { cost: number }) {
@@ -160,22 +175,26 @@ export function Cards() {
   const [search, setSearch] = useSearchParams()
   const query = search.get('q') ?? ''
   const view = search.get('view') === '3d' ? '3d' : 'grid'
-  const cards = DECK.filter((def) => matches(def, query))
+  const sort = (search.get('sort') ?? 'deck') in SORTS ? ((search.get('sort') ?? 'deck') as Sort) : 'deck'
+  const descending = search.get('order') === 'desc'
+  const costs = (search.get('cost') ?? '').split(',').filter(Boolean).map(Number)
+  const cards = sorted(
+    DECK.filter((def) => matches(def, query) && (!costs.length || costs.includes(def.cost))),
+    sort,
+    descending,
+  )
   const chosen = cards.find((def) => def.id === search.get('card')) ?? cards[0] ?? DECK[0]!
   const field = useId()
 
-  const change = (changes: Record<string, string | null>) =>
-    setSearch(
-      (now) => {
-        const next = new URLSearchParams(now)
-        for (const [key, value] of Object.entries(changes)) {
-          if (value) next.set(key, value)
-          else next.delete(key)
-        }
-        return next
-      },
-      { replace: true, preventScrollReset: true },
-    )
+  // Built from the address as it is now, not as of the last render, so two quick changes both stick.
+  const change = (changes: Record<string, string | null>) => {
+    const next = new URLSearchParams(window.location.search)
+    for (const [key, value] of Object.entries(changes)) {
+      if (value) next.set(key, value)
+      else next.delete(key)
+    }
+    setSearch(next, { replace: true, preventScrollReset: true })
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -198,6 +217,51 @@ export function Cards() {
             placeholder="Name, Sigil, or Cost"
             className="pl-9"
           />
+        </div>
+        <label className="flex items-center gap-2 text-sm text-muted-foreground">
+          Sort
+          <select
+            value={sort}
+            onChange={(event) => change({ sort: event.target.value === 'deck' ? null : event.target.value })}
+            className="h-8 rounded-md border border-input bg-transparent px-2 text-sm text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          >
+            {Object.entries(SORTS).map(([key, label]) => (
+              <option key={key} value={key} className="bg-popover">
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Button
+          variant="outline"
+          size="sm"
+          aria-label={descending ? 'Highest first' : 'Lowest first'}
+          title={descending ? 'Highest first' : 'Lowest first'}
+          onClick={() => change({ order: descending ? null : 'desc' })}
+        >
+          {descending ? <ArrowDownWideNarrow aria-hidden /> : <ArrowUpNarrowWide aria-hidden />}
+        </Button>
+        <div role="group" aria-label="Filter by cost" className="flex flex-wrap items-center gap-1">
+          <span className="mr-1 text-sm text-muted-foreground">Cost</span>
+          {COSTS.map((cost) => {
+            const on = costs.includes(cost)
+            return (
+              <Button
+                key={cost}
+                variant="outline"
+                size="sm"
+                aria-pressed={on}
+                className={on ? 'border-primary bg-primary/15' : ''}
+                onClick={() =>
+                  change({
+                    cost: (on ? costs.filter((c) => c !== cost) : [...costs, cost]).sort().join(',') || null,
+                  })
+                }
+              >
+                <Cost cost={cost} />
+              </Button>
+            )
+          })}
         </div>
         <div role="group" aria-label="View" className="flex overflow-hidden rounded-md border">
           <Button

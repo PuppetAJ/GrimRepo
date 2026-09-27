@@ -1,4 +1,4 @@
-import { OrbitControls } from '@react-three/drei'
+import { Grid, OrbitControls } from '@react-three/drei'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { use, useMemo, useRef } from 'react'
 import { card, type Unit } from 'shared'
@@ -87,8 +87,19 @@ export default function CardViewer({ unit, open, turn }: { unit: Unit; open: boo
       <color attach="background" args={['#02070c']} />
       <Lights />
       <Card unit={unit} open={open} turn={turn} />
-      {/* A floor under the disk, lit up in P03's green so it shows through the factory's dark. */}
-      <gridHelper args={[10, 20, '#4fae6a', '#2a6a40']} position={[0, -0.8, 0]} />
+      {/* A floor to the horizon under the disk: large squares, each divided into fainter small ones. */}
+      <Grid
+        infiniteGrid
+        position={[0, -0.8, 0]}
+        cellSize={0.25}
+        cellThickness={0.6}
+        cellColor="#434b53"
+        sectionSize={1}
+        sectionThickness={1.1}
+        sectionColor="#a7b1bb"
+        fadeDistance={40}
+        fadeStrength={1.5}
+      />
       <FactoryEffects />
       <OrbitControls makeDefault enablePan={false} minDistance={1.4} maxDistance={4} />
     </Canvas>
