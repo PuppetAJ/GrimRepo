@@ -2,9 +2,9 @@ import assert from 'node:assert/strict'
 import { after, beforeEach, describe, it } from 'node:test'
 import { apply, createGame, playOut, scoreBattle, summary, type Action, type GameState } from 'shared'
 import { pool } from '../config/db.ts'
-import { HISTORY_PAGE, RECENT_GAMES } from '../db/games.ts'
+import { BOARD_PAGE, HISTORY_PAGE, RECENT_GAMES } from '../db/games.ts'
 import { newPlayer, startApp } from '../test/http.ts'
-import { insertGame, insertOldGame, resetDatabase } from '../test/support.ts'
+import { insertGame, insertOldGame, insertPlayer, resetDatabase } from '../test/support.ts'
 
 const app = await startApp()
 after(async () => {
@@ -263,6 +263,22 @@ describe('the leaderboard', () => {
       body.players.map((row: { rank: number }) => row.rank),
       [1, 1],
     )
+  })
+
+  it('pages twenty at a time, ranking across every page', async () => {
+    for (let n = 0; n < 23; n++) {
+      await insertPlayer(`many_${n}`)
+      await insertGame(`many_${n}`, 'win', 3 + n)
+    }
+    const first = (await app.call('GET', '/api/leaderboard')).body
+    assert.deepEqual([first.page, first.pages, first.total, first.players.length], [1, 2, 23, BOARD_PAGE])
+    assert.equal(first.top, scoreBattle('win', 3))
+    const second = (await app.call('GET', '/api/leaderboard?page=2')).body
+    assert.deepEqual(
+      second.players.map((row: { rank: number }) => row.rank),
+      [21, 22, 23],
+    )
+    assert.equal((await app.call('GET', '/api/leaderboard?page=9')).body.page, 2, 'a page past the end is the last one')
   })
 
   it('leaves out players who have never finished a game', async () => {

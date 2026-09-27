@@ -42,8 +42,11 @@ const gameId = (raw: unknown): number | null => {
   return Number.isInteger(id) && id > 0 ? id : null
 }
 
-api.get('/leaderboard', async (_req, res) => {
-  res.json({ players: await leaderboard() })
+// A page number from the address; anything that is not one is the first page.
+const pageQuery = z.coerce.number().int().min(1).catch(1)
+
+api.get('/leaderboard', async (req, res) => {
+  res.json(await leaderboard(pageQuery.parse(req.query['page'] ?? 1)))
 })
 
 api.get('/me', requireUser, async (_req, res) => {
@@ -85,9 +88,6 @@ api.post('/games/:id/forfeit', requireUser, movesLimiter, async (req, res) => {
     res.status(error.status).json(error.body)
   }
 })
-
-// A page number from the address; anything that is not one is the first page.
-const pageQuery = z.coerce.number().int().min(1).catch(1)
 
 api.get('/players/:username/games', async (req, res) => {
   const page = pageQuery.parse(req.query['page'] ?? 1)

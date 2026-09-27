@@ -157,7 +157,6 @@ async function finish(
   return { outcome, turns, score, best, isBest: score >= best }
 }
 
-/** Players ranked by their best finished game; ties share a rank and sort by name. */
 // Enough for the stats page's charts; its history pages through every game.
 export const RECENT_GAMES = 30
 export const HISTORY_PAGE = 10
@@ -189,7 +188,20 @@ export async function playerGames(username: string, page: number): Promise<Games
   }
 }
 
-export async function leaderboard(limit = 50): Promise<LeaderboardRow[]> {
+export const BOARD_PAGE = 20
+
+/** One page of the board, with first place's score for scale; the last page if asked for one past it. */
+export type BoardPage = { players: LeaderboardRow[]; page: number; pages: number; total: number; top: number }
+
+/** Players ranked by their best finished game; ties share a rank and sort by name. Ranks count across every page. */
+export async function leaderboard(page = 1): Promise<BoardPage> {
+  const { rows: sizes } = await pool.query<{ total: number; top: number }>(
+    `SELECT COUNT(DISTINCT user_id)::int AS total, COALESCE(MAX(score), 0)::int AS top
+     FROM games WHERE status = 'finished'`,
+  )
+  const { total, top } = sizes[0] ?? { total: 0, top: 0 }
+  const pages = Math.max(1, Math.ceil(total / BOARD_PAGE))
+  const at = Math.min(Math.max(1, page), pages)
   const { rows } = await pool.query<LeaderboardRow>(
     `SELECT RANK() OVER (ORDER BY MAX(g.score) DESC)::int AS rank,
             u.display_username AS username,
@@ -200,10 +212,10 @@ export async function leaderboard(limit = 50): Promise<LeaderboardRow[]> {
      WHERE g.status = 'finished'
      GROUP BY u.id, u.display_username
      ORDER BY "bestScore" DESC, u.display_username
-     LIMIT $1`,
-    [limit],
+     LIMIT $1 OFFSET $2`,
+    [BOARD_PAGE, (at - 1) * BOARD_PAGE],
   )
-  return rows
+  return { players: rows, page: at, pages, total, top }
 }
 
 /** Everything the stats page shows, or null for a player who does not exist. */

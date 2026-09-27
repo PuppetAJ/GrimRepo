@@ -8,6 +8,14 @@ export async function resetDatabase(): Promise<void> {
   await pool.query('TRUNCATE games, rate_limits, verifications, users RESTART IDENTITY CASCADE')
 }
 
+/** A player straight into the table, past sign-up and its rate limit, for tests that need many and never sign in. */
+export async function insertPlayer(username: string): Promise<void> {
+  await pool.query(
+    `INSERT INTO users (id, name, email, username, display_username) VALUES ($1, $1, $2, lower($1), $1)`,
+    [username, `${username.toLowerCase()}@grimrepo.test`],
+  )
+}
+
 /** A finished game straight into the table, for tests about ranking and stats rather than play. */
 export async function insertGame(username: string, outcome: 'win' | 'loss', turns: number, daysAgo = 0): Promise<void> {
   const { scoreBattle } = await import('shared')
