@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react'
-import { breaks, useCorruptionStyle } from './corruptionStyle.ts'
 
 type Edge = 'top' | 'bottom' | 'left' | 'right'
 /** A break in one edge: where along it (percent), how long, how far the broken piece is thrown out, and sideways. */
@@ -144,9 +143,8 @@ function Torn({ corner }: { corner: string }) {
   )
 }
 
-/** Laid over a frame whose border is 1px, breaking it where P03 got through; in the damaged-frame styles only. */
+/** Laid over a frame whose border is 1px, breaking it where P03 got through. */
 export function FrameDamage({ frame }: { frame: keyof typeof BREAKS }) {
-  if (!breaks(useCorruptionStyle())) return null
   const damage = BREAKS[frame]!
   return (
     <span

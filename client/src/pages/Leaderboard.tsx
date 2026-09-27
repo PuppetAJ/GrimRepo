@@ -200,7 +200,6 @@ function FirstPlace({ row, mine }: { row: LeaderboardRow; mine: boolean }) {
         <Corruption dense cols={10} rows={2} corner="bottom-right" seed={41} className="right-0 bottom-0" />
         {/* And out past both ends of the board, into the page's margins, where there is room for it. */}
         <Corruption
-          outside
           dense
           fast
           cols={4}
@@ -210,7 +209,6 @@ function FirstPlace({ row, mine }: { row: LeaderboardRow; mine: boolean }) {
           className="top-0 right-full max-sm:hidden"
         />
         <Corruption
-          outside
           dense
           fast
           cols={4}
