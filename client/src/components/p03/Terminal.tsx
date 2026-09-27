@@ -143,7 +143,7 @@ export default function Terminal({ lines, user }: { lines: readonly string[]; us
   return (
     <section
       aria-label="P03's terminal"
-      className="relative flex h-full flex-col overflow-hidden bg-p03-ground font-terminal text-[#b8f5c4] [text-shadow:0_0_8px_rgb(125_255_154/0.35)]"
+      className="p03-text-glow relative flex h-full flex-col overflow-hidden bg-p03-ground font-terminal text-[#b8f5c4]"
     >
       <Suspense fallback={null}>
         <FaultyScreen />

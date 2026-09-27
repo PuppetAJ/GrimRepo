@@ -16,6 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton.tsx'
 import { Avatar } from '../components/Avatar.tsx'
 import { Outcomes, ScoreChart, TurnsChart } from '../components/Charts.tsx'
 import { Corruption } from '../components/p03/Corruption.tsx'
+import { FrameDamage } from '../components/p03/FrameDamage.tsx'
 import { Glass } from '../components/p03/Glass.tsx'
 import { Failure, Loading } from '../components/States.tsx'
 import { api, ApiError, type PlayerStats } from '../lib/api.ts'
@@ -276,11 +277,21 @@ function Trace({ game }: { game: Game }) {
   return (
     // Room around it for the corruption: out of its top corner, one row out of its bottom, and down both sides.
     <div className="relative mx-6 mt-4 mb-5">
-      <Corruption dense fast cols={12} rows={2} corner="bottom-right" seed={43} className="right-0 bottom-full" />
-      <Corruption dense fast cols={10} rows={1} corner="top-left" seed={71} className="top-full left-0" />
-      <Corruption dense fast cols={8} rows={1} corner="top-right" seed={89} className="top-full right-0" />
-      <Corruption dense fast cols={3} rows={9} corner="top-right" seed={17} className="top-0 right-full" />
-      <Corruption dense fast cols={3} rows={9} corner="bottom-left" seed={23} className="bottom-0 left-full" />
+      <FrameDamage frame="trace" />
+      <Corruption
+        outside
+        dense
+        fast
+        cols={12}
+        rows={2}
+        corner="bottom-right"
+        seed={43}
+        className="right-0 bottom-full"
+      />
+      <Corruption outside dense fast cols={10} rows={1} corner="top-left" seed={71} className="top-full left-0" />
+      <Corruption outside dense fast cols={8} rows={1} corner="top-right" seed={89} className="top-full right-0" />
+      <Corruption outside dense fast cols={3} rows={9} corner="top-right" seed={17} className="top-0 right-full" />
+      <Corruption outside dense fast cols={3} rows={9} corner="bottom-left" seed={23} className="bottom-0 left-full" />
       <div className="p03-screen p03-glow-soft relative isolate overflow-hidden border border-[#2f6b3d] px-4 py-3 font-terminal text-xl leading-tight sm:text-[1.35rem]">
         <Suspense fallback={null}>
           <FaultyScreen className="-z-10" />

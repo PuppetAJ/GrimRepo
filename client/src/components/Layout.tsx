@@ -1,6 +1,6 @@
 import { ChevronDown, LogOut, Settings, UserRound } from 'lucide-react'
 import { Suspense } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button.tsx'
 import {
@@ -13,6 +13,7 @@ import {
 import { authClient } from '../lib/auth.ts'
 import { Avatar } from './Avatar.tsx'
 import { Logo } from './Logo.tsx'
+import { CorruptionSwitch } from './p03/CorruptionSwitch.tsx'
 import { Loading } from './States.tsx'
 
 const tabs = [
@@ -25,6 +26,7 @@ const tabs = [
 export function Layout() {
   const session = authClient.useSession()
   const navigate = useNavigate()
+  const { pathname } = useLocation()
   const user = session.data?.user as { displayUsername?: string; username?: string; isAnonymous?: boolean } | undefined
   const name = user?.displayUsername ?? user?.username
 
@@ -114,6 +116,8 @@ export function Layout() {
       <footer className="border-t px-4 py-6 text-sm text-muted-foreground sm:px-12">
         A tribute to Inscryption. Built by Adrian Jimenez.
       </footer>
+      {/* Development only: compare the ways P03's corruption could look. */}
+      {import.meta.env.DEV && !pathname.startsWith('/game') ? <CorruptionSwitch /> : null}
     </div>
   )
 }

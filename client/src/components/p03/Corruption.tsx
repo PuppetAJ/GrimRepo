@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { useCorruptionStyle } from './corruptionStyle.ts'
 
 type Corner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
 
@@ -62,6 +63,7 @@ export function Corruption({
   seed,
   dense = false,
   fast = false,
+  outside = false,
   className = '',
 }: {
   cols: number
@@ -71,9 +73,13 @@ export function Corruption({
   // Dense keeps more of the cluster lit away from its corner.
   dense?: boolean
   fast?: boolean
+  // Out past its frame, rather than on it: left out of the 'in' and 'frame' styles.
+  outside?: boolean
   className?: string
 }) {
   const canvas = useRef<HTMLCanvasElement>(null)
+  const style = useCorruptionStyle()
+  const hidden = outside && style !== 'out'
 
   useEffect(() => {
     const element = canvas.current
@@ -152,7 +158,9 @@ export function Corruption({
       cancelAnimationFrame(frame)
       stop()
     }
-  }, [cols, rows, corner, seed, dense, fast])
+  }, [cols, rows, corner, seed, dense, fast, hidden])
+
+  if (hidden) return null
 
   return (
     <canvas
@@ -160,7 +168,7 @@ export function Corruption({
       aria-hidden
       style={{ width: cols * CELL_W, height: rows * CELL_H }}
       // The same phosphor glow as P03's text.
-      className={`pointer-events-none absolute [filter:drop-shadow(0_0_3px_rgb(125_255_154/0.25))] ${className}`}
+      className={`pointer-events-none absolute [filter:drop-shadow(0_0_1px_rgb(125_255_154/0.35))_drop-shadow(0_0_4px_rgb(125_255_154/0.1))] ${className}`}
     />
   )
 }

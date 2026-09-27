@@ -4,6 +4,7 @@ import { Link, useLocation, useSearchParams } from 'react-router'
 import { Button } from '@/components/ui/button.tsx'
 import { Avatar } from '../components/Avatar.tsx'
 import { Corruption } from '../components/p03/Corruption.tsx'
+import { FrameDamage } from '../components/p03/FrameDamage.tsx'
 import { Glass } from '../components/p03/Glass.tsx'
 import { Failure } from '../components/States.tsx'
 import { Skeleton } from '@/components/ui/skeleton.tsx'
@@ -191,6 +192,7 @@ function FirstPlace({ row, mine }: { row: LeaderboardRow; mine: boolean }) {
         <Glass />
         {/* The halo, from a layer, since a table row does not reliably take a shadow of its own. */}
         <span aria-hidden className="p03-glow-soft pointer-events-none absolute inset-0 -z-20" />
+        <FrameDamage frame="row" />
         {/* P03's corruption creeps in from the row's four corners, above and below the rank and the score. */}
         <Corruption dense cols={12} rows={2} corner="top-left" seed={37} className="top-0 left-0" />
         <Corruption dense cols={9} rows={2} corner="bottom-left" seed={43} className="bottom-0 left-0" />
@@ -198,6 +200,7 @@ function FirstPlace({ row, mine }: { row: LeaderboardRow; mine: boolean }) {
         <Corruption dense cols={10} rows={2} corner="bottom-right" seed={41} className="right-0 bottom-0" />
         {/* And out past both ends of the board, into the page's margins, where there is room for it. */}
         <Corruption
+          outside
           dense
           fast
           cols={4}
@@ -207,6 +210,7 @@ function FirstPlace({ row, mine }: { row: LeaderboardRow; mine: boolean }) {
           className="top-0 right-full max-sm:hidden"
         />
         <Corruption
+          outside
           dense
           fast
           cols={4}

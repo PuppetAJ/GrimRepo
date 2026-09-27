@@ -91,7 +91,7 @@ export function Home() {
             <li>FourOhFour removes everything on the other side of the table. Working as intended.</li>
             <li>
               Y2K is not in the deck.{' '}
-              <span className="relative overflow-hidden bg-p03-ground px-1.5 font-terminal text-xl whitespace-nowrap text-p03 [text-shadow:0_0_6px_rgb(125_255_154/0.5)]">
+              <span className="p03-text-glow relative overflow-hidden bg-p03-ground px-1.5 font-terminal text-xl whitespace-nowrap text-p03">
                 <Glass flat />
                 [REDACTED: nothing to see here]
               </span>
