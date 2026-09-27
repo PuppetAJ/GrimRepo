@@ -73,9 +73,24 @@ export function Infected({ lines, user }: { lines: readonly string[] | null; use
 
   return (
     <figure className="flex flex-col gap-2">
-      <figcaption aria-hidden className={`font-mono text-sm ${broken ? 'text-p03-dim' : 'text-muted-foreground'}`}>
-        {caption}
-      </figcaption>
+      <div className="flex items-baseline justify-between gap-3">
+        <figcaption aria-hidden className={`font-mono text-sm ${broken ? 'text-p03-dim' : 'text-muted-foreground'}`}>
+          {caption}
+        </figcaption>
+        {/* Development only: plays the takeover again without a new visit. */}
+        {import.meta.env.DEV ? (
+          <button
+            type="button"
+            onClick={() => {
+              setTick(0)
+              setPhase('clean')
+            }}
+            className="font-mono text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
+          >
+            replay
+          </button>
+        ) : null}
+      </div>
       <div
         className={`relative h-80 transition-[margin,rotate,translate] duration-500 ease-[steps(5)] motion-reduce:transition-none sm:h-[22rem] ${broken ? 'breakout' : ''}`}
       >
