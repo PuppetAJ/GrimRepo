@@ -78,7 +78,7 @@ export function fixture(): { name: string; state: GameState; log: string[] } | n
   return { name, state: make(), log: [`P03> Fixture "${name}": played here and never saved.`, ...log] }
 }
 
-/** A card as hard to lay out as any can be: the longest name, the top cost, huge numbers and every sigil. */
+/** A card as hard to lay out as any can be: the longest name, the top cost, huge numbers and three sigils, the most a card takes. */
 export const WORST_CARD = 'WorstCase'
 
 /** Puts the worst-case card in the card table, in development and test builds only, for the compendium to show. */
@@ -91,7 +91,8 @@ export function withWorstCard(): boolean {
     attack: 2000,
     health: 2000,
     cost: 4,
-    sigils: EVERY_SIGIL,
+    // The three with the longest descriptions.
+    sigils: ['segfault', 'fork', 'bypass'],
   }
   return true
 }

@@ -64,7 +64,7 @@ function Cost({ cost }: { cost: number }) {
   )
 }
 
-function Facts({ def }: { def: CardDef }) {
+function Facts({ def, sigils = 'max-h-28' }: { def: CardDef; sigils?: string }) {
   return (
     <>
       <p className="flex flex-wrap items-center gap-x-3 text-sm">
@@ -77,7 +77,7 @@ function Facts({ def }: { def: CardDef }) {
         <ul
           tabIndex={0}
           aria-label={`${def.name}'s sigils`}
-          className="flex max-h-28 flex-col gap-1 overflow-y-auto pr-1 focus-visible:outline-2 focus-visible:outline-ring"
+          className={`flex ${sigils} flex-col gap-1 overflow-y-auto pr-1 focus-visible:outline-2 focus-visible:outline-ring`}
         >
           {def.sigils.map((sigil) => (
             <li key={sigil} className="flex gap-2 text-sm text-muted-foreground">
@@ -193,7 +193,8 @@ function Viewer({ cards, chosen, onChoose }: { cards: CardDef[]; chosen: CardDef
         <div className="absolute inset-x-0 bottom-0 flex flex-wrap items-end justify-between gap-3 bg-gradient-to-t from-[#02070c] via-[#02070c]/85 to-transparent px-4 pt-10 pb-4">
           <div className="flex min-w-0 flex-col gap-1">
             <h2 className="font-semibold">{chosen.name}</h2>
-            <Facts def={chosen} />
+            {/* About two and a half sigils over the disk, so it stays in view; the list scrolls to the rest. */}
+            <Facts def={chosen} sigils="max-h-[3.75rem]" />
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => setOpen(!open)}>
@@ -239,7 +240,9 @@ export function Cards() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
         <h1 className="font-display text-6xl leading-none">Compendium</h1>
-        <p className="font-mono text-sm text-muted-foreground">ls ./cards · {DECK.length} cards</p>
+        <p role="status" className="font-mono text-sm text-muted-foreground">
+          ls ./cards · {cards.length} of {DECK.length} cards
+        </p>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -310,31 +313,25 @@ export function Cards() {
               )
             })}
           </div>
-          {/* The view and the count move to the next line together. */}
-          <div className="flex items-center gap-3">
-            <div role="group" aria-label="View" className="flex overflow-hidden rounded-md border">
-              <Button
-                variant="ghost"
-                size="sm"
-                aria-pressed={view === 'grid'}
-                className={`rounded-none ${view === 'grid' ? 'bg-muted' : ''}`}
-                onClick={() => change({ view: null })}
-              >
-                <LayoutGrid aria-hidden /> Cards
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                aria-pressed={view === '3d'}
-                className={`rounded-none ${view === '3d' ? 'bg-muted' : ''}`}
-                onClick={() => change({ view: '3d' })}
-              >
-                <Box aria-hidden /> 3D
-              </Button>
-            </div>
-            <p role="status" className="text-sm whitespace-nowrap text-muted-foreground">
-              {cards.length === DECK.length ? '' : `${cards.length} of ${DECK.length}`}
-            </p>
+          <div role="group" aria-label="View" className="flex overflow-hidden rounded-md border">
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-pressed={view === 'grid'}
+              className={`rounded-none ${view === 'grid' ? 'bg-muted' : ''}`}
+              onClick={() => change({ view: null })}
+            >
+              <LayoutGrid aria-hidden /> Cards
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-pressed={view === '3d'}
+              className={`rounded-none ${view === '3d' ? 'bg-muted' : ''}`}
+              onClick={() => change({ view: '3d' })}
+            >
+              <Box aria-hidden /> 3D
+            </Button>
           </div>
         </div>
       </div>
