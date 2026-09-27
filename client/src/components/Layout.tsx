@@ -1,4 +1,4 @@
-import { ChevronDown, LogOut, Settings, UserRound } from 'lucide-react'
+import { ChevronDown, LogIn, LogOut, Menu, Settings, UserPlus, UserRound } from 'lucide-react'
 import { Suspense } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router'
 import { toast } from 'sonner'
@@ -7,6 +7,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu.tsx'
@@ -48,45 +49,74 @@ export function Layout() {
           <Button variant="outline" aria-hidden tabIndex={-1} className="invisible">
             Sign in
           </Button>
-        ) : name ? (
-          <div className="flex gap-2">
-            {/* A guest's way to keep what they've played, always in reach. */}
-            {user?.isAnonymous ? (
-              <Button asChild>
-                <NavLink to="/signup">Sign up</NavLink>
-              </Button>
-            ) : null}
+        ) : (
+          <>
+            {/* On a laptop, the buttons themselves. */}
+            <div className="hidden gap-2 sm:flex">
+              {name ? (
+                <>
+                  {/* A guest's way to keep what they've played, always in reach. */}
+                  {user?.isAnonymous ? (
+                    <Button asChild>
+                      <NavLink to="/signup">Sign up</NavLink>
+                    </Button>
+                  ) : null}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" aria-label="Account menu" className="gap-2">
+                        <Avatar name={name} size="sm" />
+                        <span>{name}</span>
+                        <ChevronDown aria-hidden />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <AccountItems name={name} onSignOut={signOut} />
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </>
+              ) : (
+                <>
+                  <Button asChild variant="outline">
+                    <NavLink to="/signup">Sign up</NavLink>
+                  </Button>
+                  <Button asChild>
+                    <NavLink to="/login">Sign in</NavLink>
+                  </Button>
+                </>
+              )}
+            </div>
+            {/* On a phone, all of it behind one menu, so the header never wraps. */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" aria-label="Account menu" className="gap-2">
-                  <Avatar name={name} size="sm" />
-                  <span className="hidden sm:inline">{name}</span>
-                  <ChevronDown aria-hidden />
+                <Button variant="outline" aria-label={name ? 'Account menu' : 'Menu'} className="gap-2 sm:hidden">
+                  {name ? <Avatar name={name} size="sm" /> : null}
+                  <Menu aria-hidden />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={() => navigate(`/players/${name}`)}>
-                  <UserRound aria-hidden /> Your stats
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => navigate('/account')}>
-                  <Settings aria-hidden /> Account
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={signOut}>
-                  <LogOut aria-hidden /> Sign out
-                </DropdownMenuItem>
+              <DropdownMenuContent align="end" className="min-w-48">
+                {name ? (
+                  <>
+                    <DropdownMenuLabel>{name}</DropdownMenuLabel>
+                    {user?.isAnonymous ? (
+                      <DropdownMenuItem onSelect={() => navigate('/signup')}>
+                        <UserPlus aria-hidden /> Sign up
+                      </DropdownMenuItem>
+                    ) : null}
+                    <AccountItems name={name} onSignOut={signOut} />
+                  </>
+                ) : (
+                  <>
+                    <DropdownMenuItem onSelect={() => navigate('/login')}>
+                      <LogIn aria-hidden /> Sign in
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => navigate('/signup')}>
+                      <UserPlus aria-hidden /> Sign up
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
-          </div>
-        ) : (
-          <div className="flex gap-2">
-            <Button asChild variant="outline">
-              <NavLink to="/signup">Sign up</NavLink>
-            </Button>
-            <Button asChild>
-              <NavLink to="/login">Sign in</NavLink>
-            </Button>
-          </div>
+          </>
         )}
       </header>
 
@@ -118,5 +148,24 @@ export function Layout() {
         A tribute to Inscryption. Built by Adrian Jimenez.
       </footer>
     </div>
+  )
+}
+
+/** A signed-in player's own pages and the way out, in whichever menu holds them. */
+function AccountItems({ name, onSignOut }: { name: string; onSignOut: () => void }) {
+  const navigate = useNavigate()
+  return (
+    <>
+      <DropdownMenuItem onSelect={() => navigate(`/players/${name}`)}>
+        <UserRound aria-hidden /> Your stats
+      </DropdownMenuItem>
+      <DropdownMenuItem onSelect={() => navigate('/account')}>
+        <Settings aria-hidden /> Account
+      </DropdownMenuItem>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem onSelect={onSignOut}>
+        <LogOut aria-hidden /> Sign out
+      </DropdownMenuItem>
+    </>
   )
 }
