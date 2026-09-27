@@ -87,8 +87,8 @@ export default function CardViewer({ unit, open, turn }: { unit: Unit; open: boo
       <color attach="background" args={['#02070c']} />
       <Lights />
       <Card unit={unit} open={open} turn={turn} />
-      {/* A floor under the disk, so it reads as standing somewhere. */}
-      <gridHelper args={[10, 20, '#1d3a44', '#0f1f26']} position={[0, -0.8, 0]} />
+      {/* A floor under the disk, lit up in P03's green so it shows through the factory's dark. */}
+      <gridHelper args={[10, 20, '#4fae6a', '#2a6a40']} position={[0, -0.8, 0]} />
       <FactoryEffects />
       <OrbitControls makeDefault enablePan={false} minDistance={1.4} maxDistance={4} />
     </Canvas>

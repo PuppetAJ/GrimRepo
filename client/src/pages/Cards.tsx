@@ -33,7 +33,7 @@ function matches(def: CardDef, query: string): boolean {
 }
 
 function Cost({ cost }: { cost: number }) {
-  if (!cost) return <span className="text-muted-foreground">free</span>
+  if (!cost) return <span className="text-muted-foreground">Free</span>
   return (
     <span aria-label={`costs ${cost}`} className="tracking-widest text-[#ff9a2e]">
       {'◆'.repeat(cost)}
@@ -105,9 +105,12 @@ function Viewer({ cards, chosen, onChoose }: { cards: CardDef[]; chosen: CardDef
               type="button"
               aria-current={def.id === chosen.id}
               onClick={() => onChoose(def.id)}
-              className={`w-full border-t px-4 py-2 text-left text-sm first:border-t-0 hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring ${def.id === chosen.id ? 'bg-muted font-semibold' : ''}`}
+              className={`flex w-full items-baseline justify-between gap-3 border-t px-4 py-2 text-left text-sm first:border-t-0 hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring ${def.id === chosen.id ? 'bg-muted font-semibold' : ''}`}
             >
-              {def.name}
+              <span className="truncate">{def.name}</span>
+              <span className="shrink-0 text-xs font-normal">
+                <Cost cost={def.cost} />
+              </span>
             </button>
           </li>
         ))}
