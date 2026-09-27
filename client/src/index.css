@@ -113,6 +113,10 @@
 }
 
 @layer utilities {
+  /* The halo round a P03 screen, as if it lit the page around it. */
+  .p03-glow {
+    box-shadow: 0 0 40px rgb(125 255 154 / 0.12);
+  }
   /* P03's screen: scanlines under phosphor text. Never under body copy. */
   .p03-screen {
     background-color: var(--p03-ground);

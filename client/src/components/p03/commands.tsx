@@ -236,7 +236,7 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
         </div>
       )
     case 'top': {
-      const rows = (await api.leaderboard()).slice(0, 5)
+      const rows = (await api.leaderboard()).players.slice(0, 5)
       if (!rows.length) return <p>Nobody has finished a game against me. Obviously.</p>
       return (
         <div className="grid grid-cols-[auto_1fr_auto] gap-x-6">

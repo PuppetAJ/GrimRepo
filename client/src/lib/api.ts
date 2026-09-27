@@ -1,6 +1,8 @@
 import type { Action, Outcome } from 'shared'
 
 export type LeaderboardRow = { rank: number; username: string; bestScore: number; games: number; wins: number }
+/** One page of the board, with first place's score to scale the bars by. */
+export type BoardPage = { players: LeaderboardRow[]; page: number; pages: number; total: number; top: number }
 
 export type PlayerStats = {
   username: string
@@ -55,7 +57,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  leaderboard: () => request<{ players: LeaderboardRow[] }>('/api/leaderboard').then((body) => body.players),
+  leaderboard: (page = 1) => request<BoardPage>(`/api/leaderboard?page=${page}`),
   stats: (username: string) => request<PlayerStats>(`/api/players/${encodeURIComponent(username)}/stats`),
   games: (username: string, page: number) =>
     request<GamesPage>(`/api/players/${encodeURIComponent(username)}/games?page=${page}`),

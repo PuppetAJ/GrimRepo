@@ -6,7 +6,7 @@ const FaultyScreen = lazy(() => import('../components/p03/FaultyScreen.tsx'))
 
 export function NotFound() {
   return (
-    <div className="p03-screen relative flex max-w-xl flex-col gap-3 overflow-hidden rounded-md border border-[#2f6b3d] p-6 font-terminal text-2xl">
+    <div className="p03-screen p03-glow relative flex max-w-xl flex-col gap-3 overflow-hidden rounded-md border border-[#2f6b3d] p-6 font-terminal text-2xl">
       <Suspense fallback={null}>
         <FaultyScreen bright={0.35} />
       </Suspense>

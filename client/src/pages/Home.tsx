@@ -21,7 +21,7 @@ const turn = [
 ]
 
 export function Home() {
-  const top = useAsync(() => api.leaderboard().then((rows) => rows.slice(0, 3)), 'top')
+  const top = useAsync(() => api.leaderboard().then((board) => board.players.slice(0, 3)), 'top')
   const first = top.status === 'ready' ? top.data[0] : undefined
   const user = (authClient.useSession().data?.user as { displayUsername?: string } | undefined)?.displayUsername
   const lines =

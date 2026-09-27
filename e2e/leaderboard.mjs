@@ -44,6 +44,21 @@ section('The leaderboard')
     ['JohanH', 'PuppetAJ', 'kwm0304', 'demo'].every((name) => texts.some((text) => text.includes(name))),
   )
   check('it never shows an email address', !(await visibleText(page)).includes('@'))
+  // A board of more than one page turns to the next, whose ranks carry on from the first.
+  const lower = page.getByRole('button', { name: 'Lower' })
+  if (await lower.isVisible()) {
+    const rankOf = (text) => Number(text.replace(/\D/g, ''))
+    const last = rankOf(await page.locator('tbody > tr > td:first-child').last().innerText())
+    await lower.click()
+    await page.waitForURL(/page=2/)
+    // The first page's takeover row leaves once the second page has arrived.
+    await page.getByText('0x01').waitFor({ state: 'detached' })
+    const rank = rankOf(await page.locator('tbody > tr > td:first-child').first().innerText())
+    check('the next page ranks on from the first, ties included', rank >= last, `${last} then ${rank}`)
+    await page.goBack()
+    await page.getByText('0x01').waitFor()
+    check('and Back returns to the top', true)
+  }
   await page.getByRole('link', { name: 'PuppetAJ' }).click()
   await page.getByRole('heading', { name: 'PuppetAJ' }).waitFor()
   check('a name opens that player’s record', page.url().endsWith('/players/PuppetAJ'))

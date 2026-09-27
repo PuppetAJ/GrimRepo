@@ -159,7 +159,8 @@ export function Corruption({
       ref={canvas}
       aria-hidden
       style={{ width: cols * CELL_W, height: rows * CELL_H }}
-      className={`pointer-events-none absolute ${className}`}
+      // The same phosphor glow as P03's text.
+      className={`pointer-events-none absolute [filter:drop-shadow(0_0_5px_rgb(125_255_154/0.45))] ${className}`}
     />
   )
 }

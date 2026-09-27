@@ -1,5 +1,7 @@
 import { lazy, Suspense } from 'react'
-import { Link, useLocation } from 'react-router'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { Link, useLocation, useSearchParams } from 'react-router'
+import { Button } from '@/components/ui/button.tsx'
 import { Avatar } from '../components/Avatar.tsx'
 import { Corruption } from '../components/p03/Corruption.tsx'
 import { Glass } from '../components/p03/Glass.tsx'
@@ -14,7 +16,19 @@ import { useAsync } from '../lib/useAsync.ts'
 const FaultyScreen = lazy(() => import('../components/p03/FaultyScreen.tsx'))
 
 export function Leaderboard() {
-  const board = useAsync(api.leaderboard, 'leaderboard')
+  const [search, setSearch] = useSearchParams()
+  const page = Math.max(1, Number(search.get('page')) || 1)
+  const board = useAsync(() => api.leaderboard(page), `leaderboard:${page}`)
+  const turn = (to: number) =>
+    setSearch(
+      (now) => {
+        const next = new URLSearchParams(now)
+        if (to > 1) next.set('page', String(to))
+        else next.delete('page')
+        return next
+      },
+      { preventScrollReset: true },
+    )
   const session = authClient.useSession()
   const me = (session.data?.user as { username?: string } | undefined)?.username
   // Set by the game page when a game ends, so the result greets the player here.
@@ -25,7 +39,7 @@ export function Leaderboard() {
       {result ? (
         <div
           role="status"
-          className="p03-screen relative overflow-hidden rounded-md border border-[#2f6b3d] px-5 py-4 font-terminal text-2xl"
+          className="p03-screen p03-glow relative overflow-hidden rounded-md border border-[#2f6b3d] px-5 py-4 font-terminal text-2xl"
         >
           <Glass />
           <p>
@@ -72,7 +86,7 @@ export function Leaderboard() {
         {board.status === 'error' ? (
           <Failure title="The leaderboard would not load" detail={board.error.message} />
         ) : null}
-        {board.status === 'ready' && board.data.length === 0 ? (
+        {board.status === 'ready' && board.data.players.length === 0 ? (
           <p className="text-muted-foreground">
             Nobody has finished a game yet.{' '}
             <Link to="/game" className="text-primary hover:underline">
@@ -81,7 +95,7 @@ export function Leaderboard() {
             .
           </p>
         ) : null}
-        {board.status === 'ready' && board.data.length > 0 ? (
+        {board.status === 'ready' && board.data.players.length > 0 ? (
           // Not clipped, so first place's corruption can creep out past the board's edges.
           <div className="rounded-lg border bg-card">
             <table className="w-full border-collapse text-left">
@@ -103,20 +117,47 @@ export function Leaderboard() {
                 </tr>
               </thead>
               <tbody>
-                {board.data.map((row, index) =>
-                  index === 0 ? (
+                {board.data.players.map((row, index) =>
+                  // P03 takes over first place, which is only ever the top of the first page.
+                  index === 0 && board.data.page === 1 ? (
                     <FirstPlace key={row.username} row={row} mine={row.username.toLowerCase() === me} />
                   ) : (
                     <Row
                       key={row.username}
                       row={row}
-                      top={board.data[0]?.bestScore || 1}
+                      top={board.data.top || 1}
                       mine={row.username.toLowerCase() === me}
                     />
                   ),
                 )}
               </tbody>
             </table>
+            {board.data.pages > 1 ? (
+              <nav
+                aria-label="Leaderboard pages"
+                className="flex items-center justify-between gap-3 border-t px-4 py-3 sm:px-6"
+              >
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={board.data.page <= 1}
+                  onClick={() => turn(board.data.page - 1)}
+                >
+                  <ChevronLeft aria-hidden /> Higher
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  Page {board.data.page} of {board.data.pages} · {number(board.data.total)} players
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={board.data.page >= board.data.pages}
+                  onClick={() => turn(board.data.page + 1)}
+                >
+                  Lower <ChevronRight aria-hidden />
+                </Button>
+              </nav>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -142,6 +183,8 @@ function FirstPlace({ row, mine }: { row: LeaderboardRow; mine: boolean }) {
           <FaultyScreen className="-z-10" />
         </Suspense>
         <Glass />
+        {/* The halo, from a layer, since a table row does not reliably take a shadow of its own. */}
+        <span aria-hidden className="p03-glow pointer-events-none absolute inset-0 -z-20" />
         {/* P03's corruption creeps in from the row's four corners, above and below the rank and the score. */}
         <Corruption dense cols={12} rows={2} corner="top-left" seed={37} className="top-0 left-0" />
         <Corruption dense cols={9} rows={2} corner="bottom-left" seed={43} className="bottom-0 left-0" />
