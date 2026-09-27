@@ -13,6 +13,9 @@ const BLOCKS = '█▓▒'
 const GROWTH = 2.4
 const SETTLE = 0.6
 const FRAME_MS = 100
+// Once settled, a few characters at a time keep changing, so each one turns over every few seconds.
+const SHIMMER_MS = 160
+const SHIMMER_SHARE = 0.04
 
 type Cell = { x: number; y: number; color: string; block: boolean; final: string; arrives: number }
 
@@ -48,7 +51,7 @@ function cells(cols: number, rows: number, corner: Corner, seed: number, falloff
   return found
 }
 
-/** P03's corruption creeping in from a corner: decorative, hidden from screen readers, and never over text. */
+/** P03's corruption creeping in from a corner, then flickering on: decorative, hidden from screen readers, never over text. */
 export function Corruption({
   cols,
   rows,
@@ -92,8 +95,31 @@ export function Corruption({
       }
     }
 
+    // Only while the cluster is on screen and the tab is in front; offscreen it holds still.
+    const shimmer = () => {
+      let visible = true
+      const seen = new IntersectionObserver(([entry]) => (visible = entry?.isIntersecting ?? true))
+      seen.observe(element)
+      const count = Math.max(1, Math.round(pattern.length * SHIMMER_SHARE))
+      const timer = window.setInterval(() => {
+        if (!visible || document.hidden) return
+        for (let turn = 0; turn < count; turn++) {
+          const cell = pattern[Math.floor(Math.random() * pattern.length)]
+          if (!cell) continue
+          const glyphs = cell.block ? BLOCKS : LETTERS
+          cell.final = glyphs[Math.floor(Math.random() * glyphs.length)] as string
+        }
+        draw(end)
+      }, SHIMMER_MS)
+      stop = () => {
+        window.clearInterval(timer)
+        seen.disconnect()
+      }
+    }
+
     let frame = 0
     let cancelled = false
+    let stop = () => {}
     void document.fonts.load(`${CELL_H + 2}px VT323`).finally(() => {
       if (cancelled) return
       context.font = `${CELL_H + 2}px VT323, monospace`
@@ -102,8 +128,10 @@ export function Corruption({
       let last = -FRAME_MS
       const loop = (now: number) => {
         const seconds = (now - start) / 1000
-        // Once every cell has settled, it stays as it is and nothing runs.
-        if (seconds >= end) return draw(end)
+        if (seconds >= end) {
+          draw(end)
+          return shimmer()
+        }
         if (now - last >= FRAME_MS) {
           last = now
           draw(seconds)
@@ -115,6 +143,7 @@ export function Corruption({
     return () => {
       cancelled = true
       cancelAnimationFrame(frame)
+      stop()
     }
   }, [cols, rows, corner, seed, dense])
 
