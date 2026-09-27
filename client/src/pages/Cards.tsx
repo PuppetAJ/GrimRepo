@@ -219,7 +219,7 @@ export function Cards() {
           />
         </div>
         <label className="flex items-center gap-2 text-sm text-muted-foreground">
-          Sort
+          Sort:
           <select
             value={sort}
             onChange={(event) => change({ sort: event.target.value === 'deck' ? null : event.target.value })}
@@ -242,7 +242,7 @@ export function Cards() {
           {descending ? <ArrowDownWideNarrow aria-hidden /> : <ArrowUpNarrowWide aria-hidden />}
         </Button>
         <div role="group" aria-label="Filter by cost" className="flex flex-wrap items-center gap-1">
-          <span className="mr-1 text-sm text-muted-foreground">Cost</span>
+          <span className="mr-1 text-sm text-muted-foreground">Cost:</span>
           {COSTS.map((cost) => {
             const on = costs.includes(cost)
             return (

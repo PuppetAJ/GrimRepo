@@ -67,7 +67,8 @@ export function PixelCard({ unit }: { unit: Unit }) {
         <span className="absolute top-[18%] right-[16%] h-[62%] w-[20%] bg-[#0b1f12]" />
       </span>
       <span
-        className={`relative mx-[6%] mt-[16%] flex flex-[1.3] items-center justify-center border-2 border-[#0b1f12]/70 ${rare ? 'bg-[#e8aea8]' : 'bg-[#8fd3a0]'}`}
+        // Allowed to shrink below the art's square, so a row of sigils never pushes the numbers off the card.
+        className={`relative mx-[6%] mt-[16%] flex min-h-0 flex-[1.3] items-center justify-center border-2 border-[#0b1f12]/70 ${rare ? 'bg-[#e8aea8]' : 'bg-[#8fd3a0]'}`}
       >
         <Art id={unit.card} />
         {def.cost ? (
@@ -79,7 +80,10 @@ export function PixelCard({ unit }: { unit: Unit }) {
         ) : null}
       </span>
       {/* Many sigils share the card's width, and long numbers print smaller, so nothing runs off the card. */}
-      <span className="flex flex-1 items-center justify-center gap-[2cqw]">
+      <span
+        // Only a card with sigils gives up art space for them; without, the band is a thin gap.
+        className={`flex items-center justify-center gap-[2cqw] ${unit.sigils.length ? 'flex-1' : 'flex-[0.25]'}`}
+      >
         {unit.sigils.map((sigil) => (
           <Sigil key={sigil} id={sigil} size={`${Math.min(20, 86 / unit.sigils.length - 2)}cqw`} />
         ))}

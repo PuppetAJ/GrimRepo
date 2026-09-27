@@ -117,7 +117,19 @@ section('The compendium')
       ),
   )
   await page.getByLabel('Search the cards').fill('duck')
-  check('a search narrows it down', (await names.allInnerTexts()).join() === 'RubberDuck')
+  check(
+    'a search narrows it down',
+    await page
+      .waitForFunction(
+        () => [...document.querySelectorAll('main li h2')].map((name) => name.textContent).join() === 'RubberDuck',
+        null,
+        { timeout: 5000 },
+      )
+      .then(
+        () => true,
+        () => false,
+      ),
+  )
   await page.getByRole('button', { name: 'View in 3D' }).click()
   check(
     'and a card opens on its disk',

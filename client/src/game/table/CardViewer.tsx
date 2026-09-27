@@ -92,11 +92,11 @@ export default function CardViewer({ unit, open, turn }: { unit: Unit; open: boo
         infiniteGrid
         position={[0, -0.8, 0]}
         cellSize={0.25}
-        cellThickness={0.6}
-        cellColor="#434b53"
+        cellThickness={0.5}
+        cellColor="#262b30"
         sectionSize={1}
-        sectionThickness={1.1}
-        sectionColor="#a7b1bb"
+        sectionThickness={0.9}
+        sectionColor="#5b636b"
         fadeDistance={40}
         fadeStrength={1.5}
       />
