@@ -8,7 +8,7 @@ import { TIP, TURN_LIMIT } from './types.ts'
 
 describe('a turn', () => {
   it('runs the player’s attacks before the opponent’s', () => {
-    const { events } = play(table({ board: ['GoogleFu'], front: [null, 'GoogleFu'] }), { type: 'ringBell' })
+    const { events } = play(table({ board: ['CopyPaste'], front: [null, 'CopyPaste'] }), { type: 'ringBell' })
     const sides = events
       .filter((event) => event.type === 'attacked')
       .map((event) => event.type === 'attacked' && event.side)
@@ -16,7 +16,7 @@ describe('a turn', () => {
   })
 
   it('ends in a win the moment the scale tips to the player, before P03 can strike back', () => {
-    const state = table({ board: ['GoogleFu'], front: [null, 'JACK'], scale: TIP - 3 })
+    const state = table({ board: ['CopyPaste'], front: [null, 'Mainframe'], scale: TIP - 3 })
     const { state: after, events } = play(state, { type: 'ringBell' })
     assert.equal(after.status, 'won')
     assert.ok(!events.some((event) => event.type === 'attacked' && event.side === 'opponent'))
@@ -24,23 +24,23 @@ describe('a turn', () => {
   })
 
   it('ends in a loss when P03’s attacks tip the scale its way', () => {
-    const { state } = play(table({ front: ['JACK'], scale: 10 - TIP }), { type: 'ringBell' })
+    const { state } = play(table({ front: ['Mainframe'], scale: 10 - TIP }), { type: 'ringBell' })
     assert.equal(state.status, 'lost')
     assert.equal(state.scale, -TIP - 3, 'the overshoot is kept')
   })
 
   it('stops a card killed by the player from attacking that turn', () => {
-    const { state } = play(table({ board: ['GitSome'], front: ['GoogleFu'] }), { type: 'ringBell' })
+    const { state } = play(table({ board: ['ZeroDay'], front: ['CopyPaste'] }), { type: 'ringBell' })
     assert.equal(state.scale, 0)
   })
 
   it('moves queued cards up into empty lanes, and they attack straight away', () => {
-    const { state, events } = play(table({ back: ['GoogleFu', 'Loop'], front: [null, 'GrimRepo'] }), {
+    const { state, events } = play(table({ back: ['CopyPaste', 'InfiniteLoop'], front: [null, 'GrimRepo'] }), {
       type: 'ringBell',
     })
-    assert.equal(state.opponent.front[0]?.card, 'GoogleFu')
+    assert.equal(state.opponent.front[0]?.card, 'CopyPaste')
     assert.equal(state.opponent.front[1]?.card, 'GrimRepo', 'a card that can attack still blocks its queue')
-    assert.equal(state.opponent.back[1]?.card, 'Loop')
+    assert.equal(state.opponent.back[1]?.card, 'InfiniteLoop')
     assert.ok(events.some((event) => event.type === 'advanced' && event.lane === 0))
     assert.equal(state.scale, -6, 'the new arrival and the blocker both hit an empty lane')
   })
@@ -76,13 +76,13 @@ describe('a turn', () => {
   })
 
   it('accepts nothing once the game is over', () => {
-    const { state } = play(table({ front: ['JACK'], scale: 1 - TIP }), { type: 'ringBell' })
+    const { state } = play(table({ front: ['Mainframe'], scale: 1 - TIP }), { type: 'ringBell' })
     assert.deepEqual(legalActions(state), [])
     assert.equal(refused(state, { type: 'ringBell' }), 'The game is over')
   })
 
   it('never changes the state it was given', () => {
-    const state = table({ board: ['JACK'], front: ['Loop'], back: ['Bug'] })
+    const state = table({ board: ['Mainframe'], front: ['InfiniteLoop'], back: ['Bug'] })
     const before = structuredClone(state)
     assert.ok(apply(state, { type: 'ringBell' }).ok)
     assert.deepEqual(state, before)

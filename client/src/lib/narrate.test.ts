@@ -19,12 +19,13 @@ describe('the console', () => {
   it('names a card in the line that reports its death', () => {
     let state = createGame({ seed: 11 })
     const lines: string[] = []
-    while (state.status === 'playing' && !lines.some((line) => line.endsWith(' died.'))) {
+    const died = (line: string) => / died\./.test(line)
+    while (state.status === 'playing' && !lines.some(died)) {
       const result = step(state, nextBotAction(state))
       lines.push(...narrate(state, result.events))
       state = result.state
     }
-    const death = lines.find((line) => line.endsWith(' died.'))
+    const death = lines.find(died)
     assert.ok(death && !death.includes('a card'), String(death))
   })
 

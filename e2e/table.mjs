@@ -227,7 +227,8 @@ section('The 3D table')
   await page.getByRole('heading', { name: 'Contributors' }).waitFor()
   check(
     'the canvas and its handle go with the page',
-    await page.evaluate(() => !document.querySelector('canvas') && window.__game === undefined),
+    // The leaderboard has canvases of its own for P03's corruption; the table's lived in its frame.
+    await page.evaluate(() => !document.querySelector('[data-table] canvas') && window.__game === undefined),
   )
   check('and the test player is removed afterwards', await deletePlayer(page, player))
   await context.close()
@@ -248,7 +249,17 @@ section('Phones')
   check('which it gets in one tap', true)
 
   await page.setViewportSize({ width: 844, height: 390 })
-  await page.getByRole('button', { name: 'Play on the 3D table' }).click()
+  const text = page.locator('[data-table="text"]')
+  await page.waitForFunction(() => document.querySelector('[data-table="text"]')?.getBoundingClientRect().top === 0)
+  const box = await text.boundingBox()
+  check(
+    'turned sideways, the text table fills the screen',
+    box?.height === 390 && box.width === 844,
+    JSON.stringify(box),
+  )
+  // In the page, scrolled to so it fills the screen; its controls are in a menu.
+  await text.getByRole('button', { name: 'Menu' }).click()
+  await page.getByRole('button', { name: '3D Table' }).click()
   await tableReady(page)
   const fills = await page.evaluate(() => {
     const box = document.querySelector('[data-table="3d"]').getBoundingClientRect()

@@ -5,7 +5,7 @@ import { Rng } from './rng.ts'
 
 describe('the cards', () => {
   it('keep the 2022 stats', () => {
-    assert.deepEqual([CARDS['JACK']?.attack, CARDS['JACK']?.health, CARDS['JACK']?.cost], [13, 13, 3])
+    assert.deepEqual([CARDS['Mainframe']?.attack, CARDS['Mainframe']?.health, CARDS['Mainframe']?.cost], [13, 13, 3])
     assert.deepEqual([CARDS['FourOhFour']?.attack, CARDS['FourOhFour']?.health, CARDS['FourOhFour']?.cost], [4, 0, 4])
     assert.equal(CARDS['HelloWorld']?.name, 'Hello World')
   })

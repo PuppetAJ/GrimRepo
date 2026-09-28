@@ -1,8 +1,8 @@
-import { usernameClient } from 'better-auth/client/plugins'
+import { anonymousClient, usernameClient } from 'better-auth/client/plugins'
 import { createAuthClient } from 'better-auth/react'
 
 // Same origin in development (through Vite's proxy) and in production, so no base URL is needed.
-export const authClient = createAuthClient({ plugins: [usernameClient()] })
+export const authClient = createAuthClient({ plugins: [usernameClient(), anonymousClient()] })
 
 export const DEMO = { username: 'demo', password: 'demo-password' }
 

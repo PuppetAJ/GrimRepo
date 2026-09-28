@@ -47,3 +47,16 @@ it('sweeps expired sessions and stale rate-limit rows', async () => {
   assert.equal(removed['staleRateLimits'], 1)
   assert.equal((await app.call('GET', '/api/me', { cookie: player.cookie })).status, 401)
 })
+
+it('removes guests who never signed up within a week, and their games', async () => {
+  const fresh = await app.call('POST', '/api/auth/sign-in/anonymous')
+  const old = await app.call('POST', '/api/auth/sign-in/anonymous', { headers: { 'x-forwarded-for': '10.0.0.2' } })
+  await openGame(old.cookie)
+  const oldId = (await app.call('GET', '/api/auth/get-session', { cookie: old.cookie })).body.user.id
+  await pool.query(`UPDATE users SET created_at = now() - interval '8 days' WHERE id = $1`, [oldId])
+  const removed = await nightlyCleanup()
+  assert.equal(removed['staleGuests'], 1)
+  assert.equal((await pool.query('SELECT 1 FROM users WHERE is_anonymous')).rowCount, 1)
+  assert.equal((await pool.query('SELECT 1 FROM games')).rowCount, 0)
+  assert.equal((await app.call('GET', '/api/me', { cookie: fresh.cookie })).status, 200)
+})

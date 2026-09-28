@@ -1,6 +1,8 @@
 import type { Action, Outcome } from 'shared'
 
 export type LeaderboardRow = { rank: number; username: string; bestScore: number; games: number; wins: number }
+/** One page of the board, with first place's score to scale the bars by. */
+export type BoardPage = { players: LeaderboardRow[]; page: number; pages: number; total: number; top: number }
 
 export type PlayerStats = {
   username: string
@@ -8,13 +10,24 @@ export type PlayerStats = {
   games: number
   wins: number
   losses: number
+  // Counted among the losses too.
+  forfeits: number
   winRate: number | null
   bestScore: number
   bestWinTurns: number | null
   averageTurns: number | null
   days: { date: string; games: number; losses: number }[]
-  recent: { outcome: Outcome; turns: number; score: number; forfeited: boolean; playedAt: string }[]
+  recent: FinishedGame[]
+  // Their best game, the first time they reached that score; null before any.
+  best: FinishedGame | null
+  // Their place on the leaderboard; null for a guest or before a finished game.
+  rank: number | null
+  // The card they play most, Boilerplate aside, as its id; null before any is counted.
+  favoriteCard: string | null
 }
+
+export type FinishedGame = { outcome: Outcome; turns: number; score: number; forfeited: boolean; playedAt: string }
+export type GamesPage = { games: FinishedGame[]; page: number; pages: number; total: number }
 
 export type OpenGame = { id: number; seed: number; actions: Action[]; resumed: boolean; rulesChanged: boolean }
 
@@ -50,8 +63,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  leaderboard: () => request<{ players: LeaderboardRow[] }>('/api/leaderboard').then((body) => body.players),
+  leaderboard: (page = 1) => request<BoardPage>(`/api/leaderboard?page=${page}`),
   stats: (username: string) => request<PlayerStats>(`/api/players/${encodeURIComponent(username)}/stats`),
+  games: (username: string, page: number) =>
+    request<GamesPage>(`/api/players/${encodeURIComponent(username)}/games?page=${page}`),
   startGame: () => request<OpenGame>('/api/games', { method: 'POST' }),
   saveMoves: (id: number, from: number, actions: Action[]) =>
     request<Saved>(`/api/games/${id}/moves`, { method: 'POST', body: JSON.stringify({ from, actions }) }),

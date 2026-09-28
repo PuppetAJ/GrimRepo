@@ -1,11 +1,39 @@
-import { Link, useParams } from 'react-router'
+import { Suspense } from 'react'
+import {
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Flame,
+  GitCommitHorizontal,
+  GitMerge,
+  GitPullRequestClosed,
+  Gamepad2,
+  Heart,
+  Medal,
+  Percent,
+  Timer,
+  Trophy,
+} from 'lucide-react'
+import { Link, useParams, useSearchParams } from 'react-router'
+import { card, TURN_LIMIT } from 'shared'
+import { Button } from '@/components/ui/button.tsx'
+import { Skeleton } from '@/components/ui/skeleton.tsx'
 import { Avatar } from '../components/Avatar.tsx'
+import { Outcomes, ScoreChart, TurnsChart } from '../components/Charts.tsx'
+import { Pinned } from '../components/Pinned.tsx'
+import { Corruption } from '../components/p03/Corruption.tsx'
+import { FrameDamage } from '../components/p03/FrameDamage.tsx'
+import { Glass } from '../components/p03/Glass.tsx'
 import { Failure, Loading } from '../components/States.tsx'
 import { api, ApiError, type PlayerStats } from '../lib/api.ts'
 import { ago, number } from '../lib/format.ts'
 import { useAsync } from '../lib/useAsync.ts'
+import { FaultyScreen } from '../components/p03/faultyScreen.ts'
 
 const DAYS = 26 * 7
+// Games on a page of the history, as the server sends them.
+const HISTORY = 10
 const levels = ['bg-muted', 'bg-[#2b4a2a]', 'bg-[#3f7a3b]', 'bg-[#62a95a]', 'bg-primary']
 
 function level(games: number): number {
@@ -30,32 +58,169 @@ function grid(days: PlayerStats['days']) {
   })
 }
 
+/** The grid's key: its greens, fewest to most, and the red of a losing day; its words shorten when tight, then it wraps. */
+function Legend() {
+  return (
+    <div
+      aria-hidden
+      className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs whitespace-nowrap text-muted-foreground @max-[11rem]:gap-x-2.5"
+    >
+      <span className="flex items-center gap-1 @max-[11rem]:gap-[3px]">
+        <span className="@max-[14rem]:hidden">Fewer</span>
+        <span className="@min-[14rem]:hidden">−</span>
+        {/* At its tightest one of the middle greens goes: four steps say fewer to more as well as five. */}
+        {levels.map((level, index) => (
+          <span key={level} className={`size-3 rounded-[3px] ${level} ${index === 2 ? '@max-[11rem]:hidden' : ''}`} />
+        ))}
+        <span className="@max-[14rem]:hidden">More</span>
+        <span className="@min-[14rem]:hidden">+</span>
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="size-3 rounded-[3px] border-2 border-[#ffd2cf] bg-death" />
+        <span>
+          Losing<span className="@max-[17rem]:hidden"> trend</span>
+        </span>
+      </span>
+    </div>
+  )
+}
+
 function Activity({ stats }: { stats: PlayerStats }) {
   const cells = grid(stats.days)
   const played = cells.reduce((sum, cell) => sum + cell.games, 0)
   const bad = cells.filter((cell) => cell.bad).length
   return (
-    <section className="flex flex-col gap-3 rounded-lg border bg-card p-5">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="font-semibold">
-          {played} {played === 1 ? 'game' : 'games'} in the last 26 weeks
+    // The grid's count beside the heading, as GitHub puts its contributions over its grid, so the two cards below
+    // hold only what they show and come out about the same height. Side by side wherever the column fits the activity
+    // in two columns; one over the other only on a phone.
+    <section aria-labelledby="contributions" className="@container flex flex-col gap-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4">
+        <h2 id="contributions" className="font-semibold">
+          Contributions
         </h2>
-        <span className="text-sm text-muted-foreground">Outlined red: more lost than won that day</span>
+        {/* In words where the line has room, folded to a bar where it does not. */}
+        <p className="text-sm text-muted-foreground">
+          {played} {played === 1 ? 'game' : 'games'}
+          <span className="@max-[20rem]:hidden"> over </span>
+          <span className="@min-[20rem]:hidden"> | </span>
+          26 weeks
+        </p>
       </div>
-      <div
-        role="img"
-        aria-label={`${played} games over the last 26 weeks, ${bad} days with more losses than wins`}
-        className="grid grid-flow-col grid-rows-7 gap-1 overflow-x-auto"
-        style={{ gridAutoColumns: '14px' }}
-      >
-        {cells.map((cell) => (
-          <span
-            key={cell.key}
-            title={`${cell.key}: ${cell.games} ${cell.games === 1 ? 'game' : 'games'}`}
-            className={`size-3.5 rounded-[3px] ${cell.bad ? 'border-2 border-[#ffd2cf] bg-death' : levels[level(cell.games)]}`}
-          />
+      <div className="grid gap-5 @[39rem]:grid-cols-[minmax(12rem,36rem)_minmax(26rem,1fr)]">
+        <section
+          aria-label="Activity grid"
+          className="@container flex min-w-0 flex-col gap-3 rounded-lg border bg-card p-5"
+        >
+          {/* Laid out from the right, so where the grid scrolls it starts at the latest weeks, with no script to put it there. */}
+          <div
+            tabIndex={0}
+            aria-label="Activity grid, scrolls sideways"
+            className="flex flex-row-reverse overflow-x-auto pb-1 focus-visible:outline-2 focus-visible:outline-ring"
+          >
+            <div
+              role="img"
+              aria-label={`${played} games over the last 26 weeks, ${bad} days with more losses than wins`}
+              // The squares fill the card's width down to a legible size; past that, the grid scrolls sideways.
+              className="grid shrink-0 grow grid-flow-col grid-rows-7 gap-[3px] sm:gap-1"
+              style={{ gridAutoColumns: 'minmax(12px, 1fr)' }}
+            >
+              {cells.map((cell) => (
+                <span
+                  key={cell.key}
+                  title={`${cell.key}: ${cell.games} ${cell.games === 1 ? 'game' : 'games'}`}
+                  className={`aspect-square w-full rounded-[20%] ${cell.bad ? 'border-2 border-[#ffd2cf] bg-death' : levels[level(cell.games)]}`}
+                />
+              ))}
+            </div>
+          </div>
+          <Legend />
+        </section>
+        <Contributions stats={stats} cells={cells} />
+      </div>
+    </section>
+  )
+}
+
+type Cell = ReturnType<typeof grid>[number]
+
+/** The longest run of days in a row with a game, and the run still going: to today, or yesterday if today has none yet. */
+function streaks(cells: Cell[]): { longest: number; current: number } {
+  let longest = 0
+  let run = 0
+  for (const cell of cells) {
+    run = cell.games ? run + 1 : 0
+    longest = Math.max(longest, run)
+  }
+  let current = 0
+  for (let index = cells.length - (cells.at(-1)?.games ? 1 : 2); index >= 0 && cells[index]?.games; index--) current++
+  return { longest, current }
+}
+
+/** Beside the grid, as a repository would put it: games committed, merged and reverted, and the player's habits. */
+function Contributions({ stats, cells }: { stats: PlayerStats; cells: Cell[] }) {
+  const played = cells.reduce((sum, cell) => sum + cell.games, 0)
+  const lost = stats.days.reduce((sum, day) => sum + day.losses, 0)
+  const busiest = cells.reduce<Cell | null>((most, cell) => (cell.games > (most?.games ?? 0) ? cell : most), null)
+  const { longest, current } = streaks(cells)
+  const day = (key: string) =>
+    new Date(`${key}T00:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+  const plural = (count: number, one: string, many = `${one}s`) => `${number(count)} ${count === 1 ? one : many}`
+  const items = [
+    {
+      icon: GitCommitHorizontal,
+      tone: 'text-muted-foreground',
+      title: `${plural(played, 'game')} committed`,
+      note: 'in the last 26 weeks',
+    },
+    {
+      icon: GitMerge,
+      tone: 'text-primary',
+      title: `${plural(played - lost, 'win')} merged`,
+      note: 'games won',
+    },
+    {
+      icon: GitPullRequestClosed,
+      tone: 'text-death',
+      title: `${plural(lost, 'loss', 'losses')} reverted`,
+      note: 'forfeits included',
+    },
+    {
+      icon: Flame,
+      tone: 'text-[#ffb454]',
+      title: `${plural(longest, 'day')} in a row, at most`,
+      note: current ? `${plural(current, 'day')} running now` : 'no run going now',
+    },
+    {
+      icon: CalendarDays,
+      tone: 'text-muted-foreground',
+      title: busiest ? `Busiest on ${day(busiest.key)}` : 'No busiest day yet',
+      note: busiest ? plural(busiest.games, 'game') : 'nothing played',
+    },
+    {
+      icon: Clock,
+      tone: 'text-muted-foreground',
+      title: stats.recent[0] ? `Last played ${ago(stats.recent[0].playedAt)}` : 'Never played',
+      note: stats.recent[0] ? messageOf(stats.recent[0]) : 'the table is waiting',
+    },
+  ]
+  return (
+    <section
+      aria-label="Contribution activity"
+      className="@container flex min-w-0 flex-col gap-3 rounded-lg border bg-card p-5"
+    >
+      {/* Two columns of three where there is room, one on a phone; spread down the card, so a grid beside it that is a
+          little taller leaves spacing rather than a gap. */}
+      <ul className="grid flex-1 content-around gap-x-5 gap-y-3 @[22rem]:grid-cols-2">
+        {items.map((item) => (
+          <li key={item.title} className="flex items-start gap-3">
+            <item.icon aria-hidden className={`mt-0.5 size-4 shrink-0 ${item.tone}`} />
+            <div className="flex min-w-0 flex-col">
+              <span className="text-sm">{item.title}</span>
+              <span className="text-xs text-muted-foreground">{item.note}</span>
+            </div>
+          </li>
         ))}
-      </div>
+      </ul>
     </section>
   )
 }
@@ -76,73 +241,283 @@ export function Player() {
   }
 
   const player = stats.data
-  const facts = [
-    ['Games', number(player.games)],
-    ['Wins', number(player.wins)],
-    ['Win rate', player.winRate === null ? '-' : `${Math.round(player.winRate * 100)}%`],
-    ['Best score', number(player.bestScore)],
-    ['Fastest win', player.bestWinTurns === null ? '-' : `${player.bestWinTurns} turns`],
-    ['Average game', player.averageTurns === null ? '-' : `${player.averageTurns} turns`],
+  const facts: { icon: typeof Gamepad2; label: string; short?: string; shortest?: string; value: string }[] = [
+    { icon: Gamepad2, label: 'Games', value: number(player.games) },
+    { icon: Trophy, label: 'Wins', value: number(player.wins) },
+    { icon: Percent, label: 'Win rate', value: player.winRate === null ? '-' : `${Math.round(player.winRate * 100)}%` },
+    { icon: Medal, label: 'Rank', value: player.rank === null ? '-' : `#${number(player.rank)}` },
+    { icon: Timer, label: 'Avg. game', value: player.averageTurns === null ? '-' : `${player.averageTurns} turns` },
+    {
+      icon: Heart,
+      label: 'Favorite card',
+      short: 'Fav. card',
+      shortest: 'Fav.',
+      value: player.favoriteCard ? card(player.favoriteCard).name : '-',
+    },
   ]
 
   return (
-    <div className="flex flex-col gap-10 lg:flex-row lg:items-start">
-      <aside className="flex w-full flex-col gap-5 lg:w-72">
-        <Avatar name={player.username} size="lg" />
-        <div>
-          <h1 className="text-3xl font-semibold">{player.username}</h1>
-          <p className="text-muted-foreground">
-            Sitting at the table since{' '}
-            {new Date(player.joinedAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-          </p>
-        </div>
-        <dl className="flex flex-col gap-2.5 border-t pt-5 text-sm">
-          {facts.map(([label, value]) => (
-            <div key={label} className="flex justify-between">
-              <dt className="text-muted-foreground">{label}</dt>
-              <dd className="font-mono">{value}</dd>
+    <div className="flex flex-col gap-10 profile:flex-row profile:items-start">
+      {/* Beside the page from 1320px, where the column left fits the heatmap and activity side by side; above it before. */}
+      <aside className="@container w-full profile:w-72">
+        <div className="grid items-center gap-5 @[43rem]:grid-cols-[minmax(15rem,1fr)_auto] @[43rem]:gap-x-12">
+          {/* Stacked, the picture sits beside the name, as GitHub lays a profile out on a phone; beside the page, above it. */}
+          <div className="flex items-center gap-5 profile:flex-col profile:items-start">
+            <Avatar name={player.username} size="lg" className="profile:self-center" />
+            <div className="@container w-full min-w-0 flex-1">
+              <h1 className="truncate text-3xl font-semibold">{player.username}</h1>
+              <p className="whitespace-nowrap text-muted-foreground">
+                Joined {/* The month in full where the line has room, shortened so it stays on one line where not. */}
+                <span className="@max-[12rem]:hidden">
+                  {new Date(player.joinedAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </span>
+                <span className="@min-[12rem]:hidden">
+                  {new Date(player.joinedAt)
+                    .toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+                    .replace(' ', '. ')}
+                </span>
+              </p>
             </div>
-          ))}
-        </dl>
+          </div>
+          {/*
+            Stacked, the numbers are badges, as at the top of a README: the name on grey, the value on green, each
+            column as wide as its widest badge so their edges line up. Beside the name, two columns of three with room to
+            breathe; under it, set off by a rule, across the width in three of two, then two of three; on the smallest
+            phones they go, as the page below shows the same numbers. Their icons wherever there is room for them. Under
+            the name a long label takes its short form, and its shortest on the smallest phones, and a value too long for its column ends in an ellipsis, whole
+            on hover; beside it, a value is held to 14 characters, so the badges never outgrow the room kept for them.
+          */}
+          <div className="hidden border-t pt-4 profile:hidden @[21rem]:block @[43rem]:border-t-0 @[43rem]:pt-0">
+            <dl className="grid grid-cols-2 gap-2 font-mono text-xs @[38rem]:grid-cols-3 @[43rem]:w-fit @[43rem]:grid-cols-2">
+              {facts.map((fact) => (
+                <div key={fact.label} className="flex min-w-0 overflow-hidden rounded whitespace-nowrap">
+                  <dt className="flex shrink-0 grow items-center gap-1.5 bg-muted px-2 py-1 text-muted-foreground @max-[25rem]:px-1.5">
+                    <fact.icon
+                      aria-hidden
+                      className="hidden size-3.5 shrink-0 @min-[25rem]:@max-[43rem]:block @[50rem]:block"
+                    />
+                    {fact.short ? (
+                      <>
+                        <span className="@max-[43rem]:hidden">{fact.label}</span>
+                        <span className="@max-[22rem]:hidden @min-[43rem]:hidden">{fact.short}</span>
+                        <span className="@min-[22rem]:hidden">{fact.shortest ?? fact.short}</span>
+                      </>
+                    ) : (
+                      fact.label
+                    )}
+                  </dt>
+                  <dd
+                    title={fact.value}
+                    className="min-w-0 truncate bg-primary/15 px-2 py-1 font-semibold text-primary @max-[25rem]:px-1.5 @[43rem]:max-w-[calc(14ch+1rem)]"
+                  >
+                    {fact.value}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+          {/* In the sidebar, a table of icon, name and number, one to a line, and the pins under a rule. */}
+          <dl className="hidden gap-y-2 border-t pt-4 text-sm profile:grid">
+            {facts.map((fact) => (
+              <div key={fact.label} className="flex items-center gap-2 whitespace-nowrap">
+                <fact.icon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+                <dt className="text-muted-foreground">{fact.label}</dt>
+                <dd title={fact.value} className="ml-auto min-w-0 truncate font-mono">
+                  {fact.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+          <Pinned player={player} className="border-t pt-4 max-profile:hidden" />
+        </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col gap-7">
+        {/* Stacked, the pins come first under the name, as GitHub shows them; beside the page, they are in the sidebar. */}
+        <Pinned player={player} className="profile:hidden" />
         <Activity stats={player} />
-        <section className="overflow-hidden rounded-lg border bg-card">
-          <h2 className="border-b px-6 py-3.5 font-semibold">Game history</h2>
-          {player.recent.length === 0 ? (
-            <p className="px-6 py-5 text-muted-foreground">
-              No games yet.{' '}
-              <Link to="/game" className="text-primary hover:underline">
-                Play one
-              </Link>
-              .
-            </p>
-          ) : (
-            <ol>
-              {player.recent.map((game) => (
-                <li key={game.playedAt} className="flex items-center gap-4 border-t px-6 py-3.5 first:border-t-0">
-                  <span
-                    aria-hidden
-                    className={`size-2.5 shrink-0 rounded-full ${game.outcome === 'win' ? 'bg-primary' : 'bg-death'}`}
-                  />
-                  <div className="flex min-w-0 flex-1 flex-col">
-                    <span>
-                      {game.forfeited
-                        ? `Forfeited on turn ${game.turns}`
-                        : game.outcome === 'win'
-                          ? `Win in ${game.turns} turns`
-                          : `Lose on turn ${game.turns}`}
-                    </span>
-                    <span className="text-sm text-muted-foreground">{ago(game.playedAt)}</span>
-                  </div>
-                  <span className="font-mono">{number(game.score)}</span>
-                </li>
-              ))}
-            </ol>
-          )}
-        </section>
+        {player.recent.length ? (
+          <section aria-labelledby="recent" className="flex flex-col gap-3">
+            <h2 id="recent" className="font-semibold">
+              Recent games
+            </h2>
+            <div className="grid gap-5 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <ScoreChart games={[...player.recent].reverse()} />
+              </div>
+              <TurnsChart games={[...player.recent].reverse()} />
+              <Outcomes
+                wins={player.wins}
+                losses={player.losses - player.forfeits}
+                forfeits={player.forfeits}
+                recent={player.recent}
+              />
+            </div>
+          </section>
+        ) : null}
+        <History username={player.username} lastLoss={player.recent.find((game) => game.outcome === 'loss')} />
       </div>
     </div>
+  )
+}
+
+type Game = PlayerStats['recent'][number]
+
+/** A short commit hash from when the game ended, so each game has one and keeps it. */
+function hashOf(game: Game): string {
+  let hash = 2166136261
+  for (const letter of game.playedAt) hash = Math.imul(hash ^ letter.charCodeAt(0), 16777619)
+  return (hash >>> 0).toString(16).padStart(8, '0').slice(0, 7)
+}
+
+const messageOf = (game: Game) =>
+  game.forfeited
+    ? `Forfeit to P03 on turn ${game.turns}`
+    : game.outcome === 'win'
+      ? `Won in ${game.turns} ${game.turns === 1 ? 'turn' : 'turns'}`
+      : `Lost on turn ${game.turns}`
+
+/** The newest loss, as P03 prints it: a stack trace. */
+function Trace({ game }: { game: Game }) {
+  const frames = game.forfeited
+    ? ['at you.forfeit()', `at factory.table (turn ${game.turns})`]
+    : game.turns >= TURN_LIMIT
+      ? [`at turn.limit(${TURN_LIMIT})`, 'at factory.table (ran out of time)']
+      : ['at scale.tip(p03)', `at factory.table (turn ${game.turns})`, 'at deck.synergy() -> null']
+  return (
+    // Room around it for the corruption: out of its top corner, one row out of its bottom, and down both sides.
+    <div className="relative mx-6 mt-4 mb-5">
+      <FrameDamage frame="trace" />
+      <Corruption dense fast cols={12} rows={2} corner="bottom-right" seed={43} className="right-0 bottom-full" />
+      <Corruption dense fast cols={10} rows={1} corner="top-left" seed={71} className="top-full left-0" />
+      <Corruption dense fast cols={8} rows={1} corner="top-right" seed={89} className="top-full right-0" />
+      <Corruption dense fast cols={3} rows={9} corner="top-right" seed={17} className="top-0 right-full" />
+      <Corruption dense fast cols={3} rows={9} corner="bottom-left" seed={23} className="bottom-0 left-full" />
+      <div className="p03-screen p03-glow-soft relative isolate overflow-hidden border border-[#2f6b3d] px-4 py-3 font-terminal text-xl leading-tight sm:text-[1.35rem]">
+        <Suspense fallback={null}>
+          <FaultyScreen className="-z-10" />
+        </Suspense>
+        <Glass />
+        {/* Inside, up from the bottom of its right end, clear of the text. */}
+        <Corruption dense cols={2} rows={5} corner="bottom-right" seed={29} className="right-0 bottom-0" />
+        <p className="flex flex-wrap justify-between gap-x-4">
+          <span className="text-[#ff7a6b]">
+            {game.forfeited ? 'SIGTERM' : 'FATAL'} game {game.forfeited ? 'abandoned' : 'lost'} on turn {game.turns}
+          </span>
+          <span className="text-p03-dim">
+            {hashOf(game)} · {number(game.score)}
+          </span>
+        </p>
+        {frames.map((frame) => (
+          <p key={frame} className="pl-6 text-p03-dim">
+            {frame}
+          </p>
+        ))}
+        <p className="mt-1">
+          <span className="text-p03">P03&gt;</span>{' '}
+          {game.forfeited ? 'Walking away? Typical.' : 'Weak cards. Total lack of synergy.'}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+/** Every game the player finished, ten to a page, newest first; the page is in the address, so Back returns to it. */
+function History({ username, lastLoss }: { username: string; lastLoss: Game | undefined }) {
+  const [search, setSearch] = useSearchParams()
+  const page = Math.max(1, Number(search.get('page')) || 1)
+  const history = useAsync(() => api.games(username, page), `${username}:${page}`)
+  const turn = (to: number) =>
+    setSearch(
+      (now) => {
+        const next = new URLSearchParams(now)
+        if (to > 1) next.set('page', String(to))
+        else next.delete('page')
+        return next
+      },
+      { preventScrollReset: true },
+    )
+  const games = history.status === 'ready' ? history.data.games : []
+  const pinned = lastLoss && page === 1
+  return (
+    <section className="overflow-hidden rounded-lg border bg-card">
+      <div className="flex items-baseline justify-between gap-3 border-b px-6 py-3.5">
+        <h2 className="font-semibold">Game history</h2>
+        {history.status === 'ready' && history.data.total ? (
+          <span className="text-sm text-muted-foreground">
+            {number(history.data.total)} {history.data.total === 1 ? 'game' : 'games'}
+          </span>
+        ) : null}
+      </div>
+      {history.status === 'error' ? <p className="px-6 py-5 text-muted-foreground">{history.error.message}</p> : null}
+      {history.status === 'ready' && history.data.total === 0 ? (
+        <p className="px-6 py-5 text-muted-foreground">
+          No games yet.{' '}
+          <Link to="/game" className="text-primary underline underline-offset-2">
+            Play one
+          </Link>
+          .
+        </p>
+      ) : null}
+      {pinned ? <Trace game={lastLoss} /> : null}
+      {/* While a page loads, placeholder rows keep the list its height, so nothing below it jumps. */}
+      {history.status === 'loading' ? (
+        <ol role="status" aria-label="Loading games" className={pinned ? '' : 'mt-3'}>
+          {[...Array(HISTORY).keys()].map((row) => (
+            <li key={row} className="flex items-center gap-4 border-t px-6 py-3.5">
+              <Skeleton className="size-2.5 rounded-full" />
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Skeleton className="h-4 w-40" />
+                <Skeleton className="h-3.5 w-20" />
+              </div>
+              <Skeleton className="h-5 w-14" />
+            </li>
+          ))}
+        </ol>
+      ) : null}
+      {games.length ? (
+        <ol className={pinned ? '' : 'mt-3'}>
+          {games.map((game) => (
+            <li key={game.playedAt} className="flex items-center gap-4 border-t px-6 py-3.5">
+              <span
+                aria-hidden
+                className={`size-2.5 shrink-0 rounded-full ${game.forfeited ? 'bg-muted-foreground' : game.outcome === 'win' ? 'bg-primary' : 'bg-death'}`}
+              />
+              <div className="flex min-w-0 flex-1 flex-col">
+                <span>{messageOf(game)}</span>
+                <span className="text-sm text-muted-foreground">{ago(game.playedAt)}</span>
+              </div>
+              <span className="hidden rounded-md border border-input px-2 py-0.5 font-mono text-sm text-muted-foreground sm:inline">
+                {hashOf(game)}
+              </span>
+              <span className="w-16 text-right font-mono">{number(game.score)}</span>
+            </li>
+          ))}
+        </ol>
+      ) : null}
+      {history.status === 'ready' && history.data.pages > 1 ? (
+        <nav aria-label="Game history pages" className="flex items-center justify-between gap-3 border-t px-6 py-3">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={history.data.page <= 1}
+            onClick={() => turn(history.data.page - 1)}
+          >
+            <ChevronLeft aria-hidden /> Newer
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            Page {history.data.page} of {history.data.pages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={history.data.page >= history.data.pages}
+            onClick={() => turn(history.data.page + 1)}
+          >
+            Older <ChevronRight aria-hidden />
+          </Button>
+        </nav>
+      ) : null}
+    </section>
   )
 }

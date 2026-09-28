@@ -1,6 +1,6 @@
 // The app boots, the client reaches the API, accounts and scores work end to end. Grows as pages arrive.
 import { apply, createGame, nextBotAction, summary } from '../shared/src/index.ts'
-import { BASE, deletePlayer, launch, reporter, resetRateLimits } from './lib.mjs'
+import { BASE, deletePlayer, launch, reporter, resetRateLimits, stamp } from './lib.mjs'
 
 await resetRateLimits()
 
@@ -36,14 +36,135 @@ section('The home page')
   check('the client reaches the API', reached)
 }
 
+section("P03's terminal")
+{
+  const readme = page.getByRole('img', { name: /The 3D table/ })
+  check('the README shows a gameplay screenshot first', await readme.isVisible())
+  const terminal = page.getByRole('region', { name: "P03's terminal" })
+  await terminal.getByText('You done gawking').first().waitFor()
+  check('then P03 takes it over with his terminal', !(await readme.isVisible()))
+  check(
+    'and greets the visitor once',
+    (await terminal.locator('.sr-only', { hasText: 'You done gawking' }).count()) === 1,
+  )
+  const prompt = terminal.getByLabel('Command for P03')
+  const run = async (command) => {
+    await prompt.fill(command)
+    await prompt.press('Enter')
+  }
+  await run('help')
+  check(
+    'help lists the commands',
+    await terminal
+      .getByText('The rules, since you clearly need them')
+      .waitFor()
+      .then(
+        () => true,
+        () => false,
+      ),
+  )
+  await run('card mainframe')
+  check(
+    'a card can be read up close',
+    await terminal
+      .getByText('attack 13')
+      .waitFor()
+      .then(
+        () => true,
+        () => false,
+      ),
+  )
+  await run('nonsense')
+  check(
+    'an unknown command says so',
+    await terminal
+      .getByText('command not found: nonsense')
+      .waitFor()
+      .then(
+        () => true,
+        () => false,
+      ),
+  )
+  await page.reload()
+  check(
+    'on the same visit, the README is already infected',
+    await terminal.waitFor({ timeout: 1500 }).then(
+      () => true,
+      () => false,
+    ),
+  )
+  await run('cd leaderboard')
+  await page.waitForURL(/\/leaderboard$/)
+  check('cd moves to another page', true)
+  await page.goto(BASE)
+}
+
+section('The compendium')
+{
+  await page.goto(`${BASE}/cards`)
+  await page.getByRole('heading', { name: 'Compendium' }).waitFor()
+  const names = page.locator('main li h2')
+  // Development and test builds add a worst-case card, for checking layouts against, at the end.
+  const listed = (await names.allInnerTexts()).filter((name) => name !== 'destroyEverything(everyone)')
+  check('every card a player can hold is listed', listed.length === 26, String(listed.length))
+  await page.getByLabel('Sort').selectOption('attack')
+  await page.getByRole('button', { name: 'Lowest first' }).click()
+  check(
+    'it sorts, highest attack first',
+    await page
+      .waitForFunction(
+        () =>
+          [...document.querySelectorAll('main li h2')]
+            .map((name) => name.textContent)
+            .find((name) => name !== 'destroyEverything(everyone)') === 'Mainframe',
+        null,
+        { timeout: 5000 },
+      )
+      .then(
+        () => true,
+        () => false,
+      ),
+  )
+  await page.getByLabel('Search the cards').fill('duck')
+  check(
+    'a search narrows it down',
+    await page
+      .waitForFunction(
+        () => [...document.querySelectorAll('main li h2')].map((name) => name.textContent).join() === 'RubberDuck',
+        null,
+        { timeout: 5000 },
+      )
+      .then(
+        () => true,
+        () => false,
+      ),
+  )
+  await page.getByRole('button', { name: 'View in 3D' }).click()
+  check(
+    'and a card opens on its disk',
+    await page
+      .getByLabel('RubberDuck on its disk')
+      .waitFor()
+      .then(
+        () => true,
+        () => false,
+      ),
+  )
+  check(
+    'the address keeps the search and the card',
+    /q=duck.*view=3d.*card=RubberDuck|q=duck/.test(page.url()),
+    page.url(),
+  )
+}
+
 section('Accounts and scores')
 {
   // The page's request context shares its cookies, so this signs in the way the client will.
-  const stamp = Date.now().toString(36)
+  const tag = stamp()
   const player = {
-    name: `e2e_${stamp}`,
-    username: `e2e_${stamp}`,
-    email: `e2e_${stamp}@grimrepo.test`,
+    name: `e2e_${tag}`,
+    username: `e2e_${tag}`,
+    email: `e2e_${tag}@grimrepo.test`,
     password: 'a-long-enough-password',
   }
 

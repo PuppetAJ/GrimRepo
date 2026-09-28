@@ -1,8 +1,22 @@
 import { randomInt } from 'node:crypto'
-import { replay, RULES_VERSION, scoreBattle, summary, type Action, type Outcome } from 'shared'
+import {
+  BOILERPLATE,
+  cardsPlayed,
+  replay,
+  RULES_VERSION,
+  scoreBattle,
+  summary,
+  type Action,
+  type Outcome,
+} from 'shared'
 import { pool } from '../config/db.ts'
 
 export type LeaderboardRow = { rank: number; username: string; bestScore: number; games: number; wins: number }
+
+export type FinishedGame = { outcome: Outcome; turns: number; score: number; forfeited: boolean; playedAt: string }
+
+/** One page of a player's finished games, newest first. */
+export type GamesPage = { games: FinishedGame[]; page: number; pages: number; total: number }
 
 export type PlayerStats = {
   username: string
@@ -10,12 +24,20 @@ export type PlayerStats = {
   games: number
   wins: number
   losses: number
+  // Counted among the losses too.
+  forfeits: number
   winRate: number | null
   bestScore: number
   bestWinTurns: number | null
   averageTurns: number | null
   days: { date: string; games: number; losses: number }[]
-  recent: { outcome: Outcome; turns: number; score: number; forfeited: boolean; playedAt: string }[]
+  recent: FinishedGame[]
+  // Their best game, the first time they reached that score; null before any.
+  best: FinishedGame | null
+  // Their place on the leaderboard; null for a guest or before a finished game.
+  rank: number | null
+  // The card they play most, Boilerplate aside; null before any is counted.
+  favoriteCard: string | null
 }
 
 export type OpenGame = { id: number; seed: number; actions: Action[]; resumed: boolean; rulesChanged: boolean }
@@ -92,7 +114,7 @@ export async function recordMoves(userId: string, gameId: number, from: number, 
       return { status: 'playing', saved: all.length }
     }
 
-    const finished = await finish(client, userId, gameId, all, result.outcome, result.turns, false)
+    const finished = await finish(client, userId, gameId, all, result.outcome, result.turns, false, replayed.events)
     await client.query('COMMIT')
     return { status: 'finished', ...finished }
   } catch (error) {
@@ -116,7 +138,16 @@ export async function forfeitGame(userId: string, gameId: number): Promise<Moves
     if (!game) throw new GameError(404, { error: 'No such game in progress' })
     const replayed = replay(Number(game.seed), game.actions)
     const turns = replayed.ok ? replayed.state.turn : 1
-    const finished = await finish(client, userId, gameId, game.actions, 'loss', turns, true)
+    const finished = await finish(
+      client,
+      userId,
+      gameId,
+      game.actions,
+      'loss',
+      turns,
+      true,
+      replayed.ok ? replayed.events : [],
+    )
     await client.query('COMMIT')
     return { status: 'finished', ...finished }
   } catch (error) {
@@ -135,6 +166,7 @@ async function finish(
   outcome: Outcome,
   turns: number,
   forfeited: boolean,
+  events: Parameters<typeof cardsPlayed>[0],
 ) {
   const score = scoreBattle(outcome, turns)
   const previous = await client.query<{ best: number | null }>(
@@ -142,16 +174,78 @@ async function finish(
     [userId],
   )
   await client.query(
-    `UPDATE games SET status = 'finished', actions = $1, outcome = $2, turns = $3, score = $4, forfeited = $5, played_at = now()
-     WHERE id = $6`,
-    [JSON.stringify(actions), outcome, turns, score, forfeited, gameId],
+    `UPDATE games SET status = 'finished', actions = $1, outcome = $2, turns = $3, score = $4, forfeited = $5,
+       cards = $6, played_at = now()
+     WHERE id = $7`,
+    [JSON.stringify(actions), outcome, turns, score, forfeited, JSON.stringify(cardsPlayed(events)), gameId],
   )
   const best = Math.max(score, previous.rows[0]?.best ?? 0)
   return { outcome, turns, score, best, isBest: score >= best }
 }
 
-/** Players ranked by their best finished game; ties share a rank and sort by name. */
-export async function leaderboard(limit = 50): Promise<LeaderboardRow[]> {
+/**
+ * Counts the cards played in finished games that have moves but no count yet, as games finished before the count
+ * existed; run as the server starts. A game its rules can no longer replay is counted as none.
+ */
+export async function countCardsPlayed(): Promise<number> {
+  const { rows } = await pool.query<{ id: number; seed: string; actions: Action[] }>(
+    `SELECT id, seed, actions FROM games
+     WHERE status = 'finished' AND cards IS NULL AND seed IS NOT NULL AND jsonb_array_length(actions) > 0`,
+  )
+  for (const game of rows) {
+    const replayed = replay(Number(game.seed), game.actions)
+    const cards = replayed.ok ? cardsPlayed(replayed.events) : {}
+    await pool.query(`UPDATE games SET cards = $1 WHERE id = $2`, [JSON.stringify(cards), game.id])
+  }
+  return rows.length
+}
+
+// The charts show the last twenty games, so they stay a readable width; the history pages through every game.
+export const RECENT_GAMES = 20
+export const HISTORY_PAGE = 10
+
+/** A page of a player's history, the last page if asked for one past it; null for a player who does not exist. */
+export async function playerGames(username: string, page: number): Promise<GamesPage | null> {
+  const { rows } = await pool.query<{ id: string; total: number }>(
+    `SELECT u.id, COUNT(g.id)::int AS total
+     FROM users u LEFT JOIN games g ON g.user_id = u.id AND g.status = 'finished'
+     WHERE u.username = LOWER($1)
+     GROUP BY u.id`,
+    [username],
+  )
+  const player = rows[0]
+  if (!player) return null
+  const pages = Math.max(1, Math.ceil(player.total / HISTORY_PAGE))
+  const at = Math.min(Math.max(1, page), pages)
+  const games = await pool.query<Omit<FinishedGame, 'playedAt'> & { playedAt: Date }>(
+    `SELECT outcome, turns, score, forfeited, played_at AS "playedAt"
+     FROM games WHERE user_id = $1 AND status = 'finished'
+     ORDER BY played_at DESC, id DESC LIMIT $2 OFFSET $3`,
+    [player.id, HISTORY_PAGE, (at - 1) * HISTORY_PAGE],
+  )
+  return {
+    games: games.rows.map((game) => ({ ...game, playedAt: game.playedAt.toISOString() })),
+    page: at,
+    pages,
+    total: player.total,
+  }
+}
+
+export const BOARD_PAGE = 20
+
+/** One page of the board, with first place's score for scale; the last page if asked for one past it. */
+export type BoardPage = { players: LeaderboardRow[]; page: number; pages: number; total: number; top: number }
+
+/** Players ranked by their best finished game; ties share a rank and sort by name. Ranks count across every page, and guests are left off until they sign up. */
+export async function leaderboard(page = 1): Promise<BoardPage> {
+  const { rows: sizes } = await pool.query<{ total: number; top: number }>(
+    `SELECT COUNT(DISTINCT g.user_id)::int AS total, COALESCE(MAX(g.score), 0)::int AS top
+     FROM games g JOIN users u ON u.id = g.user_id
+     WHERE g.status = 'finished' AND NOT u.is_anonymous`,
+  )
+  const { total, top } = sizes[0] ?? { total: 0, top: 0 }
+  const pages = Math.max(1, Math.ceil(total / BOARD_PAGE))
+  const at = Math.min(Math.max(1, page), pages)
   const { rows } = await pool.query<LeaderboardRow>(
     `SELECT RANK() OVER (ORDER BY MAX(g.score) DESC)::int AS rank,
             u.display_username AS username,
@@ -159,13 +253,13 @@ export async function leaderboard(limit = 50): Promise<LeaderboardRow[]> {
             COUNT(*)::int AS games,
             COUNT(*) FILTER (WHERE g.outcome = 'win')::int AS wins
      FROM games g JOIN users u ON u.id = g.user_id
-     WHERE g.status = 'finished'
+     WHERE g.status = 'finished' AND NOT u.is_anonymous
      GROUP BY u.id, u.display_username
      ORDER BY "bestScore" DESC, u.display_username
-     LIMIT $1`,
-    [limit],
+     LIMIT $1 OFFSET $2`,
+    [BOARD_PAGE, (at - 1) * BOARD_PAGE],
   )
-  return rows
+  return { players: rows, page: at, pages, total, top }
 }
 
 /** Everything the stats page shows, or null for a player who does not exist. */
@@ -176,6 +270,7 @@ export async function playerStats(username: string): Promise<PlayerStats | null>
     joinedAt: Date
     games: number
     wins: number
+    forfeits: number
     bestScore: number
     bestWinTurns: number | null
     averageTurns: number | null
@@ -183,6 +278,7 @@ export async function playerStats(username: string): Promise<PlayerStats | null>
     `SELECT u.id, u.display_username AS username, u.created_at AS "joinedAt",
             COUNT(g.id)::int AS games,
             COUNT(g.id) FILTER (WHERE g.outcome = 'win')::int AS wins,
+            COUNT(g.id) FILTER (WHERE g.forfeited)::int AS forfeits,
             COALESCE(MAX(g.score), 0)::int AS "bestScore",
             MIN(g.turns) FILTER (WHERE g.outcome = 'win')::int AS "bestWinTurns",
             ROUND(AVG(g.turns), 1)::float AS "averageTurns"
@@ -194,11 +290,11 @@ export async function playerStats(username: string): Promise<PlayerStats | null>
   const player = rows[0]
   if (!player) return null
 
-  const [recent, days] = await Promise.all([
+  const [recent, days, best, rank, favorite] = await Promise.all([
     pool.query<{ outcome: Outcome; turns: number; score: number; forfeited: boolean; playedAt: Date }>(
       `SELECT outcome, turns, score, forfeited, played_at AS "playedAt"
-       FROM games WHERE user_id = $1 AND status = 'finished' ORDER BY played_at DESC, id DESC LIMIT 10`,
-      [player.id],
+       FROM games WHERE user_id = $1 AND status = 'finished' ORDER BY played_at DESC, id DESC LIMIT $2`,
+      [player.id, RECENT_GAMES],
     ),
     // Half a year of days, for the activity grid on the stats page.
     pool.query<{ date: string; games: number; losses: number }>(
@@ -209,7 +305,34 @@ export async function playerStats(username: string): Promise<PlayerStats | null>
        GROUP BY 1 ORDER BY 1`,
       [player.id],
     ),
+    pool.query<{ outcome: Outcome; turns: number; score: number; forfeited: boolean; playedAt: Date }>(
+      `SELECT outcome, turns, score, forfeited, played_at AS "playedAt"
+       FROM games WHERE user_id = $1 AND status = 'finished' ORDER BY score DESC, played_at, id LIMIT 1`,
+      [player.id],
+    ),
+    // Ranked as the leaderboard ranks, among players who have signed up.
+    pool.query<{ rank: number }>(
+      `SELECT rank FROM (
+         SELECT u.id, RANK() OVER (ORDER BY MAX(g.score) DESC)::int AS rank
+         FROM games g JOIN users u ON u.id = g.user_id
+         WHERE g.status = 'finished' AND NOT u.is_anonymous
+         GROUP BY u.id
+       ) ranked WHERE id = $1`,
+      [player.id],
+    ),
+    // Boilerplate is free and endless, so it would be nearly everyone's favourite; ties go to the name first.
+    pool.query<{ card: string }>(
+      `SELECT played.key AS card
+       FROM games, jsonb_each_text(games.cards) AS played
+       WHERE games.user_id = $1 AND games.status = 'finished' AND played.key <> $2
+       GROUP BY played.key ORDER BY SUM(played.value::int) DESC, played.key LIMIT 1`,
+      [player.id, BOILERPLATE],
+    ),
   ])
+  const finished = (game: { outcome: Outcome; turns: number; score: number; forfeited: boolean; playedAt: Date }) => ({
+    ...game,
+    playedAt: game.playedAt.toISOString(),
+  })
 
   return {
     username: player.username,
@@ -217,11 +340,15 @@ export async function playerStats(username: string): Promise<PlayerStats | null>
     games: player.games,
     wins: player.wins,
     losses: player.games - player.wins,
+    forfeits: player.forfeits,
     winRate: player.games ? Math.round((player.wins / player.games) * 1000) / 1000 : null,
     bestScore: player.bestScore,
     bestWinTurns: player.bestWinTurns,
     averageTurns: player.averageTurns,
     days: days.rows,
-    recent: recent.rows.map((game) => ({ ...game, playedAt: game.playedAt.toISOString() })),
+    recent: recent.rows.map(finished),
+    best: best.rows[0] ? finished(best.rows[0]) : null,
+    rank: rank.rows[0]?.rank ?? null,
+    favoriteCard: favorite.rows[0]?.card ?? null,
   }
 }

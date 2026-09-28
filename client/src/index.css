@@ -13,6 +13,8 @@
 @custom-variant dark (&:is(.dark *));
 /* Phones held sideways, where the 3D table takes the whole screen. */
 @custom-variant short (@media (max-height: 32rem));
+/* Tall enough, turned upright, for the landscape table's bigger pieces around the board. */
+@custom-variant tall (@media (min-height: 44rem));
 
 /* `:root` holds the values; `@theme inline` maps each to the Tailwind name shadcn's components use. */
 @theme inline {
@@ -21,6 +23,9 @@
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
   --font-display: 'Pirata One', serif;
   --font-terminal: 'VT323', ui-monospace, monospace;
+
+  /* Where the player page's sidebar sits beside it; named so it sorts after the smaller breakpoints. */
+  --breakpoint-profile: 65.625rem;
 
   --color-ring: var(--ring);
   --color-input: var(--input);
@@ -58,6 +63,9 @@
 :root,
 .dark {
   color-scheme: dark;
+
+  /* The page's side margin: 16px on a small phone, growing with the window to 48px from about 960px. */
+  --gutter: clamp(1rem, 5vw, 3rem);
 
   --background: #111013;
   --chrome: #0c0b0e;
@@ -113,12 +121,45 @@
 }
 
 @layer utilities {
+  /* The halo round a P03 screen, as if it lit the page around it. */
+  /* Layered as light falls off, bright and tight close in and fading far out, rather than one even haze. */
+  .p03-glow {
+    box-shadow:
+      0 0 1px rgb(125 255 154 / 0.3),
+      0 0 6px rgb(125 255 154 / 0.12),
+      0 0 18px rgb(125 255 154 / 0.07),
+      0 0 48px rgb(125 255 154 / 0.045);
+  }
+  /* A fainter halo, for P03's screens that sit among the page's own content. */
+  .p03-glow-soft {
+    box-shadow:
+      0 0 1px rgb(125 255 154 / 0.2),
+      0 0 6px rgb(125 255 154 / 0.06),
+      0 0 24px rgb(125 255 154 / 0.03);
+  }
+  /* Phosphor text: the glow hugs each letter and fades in steps, as the halos do. */
+  .p03-text-glow {
+    text-shadow:
+      0 0 1px rgb(125 255 154 / 0.55),
+      0 0 4px rgb(125 255 154 / 0.22),
+      0 0 12px rgb(125 255 154 / 0.1);
+  }
   /* P03's screen: scanlines under phosphor text. Never under body copy. */
   .p03-screen {
     background-color: var(--p03-ground);
     background-image: repeating-linear-gradient(0deg, rgb(0 0 0 / 0.3) 0 1px, transparent 1px 3px);
     color: #b8f5c4;
-    text-shadow: 0 0 8px rgb(125 255 154 / 0.35);
+    text-shadow:
+      0 0 1px rgb(125 255 154 / 0.55),
+      0 0 4px rgb(125 255 154 / 0.22),
+      0 0 12px rgb(125 255 154 / 0.1);
+  }
+}
+
+/* The terminal's cursor: lit, then dark, about once a second. */
+@keyframes blink {
+  50% {
+    opacity: 0;
   }
 }
 
@@ -305,10 +346,15 @@
   background-image: repeating-linear-gradient(0deg, rgb(0 0 0 / 0.07) 0 1px, transparent 1px 3px);
 }
 .crt-glass {
+  /* A faint grain over the dark corners, so their gradient does not fall into visible steps. */
   background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='128'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='128' height='128' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E"),
     radial-gradient(ellipse at center, transparent 55%, rgb(0 0 0 / 0.55) 100%),
     repeating-linear-gradient(0deg, rgb(0 0 0 / 0.05) 0 2px, transparent 2px 4px);
   animation: flicker 9s steps(1) infinite;
+}
+.crt-glass.flat {
+  background: repeating-linear-gradient(0deg, rgb(0 0 0 / 0.08) 0 2px, transparent 2px 4px);
 }
 .crt-glass::after {
   content: '';

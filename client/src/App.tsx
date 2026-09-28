@@ -8,6 +8,7 @@ import { NotFound } from './pages/NotFound.tsx'
 
 // The home page and the leaderboard come with the first load; every other page loads when it is opened.
 const Account = lazy(() => import('./pages/Account.tsx').then((page) => ({ default: page.Account })))
+const Cards = lazy(() => import('./pages/Cards.tsx').then((page) => ({ default: page.Cards })))
 const Game = lazy(() => import('./pages/Game.tsx').then((page) => ({ default: page.Game })))
 const MyStats = lazy(() => import('./pages/MyStats.tsx').then((page) => ({ default: page.MyStats })))
 const Player = lazy(() => import('./pages/Player.tsx').then((page) => ({ default: page.Player })))
@@ -22,6 +23,7 @@ export default function App() {
         <Route path="login" element={<SignIn />} />
         <Route path="signup" element={<SignUp />} />
         <Route path="leaderboard" element={<Leaderboard />} />
+        <Route path="cards" element={<Cards />} />
         <Route path="players/:username" element={<Player />} />
         <Route
           path="stats"
@@ -42,7 +44,7 @@ export default function App() {
         <Route
           path="game"
           element={
-            <RequireAuth>
+            <RequireAuth guest>
               <Game />
             </RequireAuth>
           }

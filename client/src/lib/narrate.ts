@@ -6,6 +6,15 @@ const lead = (scale: number) =>
 
 const lane = (index: number) => `lane ${index + 1}`
 
+// P03's asides, picked by a number from the game rather than at random, so a reload tells the same story.
+const pick = (lines: string[], key: number) => lines[Math.abs(key) % lines.length] as string
+const BIG_HIT = 5
+const TAUNTS = ['Now THAT is synergy.', 'Feel that?', 'Leshy never hit that hard.', 'Too easy.']
+const EXCUSES = ['Lucky.', 'RNG.', 'Rigged.', "That one doesn't count."]
+const LOSSES = ['RNG.', 'Pure luck.', 'I meant to do that.', '']
+const PLAYS = ["Oh, NOW you're trying.", 'Finally, a real card.', 'Cute.']
+const PATIENCE = ['Hurry up.', "We've got Transcending to do.", 'Any day now, challenger.', 'Still here? Fine.']
+
 /** Every unit either state knows about, so an event can name a card that has since died. */
 function names(before: GameState, events: GameEvent[]): Map<number, string> {
   const known = new Map<number, string>()
@@ -26,27 +35,44 @@ export function narrate(before: GameState, events: GameEvent[]): string[] {
   return events.flatMap((event): string[] => {
     switch (event.type) {
       case 'drew':
-        return [`You drew ${card(event.unit.card).name}${event.from === 'boilerplate' ? ' from the side pile' : ''}.`]
+        return [
+          event.from === 'boilerplate'
+            ? `You took a Boilerplate from the side pile. Filler.`
+            : `You drew ${card(event.unit.card).name}.`,
+        ]
       case 'reshuffled':
-        return [`Your deck ran out. ${event.cards} cards shuffled back in.`]
+        return [`Your deck ran dry. ${event.cards} cards shuffled back in. Same weak cards, new order.`]
       case 'sacrificed':
-        return [event.survived ? `${name(event.uid)} was offered and survived.` : `${name(event.uid)} was sacrificed.`]
-      case 'placed':
-        return [`You played ${card(event.unit.card).name} in ${lane(event.lane)}.`]
+        return [
+          event.survived
+            ? `${name(event.uid)} was offered and survived. try/catch. Cheap.`
+            : `${name(event.uid)} was sacrificed. Deprecated.`,
+        ]
+      case 'placed': {
+        const played = card(event.unit.card)
+        const aside = played.cost >= 2 ? ` ${pick(PLAYS, event.unit.uid)}` : ''
+        return [`You played ${played.name} in ${lane(event.lane)}.${aside}`]
+      }
       case 'wiped':
-        return [`Segfault. ${event.uids.length} of my cards are gone. Rude.`]
-      case 'hit':
+        return [`Segfault?! ${event.uids.length} of my cards, gone. That's not a strategy, that's just cheap.`]
+      case 'hit': {
+        const big = event.amount >= BIG_HIT
         return event.side === 'opponent'
-          ? [`You hit me for ${event.amount}. ${lead(event.scale)}`]
-          : [`I hit you for ${event.amount}. ${lead(event.scale)}`]
+          ? [`You hit me for ${event.amount}. ${lead(event.scale)}${big ? ` ${pick(EXCUSES, event.scale)}` : ''}`]
+          : [`I hit you for ${event.amount}. ${lead(event.scale)}${big ? ` ${pick(TAUNTS, event.scale)}` : ''}`]
+      }
       case 'killed':
-        return [mine(event.uid) ? `Your ${name(event.uid)} died.` : `My ${name(event.uid)} died.`]
+        return [
+          mine(event.uid)
+            ? `Your ${name(event.uid)} died. Obviously.`
+            : `My ${name(event.uid)} died. ${pick(LOSSES, event.uid)}`.trimEnd(),
+        ]
       case 'overkill':
         return [`${event.amount} damage spilled into ${lane(event.lane)}'s queue.`]
       case 'struckBack':
         return [`${name(event.uid)} took ${event.amount} for its trouble.`]
       case 'retired':
-        return [`My ${name(event.uid)} was guarding nothing. Deleted as dead code.`]
+        return [`My ${name(event.uid)} was guarding nothing. Dead code. Deleted.`]
       case 'advanced':
         return [`My ${name(event.uid)} moved up to ${lane(event.lane)}.`]
       case 'queued':
@@ -54,12 +80,12 @@ export function narrate(before: GameState, events: GameEvent[]): string[] {
       case 'healed':
         return [`${name(event.uid)} patched itself up to ${event.health}.`]
       case 'turnStarted':
-        return [`Turn ${event.turn}. Draw.`]
+        return [`Turn ${event.turn}. Draw.${event.turn % 5 === 0 ? ` ${pick(PATIENCE, event.turn / 5)}` : ''}`]
       case 'gameOver':
         return [
           event.outcome === 'win'
-            ? `You win in ${event.turns} turns. Recalculating.`
-            : `You lose on turn ${event.turns}. As predicted.`,
+            ? `You win in ${event.turns} turns. ...The RNG was rigged. Obviously.`
+            : `You lose on turn ${event.turns}. Weak cards. Total lack of synergy.`,
         ]
       default:
         return []
@@ -72,7 +98,7 @@ export function opening(state: GameState): string[] {
   const queued = state.opponent.back.flatMap((unit, index) =>
     unit ? [`I queued ${card(unit.card).name} behind ${lane(index)}.`] : [],
   )
-  return ['A new deal. Draw.', ...queued]
+  return ['New game. You done gawking? Good. Draw.', ...queued]
 }
 
 /** The whole console for a saved game, rebuilt move by move so a reload loses nothing. */
