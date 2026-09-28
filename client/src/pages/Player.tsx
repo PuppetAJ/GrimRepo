@@ -256,11 +256,11 @@ export function Player() {
           </div>
           {/*
             Stacked, the numbers are badges, as at the top of a README: the name on grey, the number on green. They sit
-            in two columns of three like a table, each filling its cell so their edges line up, and in one column where
-            two would not fit; the icons go first when space is short. Set off from the name by a rule.
+            in two columns of three like a table, each column as wide as its widest badge so their edges line up and none
+            stretches across the page, and in one column where two would not fit; the icons go first when space is short. Set off from the name by a rule.
           */}
           <div className="@container border-t pt-4 profile:hidden @3xl:border-t-0 @3xl:border-l @3xl:pt-0 @3xl:pl-6">
-            <dl className="grid gap-2 font-mono text-xs @[22rem]:grid-cols-2">
+            <dl className="grid w-fit gap-2 font-mono text-xs @[22rem]:grid-cols-2">
               {facts.map((fact) => (
                 <div key={fact.label} className="flex overflow-hidden rounded whitespace-nowrap">
                   <dt className="flex flex-1 items-center gap-1.5 bg-muted px-2 py-1 text-muted-foreground">
