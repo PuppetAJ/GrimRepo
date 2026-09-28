@@ -101,9 +101,8 @@ function DeathCardPin() {
 
 /** The player's pins: their death card and their best game so far. */
 export function Pinned({ player, className = '' }: { player: PlayerStats; className?: string }) {
-  // The best game, where it is among the recent ones; older, it shows without its date. Any win outscores every loss,
-  // so it is a win unless there are none.
-  const best = player.games ? player.recent.find((game) => game.score === player.bestScore) : undefined
+  // Any win outscores every loss, so the best game is a win unless there are none.
+  const best = player.best
   const turns = (n: number) => `${n} ${n === 1 ? 'turn' : 'turns'}`
   return (
     <section aria-labelledby="pinned" className={`@container flex min-w-0 flex-col gap-3 ${className}`}>
@@ -122,17 +121,21 @@ export function Pinned({ player, className = '' }: { player: PlayerStats; classN
               </>
             }
             about={
-              !player.games
+              !best
                 ? 'Nothing to beat yet.'
-                : best?.outcome === 'win'
-                  ? `${number(player.bestScore)} points. Beat P03 in ${turns(best.turns)}.`
-                  : `${number(player.bestScore)} points, the most in any game.`
+                : best.outcome === 'win'
+                  ? `${number(best.score)} points. Beat P03 in ${turns(best.turns)}.`
+                  : `${number(best.score)} points, the most in any game.`
             }
-            details={[
-              ['score', number(player.bestScore)],
-              ...(best ? ([['turns', String(best.turns)]] as [string, string][]) : []),
-              ...(best ? ([['played', ago(best.playedAt)]] as [string, string][]) : []),
-            ]}
+            details={
+              best
+                ? [
+                    ['score', number(best.score)],
+                    ['turns', String(best.turns)],
+                    ['played', ago(best.playedAt)],
+                  ]
+                : []
+            }
           />
         </PinBox>
       </div>

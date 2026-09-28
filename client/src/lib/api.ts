@@ -18,6 +18,12 @@ export type PlayerStats = {
   averageTurns: number | null
   days: { date: string; games: number; losses: number }[]
   recent: FinishedGame[]
+  // Their best game, the first time they reached that score; null before any.
+  best: FinishedGame | null
+  // Their place on the leaderboard; null for a guest or before a finished game.
+  rank: number | null
+  // The card they play most, Boilerplate aside, as its id; null before any is counted.
+  favoriteCard: string | null
 }
 
 export type FinishedGame = { outcome: Outcome; turns: number; score: number; forfeited: boolean; playedAt: string }

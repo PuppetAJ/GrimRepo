@@ -9,14 +9,14 @@ import {
   GitMerge,
   GitPullRequestClosed,
   Gamepad2,
+  Heart,
+  Medal,
   Percent,
-  Star,
   Timer,
   Trophy,
-  Zap,
 } from 'lucide-react'
 import { Link, useParams, useSearchParams } from 'react-router'
-import { TURN_LIMIT } from 'shared'
+import { card, TURN_LIMIT } from 'shared'
 import { Button } from '@/components/ui/button.tsx'
 import { Skeleton } from '@/components/ui/skeleton.tsx'
 import { Avatar } from '../components/Avatar.tsx'
@@ -241,20 +241,26 @@ export function Player() {
   }
 
   const player = stats.data
-  const facts = [
+  const facts: { icon: typeof Gamepad2; label: string; short?: string; shortest?: string; value: string }[] = [
     { icon: Gamepad2, label: 'Games', value: number(player.games) },
     { icon: Trophy, label: 'Wins', value: number(player.wins) },
     { icon: Percent, label: 'Win rate', value: player.winRate === null ? '-' : `${Math.round(player.winRate * 100)}%` },
-    { icon: Star, label: 'Best score', value: number(player.bestScore) },
-    { icon: Zap, label: 'Fastest win', value: player.bestWinTurns === null ? '-' : `${player.bestWinTurns} turns` },
+    { icon: Medal, label: 'Rank', value: player.rank === null ? '-' : `#${number(player.rank)}` },
     { icon: Timer, label: 'Avg. game', value: player.averageTurns === null ? '-' : `${player.averageTurns} turns` },
+    {
+      icon: Heart,
+      label: 'Favorite card',
+      short: 'Fav. card',
+      shortest: 'Fav.',
+      value: player.favoriteCard ? card(player.favoriteCard).name : '-',
+    },
   ]
 
   return (
     <div className="flex flex-col gap-10 profile:flex-row profile:items-start">
       {/* Beside the page from 1320px, where the column left fits the heatmap and activity side by side; above it before. */}
       <aside className="@container w-full profile:w-72">
-        <div className="grid items-center gap-5 @[39rem]:grid-cols-[minmax(15rem,1fr)_auto] @[39rem]:gap-x-12">
+        <div className="grid items-center gap-5 @[43rem]:grid-cols-[minmax(15rem,1fr)_auto] @[43rem]:gap-x-12">
           {/* Stacked, the picture sits beside the name, as GitHub lays a profile out on a phone; beside the page, above it. */}
           <div className="flex items-center gap-5 profile:flex-col profile:items-start">
             <Avatar name={player.username} size="lg" className="profile:self-center" />
@@ -274,23 +280,38 @@ export function Player() {
             </div>
           </div>
           {/*
-            Stacked, the numbers are badges, as at the top of a README: the name on grey, the number on green, each
+            Stacked, the numbers are badges, as at the top of a README: the name on grey, the value on green, each
             column as wide as its widest badge so their edges line up. Beside the name, two columns of three with room to
             breathe; under it, set off by a rule, across the width in three of two, then two of three; on the smallest
-            phones they go, as the page below shows the same numbers. Their icons wherever there is room for them.
+            phones they go, as the page below shows the same numbers. Their icons wherever there is room for them. Under
+            the name a long label takes its short form, and its shortest on the smallest phones, and a value too long for its column ends in an ellipsis, whole
+            on hover; beside it, a value is held to 14 characters, so the badges never outgrow the room kept for them.
           */}
-          <div className="hidden border-t pt-4 profile:hidden @[21rem]:block @[39rem]:border-t-0 @[39rem]:pt-0">
-            <dl className="grid grid-cols-2 gap-2 font-mono text-xs @[35rem]:grid-cols-3 @[39rem]:w-fit @[39rem]:grid-cols-2">
+          <div className="hidden border-t pt-4 profile:hidden @[21rem]:block @[43rem]:border-t-0 @[43rem]:pt-0">
+            <dl className="grid grid-cols-2 gap-2 font-mono text-xs @[38rem]:grid-cols-3 @[43rem]:w-fit @[43rem]:grid-cols-2">
               {facts.map((fact) => (
-                <div key={fact.label} className="flex overflow-hidden rounded whitespace-nowrap">
-                  <dt className="flex flex-1 items-center gap-1.5 bg-muted px-2 py-1 text-muted-foreground">
+                <div key={fact.label} className="flex min-w-0 overflow-hidden rounded whitespace-nowrap">
+                  <dt className="flex shrink-0 grow items-center gap-1.5 bg-muted px-2 py-1 text-muted-foreground @max-[25rem]:px-1.5">
                     <fact.icon
                       aria-hidden
-                      className="hidden size-3.5 shrink-0 @min-[24rem]:@max-[39rem]:block @[47rem]:block"
+                      className="hidden size-3.5 shrink-0 @min-[25rem]:@max-[43rem]:block @[50rem]:block"
                     />
-                    {fact.label}
+                    {fact.short ? (
+                      <>
+                        <span className="@max-[43rem]:hidden">{fact.label}</span>
+                        <span className="@max-[22rem]:hidden @min-[43rem]:hidden">{fact.short}</span>
+                        <span className="@min-[22rem]:hidden">{fact.shortest ?? fact.short}</span>
+                      </>
+                    ) : (
+                      fact.label
+                    )}
                   </dt>
-                  <dd className="bg-primary/15 px-2 py-1 font-semibold text-primary">{fact.value}</dd>
+                  <dd
+                    title={fact.value}
+                    className="min-w-0 truncate bg-primary/15 px-2 py-1 font-semibold text-primary @max-[25rem]:px-1.5 @[43rem]:max-w-[calc(14ch+1rem)]"
+                  >
+                    {fact.value}
+                  </dd>
                 </div>
               ))}
             </dl>
@@ -301,7 +322,9 @@ export function Player() {
               <div key={fact.label} className="flex items-center gap-2 whitespace-nowrap">
                 <fact.icon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
                 <dt className="text-muted-foreground">{fact.label}</dt>
-                <dd className="ml-auto font-mono">{fact.value}</dd>
+                <dd title={fact.value} className="ml-auto min-w-0 truncate font-mono">
+                  {fact.value}
+                </dd>
               </div>
             ))}
           </dl>
