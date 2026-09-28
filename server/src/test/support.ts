@@ -16,13 +16,19 @@ export async function insertPlayer(username: string): Promise<void> {
   )
 }
 
-/** A finished game straight into the table, for tests about ranking and stats rather than play. */
-export async function insertGame(username: string, outcome: 'win' | 'loss', turns: number, daysAgo = 0): Promise<void> {
+/** A finished game straight into the table, for tests about ranking and stats rather than play; `cards` as counted. */
+export async function insertGame(
+  username: string,
+  outcome: 'win' | 'loss',
+  turns: number,
+  daysAgo = 0,
+  cards: Record<string, number> | null = null,
+): Promise<void> {
   const { scoreBattle } = await import('shared')
   await pool.query(
-    `INSERT INTO games (user_id, outcome, turns, score, status, played_at)
-     SELECT id, $2, $3, $4, 'finished', now() - make_interval(days => $5) FROM users WHERE username = lower($1)`,
-    [username, outcome, turns, scoreBattle(outcome, turns), daysAgo],
+    `INSERT INTO games (user_id, outcome, turns, score, status, played_at, cards)
+     SELECT id, $2, $3, $4, 'finished', now() - make_interval(days => $5), $6 FROM users WHERE username = lower($1)`,
+    [username, outcome, turns, scoreBattle(outcome, turns), daysAgo, cards && JSON.stringify(cards)],
   )
 }
 

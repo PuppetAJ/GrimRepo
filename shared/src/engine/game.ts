@@ -233,6 +233,13 @@ export function replay(seed: number, actions: readonly Action[], options: { debu
   return { ok: true, state, events }
 }
 
+/** How many times each card was played in a game, from its replayed events: for a player's favourite card. */
+export function cardsPlayed(events: readonly GameEvent[]): Record<string, number> {
+  const counts: Record<string, number> = {}
+  for (const event of events) if (event.type === 'placed') counts[event.unit.card] = (counts[event.unit.card] ?? 0) + 1
+  return counts
+}
+
 /** The finished game's result, in the shape the scoring takes. */
 export function summary(state: GameState): { outcome: 'win' | 'loss'; turns: number } | null {
   if (state.status === 'playing') return null

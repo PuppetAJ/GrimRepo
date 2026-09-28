@@ -1,8 +1,18 @@
 import assert from 'node:assert/strict'
 import { after, beforeEach, describe, it } from 'node:test'
-import { apply, createGame, playOut, scoreBattle, summary, type Action, type GameState } from 'shared'
+import {
+  apply,
+  cardsPlayed,
+  createGame,
+  playOut,
+  replay,
+  scoreBattle,
+  summary,
+  type Action,
+  type GameState,
+} from 'shared'
 import { pool } from '../config/db.ts'
-import { BOARD_PAGE, HISTORY_PAGE, RECENT_GAMES } from '../db/games.ts'
+import { BOARD_PAGE, countCardsPlayed, HISTORY_PAGE, RECENT_GAMES } from '../db/games.ts'
 import { newPlayer, startApp } from '../test/http.ts'
 import { insertGame, insertOldGame, insertPlayer, resetDatabase } from '../test/support.ts'
 
@@ -104,6 +114,12 @@ describe('a game', () => {
 
     const stats = await app.call('GET', `/api/players/${player.username}/stats`)
     assert.equal(stats.body.games, 1)
+    const { rows } = await pool.query<{ cards: Record<string, number> }>('SELECT cards FROM games WHERE id = $1', [
+      game.id,
+    ])
+    const replayed = replay(game.seed, turns.flat())
+    assert.ok(replayed.ok)
+    assert.deepEqual(rows[0]?.cards, cardsPlayed(replayed.events), 'the cards played are counted as it finishes')
     const more = await app.call('POST', `/api/games/${game.id}/moves`, {
       cookie: player.cookie,
       body: { from: 0, actions: [] },
@@ -388,5 +404,65 @@ describe('a player’s stats', () => {
     await insertGame(player.username, 'win', 10)
     const { body } = await app.call('GET', `/api/players/${player.username}/stats`)
     assert.ok(!JSON.stringify(body).includes('@'))
+  })
+
+  it('give the best game, the first time that score was reached, even past the recent games', async () => {
+    const player = await signedIn()
+    await insertGame(player.username, 'win', 3, 60)
+    await insertGame(player.username, 'win', 3, 50)
+    for (let day = 0; day < RECENT_GAMES; day++) await insertGame(player.username, 'loss', 5, day)
+    const { body } = await app.call('GET', `/api/players/${player.username}/stats`)
+    assert.equal(body.best.score, scoreBattle('win', 3))
+    assert.equal(body.best.turns, 3)
+    assert.ok(Date.now() - Date.parse(body.best.playedAt) > 55 * 86_400_000, 'the earlier of the two')
+    assert.ok(!body.recent.some((game: { turns: number }) => game.turns === 3), 'older than the recent games')
+  })
+
+  it('rank a player as the leaderboard does, and leave a guest or a newcomer unranked', async () => {
+    const first = await signedIn()
+    const second = await signedIn()
+    const tied = await signedIn()
+    await insertGame(first.username, 'win', 3)
+    await insertGame(second.username, 'win', 10)
+    await insertGame(tied.username, 'win', 10)
+    const rank = async (username: string) =>
+      (await app.call('GET', `/api/players/${username}/stats`)).body.rank as number | null
+    assert.deepEqual([await rank(first.username), await rank(second.username), await rank(tied.username)], [1, 2, 2])
+    const newcomer = await signedIn()
+    assert.equal(await rank(newcomer.username), null)
+    await pool.query(`UPDATE users SET is_anonymous = true WHERE username = lower($1)`, [first.username])
+    assert.equal(await rank(first.username), null, 'a guest is off the board')
+    assert.equal(await rank(second.username), 1)
+  })
+
+  it('name the card played most across every game, Boilerplate aside', async () => {
+    const player = await signedIn()
+    await insertGame(player.username, 'win', 10, 2, { RubberDuck: 2, Boilerplate: 9, Bug: 1 })
+    await insertGame(player.username, 'loss', 5, 1, { Bug: 2 })
+    await insertGame(player.username, 'loss', 5, 0)
+    const { body } = await app.call('GET', `/api/players/${player.username}/stats`)
+    assert.equal(body.favoriteCard, 'Bug')
+    const newcomer = await signedIn()
+    assert.equal((await app.call('GET', `/api/players/${newcomer.username}/stats`)).body.favoriteCard, null)
+  })
+
+  it('count the cards of games finished before cards were counted, once', async () => {
+    const player = await signedIn()
+    const seed = 4242
+    const { actions } = botGame(seed)
+    const replayed = replay(seed, actions)
+    assert.ok(replayed.ok)
+    await pool.query(
+      `INSERT INTO games (user_id, seed, actions, outcome, turns, score, status)
+       SELECT id, $2, $3, 'win', 5, 1, 'finished' FROM users WHERE username = lower($1)`,
+      [player.username, seed, JSON.stringify(actions)],
+    )
+    await insertGame(player.username, 'win', 10)
+    assert.equal(await countCardsPlayed(), 1, 'only the game with moves to replay')
+    const { rows } = await pool.query<{ cards: Record<string, number> }>('SELECT cards FROM games WHERE seed = $1', [
+      seed,
+    ])
+    assert.deepEqual(rows[0]?.cards, cardsPlayed(replayed.events))
+    assert.equal(await countCardsPlayed(), 0, 'and not again')
   })
 })
