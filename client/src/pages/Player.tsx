@@ -255,17 +255,27 @@ export function Player() {
             </div>
           </div>
           {/*
-            A block, set off from the name by a rule: a table of icon, name and number, two columns wide and one in the
-            sidebar; on a phone the same two columns, tighter, each name and number kept together.
+            Stacked, the numbers are badges, as at the top of a README: the name on grey, the number on green, wrapping
+            as they fit, set off from the name by a rule.
           */}
-          <dl className="grid grid-cols-[auto_auto] justify-between gap-x-3 gap-y-2 border-t pt-4 text-[13px] profile:grid-cols-1 profile:justify-normal profile:text-sm @md:grid-cols-2 @md:justify-normal @md:gap-x-8 @md:gap-y-2.5 @md:text-sm @3xl:border-t-0 @3xl:border-l @3xl:pt-0 @3xl:pl-6">
+          <dl className="flex flex-wrap gap-2 border-t pt-4 font-mono text-xs profile:hidden @3xl:border-t-0 @3xl:border-l @3xl:pt-0 @3xl:pl-6">
             {facts.map((fact) => (
-              <div key={fact.label} className="flex items-center gap-1.5 whitespace-nowrap profile:gap-2 @md:gap-2">
-                <fact.icon aria-hidden className="size-4 shrink-0 text-muted-foreground @max-[21rem]:hidden" />
+              <div key={fact.label} className="flex overflow-hidden rounded whitespace-nowrap">
+                <dt className="flex items-center gap-1.5 bg-muted px-2 py-1 text-muted-foreground">
+                  <fact.icon aria-hidden className="size-3.5 shrink-0" />
+                  {fact.label}
+                </dt>
+                <dd className="bg-primary/15 px-2 py-1 font-semibold text-primary">{fact.value}</dd>
+              </div>
+            ))}
+          </dl>
+          {/* In the sidebar, a table of icon, name and number, one to a line. */}
+          <dl className="hidden gap-y-2 border-t pt-4 text-sm profile:grid">
+            {facts.map((fact) => (
+              <div key={fact.label} className="flex items-center gap-2 whitespace-nowrap">
+                <fact.icon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
                 <dt className="text-muted-foreground">{fact.label}</dt>
-                <dd className="font-mono font-semibold profile:ml-auto profile:font-normal @md:ml-auto @md:font-normal">
-                  {fact.value}
-                </dd>
+                <dd className="ml-auto font-mono">{fact.value}</dd>
               </div>
             ))}
           </dl>
@@ -307,8 +317,8 @@ const messageOf = (game: Game) =>
   game.forfeited
     ? `Forfeit to P03 on turn ${game.turns}`
     : game.outcome === 'win'
-      ? `Beat P03 in ${game.turns} turns`
-      : `Lose to P03 on turn ${game.turns}`
+      ? `Won in ${game.turns} ${game.turns === 1 ? 'turn' : 'turns'}`
+      : `Lost on turn ${game.turns}`
 
 /** The newest loss, as P03 prints it: a stack trace. */
 function Trace({ game }: { game: Game }) {
