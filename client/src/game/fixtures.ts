@@ -3,7 +3,10 @@ import { card, CARDS, PLAYER_DECK, SIGILS, TIP, type GameState, type SigilId, ty
 // Fixed states to lay the tables out against, loaded with ?fixture=<name> in development or a test build.
 export const FIXTURES_ON = import.meta.env.DEV || import.meta.env.VITE_TEST_HANDLE === '1'
 
-const EVERY_SIGIL = Object.keys(SIGILS) as SigilId[]
+// A card carries three sigils at most; the worst case is the three that take the most words to explain.
+const MOST_SIGILS = (Object.keys(SIGILS) as SigilId[])
+  .sort((a, b) => SIGILS[b].text.length - SIGILS[a].text.length)
+  .slice(0, 3)
 
 let uid = 0
 const unit = (id: string, { sigils, hurt = 0 }: { sigils?: SigilId[]; hurt?: number } = {}): Unit => {
@@ -19,17 +22,17 @@ const unit = (id: string, { sigils, hurt = 0 }: { sigils?: SigilId[]; hurt?: num
   }
 }
 
-/** Everything at its most: every lane filled, a full hand, every sigil on a card, the longest names and numbers. */
+/** Everything at its most: every lane filled, a full hand, three sigils on a card, the longest names and numbers. */
 function worst(): GameState {
   uid = 0
   const hand = [
-    unit('FourOhFour', { sigils: EVERY_SIGIL }),
-    unit('DestroyEnemyYou', { sigils: EVERY_SIGIL }),
+    unit('FourOhFour', { sigils: MOST_SIGILS }),
+    unit('DestroyEnemyYou', { sigils: MOST_SIGILS }),
     unit('Y2K'),
     unit('Mainframe', { hurt: 9 }),
     unit('Documentation', { sigils: ['technical_debt', 'try_catch', 'rate_limiter'] }),
     unit('JSONFoorhees'),
-    unit('RubberDuck', { sigils: EVERY_SIGIL }),
+    unit('RubberDuck', { sigils: MOST_SIGILS }),
   ]
   return {
     seed: 1,
@@ -43,20 +46,20 @@ function worst(): GameState {
       deck: [...PLAYER_DECK, ...PLAYER_DECK].slice(0, 42),
       hand,
       board: [
-        unit('Mainframe', { sigils: EVERY_SIGIL, hurt: 10 }),
+        unit('Mainframe', { sigils: MOST_SIGILS, hurt: 10 }),
         unit('DestroyEnemyYou', { sigils: ['fork', 'bypass'] }),
-        unit('Documentation', { sigils: EVERY_SIGIL }),
+        unit('Documentation', { sigils: MOST_SIGILS }),
         unit('Y2K', { hurt: 1999 }),
       ],
     },
     opponent: {
       front: [
-        unit('DestroyEnemyYou', { sigils: EVERY_SIGIL }),
+        unit('DestroyEnemyYou', { sigils: MOST_SIGILS }),
         unit('JSONFoorhees', { hurt: 7 }),
         unit('Documentation'),
         unit('RubberDuck', { sigils: ['hotfix', 'rate_limiter'] }),
       ],
-      back: [unit('ForkBomb'), unit('Mainframe', { sigils: EVERY_SIGIL }), unit('Sandbox'), unit('Bug')],
+      back: [unit('ForkBomb'), unit('Mainframe', { sigils: MOST_SIGILS }), unit('Sandbox'), unit('Bug')],
     },
     // Halfway through summoning the dearest card, so the prompt, the marks and a lifted card all show.
     summon: { uid: hand[0]!.uid, marked: [1] },

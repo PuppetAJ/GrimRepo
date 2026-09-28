@@ -753,6 +753,16 @@ export default function Table3D({ game, seat, onText }: { game: Ready; seat: Sea
   const [peek, setPeek] = useState<number | null>(null)
   const [pinned, setPinned] = useState<Screen | null>(null)
   const [magnified, setMagnified] = useState<{ target: Target; x: number; y: number } | null>(null)
+  // As tall as the card needs, so every sigil reads in full: above the finger when there is more room there, else
+  // below, then moved as little as it takes to be wholly on screen, over the finger if it has to be.
+  const magnifier = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const box = magnifier.current
+    if (!box || !magnified) return
+    const height = box.offsetHeight
+    const want = magnified.y > window.innerHeight / 2 ? magnified.y - 30 - height : magnified.y + 40
+    box.style.top = `${Math.max(8, Math.min(want, window.innerHeight - height - 8))}px`
+  })
   const reader: Reader = {
     peek,
     hold: (target, x, y) => setMagnified({ target, x, y }),
@@ -862,15 +872,18 @@ export default function Table3D({ game, seat, onText }: { game: Ready; seat: Sea
         <div
           aria-hidden
           data-magnifier
-          className="pointer-events-none fixed z-[60] w-80 shadow-[0_0_18px_rgb(0_0_0/0.85)]"
-          // Above the finger, or below it near the top of the screen; never off either side.
+          ref={magnifier}
+          className="pointer-events-none fixed z-[60] flex max-h-[calc(100dvh-1rem)] w-[min(22rem,calc(100vw-1rem))] flex-col shadow-[0_0_18px_rgb(0_0_0/0.85)]"
+          // Never off either side; how high it sits is set once its height is known.
           style={{
-            left: Math.min(Math.max(8, magnified.x - 160), window.innerWidth - 328),
-            top: magnified.y > 200 ? magnified.y - 190 : magnified.y + 40,
+            left: Math.min(
+              Math.max(8, magnified.x - 176),
+              window.innerWidth - Math.min(352, window.innerWidth - 16) - 8,
+            ),
           }}
         >
           {'unit' in magnifiedRead ? (
-            <div className="relative flex h-40 gap-2 overflow-hidden rounded-md border-2 border-[#2f6b3d] bg-[#a9e7b8] p-2 font-terminal text-[#0b1f12]">
+            <div className="relative flex min-h-40 gap-2 overflow-hidden rounded-md border-2 border-[#2f6b3d] bg-[#a9e7b8] p-2 font-terminal text-[#0b1f12]">
               <FlatReaderBody unit={magnifiedRead.unit} />
               <span aria-hidden className="crt-glass pointer-events-none absolute inset-0" />
             </div>
