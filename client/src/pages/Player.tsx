@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button.tsx'
 import { Skeleton } from '@/components/ui/skeleton.tsx'
 import { Avatar } from '../components/Avatar.tsx'
 import { Outcomes, ScoreChart, TurnsChart } from '../components/Charts.tsx'
+import { PinnedDeathCard } from '../components/PinnedDeathCard.tsx'
 import { Corruption } from '../components/p03/Corruption.tsx'
 import { FrameDamage } from '../components/p03/FrameDamage.tsx'
 import { Glass } from '../components/p03/Glass.tsx'
@@ -235,7 +236,7 @@ export function Player() {
     <div className="flex flex-col gap-10 profile:flex-row profile:items-start">
       {/* Beside the page from 1320px, where the column left fits the heatmap and activity side by side; above it before. */}
       <aside className="@container w-full profile:w-72">
-        <div className="grid gap-5 @3xl:grid-cols-[minmax(0,1fr)_minmax(0,32rem)] @3xl:items-center">
+        <div className="grid gap-5 @3xl:grid-cols-[minmax(18rem,1fr)_minmax(0,40rem)] @3xl:items-center">
           {/* Stacked, the picture sits beside the name, as GitHub lays a profile out on a phone; beside the page, above it. */}
           <div className="flex items-center gap-5 profile:flex-col profile:items-start">
             <Avatar name={player.username} size="lg" />
@@ -257,10 +258,12 @@ export function Player() {
           {/*
             Stacked, the numbers are badges, as at the top of a README: the name on grey, the number on green. They sit
             in two columns of three like a table, each column as wide as its widest badge so their edges line up and none
-            stretches across the page, and in one column where two would not fit; the icons go first when space is short. Set off from the name by a rule.
+            stretches across the page, and in one column where two would not fit; the icons go first when space is short.
+            The pinned death card takes the rest of the row, or the row below where it has too little. Set off from the
+            name by a rule.
           */}
-          <div className="@container border-t pt-4 profile:hidden @3xl:border-t-0 @3xl:border-l @3xl:pt-0 @3xl:pl-6">
-            <dl className="grid w-fit gap-2 font-mono text-xs @[22rem]:grid-cols-2">
+          <div className="@container flex flex-wrap items-stretch gap-4 border-t pt-4 profile:hidden @3xl:border-t-0 @3xl:border-l @3xl:pt-0 @3xl:pl-6">
+            <dl className="grid w-fit content-start gap-2 font-mono text-xs @[22rem]:grid-cols-2">
               {facts.map((fact) => (
                 <div key={fact.label} className="flex overflow-hidden rounded whitespace-nowrap">
                   <dt className="flex flex-1 items-center gap-1.5 bg-muted px-2 py-1 text-muted-foreground">
@@ -271,8 +274,9 @@ export function Player() {
                 </div>
               ))}
             </dl>
+            <PinnedDeathCard className="flex-1" />
           </div>
-          {/* In the sidebar, a table of icon, name and number, one to a line. */}
+          {/* In the sidebar, a table of icon, name and number, one to a line, and the pinned death card under it. */}
           <dl className="hidden gap-y-2 border-t pt-4 text-sm profile:grid">
             {facts.map((fact) => (
               <div key={fact.label} className="flex items-center gap-2 whitespace-nowrap">
@@ -282,6 +286,7 @@ export function Player() {
               </div>
             ))}
           </dl>
+          <PinnedDeathCard className="max-profile:hidden" />
         </div>
       </aside>
 
