@@ -40,7 +40,7 @@ describe('the name filter', () => {
     for (const name of [
       'JohanH',
       'PuppetAJ',
-      'dev_2022',
+      'kwm0304',
       'Scunthorpe',
       'assassin_99',
       'cocktail',
