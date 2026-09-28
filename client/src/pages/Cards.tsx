@@ -189,7 +189,7 @@ function Viewer({ cards, chosen, onChoose }: { cards: CardDef[]; chosen: CardDef
             </Button>
           )}
           <p className="pointer-events-none absolute top-3 left-4 text-xs text-muted-foreground">
-            Drag to turn it<span className="max-sm:hidden">, scroll to zoom</span>.
+            Drag to turn<span className="max-sm:hidden">, scroll to zoom</span>
           </p>
         </div>
         {/* Over the foot of the canvas on a fade, so it reads against the factory's dark; under it on a phone. */}
