@@ -1,6 +1,6 @@
 // The app boots, the client reaches the API, accounts and scores work end to end. Grows as pages arrive.
 import { apply, createGame, nextBotAction, summary } from '../shared/src/index.ts'
-import { BASE, deletePlayer, launch, reporter, resetRateLimits } from './lib.mjs'
+import { BASE, deletePlayer, launch, reporter, resetRateLimits, stamp } from './lib.mjs'
 
 await resetRateLimits()
 
@@ -160,11 +160,11 @@ section('The compendium')
 section('Accounts and scores')
 {
   // The page's request context shares its cookies, so this signs in the way the client will.
-  const stamp = Date.now().toString(36)
+  const tag = stamp()
   const player = {
-    name: `e2e_${stamp}`,
-    username: `e2e_${stamp}`,
-    email: `e2e_${stamp}@grimrepo.test`,
+    name: `e2e_${tag}`,
+    username: `e2e_${tag}`,
+    email: `e2e_${tag}@grimrepo.test`,
     password: 'a-long-enough-password',
   }
 
