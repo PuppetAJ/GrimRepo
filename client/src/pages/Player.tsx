@@ -255,20 +255,23 @@ export function Player() {
             </div>
           </div>
           {/*
-            Stacked, the numbers are badges, as at the top of a README: the name on grey, the number on green, wrapping
-            as they fit, set off from the name by a rule.
+            Stacked, the numbers are badges, as at the top of a README: the name on grey, the number on green. They sit
+            in two columns of three like a table, each filling its cell so their edges line up, and in one column where
+            two would not fit; the icons go first when space is short. Set off from the name by a rule.
           */}
-          <dl className="flex flex-wrap gap-2 border-t pt-4 font-mono text-xs profile:hidden @3xl:border-t-0 @3xl:border-l @3xl:pt-0 @3xl:pl-6">
-            {facts.map((fact) => (
-              <div key={fact.label} className="flex overflow-hidden rounded whitespace-nowrap">
-                <dt className="flex items-center gap-1.5 bg-muted px-2 py-1 text-muted-foreground">
-                  <fact.icon aria-hidden className="size-3.5 shrink-0" />
-                  {fact.label}
-                </dt>
-                <dd className="bg-primary/15 px-2 py-1 font-semibold text-primary">{fact.value}</dd>
-              </div>
-            ))}
-          </dl>
+          <div className="@container border-t pt-4 profile:hidden @3xl:border-t-0 @3xl:border-l @3xl:pt-0 @3xl:pl-6">
+            <dl className="grid gap-2 font-mono text-xs @[22rem]:grid-cols-2">
+              {facts.map((fact) => (
+                <div key={fact.label} className="flex overflow-hidden rounded whitespace-nowrap">
+                  <dt className="flex flex-1 items-center gap-1.5 bg-muted px-2 py-1 text-muted-foreground">
+                    <fact.icon aria-hidden className="size-3.5 shrink-0 @min-[22rem]:@max-[25rem]:hidden" />
+                    {fact.label}
+                  </dt>
+                  <dd className="bg-primary/15 px-2 py-1 font-semibold text-primary">{fact.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
           {/* In the sidebar, a table of icon, name and number, one to a line. */}
           <dl className="hidden gap-y-2 border-t pt-4 text-sm profile:grid">
             {facts.map((fact) => (
