@@ -23,11 +23,6 @@ const histories: Record<string, [Outcome, number][]> = {
     ['loss', 4],
     ['win', 21],
   ],
-  kwm0304: [
-    ['loss', 8],
-    ['win', 24],
-    ['loss', 13],
-  ],
   demo: [
     ['loss', 7],
     ['win', 19],
@@ -38,14 +33,13 @@ const histories: Record<string, [Outcome, number][]> = {
 const favorites: Record<string, string> = {
   JohanH: 'RubberDuck',
   PuppetAJ: 'ForkBomb',
-  kwm0304: 'SQLInjection',
   demo: 'CopyPaste',
 }
 
 const players = [
   demoAccount,
   // The original team keeps its names; nobody can sign in as them, since nobody knows the password.
-  ...['JohanH', 'PuppetAJ', 'kwm0304'].map((name) => ({
+  ...['JohanH', 'PuppetAJ'].map((name) => ({
     name,
     username: name,
     email: `${name.toLowerCase()}@grimrepo.test`,
