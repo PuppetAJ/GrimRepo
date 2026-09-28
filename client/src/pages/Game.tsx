@@ -96,14 +96,14 @@ export function Game() {
     return (
       // Into most of the page's side padding, so the table has the width and only thin gutters remain; a phone's
       // table goes edge to edge.
-      <div className={layout === 'phone' ? '-mx-4 sm:-mx-12' : '-mx-2 sm:-mx-9'}>
+      <div className={layout === 'phone' ? '-mx-(--gutter)' : '-mx-[calc(var(--gutter)-0.75rem)]'}>
         <TerminalTable game={game} seat={seat} on3d={() => choose('3d')} layout={layout} />
       </div>
     )
 
   return (
     // The table fills the page under the header, edge to edge, and the whole screen on a phone held sideways.
-    <div className="relative -mx-4 -my-8 h-[calc(100dvh-7rem)] min-h-[24rem] bg-[#050403] sm:-mx-12 short:fixed short:inset-0 short:z-40 short:m-0 short:h-dvh short:min-h-0">
+    <div className="relative -mx-(--gutter) -my-8 h-[calc(100dvh-7rem)] min-h-[24rem] bg-[#050403] short:fixed short:inset-0 short:z-40 short:m-0 short:h-dvh short:min-h-0">
       {upright ? (
         <TurnSideways onText={() => choose('text')} />
       ) : (

@@ -41,7 +41,7 @@ export function Layout() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="border-b bg-chrome px-4 py-3 sm:px-12">
+      <header className="border-b bg-chrome px-(--gutter) py-3">
         <div className={`${PAGE} flex items-center justify-between gap-3`}>
           <div className="flex items-center gap-3">
             <Logo />
@@ -129,7 +129,7 @@ export function Layout() {
       <nav
         aria-label="Sections"
         // On the narrowest phones the tabs spread evenly across the width.
-        className="overflow-x-auto border-b px-4 text-sm max-[350px]:px-2 sm:px-12"
+        className="overflow-x-auto border-b px-(--gutter) text-sm max-[350px]:px-2"
       >
         <div className={`${PAGE} flex gap-2 max-[350px]:justify-between max-[350px]:gap-0`}>
           {tabs.map((tab) => (
@@ -147,7 +147,7 @@ export function Layout() {
         </div>
       </nav>
 
-      <main className="flex-1 px-4 py-8 sm:px-12">
+      <main className="flex-1 px-(--gutter) py-8">
         {/* Capped and centred like the bars, so a browser zoomed far out keeps a readable page; the table fills it all. */}
         <div className={playing ? '' : PAGE}>
           <Suspense fallback={<Loading label="Loading" />}>
@@ -156,7 +156,7 @@ export function Layout() {
         </div>
       </main>
 
-      <footer className="border-t px-4 py-6 text-sm text-muted-foreground sm:px-12">
+      <footer className="border-t px-(--gutter) py-6 text-sm text-muted-foreground">
         <div className={PAGE}>A tribute to Inscryption. Built by Adrian Jimenez.</div>
       </footer>
     </div>

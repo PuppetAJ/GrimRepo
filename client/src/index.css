@@ -64,6 +64,9 @@
 .dark {
   color-scheme: dark;
 
+  /* The page's side margin: 16px on a small phone, growing with the window to 48px from about 960px. */
+  --gutter: clamp(1rem, 5vw, 3rem);
+
   --background: #111013;
   --chrome: #0c0b0e;
   --card: #151318;

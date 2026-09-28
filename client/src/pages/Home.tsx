@@ -38,7 +38,7 @@ export function Home() {
   return (
     <div className="flex flex-col gap-10 lg:flex-row lg:items-start">
       {/* Edge to edge on a phone and right under the nav, as GitHub shows a README there, so the words get the room. */}
-      <article className="relative -mx-4 -mt-8 min-w-0 flex-1 border-b bg-card sm:mx-0 sm:mt-0 sm:rounded-lg sm:border">
+      <article className="relative -mx-(--gutter) -mt-8 min-w-0 flex-1 border-b bg-card sm:mx-0 sm:mt-0 sm:rounded-lg sm:border">
         <div className="border-b px-4 py-3 font-mono text-sm text-muted-foreground sm:px-5">README.md</div>
         <div className="flex flex-col gap-6 px-4 py-8 sm:px-11">
           <h1 className="font-display text-[clamp(3.5rem,20vw,4.5rem)] leading-none whitespace-nowrap sm:text-8xl">
