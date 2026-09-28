@@ -71,8 +71,8 @@ section('A whole game')
   check(
     'their record has the game',
     expected.outcome === 'win'
-      ? history.includes(`Beat P03 in ${expected.turns} turns`)
-      : history.includes(`Lose to P03 on turn ${expected.turns}`),
+      ? history.includes(`Won in ${expected.turns} ${expected.turns === 1 ? 'turn' : 'turns'}`)
+      : history.includes(`Lost on turn ${expected.turns}`),
     history,
   )
   check('and the test player is removed afterwards', await deletePlayer(page, player))
