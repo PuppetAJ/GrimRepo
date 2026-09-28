@@ -1,4 +1,7 @@
 import React, {
+  lazy,
+  Suspense,
+  useCallback,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -7,6 +10,8 @@ import React, {
   type ReactNode,
   type Ref,
 } from 'react'
+import { Box, Flag, LogOut, Maximize, Minimize, ScrollText, SquareTerminal } from 'lucide-react'
+import { Link } from 'react-router'
 import { card, HAND_LIMIT, legalActions, TIP, type Action, type Slot, type Unit } from 'shared'
 import {
   SeatNote,
@@ -25,8 +30,15 @@ import type { Playback } from './table/playback.ts'
 import { usePlayback } from './table/usePlayback.ts'
 import { CARD_RATIO, FlatReaderBody, PixelCard, ReaderBody } from './CardReader.tsx'
 import FaultyScreen from '../components/p03/FaultyScreen.tsx'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog.tsx'
 import { useFullScreen } from './fullScreen.ts'
 import type { Ready } from './useGame.ts'
+import { useMedia } from '../lib/useMedia.ts'
+import { authClient } from '../lib/auth.ts'
+
+// P03's terminal, for the landscape table's menu; loaded only when opened.
+const Terminal = lazy(() => import('../components/p03/Terminal.tsx'))
+const TERMINAL_LINES = ['Lost already? Type help.', 'Or tutorial, if you need it spelled out.']
 
 // The text table laid out as Inscryption's Act 2, in P03's green: the scale and the button on the left, the board in
 // the middle, the card being looked at on the right, and the hand along the bottom.
@@ -108,6 +120,9 @@ function Balance({ scale }: { scale: number }) {
 // The left column's buttons: bordered like its panels, in the terminal's type.
 const SIDE_BUTTON =
   'rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-2 font-terminal text-lg text-p03 hover:bg-[#13261a] hover:text-p03 aria-expanded:bg-[#13261a] aria-expanded:text-p03 dark:hover:bg-[#13261a] dark:aria-expanded:bg-[#13261a]'
+
+// The landscape menu's buttons: the same, with an icon before the name.
+const MENU_BUTTON = `${SIDE_BUTTON} flex items-center justify-center gap-2`
 
 function Panel({
   children,
@@ -239,7 +254,13 @@ function Rising({ text, tone, className = 'top-1/2 left-1/2' }: { text: string; 
 }
 
 /** The largest lane that fits the space given, four across and three down: the board takes the window's height. */
-function useLaneSize(narrow: boolean, hand: HTMLElement | null, aside = 0, floor = 40) {
+function useLaneSize(
+  narrow: boolean,
+  hand: HTMLElement | null,
+  aside = 0,
+  floor = 40,
+  fill: boolean | 'width' = false,
+) {
   const [area, setArea] = useState<HTMLDivElement | null>(null)
   const [size, setSize] = useState(96)
   const current = useRef(96)
@@ -247,16 +268,20 @@ function useLaneSize(narrow: boolean, hand: HTMLElement | null, aside = 0, floor
     if (!area) return
     const fit = () => {
       // The panel's padding and border, the gaps between lanes, and the line between P03's rows and the player's.
-      const width = (area.clientWidth - aside - 28 - 3 * (narrow ? 4 : 8)) / 4
+      // Filling, the board's column is only as wide as the board, so the window's width is what limits it.
+      const width = ((fill ? window.innerWidth : area.clientWidth) - aside - 28 - 3 * (narrow ? 4 : 8)) / 4
       // Compact, the lanes take up whatever room the hand leaves above the window's bottom, three rows of them,
       // measured as if the page were scrolled to the top, so scrolling never grows the board.
       const table = hand?.closest<HTMLElement>('[data-table]')
       const fixed = table ? getComputedStyle(table).position === 'fixed' : false
       const scrolled = (fixed ? 0 : window.scrollY) + (table?.scrollTop ?? 0)
       const room = hand ? window.innerHeight - 12 - (hand.getBoundingClientRect().bottom + scrolled) : 0
-      const height = narrow
-        ? current.current + room / (3 * CARD_RATIO)
-        : (area.clientHeight - 28 - 3 * 8 - 2) / 3 / CARD_RATIO
+      const height =
+        narrow && !fill
+          ? current.current + room / (3 * CARD_RATIO)
+          : fill === 'width'
+            ? Infinity
+            : (area.clientHeight - 28 - 3 * 8 - 2) / 3 / CARD_RATIO
       // Never smaller than the floor, so a short landscape phone still has a board to play on (the page scrolls to the
       // hand); never taller than the window, so it can still be seen whole.
       const tallest = (window.innerHeight - 24 - 28 - 3 * 4 - 2) / 3 / CARD_RATIO
@@ -272,8 +297,29 @@ function useLaneSize(narrow: boolean, hand: HTMLElement | null, aside = 0, floor
       observer.disconnect()
       window.removeEventListener('resize', fit)
     }
-  }, [area, narrow, hand, aside, floor])
+  }, [area, narrow, hand, aside, floor, fill])
   return { setArea, lane: { width: size, height: size * CARD_RATIO } }
+}
+
+/** A scrolling list that keeps to its newest line as lines arrive, unless it has been scrolled back to read. */
+function useStuckToBottom(content: unknown) {
+  const box = useRef<HTMLElement | null>(null)
+  const stuck = useRef(true)
+  // A list that appears, as in a modal, opens on its newest line.
+  const attach = useCallback((element: HTMLElement | null) => {
+    box.current = element
+    stuck.current = true
+    if (element) element.scrollTop = element.scrollHeight
+  }, [])
+  useLayoutEffect(() => {
+    const element = box.current
+    if (element && stuck.current) element.scrollTop = element.scrollHeight
+  }, [content])
+  const onScroll = useCallback(() => {
+    const element = box.current
+    if (element) stuck.current = element.scrollHeight - element.scrollTop - element.clientHeight < 8
+  }, [])
+  return [attach, onScroll] as const
 }
 
 // The widest the table grows, and how tall it may be for its width, so a big window does not stretch it into a tower.
@@ -381,10 +427,17 @@ export function TerminalTable({
   game: Ready
   seat: Seat
   on3d: () => void
-  /** Wide, three columns; mid, the board beside the reader; narrow, one column down to 320px. */
-  layout?: 'wide' | 'mid' | 'narrow'
+  /** Wide, three columns; mid, the board beside the reader; narrow, one column down to 320px; landscape, a phone on its side. */
+  layout?: 'wide' | 'mid' | 'narrow' | 'landscape'
 }) {
   const narrow = layout !== 'wide'
+  // Landscape turned upright, or on a phone too narrow for its side columns, stacks its pieces around a board of the
+  // same size; shorter than 680px, the stack scrolls rather than squeezing the board, as on old 320x480 phones.
+  const upright = useMedia('(orientation: portrait)')
+  const slim = useMedia('(max-width: 40rem)')
+  const cramped = useMedia('(max-height: 42.5rem)')
+  const sideways = layout === 'landscape' && !upright && !slim
+  const scrolling = layout === 'landscape' && !sideways && cramped
   const { state, act, result } = game
   // The page shows the game as far as its playback has reached; moves come from the real state, and wait for it.
   const { playback, busy } = usePlayback(game)
@@ -414,6 +467,14 @@ export function TerminalTable({
   // On touch, holding a card magnifies it above the finger; letting go does not play it.
   const [magnified, setMagnified] = useState<{ unit: Unit; x: number; y: number } | null>(null)
   const [readerBox, readerFlat] = useFlatReader()
+  // Landscape keeps the table's controls in a menu.
+  const [menu, setMenu] = useState(false)
+  const [logOpen, setLogOpen] = useState(false)
+  const [terminalOpen, setTerminalOpen] = useState(false)
+  // On a phone, with no reader beside the board, a tap opens the card in a modal instead.
+  const tapToRead = layout === 'landscape'
+  const [reading, setReading] = useState<Place | null>(null)
+  const user = (authClient.useSession().data?.user as { displayUsername?: string } | undefined)?.displayUsername
   const hold = useRef<ReturnType<typeof setTimeout> | null>(null)
   const held = useRef(false)
   const letGo = () => {
@@ -421,14 +482,18 @@ export function TerminalTable({
     hold.current = null
     setMagnified(null)
   }
-  // Once a hold opens the magnifier, sliding the finger reads whatever card it is over, and the page stays still.
+  // Once a hold opens the magnifier, sliding the finger or the pointer reads whatever card it is over, and the page
+  // stays still.
   const magnifying = magnified !== null
   useEffect(() => {
     if (!magnifying) return
-    const move = (event: TouchEvent) => {
+    const touchMove = (event: TouchEvent) => {
       event.preventDefault()
       const touch = event.touches[0]
-      if (!touch) return
+      if (touch) move(touch)
+    }
+    const pointerMove = (event: PointerEvent) => event.pointerType === 'mouse' && move(event)
+    const move = (touch: { clientX: number; clientY: number }) => {
       const key = document.elementFromPoint(touch.clientX, touch.clientY)?.closest<HTMLElement>('[data-look]')?.dataset[
         'look'
       ]
@@ -442,13 +507,17 @@ export function TerminalTable({
       setMagnified((last) => (last ? { unit: unit ?? last.unit, x: touch.clientX, y: touch.clientY } : last))
     }
     const end = () => setMagnified(null)
-    document.addEventListener('touchmove', move, { passive: false })
+    document.addEventListener('touchmove', touchMove, { passive: false })
     document.addEventListener('touchend', end)
     document.addEventListener('touchcancel', end)
+    document.addEventListener('pointermove', pointerMove)
+    document.addEventListener('pointerup', end)
     return () => {
-      document.removeEventListener('touchmove', move)
+      document.removeEventListener('touchmove', touchMove)
       document.removeEventListener('touchend', end)
       document.removeEventListener('touchcancel', end)
+      document.removeEventListener('pointermove', pointerMove)
+      document.removeEventListener('pointerup', end)
     }
   })
   const look = (place: Place, unit: Slot | Unit = null) => ({
@@ -456,7 +525,7 @@ export function TerminalTable({
     onPointerEnter: () => unit && setLooking(place),
     onFocus: () => unit && setLooking(place),
     onPointerDown: (event: React.PointerEvent) => {
-      if (event.pointerType !== 'touch' || !unit) return
+      if (!unit || (event.pointerType !== 'touch' && event.button !== 0)) return
       held.current = false
       const [x, y] = [event.clientX, event.clientY]
       hold.current = setTimeout(() => {
@@ -467,8 +536,13 @@ export function TerminalTable({
     },
     onPointerUp: letGo,
     onPointerCancel: letGo,
-    // A finger held down stays on its card until lifted; the page's touch listeners let it go.
-    onPointerLeave: (event: React.PointerEvent) => event.pointerType !== 'touch' && letGo(),
+    // A finger or button held down stays on its card until lifted, and the page's listeners let it go; a pointer that
+    // leaves before the hold is up simply stops waiting.
+    onPointerLeave: (event: React.PointerEvent) => {
+      if (event.pointerType === 'touch' || magnified) return
+      if (hold.current) clearTimeout(hold.current)
+      hold.current = null
+    },
   })
   // The cards on the table when the page opened are simply there; only those dealt, drawn or queued since arrive.
   const [present] = useState(
@@ -499,13 +573,25 @@ export function TerminalTable({
     return () => window.removeEventListener('keydown', onKey)
   }, [canPress, act])
 
+  // Landscape covers the whole screen, so the page under it must not scroll.
+  useEffect(() => {
+    if (layout !== 'landscape') return
+    const root = document.documentElement
+    root.style.overflow = 'hidden'
+    return () => {
+      root.style.overflow = ''
+    }
+  }, [layout])
+
   // A lane's size comes from the board's height, so the whole table fits the window.
   const [handSection, setHandSection] = useState<HTMLElement | null>(null)
   const { setArea, lane: laneSize } = useLaneSize(
     narrow,
     handSection,
-    layout === 'mid' ? 13 * 16 + 12 : 0,
+    layout === 'mid' ? 13 * 16 + 12 : sideways ? 21 * 16 + 32 : layout === 'landscape' ? 16 : 0,
     layout === 'mid' ? 76 : 40,
+    // Scrolling, only the width limits the board.
+    scrolling ? 'width' : layout === 'landscape',
   )
   const cell =
     'flex shrink-0 select-none items-center justify-center rounded-md border-2 p-1 [-webkit-touch-callout:none]'
@@ -534,12 +620,22 @@ export function TerminalTable({
       onClick={() => act({ type: 'ringBell' })}
       aria-keyshortcuts="E"
       aria-label="Press the button"
-      className={`flex items-center justify-center gap-1 rounded-md border-2 border-[#2f6b3d] bg-[#07130b] text-p03 enabled:hover:bg-[#13261a] disabled:[&>*]:opacity-40 ${narrow ? 'shrink-0 flex-row gap-2 px-2 py-1' : 'flex-col p-3'}`}
+      className={`flex items-center justify-center gap-1 rounded-md border-2 border-[#2f6b3d] bg-[#07130b] text-p03 enabled:hover:bg-[#13261a] disabled:[&>*]:opacity-40 ${layout === 'landscape' ? 'flex-1 flex-col gap-1 p-2' : narrow ? 'shrink-0 flex-row gap-2 px-2 py-1' : 'flex-col p-3'}`}
     >
       <span
-        className={`grid place-items-center rounded-full border-[#2f6b3d] bg-[#a3172b] shadow-[0_0_14px_rgb(255_60_60/0.4)] ${narrow ? 'size-8 border-2' : 'size-[min(3.5rem,6dvh)] border-4'}`}
+        className={`grid place-items-center rounded-full border-[#2f6b3d] bg-[#a3172b] shadow-[0_0_14px_rgb(255_60_60/0.4)] ${layout === 'landscape' ? 'size-10 border-4' : narrow ? 'size-8 border-2' : 'size-[min(3.5rem,6dvh)] border-4'}`}
       />
-      <span className={`tracking-widest ${narrow ? 'text-base' : 'text-2xl'}`}>EXECUTE</span>
+      {/* Landscape turned upright on a 320px phone has room for the button's name only cut short. */}
+      <span className={`tracking-widest ${narrow ? 'text-base' : 'text-2xl'}`}>
+        {layout === 'landscape' && !sideways ? (
+          <>
+            <span className="max-[359px]:hidden">EXECUTE</span>
+            <span className="min-[360px]:hidden">EXEC.</span>
+          </>
+        ) : (
+          'EXECUTE'
+        )}
+      </span>
       {short || narrow ? null : <span className="text-sm text-p03-dim">press the button · E</span>}
     </button>
   )
@@ -560,6 +656,7 @@ export function TerminalTable({
             key={i}
             {...look({ row: 'back', lane: i }, unit)}
             aria-label={unit ? `Queued in lane ${i + 1}: ${describe(unit)}` : `Lane ${i + 1}: nothing queued`}
+            onClick={tapToRead && unit ? () => setReading({ row: 'back', lane: i }) : undefined}
             className={`${cell} border-[#1f3a26] brightness-75`}
             style={laneSize}
           >
@@ -580,6 +677,7 @@ export function TerminalTable({
             key={i}
             {...look({ row: 'front', lane: i }, unit)}
             aria-label={unit ? `P03's lane ${i + 1}: ${describe(unit)}` : `P03's lane ${i + 1}: empty`}
+            onClick={tapToRead && unit ? () => setReading({ row: 'front', lane: i }) : undefined}
             className={`${cell} border-[#1f3a26]`}
             style={laneSize}
           >
@@ -643,7 +741,13 @@ export function TerminalTable({
               key={i}
               aria-label={action ? undefined : label}
               {...look({ row: 'board', lane: i }, unit)}
-              onClick={action ? undefined : () => !busy && refuse(`lane-${i}`)}
+              onClick={
+                action
+                  ? undefined
+                  : tapToRead && unit
+                    ? () => setReading({ row: 'board', lane: i })
+                    : () => !busy && refuse(`lane-${i}`)
+              }
               className={`${cell} relative ${frame}`}
               style={{ ...laneSize, ...shaking(`lane-${i}`) }}
             >
@@ -672,11 +776,14 @@ export function TerminalTable({
   const said = busy
     ? "P03's turn…"
     : prompt(mustDraw, summoning, summoning ? owed(summoning, state.player.board, state.summon?.marked ?? []) : 0)
+  const [consoleBox, consoleScroll] = useStuckToBottom(game.log.length)
+  const [saysBox, saysScroll] = useStuckToBottom(`${game.log.length} ${said}`)
+  const [modalBox, modalScroll] = useStuckToBottom(game.log.length)
   const promptLine = (
     <p
       key={refused.count}
       title={said}
-      className={`text-p03-dim ${layout === 'narrow' ? 'h-[2lh] w-full overflow-y-auto text-lg leading-tight' : layout === 'mid' ? 'w-full truncate text-[clamp(1rem,4.4cqi,1.25rem)]' : 'w-full truncate text-center text-[clamp(1rem,4cqi,1.5rem)]'}`}
+      className={`text-p03-dim ${layout === 'narrow' ? 'h-[2lh] w-full overflow-y-auto text-lg leading-tight' : layout === 'landscape' ? 'w-full text-lg leading-tight text-p03' : layout === 'mid' ? 'w-full truncate text-[clamp(1rem,4.4cqi,1.25rem)]' : 'w-full truncate text-center text-[clamp(1rem,4cqi,1.5rem)]'}`}
       style={refused.count ? { animation: 'nudge 0.6s ease-out' } : undefined}
     >
       {said}
@@ -685,7 +792,7 @@ export function TerminalTable({
   const readerPanel = (
     <Panel
       ref={readerBox}
-      className={`@container flex gap-2 bg-[#a9e7b8] text-[#0b1f12] ${readerFlat ? 'flex-row overflow-hidden p-2' : 'flex-col overflow-hidden'} ${narrow ? (layout === 'mid' ? (readerFlat ? 'h-[min(20rem,72%)] shrink-0' : 'max-h-[80%] shrink-0') : 'h-56') : 'max-h-[70%] shrink-0'}`}
+      className={`@container flex gap-2 bg-[#a9e7b8] text-[#0b1f12] ${readerFlat ? 'flex-row overflow-hidden p-2' : 'flex-col overflow-hidden'} ${narrow ? (layout === 'mid' ? (readerFlat ? 'h-[min(20rem,72%)] min-h-0' : 'max-h-[80%] min-h-0') : 'h-56') : 'max-h-[70%] shrink-0'}`}
     >
       {inspected ? (
         readerFlat ? (
@@ -727,36 +834,50 @@ export function TerminalTable({
     <div
       aria-hidden
       className="pointer-events-none fixed z-[60] w-40 drop-shadow-[0_0_12px_rgb(0_0_0/0.8)]"
-      style={{
-        left: Math.min(Math.max(8, magnified.x - 80), window.innerWidth - 168),
-        top: Math.max(8, magnified.y - 250),
-      }}
+      // Above the finger, or beside it where there is no room above.
+      style={
+        magnified.y - 250 >= 8
+          ? { left: Math.min(Math.max(8, magnified.x - 80), window.innerWidth - 168), top: magnified.y - 250 }
+          : {
+              left: magnified.x > window.innerWidth / 2 ? magnified.x - 184 : magnified.x + 24,
+              top: Math.min(Math.max(8, magnified.y - 112), window.innerHeight - 232),
+            }
+      }
     >
       <PixelCard unit={magnified.unit} />
       {/* The same glass as the 3D table's magnified cards. */}
       <span className="crt-glass absolute inset-0 [clip-path:polygon(0_0,86%_0,100%_9%,100%_100%,0_100%)]" />
     </div>
   ) : null
+  // Oldest first; a short log sits at the bottom, where the newest line is.
+  const logItems = game.log.map((line, index) => (
+    <li key={index} className="first:mt-auto">
+      {line}
+    </li>
+  ))
   const consolePanel = (
     <section
       aria-label="P03's console"
       className={`flex flex-col rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-2 text-base ${layout === 'narrow' ? 'h-36' : 'min-h-16 flex-1 basis-0'}`}
     >
-      <ol aria-live="polite" className="flex min-h-0 flex-1 flex-col-reverse overflow-y-auto text-lg">
-        {[...game.log].reverse().map((line, index) => (
-          <li key={game.log.length - index}>{line}</li>
-        ))}
+      <ol
+        ref={consoleBox}
+        onScroll={consoleScroll}
+        aria-live="polite"
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto text-lg"
+      >
+        {logItems}
       </ol>
     </section>
   )
-  // Always in its place, shown only while summoning, so nothing moves when it comes and goes.
+  // Always in its place, and only pressable while summoning, so nothing moves when it can be.
   const cancelButton = (
     <button
       type="button"
-      {...(state.summon ? { 'data-action': 'cancel' } : { 'aria-hidden': true, tabIndex: -1 })}
+      {...(state.summon ? { 'data-action': 'cancel' } : {})}
       disabled={!state.summon}
       onClick={() => act({ type: 'cancel' })}
-      className={`${SIDE_BUTTON} w-full ${narrow ? 'mt-1' : ''} ${state.summon ? '' : 'invisible'}`}
+      className={`${SIDE_BUTTON} w-full disabled:opacity-40 disabled:hover:bg-[#07130b] ${layout === 'mid' || layout === 'narrow' ? 'mt-1' : ''}`}
     >
       Cancel
     </button>
@@ -781,7 +902,7 @@ export function TerminalTable({
   const handCards = (
     // A box the cards scroll in, so a full hand never runs over the controls or the piles.
     <div
-      className={`justify-[safe_center] flex min-w-0 flex-1 items-center gap-2 overflow-x-auto rounded-md border-2 border-[#1f3a26] bg-[#050d07]/70 px-1 pt-5 pb-1 ${narrow ? '' : 'h-full'}`}
+      className={`flex min-w-0 flex-1 gap-2 rounded-md border-2 border-[#1f3a26] bg-[#050d07]/70 px-1 pb-1 ${sideways ? 'min-h-0 flex-wrap content-start justify-center overflow-y-auto pt-3' : `justify-[safe_center] items-center overflow-x-auto ${layout === 'landscape' ? 'pt-3' : 'pt-5'}`} ${narrow ? '' : 'h-full'}`}
     >
       {view.hand.map((unit) => {
         const selected = unit.uid === state.summon?.uid
@@ -792,18 +913,24 @@ export function TerminalTable({
           <div
             key={unit.uid}
             {...look({ uid: unit.uid }, unit)}
-            className={`shrink-0 select-none [-webkit-touch-callout:none] ${narrow ? (layout === 'mid' ? 'w-[clamp(5rem,6.5vw,6.5rem)]' : 'w-14') : 'aspect-[5/7] h-full'}`}
+            className={`shrink-0 select-none [-webkit-touch-callout:none] ${narrow ? (layout === 'mid' ? 'w-[clamp(5rem,6.5vw,6.5rem)]' : layout === 'landscape' && !sideways ? 'w-12 tall:w-14' : 'w-14') : 'aspect-[5/7] h-full'}`}
             style={fresh(unit.uid) ? { animation: 'arrive-up 280ms ease-out' } : undefined}
           >
             <button
               type="button"
-              aria-disabled={!allowed && !selected}
+              // On a phone a card that cannot be played still opens to be read.
+              aria-disabled={!allowed && !selected && !tapToRead}
               aria-pressed={selected}
               aria-label={`${describe(unit)}, costs ${card(unit.card).cost}`}
               data-action="select"
               data-uid={unit.uid}
+              // On a phone, a tap selects the card if it can; otherwise, or on the card already selected, it reads it.
               onClick={() =>
-                allowed ? act({ type: 'select', uid: unit.uid }) : !selected && !busy && refuse(`card-${unit.uid}`)
+                tapToRead && (selected || !allowed)
+                  ? setReading({ uid: unit.uid })
+                  : allowed
+                    ? act({ type: 'select', uid: unit.uid })
+                    : !selected && !busy && refuse(`card-${unit.uid}`)
               }
               className={`w-full rounded-md p-1 transition-transform ${selected ? '-translate-y-3 outline-2 outline-p03 outline-dashed' : allowed ? 'hover:-translate-y-1' : 'brightness-50 saturate-50'}`}
             >
@@ -821,7 +948,12 @@ export function TerminalTable({
     </div>
   )
   const pilesPanel = (
-    <div key={refused.count} className="flex shrink-0 gap-3" style={shaking('piles')}>
+    // Boxed like the hand, except in the wide layout, where they stand on the table's edge.
+    <div
+      key={refused.count}
+      className={`flex shrink-0 gap-3 ${narrow ? 'items-center rounded-md border-2 border-[#1f3a26] bg-[#050d07]/70 px-2 pt-2 pb-1' : ''}`}
+      style={shaking('piles')}
+    >
       <button
         type="button"
         data-action="draw-deck"
@@ -830,7 +962,7 @@ export function TerminalTable({
         title={handFull ? `Your hand is full (${HAND_LIMIT}): no draw this turn` : undefined}
         onClick={() => act({ type: 'draw', from: 'deck' })}
         aria-label={`Draw from the deck, ${view.deck} left`}
-        className={`flex flex-col items-center gap-1 text-p03 disabled:brightness-50 disabled:saturate-50 ${narrow ? 'w-12 sm:w-16' : 'w-20'}`}
+        className={`flex flex-col items-center gap-1 text-p03 disabled:brightness-50 disabled:saturate-50 ${sideways ? 'w-10' : layout === 'landscape' ? 'w-8 tall:w-10' : narrow ? 'w-12 sm:w-16' : 'w-20'}`}
       >
         <span className="grid aspect-[5/7] w-full place-items-center rounded-md border-2 border-[#2f6b3d] bg-[#0b1f12] text-3xl shadow-[3px_3px_0_#1f3a26,6px_6px_0_#13261a]">
           ▦
@@ -845,7 +977,7 @@ export function TerminalTable({
         title={handFull ? `Your hand is full (${HAND_LIMIT}): no draw this turn` : undefined}
         onClick={() => act({ type: 'draw', from: 'boilerplate' })}
         aria-label="Take a Boilerplate"
-        className={`flex flex-col items-center gap-1 text-p03 disabled:brightness-50 disabled:saturate-50 ${narrow ? 'w-12 sm:w-16' : 'w-20'}`}
+        className={`flex flex-col items-center gap-1 text-p03 disabled:brightness-50 disabled:saturate-50 ${sideways ? 'w-10' : layout === 'landscape' ? 'w-8 tall:w-10' : narrow ? 'w-12 sm:w-16' : 'w-20'}`}
       >
         <span className="grid aspect-[5/7] w-full place-items-center rounded-md border-2 border-[#0b1f12] bg-[#a9e7b8] text-lg text-[#0b1f12] shadow-[3px_3px_0_#1f3a26,6px_6px_0_#13261a]">
           {'</>'}
@@ -854,6 +986,17 @@ export function TerminalTable({
       </button>
     </div>
   )
+
+  // A held card was being read, not played.
+  const holding = {
+    onContextMenu: (event: React.MouseEvent) => (hold.current || held.current) && event.preventDefault(),
+    onClickCapture: (event: React.MouseEvent) => {
+      if (!held.current) return
+      held.current = false
+      event.stopPropagation()
+      event.preventDefault()
+    },
+  }
 
   if (!narrow)
     return (
@@ -864,6 +1007,7 @@ export function TerminalTable({
           data-game-id={game.id}
           data-seed={state.seed}
           data-table="text"
+          {...holding}
           ref={frame}
           // Sized to the room it has, in the page or the whole screen; the classes never fight over position or size.
           style={size}
@@ -898,9 +1042,213 @@ export function TerminalTable({
             {handCards}
             {pilesPanel}
           </section>
+          {magnifier}
         </div>
       </>
     )
+
+  // Landscape, a phone on its side: the whole screen, the board as tall as it goes in the middle; the turn, the scale
+  // and the hand on the left; the piles, the button and what P03 says on the right. No reader or log: holding a card
+  // magnifies it. Turned upright, the same pieces stack above and below a board of about the same size.
+  if (layout === 'landscape') {
+    const readUnit = at(reading)
+    // Why a card in the hand could not be picked, where that is why it opened; beside the close button, in the space it
+    // leaves.
+    const readNote =
+      !reading || !('uid' in reading) || result
+        ? null
+        : reading.uid === state.summon?.uid
+          ? 'Being summoned'
+          : busy
+            ? "P03's turn"
+            : mustDraw
+              ? 'Draw first'
+              : has(legal, { type: 'select', uid: reading.uid } as Partial<Action>)
+                ? null
+                : 'Not enough to sacrifice'
+    const status = (
+      <div className="flex items-center gap-2 text-lg">
+        <span className="text-p03">Turn {view.turn}</span>
+        <span className="ml-auto truncate text-sm text-p03-dim" aria-live="polite">
+          {game.saving ? 'saving…' : game.unsaved ? `${game.unsaved} unsaved` : 'saved'}
+        </span>
+        <button
+          type="button"
+          aria-expanded={menu}
+          aria-label="Menu"
+          onClick={() => setMenu((open) => !open)}
+          className="rounded px-2 text-2xl leading-none text-p03 hover:bg-[#13261a]"
+        >
+          ≡
+        </button>
+      </div>
+    )
+    // The log, scrolled to its end, with what to do now as its newest line.
+    // Short and upright, the box holds the prompt alone rather than a clipped line of the log.
+    const says = (className: string, log = 'block') => (
+      <div
+        ref={saysBox}
+        onScroll={saysScroll}
+        className={`@container flex flex-col gap-1 overflow-y-auto rounded-md border-2 border-[#1f3a26] bg-[#050d07]/70 p-2 ${className}`}
+      >
+        <ol aria-live="polite" className={`mt-auto text-base leading-tight text-p03-dim ${log}`}>
+          {logItems}
+        </ol>
+        {promptLine}
+      </div>
+    )
+    const menuPanel = menu ? (
+      <div
+        className={`absolute top-12 z-40 flex w-72 max-w-[calc(100%-1rem)] flex-col gap-3 rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-2 ${sideways ? 'left-2' : 'right-2'}`}
+      >
+        {seat ? <SeatNote seat={seat} /> : null}
+        <div className="grid grid-cols-2 gap-2 [&_svg]:size-4 [&_svg]:shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              setMenu(false)
+              setLogOpen(true)
+            }}
+            className={MENU_BUTTON}
+          >
+            <ScrollText aria-hidden />
+            Battle log
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMenu(false)
+              setTerminalOpen(true)
+            }}
+            className={MENU_BUTTON}
+          >
+            <SquareTerminal aria-hidden />
+            Terminal
+          </button>
+          {fullScreen.supported ? (
+            <button type="button" onClick={fullScreen.toggle} className={`${MENU_BUTTON} whitespace-nowrap`}>
+              {fullScreen.on ? <Minimize aria-hidden /> : <Maximize aria-hidden />}
+              {fullScreen.on ? 'Exit full screen' : 'Full screen'}
+            </button>
+          ) : null}
+          <Forfeit forfeit={game.forfeit} className={`${MENU_BUTTON} h-auto`}>
+            <Flag aria-hidden />
+            Forfeit
+          </Forfeit>
+          <button type="button" onClick={on3d} className={MENU_BUTTON}>
+            <Box aria-hidden />
+            3D Table
+          </button>
+          <Link to="/" className={MENU_BUTTON}>
+            <LogOut aria-hidden />
+            Leave Game
+          </Link>
+        </div>
+      </div>
+    ) : null
+    const board = (
+      <div
+        role="region"
+        ref={setArea}
+        aria-label="The table"
+        className={`relative z-10 flex min-w-0 items-center justify-center ${scrolling ? 'shrink-0' : 'min-h-0 flex-1'}`}
+      >
+        {boardPanel}
+      </div>
+    )
+    const pieces =
+      'absolute inset-0 z-10 gap-2 pt-[max(0.5rem,env(safe-area-inset-top))] pr-[max(0.5rem,env(safe-area-inset-right))] pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(0.5rem,env(safe-area-inset-left))]'
+    return (
+      <div
+        data-game-id={game.id}
+        data-seed={state.seed}
+        data-table="text"
+        {...holding}
+        className="p03-screen crt fixed inset-0 z-50 overflow-hidden font-terminal text-xl"
+      >
+        {/* The screen and the glass stay put while the pieces scroll over them. */}
+        <FaultyScreen />
+        <span aria-hidden className="crt-glass pointer-events-none absolute inset-0 z-30" />
+        {sideways ? (
+          <div
+            className={`${pieces} grid grid-cols-[minmax(9.5rem,1fr)_auto_minmax(11.5rem,1fr)] grid-rows-[minmax(0,1fr)] overflow-hidden`}
+          >
+            <aside className="relative z-10 flex min-h-0 flex-col gap-2 overflow-hidden">
+              <div className="rounded-md border-2 border-[#2f6b3d] bg-[#07130b] py-1 pr-1 pl-2">{status}</div>
+              <Panel className="shrink-0 p-2">
+                <Balance scale={view.scale} />
+              </Panel>
+              <section ref={setHandSection} aria-label="Your hand" className="flex min-h-0 flex-1 flex-col">
+                {handCards}
+              </section>
+            </aside>
+            {board}
+            <aside className="relative z-10 flex min-h-0 flex-col gap-2">
+              <div className="flex items-stretch gap-2">
+                {pilesPanel}
+                <div className="flex min-w-0 flex-1 flex-col">{executeButton}</div>
+              </div>
+              {says('min-h-0 flex-1')}
+              {cancelButton}
+            </aside>
+          </div>
+        ) : (
+          <div className={`${pieces} flex flex-col ${scrolling ? 'overflow-y-auto' : 'overflow-hidden'}`}>
+            <div className="relative z-10 flex shrink-0 flex-col gap-1 rounded-md border-2 border-[#2f6b3d] bg-[#07130b] py-1 pr-1 pl-2">
+              {status}
+              <ScaleBar scale={view.scale} fluid className="gap-1 pr-1 text-base" />
+            </div>
+            <div className="relative z-10 shrink-0">{says('h-[3.25rem] tall:h-[4.75rem]', 'hidden tall:block')}</div>
+            {board}
+            <section ref={setHandSection} aria-label="Your hand" className="relative z-10 flex shrink-0">
+              {handCards}
+            </section>
+            <div className="relative z-10 flex shrink-0 items-stretch gap-2">
+              {pilesPanel}
+              <div className="flex min-w-0 flex-1 flex-col">{executeButton}</div>
+              <div className="flex w-24 min-[360px]:w-28">{cancelButton}</div>
+            </div>
+          </div>
+        )}
+        {menuPanel}
+        <Dialog open={logOpen} onOpenChange={setLogOpen}>
+          <DialogContent
+            aria-describedby={undefined}
+            className="flex max-h-[85dvh] flex-col border-2 border-[#2f6b3d] bg-[#07130b] font-terminal text-p03 ring-0"
+          >
+            <DialogHeader>
+              <DialogTitle className="font-terminal text-2xl font-normal text-p03">Battle log</DialogTitle>
+            </DialogHeader>
+            <ol ref={modalBox} onScroll={modalScroll} className="flex min-h-0 flex-1 flex-col overflow-y-auto text-lg">
+              {logItems}
+            </ol>
+          </DialogContent>
+        </Dialog>
+        <Dialog open={readUnit !== null} onOpenChange={(open) => !open && setReading(null)}>
+          <DialogContent
+            aria-describedby={undefined}
+            className="@container flex max-h-[85dvh] flex-col gap-2 overflow-y-auto border-2 border-[#0b1f12] bg-[#a9e7b8] p-3 pt-10 font-terminal text-[#0b1f12] ring-0 sm:max-w-sm"
+          >
+            <DialogTitle className="sr-only">{readUnit ? describe(readUnit) : 'Card'}</DialogTitle>
+            {readUnit ? <ReaderBody unit={readUnit} /> : null}
+            {readNote ? <p className="absolute top-2.5 right-10 left-3 truncate text-lg">{readNote}</p> : null}
+          </DialogContent>
+        </Dialog>
+        <Dialog open={terminalOpen} onOpenChange={setTerminalOpen}>
+          <DialogContent
+            aria-describedby={undefined}
+            className="flex h-[min(32rem,85dvh)] flex-col overflow-hidden border-2 border-[#2f6b3d] bg-p03-ground p-0 ring-0 [&>[data-slot=dialog-close]]:z-10"
+          >
+            <DialogTitle className="sr-only">P03's terminal</DialogTitle>
+            <Suspense fallback={<div className="h-full bg-p03-ground" />}>
+              <Terminal lines={TERMINAL_LINES} user={user} />
+            </Suspense>
+          </DialogContent>
+        </Dialog>
+        {magnifier}
+      </div>
+    )
+  }
 
   // Compact: a strip over the board, the playing pieces sized to fit the window, the rest below. Mid puts the
   // reader and the console beside the board; narrow, down to a 320px phone, stacks everything in one column.
@@ -909,14 +1257,7 @@ export function TerminalTable({
       data-game-id={game.id}
       data-seed={state.seed}
       data-table="text"
-      // A held card was being read, not played.
-      onContextMenu={(event) => (hold.current || held.current) && event.preventDefault()}
-      onClickCapture={(event) => {
-        if (!held.current) return
-        held.current = false
-        event.stopPropagation()
-        event.preventDefault()
-      }}
+      {...holding}
       className={`p03-screen crt mx-auto flex w-full max-w-[1792px] flex-col gap-2 overflow-hidden border border-[#2f6b3d] p-2 font-terminal text-xl sm:gap-3 sm:p-3 ${fullScreen.on ? 'fixed inset-0 z-50 overflow-y-auto' : 'relative rounded-lg'}`}
     >
       <FaultyScreen />
@@ -925,7 +1266,7 @@ export function TerminalTable({
       <div ref={setArea} className="relative z-10 flex justify-center gap-3">
         <section aria-label="The table" className="flex flex-none flex-col items-center gap-2">
           {/* As wide as the board and no wider, so its words wrap instead of pushing the reader off the table. */}
-          {seat ? (
+          {seat && layout === 'narrow' ? (
             <div className="w-0 min-w-full">
               <SeatNote seat={seat} />
             </div>
@@ -935,7 +1276,9 @@ export function TerminalTable({
         {layout === 'mid' ? (
           // Pinned to the board's height so the column never makes the row taller; it takes the width left over.
           <div className="relative max-w-[32rem] min-w-52 flex-1">
-            <div className="absolute inset-0 flex flex-col gap-3">
+            <div className="absolute inset-0 flex flex-col gap-3 overflow-hidden">
+              {/* Here rather than over the board, where it would take the board's height. */}
+              {seat ? <SeatNote seat={seat} /> : null}
               {readerPanel}
               {consolePanel}
             </div>

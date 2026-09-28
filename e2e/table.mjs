@@ -249,7 +249,17 @@ section('Phones')
   check('which it gets in one tap', true)
 
   await page.setViewportSize({ width: 844, height: 390 })
-  await page.getByRole('button', { name: 'Play on the 3D table' }).click()
+  const text = page.locator('[data-table="text"]')
+  await page.waitForFunction(() => document.querySelector('[data-table="text"]')?.getBoundingClientRect().top === 0)
+  const box = await text.boundingBox()
+  check(
+    'turned sideways, the text table fills the screen',
+    box?.height === 390 && box.width === 844,
+    JSON.stringify(box),
+  )
+  // Its controls are in a menu, as the header is covered.
+  await text.getByRole('button', { name: 'Menu' }).click()
+  await page.getByRole('button', { name: '3D Table' }).click()
   await tableReady(page)
   const fills = await page.evaluate(() => {
     const box = document.querySelector('[data-table="3d"]').getBoundingClientRect()

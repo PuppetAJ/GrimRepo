@@ -13,6 +13,8 @@
 @custom-variant dark (&:is(.dark *));
 /* Phones held sideways, where the 3D table takes the whole screen. */
 @custom-variant short (@media (max-height: 32rem));
+/* Tall enough, turned upright, for the landscape table's bigger pieces around the board. */
+@custom-variant tall (@media (min-height: 44rem));
 
 /* `:root` holds the values; `@theme inline` maps each to the Tailwind name shadcn's components use. */
 @theme inline {

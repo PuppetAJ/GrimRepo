@@ -1,5 +1,5 @@
 import { RotateCw } from 'lucide-react'
-import { Component, lazy, Suspense, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { Component, lazy, Suspense, useState, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button.tsx'
 import { Failure, Loading } from '../components/States.tsx'
 import type { Seat } from '../game/controls.tsx'
@@ -7,6 +7,7 @@ import { Boot } from '../game/table/Boot.tsx'
 import { TerminalTable } from '../game/TerminalTable.tsx'
 import { useGame } from '../game/useGame.ts'
 import { authClient, DEMO } from '../lib/auth.ts'
+import { useMedia } from '../lib/useMedia.ts'
 
 // three.js is most of the table's weight, so it loads only when someone sits down at it.
 const Table3D = lazy(() => import('../game/table/Table3D.tsx'))
@@ -29,23 +30,14 @@ const UPRIGHT_PHONE = '(orientation: portrait) and (max-width: 767px)'
 const WIDE = '(min-width: 1100px)'
 // Down to this width; narrower still, one column.
 const MID = '(min-width: 560px)'
-type Layout = 'wide' | 'mid' | 'narrow'
+// A phone on its side, as short as the 3D table's full-screen switch: the board in the middle, the rest beside it.
+const SIDEWAYS_PHONE = '(orientation: landscape) and (max-height: 32rem)'
+type Layout = 'wide' | 'mid' | 'narrow' | 'landscape'
 
-// ?layout=wide, mid or narrow forces one, to compare them.
+// ?layout=wide, mid, narrow or landscape forces one, to compare them.
 function askedLayout(): Layout | null {
   const asked = new URLSearchParams(window.location.search).get('layout')
-  return asked === 'wide' || asked === 'mid' || asked === 'narrow' ? asked : null
-}
-
-function useMedia(media: string): boolean {
-  return useSyncExternalStore(
-    (changed) => {
-      const query = window.matchMedia(media)
-      query.addEventListener('change', changed)
-      return () => query.removeEventListener('change', changed)
-    },
-    () => window.matchMedia(media).matches,
-  )
+  return asked === 'wide' || asked === 'mid' || asked === 'narrow' || asked === 'landscape' ? asked : null
 }
 
 /** A model that fails to load, or a lost WebGL context, offers the text table rather than a broken page. */
@@ -85,6 +77,7 @@ export function Game() {
   const upright = useMedia(UPRIGHT_PHONE)
   const wide = useMedia(WIDE)
   const mid = useMedia(MID)
+  const sideways = useMedia(SIDEWAYS_PHONE)
 
   const choose = (next: Mode) => {
     setMode(next)
@@ -106,7 +99,7 @@ export function Game() {
           game={game}
           seat={seat}
           on3d={() => choose('3d')}
-          layout={askedLayout() ?? (wide ? 'wide' : mid ? 'mid' : 'narrow')}
+          layout={askedLayout() ?? (sideways ? 'landscape' : wide ? 'wide' : mid ? 'mid' : 'narrow')}
         />
       </div>
     )
