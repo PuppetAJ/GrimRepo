@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input.tsx'
 import { Label } from '@/components/ui/label.tsx'
 import { PasswordInput } from '../components/PasswordInput.tsx'
 import { authClient, authError, DEMO } from '../lib/auth.ts'
+import { P03Line } from '../components/p03/P03Line.tsx'
 
 export function SignIn() {
   const navigate = useNavigate()
@@ -39,6 +40,7 @@ export function SignIn() {
   return (
     <div className="mx-auto flex w-full max-w-sm flex-col gap-6">
       <h1 className="font-display text-5xl">Sign in</h1>
+      <P03Line>Back again? Identify yourself.</P03Line>
       <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
         <div className="flex flex-col gap-2">
           <Label htmlFor="identifier">Username or email</Label>
@@ -58,14 +60,17 @@ export function SignIn() {
         </Button>
       </form>
       <div className="flex flex-col gap-3 border-t pt-5">
-        <p className="text-sm text-muted-foreground">Just looking? The demo account is shared by everyone.</p>
+        <p className="text-sm text-muted-foreground">Just looking?</p>
         <Button variant="outline" disabled={busy} onClick={() => void signIn(DEMO.username, DEMO.password)}>
           Play as the demo account
+        </Button>
+        <Button asChild variant="ghost" disabled={busy}>
+          <Link to="/game">Or play a game of your own as a guest</Link>
         </Button>
       </div>
       <p className="text-sm text-muted-foreground">
         New here?{' '}
-        <Link to="/signup" className="text-primary hover:underline">
+        <Link to="/signup" className="text-primary underline underline-offset-2">
           Create an account
         </Link>
       </p>

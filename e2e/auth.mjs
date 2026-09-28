@@ -103,12 +103,41 @@ section('Signing up')
   await context.close()
 }
 
+section('Playing as a guest')
+{
+  const { context, page } = await freshPage(browser, { table: 'text' })
+  await page.goto(BASE)
+  await page.getByRole('link', { name: 'Quick battle' }).click()
+  await page.locator('[data-table="text"]').waitFor()
+  check('Quick battle deals a signed-out visitor straight in', page.url() === `${BASE}/game`, page.url())
+  const menu = page.getByRole('button', { name: 'Account menu' })
+  check('as a guest, under a guest name', /guest_[a-z0-9]{6}/.test(await menu.innerText()), await menu.innerText())
+  check('who is told so at the table', await page.getByText('You are playing as a guest').isVisible())
+  const game = await page.locator('[data-game-id]').getAttribute('data-game-id')
+
+  const player = newPlayer('Claimed')
+  await page.getByRole('banner').getByRole('link', { name: 'Sign up' }).click()
+  await page.getByText('Your guest games come with you').waitFor()
+  check('signing up says their games come along', true)
+  await page.getByLabel('Username').fill(player.username)
+  await page.getByLabel('Email').fill(player.email)
+  await page.getByLabel('Password', { exact: true }).fill(player.password)
+  await page.getByRole('button', { name: 'Create account' }).click()
+  await page.getByRole('button', { name: 'Account menu' }).filter({ hasText: player.username }).waitFor()
+  await page.goto(`${BASE}/game`)
+  await page.locator('[data-game-id]').waitFor()
+  check(
+    'and the game they were playing is still theirs',
+    (await page.locator('[data-game-id]').getAttribute('data-game-id')) === game,
+  )
+  check('and the test player is removed afterwards', await deletePlayer(page, player))
+  await context.close()
+}
+
 section('The demo account and redirects')
 {
   const { context, page } = await freshPage(browser)
-  await page.goto(`${BASE}/game`)
-  await page.waitForURL(`${BASE}/login`)
-  check('the table sends a signed-out visitor to sign in', true)
+  await page.goto(`${BASE}/login`)
   await page.getByRole('button', { name: 'Play as the demo account' }).click()
   await page.getByRole('button', { name: 'Account menu' }).waitFor()
   check('signing in always lands on the home page', page.url() === `${BASE}/`, page.url())

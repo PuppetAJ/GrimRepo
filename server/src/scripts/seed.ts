@@ -23,21 +23,23 @@ const histories: Record<string, [Outcome, number][]> = {
     ['loss', 4],
     ['win', 21],
   ],
-  kwm0304: [
-    ['loss', 8],
-    ['win', 24],
-    ['loss', 13],
-  ],
   demo: [
     ['loss', 7],
     ['win', 19],
   ],
 }
 
+// The card each seeded player favours, so their profiles have one; their games have no moves to count it from.
+const favorites: Record<string, string> = {
+  JohanH: 'RubberDuck',
+  PuppetAJ: 'ForkBomb',
+  demo: 'CopyPaste',
+}
+
 const players = [
   demoAccount,
   // The original team keeps its names; nobody can sign in as them, since nobody knows the password.
-  ...['JohanH', 'PuppetAJ', 'kwm0304'].map((name) => ({
+  ...['JohanH', 'PuppetAJ'].map((name) => ({
     name,
     username: name,
     email: `${name.toLowerCase()}@grimrepo.test`,
@@ -61,10 +63,18 @@ async function main(): Promise<void> {
     const games = histories[player.username] ?? []
     for (const [index, [outcome, turns]] of games.entries()) {
       // Spread across recent days, newest last, so the stats page has some history to show.
+      const favorite = favorites[player.username]
       await pool.query(
-        `INSERT INTO games (user_id, outcome, turns, score, played_at)
-         VALUES ($1, $2, $3, $4, now() - make_interval(days => $5))`,
-        [user.id, outcome, turns, scoreBattle(outcome, turns), (games.length - index) * 2],
+        `INSERT INTO games (user_id, outcome, turns, score, played_at, cards)
+         VALUES ($1, $2, $3, $4, now() - make_interval(days => $5), $6)`,
+        [
+          user.id,
+          outcome,
+          turns,
+          scoreBattle(outcome, turns),
+          (games.length - index) * 2,
+          JSON.stringify(favorite ? { [favorite]: 2, Boilerplate: 3 } : {}),
+        ],
       )
     }
   }

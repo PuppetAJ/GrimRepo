@@ -1,5 +1,6 @@
-import { card, CARDS, type Unit } from 'shared'
+import { card, type Unit } from 'shared'
 import { CanvasTexture, SRGBColorSpace, type Texture } from 'three'
+import { SPRITE_SIZE, spriteOf } from '../sprites.ts'
 import { ICONS, STAT_ICONS } from './icons.ts'
 import { TINT } from './palette.ts'
 import { CORNER_HOLES, DISK, RECESS, SCREEN_DIVIDER, SECTIONS, SIGIL_BAND } from './layout.ts'
@@ -8,29 +9,14 @@ import { CORNER_HOLES, DISK, RECESS, SCREEN_DIVIDER, SECTIONS, SIGIL_BAND } from
 const W = 300
 const H = 504
 
-type Assets = { art: Map<string, HTMLImageElement> }
-
-function image(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image()
-    img.onload = () => resolve(img)
-    img.onerror = () => reject(new Error(`Could not load ${src}`))
-    img.src = src
-  })
-}
+// Proof that the font every face is lettered in has loaded; card art is drawn from sprites and needs no loading.
+type Assets = { font: 'VT323' }
 
 let assets: Promise<Assets> | null = null
 
-/** The art and the font every face needs, loaded once for the page. */
+/** The font every face needs, loaded once for the page. */
 export function loadCardAssets(): Promise<Assets> {
-  assets ??= (async () => {
-    const withArt = Object.keys(CARDS).filter((id) => id !== 'Boilerplate')
-    const [art] = await Promise.all([
-      Promise.all(withArt.map((id) => image(`/cards/${id}.webp`))),
-      document.fonts.load('48px VT323'),
-    ])
-    return { art: new Map(withArt.map((id, i) => [id, art[i] as HTMLImageElement])) }
-  })()
+  assets ??= document.fonts.load('48px VT323').then(() => ({ font: 'VT323' as const }))
   return assets
 }
 
@@ -146,65 +132,51 @@ function screen(context: CanvasRenderingContext2D, area: readonly [number, numbe
   for (let line = y; line < y + h; line += 3) context.fillRect(x, line, w, 1)
 }
 
-/** The 2022 art redrawn as a hologram: a dim dithered fill with a bright edge, as the game draws its bots. */
-const holograms = new Map<string, HTMLCanvasElement>()
+const sprites = new Map<string, HTMLCanvasElement>()
 
-/** A card's art as projected light, made once per card and colour: reading pixels back is slow, and the art never changes. */
-function hologramOf(art: HTMLImageElement, w: number, h: number, colour: string): HTMLCanvasElement {
-  const key = `${art.src}:${colour}:${Math.round(w)}x${Math.round(h)}`
-  let layer = holograms.get(key)
+/** A sprite at a whole-pixel scale, scanlined like projected light, made once per sprite, colour and size. */
+function spriteLayer(grid: readonly string[], scale: number, colour: string): HTMLCanvasElement {
+  const key = `${grid.join('')}:${colour}:${scale}`
+  let layer = sprites.get(key)
   if (layer) return layer
   layer = document.createElement('canvas')
-  layer.width = Math.round(w)
-  layer.height = Math.round(h)
-  // Kept on the CPU, so reading its pixels back does not wait on the GPU.
-  const paint = layer.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D
-  paint.drawImage(art, 0, 0, w, h)
-  // Dark strokes stay solid and light fills fade, so coloured art keeps its detail instead of becoming a blob.
-  const image = paint.getImageData(0, 0, layer.width, layer.height)
-  const { data } = image
-  for (let i = 0; i < data.length; i += 4) {
-    const light = (0.3 * (data[i] as number) + 0.59 * (data[i + 1] as number) + 0.11 * (data[i + 2] as number)) / 255
-    data[i + 3] = (data[i + 3] as number) * (1 - light * 0.85)
-  }
-  paint.putImageData(image, 0, 0)
-  paint.globalCompositeOperation = 'source-in'
-  paint.fillStyle = colour
-  paint.fillRect(0, 0, w, h)
-  // Every stroke a pixel thicker, so fine line art survives being shrunk on a distant card.
-  const thin = document.createElement('canvas')
-  thin.width = layer.width
-  thin.height = layer.height
-  ;(thin.getContext('2d') as CanvasRenderingContext2D).drawImage(layer, 0, 0)
-  paint.globalCompositeOperation = 'source-over'
-  for (const [dx, dy] of [
-    [-1, 0],
-    [1, 0],
-    [0, -1],
-    [0, 1],
-  ] as const)
-    paint.drawImage(thin, dx, dy)
-  // Scanlines through the hologram itself, so it reads as projected light.
+  layer.width = layer.height = SPRITE_SIZE * scale
+  const paint = layer.getContext('2d') as CanvasRenderingContext2D
+  pixels(
+    paint,
+    grid.map((row) => row.replaceAll('#', '1')),
+    0,
+    0,
+    scale,
+    colour,
+  )
   paint.globalCompositeOperation = 'destination-out'
-  paint.fillStyle = 'rgb(0 0 0 / 0.45)'
-  for (let line = 1; line < h; line += 3) paint.fillRect(0, line, w, 1)
-  holograms.set(key, layer)
+  paint.fillStyle = 'rgb(0 0 0 / 0.35)'
+  for (let line = 1; line < layer.height; line += 3) paint.fillRect(0, line, layer.width, 1)
+  sprites.set(key, layer)
   return layer
 }
 
-function hologram(
+/** A sprite centred in its area, as large as whole pixels allow, glowing like the rest of the screen. */
+function sprite(
   context: CanvasRenderingContext2D,
-  art: HTMLImageElement,
+  grid: readonly string[],
   x: number,
   y: number,
   w: number,
   h: number,
   palette: Palette,
 ) {
+  const scale = Math.max(1, Math.floor(Math.min(w, h) / SPRITE_SIZE))
+  const size = SPRITE_SIZE * scale
   context.save()
   context.shadowColor = palette.line
   context.shadowBlur = 5
-  context.drawImage(hologramOf(art, w, h, palette.line), x, y)
+  context.drawImage(
+    spriteLayer(grid, scale, palette.line),
+    Math.round(x + (w - size) / 2),
+    Math.round(y + (h - size) / 2),
+  )
   context.restore()
 }
 
@@ -215,7 +187,7 @@ type Layer = 'base' | 'content' | 'lights'
  * closes; `content` is what shows on them (name, art, cost, sigils, numerals) on a clear ground, which fades out;
  * `lights` is the content on black, for the emissive map, so only the screens' contents glow.
  */
-function drawFace(context: CanvasRenderingContext2D, unit: Unit, loaded: Assets, layer: Layer): void {
+function drawFace(context: CanvasRenderingContext2D, unit: Unit, layer: Layer): void {
   const def = card(unit.card)
   const palette = def.tier === 'S' ? RARE : COMMON
   context.clearRect(0, 0, W, H)
@@ -260,18 +232,7 @@ function drawFace(context: CanvasRenderingContext2D, unit: Unit, loaded: Assets,
 
   // The art above the divider, the sigils below it, the cost in the top-right corner.
   const divider = SCREEN_DIVIDER * H
-  const art = loaded.art.get(unit.card)
-  if (art) hologram(context, art, sx + sw * 0.03, sy + sh * 0.08, sw * 0.94, divider - sy - sh * 0.1, palette)
-  else {
-    context.save()
-    context.shadowColor = palette.line
-    context.shadowBlur = 8
-    context.fillStyle = palette.line
-    context.font = '46px VT323'
-    context.fillText('<div>', sx + sw / 2, sy + (divider - sy) * 0.42)
-    context.fillText('</div>', sx + sw / 2, sy + (divider - sy) * 0.62)
-    context.restore()
-  }
+  sprite(context, spriteOf(unit.card), sx + sw * 0.03, sy + sh * 0.08, sw * 0.94, divider - sy - sh * 0.1, palette)
   const cells = 4
   const cell = 13
   context.fillStyle = palette.cost
@@ -331,7 +292,7 @@ function drawn(unit: Unit, loaded: Assets, layer: Layer): Texture {
   let found = faces.get(key)
   if (!found) {
     const [element, context] = canvas()
-    drawFace(context, unit, loaded, layer)
+    drawFace(context, unit, layer)
     found = texture(element)
     faces.set(key, found)
   }

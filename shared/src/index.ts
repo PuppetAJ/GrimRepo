@@ -11,7 +11,16 @@ export {
   type Tier,
 } from './cards.ts'
 export { deadLane, nextBotAction, playOut, type Strategy } from './engine/bot.ts'
-export { apply, createGame, legalActions, replay, summary, type GameOptions, type Replay } from './engine/game.ts'
+export {
+  apply,
+  cardsPlayed,
+  createGame,
+  legalActions,
+  replay,
+  summary,
+  type GameOptions,
+  type Replay,
+} from './engine/game.ts'
 export {
   HAND_LIMIT,
   LANES,

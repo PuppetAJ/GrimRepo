@@ -14,6 +14,8 @@ export async function nightlyCleanup(): Promise<Record<string, number>> {
     abandonedGames: await count(
       `DELETE FROM games WHERE status = 'playing' AND started_at < now() - interval '30 days'`,
     ),
+    // A guest who never signed up in a week is not coming back; their games go with them.
+    staleGuests: await count(`DELETE FROM users WHERE is_anonymous AND created_at < now() - interval '7 days'`),
     expiredSessions: await count('DELETE FROM sessions WHERE expires_at < now()'),
     expiredVerifications: await count('DELETE FROM verifications WHERE expires_at < now()'),
     // Rate-limit rows only matter for a minute; last_request is in milliseconds.

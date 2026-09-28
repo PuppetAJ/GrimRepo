@@ -84,4 +84,6 @@ export function isOffensive(name: string): boolean {
   return [name, name.replaceAll('_', ''), spaced].some((reading) => matcher.hasMatch(reading))
 }
 
-export const isReserved = (name: string): boolean => RESERVED.has(name.replaceAll('_', '').toLowerCase())
+// Guest names are handed out to guests alone, so no player can pass for one.
+export const isReserved = (name: string): boolean =>
+  RESERVED.has(name.replaceAll('_', '').toLowerCase()) || /^guest_/i.test(name)

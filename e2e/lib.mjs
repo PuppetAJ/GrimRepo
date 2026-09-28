@@ -79,10 +79,22 @@ export async function freshPage(browser, { width = 1280, height = 900, table } =
   return { context, page }
 }
 
-/** The stamp keeps a rerun from colliding with the players the last one made. */
+// Consonants only: no vowels, and no digits the name filter reads as letters, so a stamp never spells a blocked word.
+const STAMP_LETTERS = 'bcdfghjkmnpqrtvwz'
+
+/** A name part from the clock, so a rerun never collides with the players the last one made. */
+export function stamp() {
+  let left = Date.now() * 1000 + Math.floor(Math.random() * 1000)
+  let text = ''
+  while (left > 0) {
+    text = STAMP_LETTERS[left % STAMP_LETTERS.length] + text
+    left = Math.floor(left / STAMP_LETTERS.length)
+  }
+  return text
+}
+
 export function newPlayer(prefix = 'e2e') {
-  const stamp = `${Date.now().toString(36)}${Math.floor(Math.random() * 1296).toString(36)}`
-  const username = `${prefix}_${stamp}`.slice(0, 20)
+  const username = `${prefix}_${stamp()}`.slice(0, 20)
   return { username, email: `${username}@grimrepo.test`, password: 'a-long-enough-password' }
 }
 
