@@ -5,6 +5,7 @@ import { Failure, Loading } from '../components/States.tsx'
 import type { Seat } from '../game/controls.tsx'
 import { Boot } from '../game/table/Boot.tsx'
 import { TerminalTable } from '../game/TerminalTable.tsx'
+import type { Layout } from '../game/text/useTextTable.ts'
 import { useGame } from '../game/useGame.ts'
 import { authClient, DEMO } from '../lib/auth.ts'
 import { useMedia } from '../lib/useMedia.ts'
@@ -32,12 +33,11 @@ const WIDE = '(min-width: 1100px)'
 const MID = '(min-width: 560px)'
 // A phone on its side, as short as the 3D table's full-screen switch; it gets the phone layout, as an upright one does.
 const SIDEWAYS_PHONE = '(orientation: landscape) and (max-height: 32rem)'
-type Layout = 'wide' | 'mid' | 'narrow' | 'phone'
 
-// ?layout=wide, mid, narrow or phone forces one, to compare them; narrow is only ever asked for now.
+// ?layout=wide, mid or phone forces one, to compare them.
 function askedLayout(): Layout | null {
   const asked = new URLSearchParams(window.location.search).get('layout')
-  return asked === 'wide' || asked === 'mid' || asked === 'narrow' || asked === 'phone' ? asked : null
+  return asked === 'wide' || asked === 'mid' || asked === 'phone' ? asked : null
 }
 
 /** A model that fails to load, or a lost WebGL context, offers the text table rather than a broken page. */

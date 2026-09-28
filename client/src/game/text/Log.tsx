@@ -1,0 +1,100 @@
+import { lazy, Suspense } from 'react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog.tsx'
+import { useTable } from './context.ts'
+import { PromptLine } from './Reading.tsx'
+import { useStuckToBottom } from './sizing.ts'
+
+// P03's terminal, for the phone layout's menu; loaded only when opened.
+const Terminal = lazy(() => import('../../components/p03/Terminal.tsx'))
+const TERMINAL_LINES = ['Lost already? Type help.', 'Or tutorial, if you need it spelled out.']
+
+/** The log's lines, oldest first; a short log sits at the bottom, where the newest line is. */
+function LogItems() {
+  const { game } = useTable()
+  return game.log.map((line, index) => (
+    <li key={index} className="first:mt-auto">
+      {line}
+    </li>
+  ))
+}
+
+/** P03's console: the whole log, for the wide and mid layouts. */
+export function ConsolePanel() {
+  const { game } = useTable()
+  const [box, onScroll] = useStuckToBottom(game.log.length)
+  return (
+    <section
+      aria-label="P03's console"
+      className="flex min-h-16 flex-1 basis-0 flex-col rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-2 text-base"
+    >
+      <ol
+        ref={box}
+        onScroll={onScroll}
+        aria-live="polite"
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto text-lg"
+      >
+        <LogItems />
+      </ol>
+    </section>
+  )
+}
+
+/**
+ * The phone's log, scrolled to its end, with what to do now as its newest line. Short and upright, `log` hides the log
+ * and leaves the prompt alone rather than a clipped line of it.
+ */
+export function LogBox({ className, log = 'block' }: { className: string; log?: string }) {
+  const { game, said } = useTable()
+  const [box, onScroll] = useStuckToBottom(`${game.log.length} ${said}`)
+  return (
+    <div
+      ref={box}
+      onScroll={onScroll}
+      className={`@container flex flex-col gap-1 overflow-y-auto rounded-md border-2 border-[#1f3a26] bg-[#050d07]/70 p-2 ${className}`}
+    >
+      <ol aria-live="polite" className={`mt-auto text-base leading-tight text-p03-dim ${log}`}>
+        <LogItems />
+      </ol>
+      <PromptLine />
+    </div>
+  )
+}
+
+/** The whole log in a modal, from the phone's menu. */
+export function LogDialog() {
+  const { game, logOpen, setLogOpen } = useTable()
+  const [box, onScroll] = useStuckToBottom(game.log.length)
+  return (
+    <Dialog open={logOpen} onOpenChange={setLogOpen}>
+      <DialogContent
+        aria-describedby={undefined}
+        className="flex max-h-[85dvh] flex-col border-2 border-[#2f6b3d] bg-[#07130b] font-terminal text-p03 ring-0"
+      >
+        <DialogHeader>
+          <DialogTitle className="font-terminal text-2xl font-normal text-p03">Battle log</DialogTitle>
+        </DialogHeader>
+        <ol ref={box} onScroll={onScroll} className="flex min-h-0 flex-1 flex-col overflow-y-auto text-lg">
+          <LogItems />
+        </ol>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/** P03's terminal in a modal, from the phone's menu, for anyone who wants to type help. */
+export function TerminalDialog() {
+  const { terminalOpen, setTerminalOpen, user } = useTable()
+  return (
+    <Dialog open={terminalOpen} onOpenChange={setTerminalOpen}>
+      <DialogContent
+        aria-describedby={undefined}
+        className="flex h-[min(32rem,85dvh)] flex-col overflow-hidden border-2 border-[#2f6b3d] bg-p03-ground p-0 ring-0 [&>[data-slot=dialog-close]]:z-10"
+      >
+        <DialogTitle className="sr-only">P03's terminal</DialogTitle>
+        <Suspense fallback={<div className="h-full bg-p03-ground" />}>
+          <Terminal lines={TERMINAL_LINES} user={user} />
+        </Suspense>
+      </DialogContent>
+    </Dialog>
+  )
+}
