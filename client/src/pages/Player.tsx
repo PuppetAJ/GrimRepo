@@ -21,7 +21,7 @@ import { Button } from '@/components/ui/button.tsx'
 import { Skeleton } from '@/components/ui/skeleton.tsx'
 import { Avatar } from '../components/Avatar.tsx'
 import { Outcomes, ScoreChart, TurnsChart } from '../components/Charts.tsx'
-import { PinnedDeathCard } from '../components/PinnedDeathCard.tsx'
+import { Pinned } from '../components/Pinned.tsx'
 import { Corruption } from '../components/p03/Corruption.tsx'
 import { FrameDamage } from '../components/p03/FrameDamage.tsx'
 import { Glass } from '../components/p03/Glass.tsx'
@@ -58,19 +58,28 @@ function grid(days: PlayerStats['days']) {
   })
 }
 
+/** The grid's key: its greens, fewest to most, and the red of a losing day; its words shorten when tight, then it wraps. */
 function Legend() {
   return (
-    <div aria-hidden className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-      <span className="flex items-center gap-1">
-        Fewer
-        {levels.map((level) => (
-          <span key={level} className={`size-3 rounded-[3px] ${level}`} />
+    <div
+      aria-hidden
+      className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs whitespace-nowrap text-muted-foreground @max-[11rem]:gap-x-2.5"
+    >
+      <span className="flex items-center gap-1 @max-[11rem]:gap-[3px]">
+        <span className="@max-[14rem]:hidden">Fewer</span>
+        <span className="@min-[14rem]:hidden">−</span>
+        {/* At its tightest one of the middle greens goes: four steps say fewer to more as well as five. */}
+        {levels.map((level, index) => (
+          <span key={level} className={`size-3 rounded-[3px] ${level} ${index === 2 ? '@max-[11rem]:hidden' : ''}`} />
         ))}
-        More
+        <span className="@max-[14rem]:hidden">More</span>
+        <span className="@min-[14rem]:hidden">+</span>
       </span>
       <span className="flex items-center gap-1.5">
         <span className="size-3 rounded-[3px] border-2 border-[#ffd2cf] bg-death" />
-        Losing trend
+        <span>
+          Losing<span className="@max-[17rem]:hidden"> trend</span>
+        </span>
       </span>
     </div>
   )
@@ -81,19 +90,27 @@ function Activity({ stats }: { stats: PlayerStats }) {
   const played = cells.reduce((sum, cell) => sum + cell.games, 0)
   const bad = cells.filter((cell) => cell.bad).length
   return (
-    // Side by side wherever the column fits the activity in two columns; one over the other only on a phone.
-    <div className="@container">
+    // The grid's count beside the heading, as GitHub puts its contributions over its grid, so the two cards below
+    // hold only what they show and come out about the same height. Side by side wherever the column fits the activity
+    // in two columns; one over the other only on a phone.
+    <section aria-labelledby="contributions" className="@container flex flex-col gap-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4">
+        <h2 id="contributions" className="font-semibold">
+          Contributions
+        </h2>
+        {/* In words where the line has room, folded to a bar where it does not. */}
+        <p className="text-sm text-muted-foreground">
+          {played} {played === 1 ? 'game' : 'games'}
+          <span className="@max-[20rem]:hidden"> over </span>
+          <span className="@min-[20rem]:hidden"> | </span>
+          26 weeks
+        </p>
+      </div>
       <div className="grid gap-5 @[39rem]:grid-cols-[minmax(12rem,36rem)_minmax(26rem,1fr)]">
-        <section className="@container flex min-w-0 flex-col gap-3 rounded-lg border bg-card p-5">
-          {/* The legend at the top right where it fits beside the title, and under the grid where it does not. */}
-          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-            <h2 className="font-semibold whitespace-nowrap">
-              {played} {played === 1 ? 'game' : 'games'} <span className="text-muted-foreground">|</span> 26 weeks
-            </h2>
-            <div className="@max-[30rem]:hidden">
-              <Legend />
-            </div>
-          </div>
+        <section
+          aria-label="Activity grid"
+          className="@container flex min-w-0 flex-col gap-3 rounded-lg border bg-card p-5"
+        >
           {/* Laid out from the right, so where the grid scrolls it starts at the latest weeks, with no script to put it there. */}
           <div
             tabIndex={0}
@@ -116,13 +133,11 @@ function Activity({ stats }: { stats: PlayerStats }) {
               ))}
             </div>
           </div>
-          <div className="@min-[30rem]:hidden">
-            <Legend />
-          </div>
+          <Legend />
         </section>
         <Contributions stats={stats} cells={cells} />
       </div>
-    </div>
+    </section>
   )
 }
 
@@ -189,10 +204,13 @@ function Contributions({ stats, cells }: { stats: PlayerStats; cells: Cell[] }) 
     },
   ]
   return (
-    <section className="@container flex min-w-0 flex-col gap-3 rounded-lg border bg-card p-5">
-      <h2 className="font-semibold">Contribution activity</h2>
-      {/* Two columns of three where there is room, about as tall as the heatmap beside it; one on a phone. */}
-      <ul className="grid gap-x-5 gap-y-3 @[22rem]:grid-cols-2">
+    <section
+      aria-label="Contribution activity"
+      className="@container flex min-w-0 flex-col gap-3 rounded-lg border bg-card p-5"
+    >
+      {/* Two columns of three where there is room, one on a phone; spread down the card, so a grid beside it that is a
+          little taller leaves spacing rather than a gap. */}
+      <ul className="grid flex-1 content-around gap-x-5 gap-y-3 @[22rem]:grid-cols-2">
         {items.map((item) => (
           <li key={item.title} className="flex items-start gap-3">
             <item.icon aria-hidden className={`mt-0.5 size-4 shrink-0 ${item.tone}`} />
@@ -236,10 +254,10 @@ export function Player() {
     <div className="flex flex-col gap-10 profile:flex-row profile:items-start">
       {/* Beside the page from 1320px, where the column left fits the heatmap and activity side by side; above it before. */}
       <aside className="@container w-full profile:w-72">
-        <div className="grid gap-5 @3xl:grid-cols-[minmax(18rem,1fr)_minmax(0,40rem)] @3xl:items-center">
+        <div className="grid items-center gap-5 @[39rem]:grid-cols-[minmax(15rem,1fr)_auto] @[39rem]:gap-x-12">
           {/* Stacked, the picture sits beside the name, as GitHub lays a profile out on a phone; beside the page, above it. */}
           <div className="flex items-center gap-5 profile:flex-col profile:items-start">
-            <Avatar name={player.username} size="lg" />
+            <Avatar name={player.username} size="lg" className="profile:self-center" />
             <div className="@container w-full min-w-0 flex-1">
               <h1 className="truncate text-3xl font-semibold">{player.username}</h1>
               <p className="whitespace-nowrap text-muted-foreground">
@@ -256,27 +274,28 @@ export function Player() {
             </div>
           </div>
           {/*
-            Stacked, the numbers are badges, as at the top of a README: the name on grey, the number on green. They sit
-            in two columns of three like a table, each column as wide as its widest badge so their edges line up and none
-            stretches across the page, and in one column where two would not fit; the icons go first when space is short.
-            The pinned death card takes the rest of the row, or the row below where it has too little. Set off from the
-            name by a rule.
+            Stacked, the numbers are badges, as at the top of a README: the name on grey, the number on green, each
+            column as wide as its widest badge so their edges line up. Beside the name, two columns of three with room to
+            breathe; under it, set off by a rule, across the width in three of two, then two of three; on the smallest
+            phones they go, as the page below shows the same numbers. Their icons wherever there is room for them.
           */}
-          <div className="@container flex flex-wrap items-stretch gap-4 border-t pt-4 profile:hidden @3xl:border-t-0 @3xl:border-l @3xl:pt-0 @3xl:pl-6">
-            <dl className="grid w-fit content-start gap-2 font-mono text-xs @[22rem]:grid-cols-2">
+          <div className="hidden border-t pt-4 profile:hidden @[21rem]:block @[39rem]:border-t-0 @[39rem]:pt-0">
+            <dl className="grid grid-cols-2 gap-2 font-mono text-xs @[35rem]:grid-cols-3 @[39rem]:w-fit @[39rem]:grid-cols-2">
               {facts.map((fact) => (
                 <div key={fact.label} className="flex overflow-hidden rounded whitespace-nowrap">
                   <dt className="flex flex-1 items-center gap-1.5 bg-muted px-2 py-1 text-muted-foreground">
-                    <fact.icon aria-hidden className="size-3.5 shrink-0 @min-[22rem]:@max-[25rem]:hidden" />
+                    <fact.icon
+                      aria-hidden
+                      className="hidden size-3.5 shrink-0 @min-[24rem]:@max-[39rem]:block @[47rem]:block"
+                    />
                     {fact.label}
                   </dt>
                   <dd className="bg-primary/15 px-2 py-1 font-semibold text-primary">{fact.value}</dd>
                 </div>
               ))}
             </dl>
-            <PinnedDeathCard className="flex-1" />
           </div>
-          {/* In the sidebar, a table of icon, name and number, one to a line, and the pinned death card under it. */}
+          {/* In the sidebar, a table of icon, name and number, one to a line, and the pins under a rule. */}
           <dl className="hidden gap-y-2 border-t pt-4 text-sm profile:grid">
             {facts.map((fact) => (
               <div key={fact.label} className="flex items-center gap-2 whitespace-nowrap">
@@ -286,25 +305,32 @@ export function Player() {
               </div>
             ))}
           </dl>
-          <PinnedDeathCard className="max-profile:hidden" />
+          <Pinned player={player} className="border-t pt-4 max-profile:hidden" />
         </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col gap-7">
+        {/* Stacked, the pins come first under the name, as GitHub shows them; beside the page, they are in the sidebar. */}
+        <Pinned player={player} className="profile:hidden" />
         <Activity stats={player} />
         {player.recent.length ? (
-          <div className="grid gap-5 md:grid-cols-2">
-            <div className="md:col-span-2">
-              <ScoreChart games={[...player.recent].reverse()} />
+          <section aria-labelledby="recent" className="flex flex-col gap-3">
+            <h2 id="recent" className="font-semibold">
+              Recent games
+            </h2>
+            <div className="grid gap-5 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <ScoreChart games={[...player.recent].reverse()} />
+              </div>
+              <TurnsChart games={[...player.recent].reverse()} />
+              <Outcomes
+                wins={player.wins}
+                losses={player.losses - player.forfeits}
+                forfeits={player.forfeits}
+                recent={player.recent}
+              />
             </div>
-            <TurnsChart games={[...player.recent].reverse()} />
-            <Outcomes
-              wins={player.wins}
-              losses={player.losses - player.forfeits}
-              forfeits={player.forfeits}
-              recent={player.recent}
-            />
-          </div>
+          </section>
         ) : null}
         <History username={player.username} lastLoss={player.recent.find((game) => game.outcome === 'loss')} />
       </div>
