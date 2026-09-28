@@ -41,7 +41,7 @@ section('The leaderboard')
   )
   check(
     'the seeded players are on it',
-    ['JohanH', 'PuppetAJ', 'demo'].every((name) => texts.some((text) => text.includes(name))),
+    ['JohanH', 'PuppetAJ', 'kwm0304', 'demo'].every((name) => texts.some((text) => text.includes(name))),
   )
   check('it never shows an email address', !(await visibleText(page)).includes('@'))
   // A board of more than one page turns to the next, whose ranks carry on from the first.
