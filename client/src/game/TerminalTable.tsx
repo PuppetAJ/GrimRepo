@@ -36,7 +36,7 @@ import type { Ready } from './useGame.ts'
 import { useMedia } from '../lib/useMedia.ts'
 import { authClient } from '../lib/auth.ts'
 
-// P03's terminal, for the landscape table's menu; loaded only when opened.
+// P03's terminal, for the phone layout's menu; loaded only when opened.
 const Terminal = lazy(() => import('../components/p03/Terminal.tsx'))
 const TERMINAL_LINES = ['Lost already? Type help.', 'Or tutorial, if you need it spelled out.']
 
@@ -121,7 +121,7 @@ function Balance({ scale }: { scale: number }) {
 const SIDE_BUTTON =
   'rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-2 font-terminal text-lg text-p03 hover:bg-[#13261a] hover:text-p03 aria-expanded:bg-[#13261a] aria-expanded:text-p03 dark:hover:bg-[#13261a] dark:aria-expanded:bg-[#13261a]'
 
-// The landscape menu's buttons: the same, with an icon before the name.
+// The phone layout's menu buttons: the same, with an icon before the name.
 const MENU_BUTTON = `${SIDE_BUTTON} flex items-center justify-center gap-2`
 
 function Panel({
@@ -427,17 +427,18 @@ export function TerminalTable({
   game: Ready
   seat: Seat
   on3d: () => void
-  /** Wide, three columns; mid, the board beside the reader; narrow, one column down to 320px; landscape, a phone on its side. */
-  layout?: 'wide' | 'mid' | 'narrow' | 'landscape'
+  /** Wide, three columns; mid, the board beside the reader; phone, the board as big as the screen allows. Narrow, one
+   * column down to 320px, is only used when asked for. */
+  layout?: 'wide' | 'mid' | 'narrow' | 'phone'
 }) {
   const narrow = layout !== 'wide'
-  // Landscape turned upright, or on a phone too narrow for its side columns, stacks its pieces around a board of the
-  // same size; shorter than 680px, the stack scrolls rather than squeezing the board, as on old 320x480 phones.
+  // The phone layout, upright or on a screen too narrow for its side columns, stacks its pieces around a board of the
+  // same size; shorter than 680px, the stack grows past the screen and scrolls rather than squeezing the board.
   const upright = useMedia('(orientation: portrait)')
   const slim = useMedia('(max-width: 40rem)')
   const cramped = useMedia('(max-height: 42.5rem)')
-  const sideways = layout === 'landscape' && !upright && !slim
-  const scrolling = layout === 'landscape' && !sideways && cramped
+  const sideways = layout === 'phone' && !upright && !slim
+  const scrolling = layout === 'phone' && !sideways && cramped
   const { state, act, result } = game
   // The page shows the game as far as its playback has reached; moves come from the real state, and wait for it.
   const { playback, busy } = usePlayback(game)
@@ -449,7 +450,10 @@ export function TerminalTable({
   const handFull = !busy && !result && state.player.hand.length >= HAND_LIMIT && !state.drawn
   // Where the pointer was, not the card that was there: a card played into that lane shows at once.
   const [looking, setLooking] = useState<Place | null>(null)
-  const fullScreen = useFullScreen()
+  const fullScreen = useFullScreen({ fallback: layout === 'phone' })
+  // A phone's table sits in the page until asked to cover it.
+  const covering = layout === 'phone' && fullScreen.on
+  const phoneFrame = useRef<HTMLDivElement>(null)
   const { frame, size } = useFit(fullScreen.on)
   // Less print on short tables.
   const height = typeof size.height === 'number' ? size.height : 900
@@ -472,7 +476,7 @@ export function TerminalTable({
   const [logOpen, setLogOpen] = useState(false)
   const [terminalOpen, setTerminalOpen] = useState(false)
   // On a phone, with no reader beside the board, a tap opens the card in a modal instead.
-  const tapToRead = layout === 'landscape'
+  const tapToRead = layout === 'phone'
   const [reading, setReading] = useState<Place | null>(null)
   const user = (authClient.useSession().data?.user as { displayUsername?: string } | undefined)?.displayUsername
   const hold = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -573,25 +577,29 @@ export function TerminalTable({
     return () => window.removeEventListener('keydown', onKey)
   }, [canPress, act])
 
-  // Landscape covers the whole screen, so the page under it must not scroll.
+  // Covering the page, the page under it must not scroll.
   useEffect(() => {
-    if (layout !== 'landscape') return
+    if (!covering) return
     const root = document.documentElement
     root.style.overflow = 'hidden'
     return () => {
       root.style.overflow = ''
     }
-  }, [layout])
+  }, [covering])
+  // In the page, one screen tall: scrolled to so it fills the screen, with the nav a scroll away; again on turning.
+  useEffect(() => {
+    if (layout === 'phone' && !covering) phoneFrame.current?.scrollIntoView({ block: 'start' })
+  }, [layout, covering, sideways])
 
   // A lane's size comes from the board's height, so the whole table fits the window.
   const [handSection, setHandSection] = useState<HTMLElement | null>(null)
   const { setArea, lane: laneSize } = useLaneSize(
     narrow,
     handSection,
-    layout === 'mid' ? 13 * 16 + 12 : sideways ? 21 * 16 + 32 : layout === 'landscape' ? 16 : 0,
+    layout === 'mid' ? 13 * 16 + 12 : sideways ? 21 * 16 + 32 : layout === 'phone' ? 16 : 0,
     layout === 'mid' ? 76 : 40,
     // Scrolling, only the width limits the board.
-    scrolling ? 'width' : layout === 'landscape',
+    scrolling ? 'width' : layout === 'phone',
   )
   const cell =
     'flex shrink-0 select-none items-center justify-center rounded-md border-2 p-1 [-webkit-touch-callout:none]'
@@ -620,14 +628,14 @@ export function TerminalTable({
       onClick={() => act({ type: 'ringBell' })}
       aria-keyshortcuts="E"
       aria-label="Press the button"
-      className={`flex items-center justify-center gap-1 rounded-md border-2 border-[#2f6b3d] bg-[#07130b] text-p03 enabled:hover:bg-[#13261a] disabled:[&>*]:opacity-40 ${layout === 'landscape' ? 'flex-1 flex-col gap-1 p-2' : narrow ? 'shrink-0 flex-row gap-2 px-2 py-1' : 'flex-col p-3'}`}
+      className={`flex items-center justify-center gap-1 rounded-md border-2 border-[#2f6b3d] bg-[#07130b] text-p03 enabled:hover:bg-[#13261a] disabled:[&>*]:opacity-40 ${layout === 'phone' ? 'flex-1 flex-col gap-1 p-2' : narrow ? 'shrink-0 flex-row gap-2 px-2 py-1' : 'flex-col p-3'}`}
     >
       <span
-        className={`grid place-items-center rounded-full border-[#2f6b3d] bg-[#a3172b] shadow-[0_0_14px_rgb(255_60_60/0.4)] ${layout === 'landscape' ? 'size-10 border-4' : narrow ? 'size-8 border-2' : 'size-[min(3.5rem,6dvh)] border-4'}`}
+        className={`grid place-items-center rounded-full border-[#2f6b3d] bg-[#a3172b] shadow-[0_0_14px_rgb(255_60_60/0.4)] ${layout === 'phone' ? 'size-10 border-4' : narrow ? 'size-8 border-2' : 'size-[min(3.5rem,6dvh)] border-4'}`}
       />
       {/* Landscape turned upright on a 320px phone has room for the button's name only cut short. */}
       <span className={`tracking-widest ${narrow ? 'text-base' : 'text-2xl'}`}>
-        {layout === 'landscape' && !sideways ? (
+        {layout === 'phone' && !sideways ? (
           <>
             <span className="max-[359px]:hidden">EXECUTE</span>
             <span className="min-[360px]:hidden">EXEC.</span>
@@ -783,7 +791,7 @@ export function TerminalTable({
     <p
       key={refused.count}
       title={said}
-      className={`text-p03-dim ${layout === 'narrow' ? 'h-[2lh] w-full overflow-y-auto text-lg leading-tight' : layout === 'landscape' ? 'w-full text-lg leading-tight text-p03' : layout === 'mid' ? 'w-full truncate text-[clamp(1rem,4.4cqi,1.25rem)]' : 'w-full truncate text-center text-[clamp(1rem,4cqi,1.5rem)]'}`}
+      className={`text-p03-dim ${layout === 'narrow' ? 'h-[2lh] w-full overflow-y-auto text-lg leading-tight' : layout === 'phone' ? 'w-full text-lg leading-tight text-p03' : layout === 'mid' ? 'w-full truncate text-[clamp(1rem,4.4cqi,1.25rem)]' : 'w-full truncate text-center text-[clamp(1rem,4cqi,1.5rem)]'}`}
       style={refused.count ? { animation: 'nudge 0.6s ease-out' } : undefined}
     >
       {said}
@@ -902,7 +910,7 @@ export function TerminalTable({
   const handCards = (
     // A box the cards scroll in, so a full hand never runs over the controls or the piles.
     <div
-      className={`flex min-w-0 flex-1 gap-2 rounded-md border-2 border-[#1f3a26] bg-[#050d07]/70 px-1 pb-1 ${sideways ? 'min-h-0 flex-wrap content-start justify-center overflow-y-auto pt-3' : `justify-[safe_center] items-center overflow-x-auto ${layout === 'landscape' ? 'pt-3' : 'pt-5'}`} ${narrow ? '' : 'h-full'}`}
+      className={`flex min-w-0 flex-1 gap-2 rounded-md border-2 border-[#1f3a26] bg-[#050d07]/70 px-1 pb-1 ${sideways ? 'min-h-0 flex-wrap content-start justify-center overflow-y-auto pt-3' : `justify-[safe_center] items-center overflow-x-auto ${layout === 'phone' ? 'pt-3' : 'pt-5'}`} ${narrow ? '' : 'h-full'}`}
     >
       {view.hand.map((unit) => {
         const selected = unit.uid === state.summon?.uid
@@ -913,7 +921,7 @@ export function TerminalTable({
           <div
             key={unit.uid}
             {...look({ uid: unit.uid }, unit)}
-            className={`shrink-0 select-none [-webkit-touch-callout:none] ${narrow ? (layout === 'mid' ? 'w-[clamp(5rem,6.5vw,6.5rem)]' : layout === 'landscape' && !sideways ? 'w-12 tall:w-14' : 'w-14') : 'aspect-[5/7] h-full'}`}
+            className={`shrink-0 select-none [-webkit-touch-callout:none] ${narrow ? (layout === 'mid' ? 'w-[clamp(5rem,6.5vw,6.5rem)]' : layout === 'phone' && !sideways ? 'w-12 tall:w-14' : 'w-14') : 'aspect-[5/7] h-full'}`}
             style={fresh(unit.uid) ? { animation: 'arrive-up 280ms ease-out' } : undefined}
           >
             <button
@@ -962,7 +970,7 @@ export function TerminalTable({
         title={handFull ? `Your hand is full (${HAND_LIMIT}): no draw this turn` : undefined}
         onClick={() => act({ type: 'draw', from: 'deck' })}
         aria-label={`Draw from the deck, ${view.deck} left`}
-        className={`flex flex-col items-center gap-1 text-p03 disabled:brightness-50 disabled:saturate-50 ${sideways ? 'w-10' : layout === 'landscape' ? 'w-8 tall:w-10' : narrow ? 'w-12 sm:w-16' : 'w-20'}`}
+        className={`flex flex-col items-center gap-1 text-p03 disabled:brightness-50 disabled:saturate-50 ${sideways ? 'w-10' : layout === 'phone' ? 'w-8 tall:w-10' : narrow ? 'w-12 sm:w-16' : 'w-20'}`}
       >
         <span className="grid aspect-[5/7] w-full place-items-center rounded-md border-2 border-[#2f6b3d] bg-[#0b1f12] text-3xl shadow-[3px_3px_0_#1f3a26,6px_6px_0_#13261a]">
           ▦
@@ -977,7 +985,7 @@ export function TerminalTable({
         title={handFull ? `Your hand is full (${HAND_LIMIT}): no draw this turn` : undefined}
         onClick={() => act({ type: 'draw', from: 'boilerplate' })}
         aria-label="Take a Boilerplate"
-        className={`flex flex-col items-center gap-1 text-p03 disabled:brightness-50 disabled:saturate-50 ${sideways ? 'w-10' : layout === 'landscape' ? 'w-8 tall:w-10' : narrow ? 'w-12 sm:w-16' : 'w-20'}`}
+        className={`flex flex-col items-center gap-1 text-p03 disabled:brightness-50 disabled:saturate-50 ${sideways ? 'w-10' : layout === 'phone' ? 'w-8 tall:w-10' : narrow ? 'w-12 sm:w-16' : 'w-20'}`}
       >
         <span className="grid aspect-[5/7] w-full place-items-center rounded-md border-2 border-[#0b1f12] bg-[#a9e7b8] text-lg text-[#0b1f12] shadow-[3px_3px_0_#1f3a26,6px_6px_0_#13261a]">
           {'</>'}
@@ -1047,10 +1055,11 @@ export function TerminalTable({
       </>
     )
 
-  // Landscape, a phone on its side: the whole screen, the board as tall as it goes in the middle; the turn, the scale
-  // and the hand on the left; the piles, the button and what P03 says on the right. No reader or log: holding a card
-  // magnifies it. Turned upright, the same pieces stack above and below a board of about the same size.
-  if (layout === 'landscape') {
+  // Phone: one screen tall in the page, or covering it in full screen. On its side, the board as tall as it goes in the
+  // middle; the turn, the scale and the hand on the left; the piles, the button and what P03 says on the right.
+  // Upright, the same pieces stack above and below a board of about the same size. No reader: a tap opens a card and
+  // holding one magnifies it.
+  if (layout === 'phone') {
     const readUnit = at(reading)
     // Why a card in the hand could not be picked, where that is why it opened; beside the close button, in the space it
     // leaves.
@@ -1101,7 +1110,6 @@ export function TerminalTable({
       <div
         className={`absolute top-12 z-40 flex w-72 max-w-[calc(100%-1rem)] flex-col gap-3 rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-2 ${sideways ? 'left-2' : 'right-2'}`}
       >
-        {seat ? <SeatNote seat={seat} /> : null}
         <div className="grid grid-cols-2 gap-2 [&_svg]:size-4 [&_svg]:shrink-0">
           <button
             type="button"
@@ -1126,7 +1134,14 @@ export function TerminalTable({
             Terminal
           </button>
           {fullScreen.supported ? (
-            <button type="button" onClick={fullScreen.toggle} className={`${MENU_BUTTON} whitespace-nowrap`}>
+            <button
+              type="button"
+              onClick={() => {
+                setMenu(false)
+                fullScreen.toggle()
+              }}
+              className={`${MENU_BUTTON} whitespace-nowrap`}
+            >
               {fullScreen.on ? <Minimize aria-hidden /> : <Maximize aria-hidden />}
               {fullScreen.on ? 'Exit full screen' : 'Full screen'}
             </button>
@@ -1156,15 +1171,18 @@ export function TerminalTable({
         {boardPanel}
       </div>
     )
-    const pieces =
-      'absolute inset-0 z-10 gap-2 pt-[max(0.5rem,env(safe-area-inset-top))] pr-[max(0.5rem,env(safe-area-inset-right))] pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(0.5rem,env(safe-area-inset-left))]'
+    // In the page and too short to fit, the pieces run on and the page scrolls; otherwise they fill the frame, which
+    // scrolls them itself when it covers a short screen.
+    const flowing = scrolling && !covering
+    const pieces = `z-10 gap-2 pt-[max(0.5rem,env(safe-area-inset-top))] pr-[max(0.5rem,env(safe-area-inset-right))] pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(0.5rem,env(safe-area-inset-left))] ${flowing ? 'relative min-h-svh' : 'absolute inset-0'}`
     return (
       <div
         data-game-id={game.id}
         data-seed={state.seed}
         data-table="text"
         {...holding}
-        className="p03-screen crt fixed inset-0 z-50 overflow-hidden font-terminal text-xl"
+        ref={phoneFrame}
+        className={`p03-screen crt overflow-hidden font-terminal text-xl ${covering ? 'fixed inset-0 z-50' : `relative border-y border-[#2f6b3d] ${flowing ? '' : 'h-svh'}`}`}
       >
         {/* The screen and the glass stay put while the pieces scroll over them. */}
         <FaultyScreen />
@@ -1193,7 +1211,9 @@ export function TerminalTable({
             </aside>
           </div>
         ) : (
-          <div className={`${pieces} flex flex-col ${scrolling ? 'overflow-y-auto' : 'overflow-hidden'}`}>
+          <div
+            className={`${pieces} flex flex-col ${flowing ? '' : scrolling ? 'overflow-y-auto' : 'overflow-hidden'}`}
+          >
             <div className="relative z-10 flex shrink-0 flex-col gap-1 rounded-md border-2 border-[#2f6b3d] bg-[#07130b] py-1 pr-1 pl-2">
               {status}
               <ScaleBar scale={view.scale} fluid className="gap-1 pr-1 text-base" />
@@ -1210,6 +1230,13 @@ export function TerminalTable({
             </div>
           </div>
         )}
+        {/* The demo's or a guest's note over the table until closed, as the page above is scrolled away; under the turn,
+            so the menu stays in reach. */}
+        {seat ? (
+          <div className="absolute inset-x-2 top-16 z-40 rounded bg-background font-sans">
+            <SeatNote seat={seat} />
+          </div>
+        ) : null}
         {menuPanel}
         <Dialog open={logOpen} onOpenChange={setLogOpen}>
           <DialogContent

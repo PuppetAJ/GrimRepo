@@ -28,16 +28,16 @@ function savedMode(): Mode {
 const UPRIGHT_PHONE = '(orientation: portrait) and (max-width: 767px)'
 // The Act 2 layout's three columns need this much width; narrower, the board sits beside the card reader.
 const WIDE = '(min-width: 1100px)'
-// Down to this width; narrower still, one column.
+// Down to this width; narrower still, the phone layout.
 const MID = '(min-width: 560px)'
-// A phone on its side, as short as the 3D table's full-screen switch: the board in the middle, the rest beside it.
+// A phone on its side, as short as the 3D table's full-screen switch; it gets the phone layout, as an upright one does.
 const SIDEWAYS_PHONE = '(orientation: landscape) and (max-height: 32rem)'
-type Layout = 'wide' | 'mid' | 'narrow' | 'landscape'
+type Layout = 'wide' | 'mid' | 'narrow' | 'phone'
 
-// ?layout=wide, mid, narrow or landscape forces one, to compare them.
+// ?layout=wide, mid, narrow or phone forces one, to compare them; narrow is only ever asked for now.
 function askedLayout(): Layout | null {
   const asked = new URLSearchParams(window.location.search).get('layout')
-  return asked === 'wide' || asked === 'mid' || asked === 'narrow' || asked === 'landscape' ? asked : null
+  return asked === 'wide' || asked === 'mid' || asked === 'narrow' || asked === 'phone' ? asked : null
 }
 
 /** A model that fails to load, or a lost WebGL context, offers the text table rather than a broken page. */
@@ -91,16 +91,13 @@ export function Game() {
   if (game.status === 'loading') return <Loading label="Dealing" />
   if (game.status === 'error') return <Failure title="The table is not ready" detail={game.message} />
 
+  const layout: Layout = askedLayout() ?? (sideways || upright || !mid ? 'phone' : wide ? 'wide' : 'mid')
   if (mode === 'text')
     return (
-      // Into most of the page's side padding, so the table has the width and only thin gutters remain.
-      <div className="-mx-2 sm:-mx-9">
-        <TerminalTable
-          game={game}
-          seat={seat}
-          on3d={() => choose('3d')}
-          layout={askedLayout() ?? (sideways ? 'landscape' : wide ? 'wide' : mid ? 'mid' : 'narrow')}
-        />
+      // Into most of the page's side padding, so the table has the width and only thin gutters remain; a phone's
+      // table goes edge to edge.
+      <div className={layout === 'phone' ? '-mx-4 sm:-mx-12' : '-mx-2 sm:-mx-9'}>
+        <TerminalTable game={game} seat={seat} on3d={() => choose('3d')} layout={layout} />
       </div>
     )
 

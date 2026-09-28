@@ -257,7 +257,7 @@ section('Phones')
     box?.height === 390 && box.width === 844,
     JSON.stringify(box),
   )
-  // Its controls are in a menu, as the header is covered.
+  // In the page, scrolled to so it fills the screen; its controls are in a menu.
   await text.getByRole('button', { name: 'Menu' }).click()
   await page.getByRole('button', { name: '3D Table' }).click()
   await tableReady(page)
