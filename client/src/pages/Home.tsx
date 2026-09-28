@@ -32,7 +32,7 @@ export function Home() {
           "This is my repository now. I rewrote it. It's better. You're welcome.",
           first
             ? `${first.username} is in first with ${number(first.bestScore)} points. For now.`
-            : 'Nobody has beaten me. Obviously.',
+            : 'Nobody has beaten me, obviously.',
         ]
 
   return (
