@@ -157,40 +157,43 @@ function Viewer({ cards, chosen, onChoose }: { cards: CardDef[]; chosen: CardDef
       </ul>
       <section
         aria-label={chosen.name}
-        className="relative h-[28rem] min-w-0 overflow-hidden rounded-lg border bg-[#02070c] lg:h-[36rem]"
+        // On a phone the details sit under the disk rather than over it, so neither covers the other.
+        className="min-w-0 overflow-hidden rounded-lg border bg-[#02070c] sm:relative sm:h-[28rem] lg:h-[36rem]"
       >
-        <Suspense
-          fallback={
-            <p className="absolute inset-0 grid place-items-center font-terminal text-xl text-p03">
-              P03&gt; loading the disk…
-            </p>
-          }
-        >
-          <CardViewer unit={unitOf(chosen)} open={open} turn={turn} />
-        </Suspense>
-        {/* The same card as the text table draws it, in the corner, dismissed with its cross and brought back after. */}
-        {flat ? (
-          <div className="absolute top-3 right-3 w-24 sm:w-32">
-            <Screen def={chosen} />
-            <button
-              type="button"
-              aria-label="Hide the 2D card"
-              onClick={() => setFlat(false)}
-              className="absolute -top-2 -right-2 z-30 grid size-6 place-items-center rounded-full border bg-popover text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
-            >
-              <X aria-hidden className="size-3.5" />
-            </button>
-          </div>
-        ) : (
-          <Button variant="outline" size="sm" className="absolute top-3 right-3" onClick={() => setFlat(true)}>
-            2D card
-          </Button>
-        )}
-        <p className="pointer-events-none absolute top-3 left-4 text-xs text-muted-foreground">
-          Drag to turn it, scroll to zoom.
-        </p>
-        {/* Over the foot of the canvas, on a fade so it reads against the factory's dark. */}
-        <div className="absolute inset-x-0 bottom-0 flex flex-wrap items-end justify-between gap-3 bg-gradient-to-t from-[#02070c] via-[#02070c]/85 to-transparent px-4 pt-10 pb-4">
+        <div className="relative h-80 sm:absolute sm:inset-0 sm:h-auto">
+          <Suspense
+            fallback={
+              <p className="absolute inset-0 grid place-items-center font-terminal text-xl text-p03">
+                P03&gt; loading the disk…
+              </p>
+            }
+          >
+            <CardViewer unit={unitOf(chosen)} open={open} turn={turn} />
+          </Suspense>
+          {/* The same card as the text table draws it, in the corner, dismissed with its cross and brought back after. */}
+          {flat ? (
+            <div className="absolute top-3 right-3 w-20 sm:w-32">
+              <Screen def={chosen} />
+              <button
+                type="button"
+                aria-label="Hide the 2D card"
+                onClick={() => setFlat(false)}
+                className="absolute -top-2 -right-2 z-30 grid size-6 place-items-center rounded-full border bg-popover text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+              >
+                <X aria-hidden className="size-3.5" />
+              </button>
+            </div>
+          ) : (
+            <Button variant="outline" size="sm" className="absolute top-3 right-3" onClick={() => setFlat(true)}>
+              2D card
+            </Button>
+          )}
+          <p className="pointer-events-none absolute top-3 left-4 text-xs text-muted-foreground">
+            Drag to turn it<span className="max-sm:hidden">, scroll to zoom</span>.
+          </p>
+        </div>
+        {/* Over the foot of the canvas on a fade, so it reads against the factory's dark; under it on a phone. */}
+        <div className="flex flex-wrap items-end justify-between gap-3 border-t px-4 pt-3 pb-4 sm:absolute sm:inset-x-0 sm:bottom-0 sm:border-t-0 sm:bg-gradient-to-t sm:from-[#02070c] sm:via-[#02070c]/85 sm:to-transparent sm:pt-10">
           <div className="flex min-w-0 flex-col gap-1">
             <h2 className="font-semibold">{chosen.name}</h2>
             {/* About two and a half sigils over the disk, so it stays in view; the list scrolls to the rest. */}
