@@ -82,7 +82,14 @@ jobs:
           done
           echo "The app did not come up"; cat app.log; exit 1
 
-      - run: node e2e/${{ matrix.suite }}.mjs
+      # Headless Firefox on a runner with no GPU won't create a WebGL context; in a virtual display it draws in software.
+      - if: matrix.engine == 'firefox'
+        run: xvfb-run -a node e2e/${{ matrix.suite }}.mjs
+        env:
+          E2E_HEADED: '1'
+
+      - if: matrix.engine == 'chromium'
+        run: node e2e/${{ matrix.suite }}.mjs
 
       - if: failure()
         uses: actions/upload-artifact@v4

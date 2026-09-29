@@ -15,7 +15,8 @@ export async function launch({ width = 1280, height = 800 } = {}) {
   // Headless browsers on a machine with no GPU only draw WebGL in software when asked to, which the 3D table needs.
   const browser =
     ENGINE === 'firefox'
-      ? await firefox.launch({ firefoxUserPrefs: { 'webgl.force-enabled': true } })
+      ? // On CI, E2E_HEADED runs it in a virtual display, where Mesa's software OpenGL can draw WebGL.
+        await firefox.launch({ headless: !process.env.E2E_HEADED, firefoxUserPrefs: { 'webgl.force-enabled': true } })
       : await chromium.launch({ args: ['--enable-unsafe-swiftshader'] })
   const context = await browser.newContext({ viewport: { width, height } })
   const page = await context.newPage()
