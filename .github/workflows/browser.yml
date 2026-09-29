@@ -94,5 +94,7 @@ jobs:
       - if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: app-log-${{ matrix.suite }}-${{ matrix.engine }}
-          path: app.log
+          name: failure-${{ matrix.suite }}-${{ matrix.engine }}
+          path: |
+            app.log
+            e2e-failure.png

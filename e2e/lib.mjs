@@ -136,7 +136,15 @@ export async function playWithBot(page, { stopAfterTurn = Infinity } = {}) {
   const actions = []
   while (state.status === 'playing' && state.turn <= stopAfterTurn) {
     const action = nextBotAction(state)
-    await page.locator(selectorFor(action)).first().click()
+    try {
+      await page.locator(selectorFor(action)).first().click()
+    } catch (error) {
+      // What was wanted, and what the table showed instead, for a failure on CI that can't be watched.
+      console.log(`  The bot wanted ${JSON.stringify(action)} on turn ${state.turn}; the table said:`)
+      console.log(`  ${(await page.locator('[data-table]').innerText()).replace(/\s+/g, ' ').slice(0, 600)}`)
+      await page.screenshot({ path: 'e2e-failure.png' }).catch(() => {})
+      throw error
+    }
     const result = apply(state, action)
     if (!result.ok) throw new Error(`the mirror refused ${JSON.stringify(action)}: ${result.reason}`)
     state = result.state
