@@ -2,7 +2,7 @@
 
 A card game of sacrifices, played on floppy disks against P03 in his factory. Inspired by [Inscryption](https://www.inscryption.com/), with a deck of programming jokes: every card costs something, and to play the strong ones you give up the weak.
 
-It started in 2022 as a bootcamp group project (Express, Handlebars, MySQL and a single three.js script) and is rebuilt here as a portfolio project. The original is tagged `v1-legacy`.
+It started in 2022 as a bootcamp group project (Express, Handlebars, MySQL and a single three.js script) and is rebuilt here as a portfolio project.
 
 **Live: [grimrepo.up.railway.app](https://grimrepo.up.railway.app)**. Press **Quick battle** to play straight away as a guest, with no sign-up, or use the demo account button on the sign-in page.
 
