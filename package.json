@@ -29,6 +29,7 @@
     "typecheck": "pnpm --recursive typecheck",
     "test": "pnpm --recursive test",
     "test:e2e": "node --env-file-if-exists=.env e2e/run.mjs",
+    "test:prod": "node e2e/production.mjs",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:migrate": "pnpm --filter server db:migrate",
