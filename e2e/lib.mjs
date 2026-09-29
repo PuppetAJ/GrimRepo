@@ -120,6 +120,15 @@ export async function signInAsDemo(page) {
   await page.getByRole('button', { name: 'Account menu' }).waitFor()
 }
 
+/** A new guest, as Quick battle makes: its own game, and its own count against the game API's limits. */
+export async function signInAsGuest(page) {
+  // Guests may sign in 10 times a minute; locally, the counter is cleared so a script can make as many as it needs.
+  await resetRateLimits()
+  await page.context().clearCookies()
+  const response = await page.request.post(`${BASE}/api/auth/sign-in/anonymous`, { headers: { origin: BASE } })
+  if (!response.ok()) throw new Error(`a guest could not sign in: ${response.status()}`)
+}
+
 /** Visible text, for asserting on what a person would actually read. */
 export const visibleText = (page) => page.locator('body').innerText()
 

@@ -4,7 +4,7 @@ import { chromium, firefox } from 'playwright'
 
 // The live site unless told otherwise; set before the shared helpers load, since they read it as they do.
 process.env.E2E_BASE_URL ??= 'https://grimrepo.up.railway.app'
-const { BASE, ENGINE, reporter } = await import('./lib.mjs')
+const { BASE, ENGINE, reporter, resetRateLimits, stamp } = await import('./lib.mjs')
 
 const browser = await (ENGINE === 'firefox' ? firefox : chromium).launch()
 const { check, section, report } = reporter()
@@ -80,6 +80,22 @@ section('Playing')
   await demo.getByRole('button', { name: 'Play as the demo account' }).click()
   await demo.getByRole('button', { name: 'Account menu' }).waitFor()
   check('the demo account signs in', true)
+}
+
+section('Guessing')
+{
+  // Last, since it leaves this address unable to sign in for a minute. A made-up name, so no real account is touched.
+  const statuses = []
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const response = await page.request.post(`${BASE}/api/auth/sign-in/username`, {
+      data: { username: `nobody_${stamp()}`.slice(0, 20), password: 'not-the-password' },
+      headers: { origin: BASE },
+    })
+    statuses.push(response.status())
+  }
+  // The demo's sign-in above counts too, so the refusal may come one attempt early.
+  check('a sixth sign-in in a minute is refused', statuses[0] === 401 && statuses.at(-1) === 429, statuses.join(', '))
+  await resetRateLimits()
 }
 
 check('no page or console errors along the way', errors.length === 0, errors.slice(0, 3).join(' | '))
