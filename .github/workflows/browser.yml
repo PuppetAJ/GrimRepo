@@ -1,0 +1,91 @@
+# The browser suites against a production build, on pull requests only. They build and boot the app, so this is slower
+# than ci.yml and is not a required check: main is gated by ci.yml alone.
+name: Browser suites
+
+on:
+  pull_request:
+
+concurrency:
+  group: browser-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # One runner per suite and engine, so the wall clock is the slowest suite rather than all of them in a row.
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [smoke, auth, leaderboard, game, table, a11y]
+        engine: [chromium, firefox]
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: grimrepo
+          POSTGRES_PASSWORD: grimrepo
+          POSTGRES_DB: grimrepo
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U grimrepo"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://grimrepo:grimrepo@127.0.0.1:5432/grimrepo
+      # Throwaway: nothing here signs a cookie that has to be read back later.
+      BETTER_AUTH_SECRET: ci-secret-not-used-for-anything-real-0123456789
+      E2E_BASE_URL: http://localhost:3000
+      E2E_BROWSER: ${{ matrix.engine }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # The browsers are large and never change between runs of the same Playwright version.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ matrix.engine }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - run: pnpm exec playwright install --with-deps ${{ matrix.engine }}
+
+      - run: pnpm db:migrate
+
+      # The leaderboard suite asserts on the seeded players and the demo account.
+      - run: pnpm db:seed
+
+      # A production build, prerendering and all, with the test handles the table suite drives the game through.
+      - run: pnpm build
+        env:
+          VITE_TEST_HANDLE: '1'
+
+      - name: Start the app
+        run: |
+          NODE_ENV=production PORT=3000 APP_URL=http://localhost:3000 pnpm start > app.log 2>&1 &
+          for i in $(seq 1 45); do
+            curl -sf http://localhost:3000/health > /dev/null && exit 0
+            sleep 2
+          done
+          echo "The app did not come up"; cat app.log; exit 1
+
+      - run: node e2e/${{ matrix.suite }}.mjs
+
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-log-${{ matrix.suite }}-${{ matrix.engine }}
+          path: app.log
