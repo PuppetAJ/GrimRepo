@@ -9,5 +9,7 @@ export function useMedia(media: string): boolean {
       return () => query.removeEventListener('change', changed)
     },
     () => window.matchMedia(media).matches,
+    // Prerendered, no query matches; the browser's answer follows once React takes over.
+    () => false,
   )
 }

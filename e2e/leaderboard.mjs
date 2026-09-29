@@ -7,9 +7,23 @@ const { page } = await freshPage(browser)
 
 section('The README')
 {
+  // React reports a page that doesn't match its prerendered HTML as a console error, not a thrown one.
+  const hydration = []
+  page.on('console', (message) => {
+    if (message.type() === 'error' && /hydrat|#418|#423|#425/i.test(message.text())) hydration.push(message.text())
+  })
   await page.goto(BASE)
   await page.getByRole('heading', { name: 'Grim Repo', level: 1 }).waitFor()
   check('it has the title and the way to play', (await page.getByRole('link', { name: 'Quick battle' }).count()) === 1)
+  // A production build serves the home page already rendered; the dev server never does.
+  const served = await (await page.request.get(BASE)).text()
+  if (!served.includes('/@vite/client')) {
+    check('a production build serves the README already rendered', served.includes('Grim Repo</h1>'))
+    const other = await (await page.request.get(`${BASE}/leaderboard`)).text()
+    check('and every other page the empty shell', other.includes('<div id="root"></div>'))
+  }
+  await page.waitForTimeout(500)
+  check('React takes the page over without a mismatch', hydration.length === 0, hydration.join(' | '))
   // Other suites add players, so the README is checked against the API rather than fixed names.
   const top = (await (await page.request.get(`${BASE}/api/leaderboard`)).json()).players.slice(0, 3)
   const maintainers = page.getByRole('heading', { name: 'Top maintainers' }).locator('..')
