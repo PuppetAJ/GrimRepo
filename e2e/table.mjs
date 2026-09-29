@@ -88,7 +88,7 @@ section('The 3D table')
       page,
       (name) => document.querySelector('[data-magnifier]')?.textContent.includes(name),
       name,
-      5_000,
+      15_000,
     ).then(
       () => true,
       () => false,

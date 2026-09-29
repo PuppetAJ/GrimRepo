@@ -12,9 +12,11 @@ export const ENGINE = process.env.E2E_BROWSER === 'firefox' ? 'firefox' : 'chrom
 console.log(`against ${BASE} in ${ENGINE}`)
 
 export async function launch({ width = 1280, height = 800 } = {}) {
-  // Headless Chrome has no GPU and only draws WebGL in software when asked to, which the 3D table needs.
+  // Headless browsers on a machine with no GPU only draw WebGL in software when asked to, which the 3D table needs.
   const browser =
-    ENGINE === 'firefox' ? await firefox.launch() : await chromium.launch({ args: ['--enable-unsafe-swiftshader'] })
+    ENGINE === 'firefox'
+      ? await firefox.launch({ firefoxUserPrefs: { 'webgl.force-enabled': true } })
+      : await chromium.launch({ args: ['--enable-unsafe-swiftshader'] })
   const context = await browser.newContext({ viewport: { width, height } })
   const page = await context.newPage()
   page.setDefaultTimeout(20_000)
@@ -119,7 +121,8 @@ export const visibleText = (page) => page.locator('body').innerText()
 
 const selectorFor = (action) => {
   if (action.type === 'draw') return `[data-action="draw-${action.from}"]`
-  if (action.type === 'select') return `[data-action="select"][data-uid="${action.uid}"]`
+  // A hand card is never disabled, only marked so, and a click while a move plays back is refused; so wait for it.
+  if (action.type === 'select') return `[data-action="select"][data-uid="${action.uid}"]:not([aria-disabled="true"])`
   if ('lane' in action) return `[data-action="${action.type}"][data-lane="${action.lane}"]`
   return `[data-action="${action.type}"]`
 }
