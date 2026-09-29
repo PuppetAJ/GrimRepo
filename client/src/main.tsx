@@ -1,5 +1,5 @@
 import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
+import { createRoot, hydrateRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router'
 import { Toaster } from '@/components/ui/sonner.tsx'
 import App from './App.tsx'
@@ -8,11 +8,16 @@ import './index.css'
 const container = document.getElementById('root')
 if (!container) throw new Error('index.html is missing its #root element')
 
-createRoot(container).render(
+// The same tree as prerender.tsx renders, so the prerendered home page hydrates cleanly.
+const app = (
   <StrictMode>
     <BrowserRouter>
       <App />
       <Toaster />
     </BrowserRouter>
-  </StrictMode>,
+  </StrictMode>
 )
+
+// The home page arrives prerendered, so React takes over its HTML; every other address starts empty.
+if (container.hasChildNodes()) hydrateRoot(container, app)
+else createRoot(container).render(app)

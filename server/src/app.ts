@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs'
 import { toNodeHandler } from 'better-auth/node'
 import compression from 'compression'
 import express from 'express'
@@ -75,9 +76,11 @@ export function createApp({
         },
       }),
     )
-    // Anything that is not an API route or a real file is a client-side route.
+    // Anything that is not an API route or a real file is a client-side route. index.html holds the prerendered home
+    // page, so every other route gets the empty shell, which older builds without it did not have.
+    const shell = existsSync(path.join(clientBuildDir, 'shell.html')) ? 'shell.html' : 'index.html'
     app.get(/(.*)/, (_req, res) => {
-      res.sendFile(path.join(clientBuildDir, 'index.html'))
+      res.sendFile(path.join(clientBuildDir, shell))
     })
   }
 
