@@ -1,5 +1,5 @@
 import { Pause, Play, X } from 'lucide-react'
-import { lazy, Suspense, useState } from 'react'
+import { Component, lazy, Suspense, useState, type ReactNode } from 'react'
 import type { CardDef } from 'shared'
 import { Button } from '@/components/ui/button.tsx'
 import { Cost, Facts, Screen } from './CardFacts.tsx'
@@ -7,6 +7,25 @@ import { unitOf } from './deck.ts'
 
 // three.js loads only when someone opens a card in 3D.
 const CardViewer = lazy(() => import('../../game/table/CardViewer.tsx'))
+
+/** A browser that can't draw WebGL says so here, rather than the page failing; the cards view still shows every card. */
+class DiskFailed extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false }
+  static getDerivedStateFromError() {
+    return { failed: true }
+  }
+  render() {
+    if (!this.state.failed) return this.props.children
+    return (
+      <p
+        role="alert"
+        className="absolute inset-0 grid place-items-center p-6 text-center font-terminal text-xl text-p03"
+      >
+        P03&gt; this browser can't draw the disk. The cards view shows every card.
+      </p>
+    )
+  }
+}
 
 export function Viewer({
   cards,
@@ -56,7 +75,9 @@ export function Viewer({
               </p>
             }
           >
-            <CardViewer unit={unitOf(chosen)} open={open} turn={turn} />
+            <DiskFailed>
+              <CardViewer unit={unitOf(chosen)} open={open} turn={turn} />
+            </DiskFailed>
           </Suspense>
           {/* The same card as the text table draws it, in the corner, dismissed with its cross and brought back after. */}
           {flat ? (

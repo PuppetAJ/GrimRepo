@@ -1,19 +1,48 @@
 # Grim Repo
 
-A card game of sacrifices, played on floppy disks against P03 in his factory. Inspired by [Inscryption](https://www.inscryption.com/), with a deck of programming jokes.
+A card game of sacrifices, played on floppy disks against P03 in his factory. Inspired by [Inscryption](https://www.inscryption.com/), with a deck of programming jokes: every card costs something, and to play the strong ones you give up the weak.
 
-Grim Repo started in 2022 as a bootcamp group project (Express, Handlebars, MySQL and a single three.js script) and is being rebuilt. The original is tagged `v1-legacy`.
+It started in 2022 as a bootcamp group project (Express, Handlebars, MySQL and a single three.js script) and is rebuilt here as a portfolio project. The original is tagged `v1-legacy`.
+
+**Live: [grimrepo.up.railway.app](https://grimrepo.up.railway.app)**. Press **Quick battle** to play straight away as a guest, with no sign-up, or use the demo account button on the sign-in page.
+
+![The 3D table in P03's factory: a card is summoned and placed, P03 takes his turn, and damage rises off the cards it hits](.github/screenshots/table.webp)
+
+- **A 3D table** in P03's factory, built with React Three Fiber. Every card is a floppy disk drawn from the game's data, and every move is played back: cards lunge, damage rises off what they hit, and the dead fold away.
+- **Scores the server can trust.** Only moves are ever sent. The server replays them with the same rules engine the browser plays with, refuses an illegal one, and scores the finished game itself.
+- **A text table as well,** laid out for phones held either way, which works with a screen reader.
+- **P03 has broken in.** The README's screenshot tears into his terminal, which takes commands (`help`, `tutorial`, `cards`), and he has taken over first place on the leaderboard.
+- **Profiles like GitHub's:** a contributions heatmap, charts of recent games, badges with rank and favorite card, and a pinned best game; and a compendium of every card, turning on its disk in 3D.
+
+<table>
+  <tr>
+    <td width="36%"><img src=".github/screenshots/readme.webp" alt="The home page: a README titled Grim Repo, with P03's green terminal where the screenshot was, corruption spilling from its corners"></td>
+    <td width="36%"><img src=".github/screenshots/profile.webp" alt="A player's profile: an avatar, a table of stats, a contributions heatmap and a chart of score per game"></td>
+    <td width="28%" rowspan="2"><img src=".github/screenshots/phone.webp" alt="The text table on a phone: the turn and scale, P03's last lines, the board, the hand, and the EXECUTE button"></td>
+  </tr>
+  <tr>
+    <td colspan="2"><img src=".github/screenshots/compendium.webp" alt="The compendium: the list of cards beside Mainframe turning on its floppy disk over a grid floor"></td>
+  </tr>
+</table>
+
+## How it works
+
+- **One rules engine, used by both sides.** The rules are plain TypeScript in `shared`, with no browser or database in them, so they're tested in Node and run the same everywhere. A game is its seed and its moves: replaying them always gives the same state.
+- **The server keeps the score.** A game's seed is chosen by the server. The browser saves the moves at each turn's end, and the server replays the whole game on every save, so an illegal move is refused and nothing is kept from it. A score can't be sent at all: it's computed once the replay reaches the end.
+- **The table plays back events.** Each move reports what it did as a list of events (placed, attacked, damaged, killed), and both tables play them back one at a time. A unit test folds the events of whole games and checks they always land on the rules' own state.
+- **Guests become players.** Quick battle signs a visitor in as a guest. If they sign up later, their games follow them into the account; guests stay off the leaderboard and are cleared out after a week.
+- **Fast first load.** The home page is prerendered at build time with React's own `prerender`, so its first view arrives in the HTML, and three.js loads only when a 3D view is opened. A budget in the build fails it if a bundle outgrows its limit. Largest Contentful Paint on a simulated slow phone is 2.45 s.
 
 ## What it is built on
 
-| Area     | Choice                                                                          |
-| -------- | ------------------------------------------------------------------------------- |
-| Client   | Vite, React 19, Tailwind v4 and shadcn/ui; React Three Fiber for the table      |
-| Server   | Express 5 on Node 24, which runs its TypeScript directly                        |
-| Rules    | A `shared` package of plain TypeScript used by both sides                       |
-| Database | Postgres 18                                                                     |
-| Tooling  | pnpm workspaces, TypeScript 7, oxlint, Prettier, Node's test runner, Playwright |
-| Hosting  | Railway, described in code in `.railway/railway.ts`                             |
+| Area     | Choice                                                                                    |
+| -------- | ----------------------------------------------------------------------------------------- |
+| Client   | Vite, React 19, React Router, Tailwind v4 and shadcn/ui; React Three Fiber for the table  |
+| Server   | Express 5 on Node 24, which runs its TypeScript directly; Better Auth for accounts        |
+| Rules    | A `shared` package of plain TypeScript used by both sides                                 |
+| Database | Postgres 18, through `pg` and node-pg-migrate                                             |
+| Tooling  | pnpm workspaces, TypeScript 7, oxlint, Prettier, Node's test runner, Playwright, axe-core |
+| Hosting  | Railway, described in code in `.railway/railway.ts`; deploys only after CI passes         |
 
 ## Running it
 
@@ -32,58 +61,64 @@ The seed creates a demo account anyone can use, `demo` with the password `demo-p
 
 The client is at http://localhost:3000 and proxies `/api` and `/health` to the API on port 3001. The database listens on 5433 so it can run beside another project's Postgres on 5432.
 
+In development, `window.__game` exposes the 3D table's state and where things are on screen, and `/game?fixture=worst` loads a worst-case board to lay the tables out against. Neither exists in a production build.
+
+## Tests
+
+- **Unit tests** (`pnpm test`): the rules engine, including a bot that plays whole seeded games and a check that replay always agrees; the server's routes, auth, guests, rate limits and name filter against a real Postgres database whose name must end in `_test`; and the client's playback, table layout and P03's lines.
+- **Browser suites** (`pnpm test:e2e`): plain Playwright scripts in `e2e/`, run in Chromium and Firefox. Smoke, auth, leaderboard, a whole game on the text table, the 3D table (clicking its models through `window.__game`), and an axe accessibility check of every page but the game on a laptop and a phone.
+- **CI:** `ci.yml` runs lint, formatting, types, the unit tests and the build on every pull request and on `main`, and Railway deploys only once it passes. `browser.yml` runs every browser suite on pull requests, in both engines, against a production build.
+- **The live site** (`pnpm test:prod`): a short check of the critical path after a deploy. It plays as a guest and signs nobody up.
+
 ## Scripts
 
-| Script                        | Does                                                                                                                                                                                                                                                                       |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm dev`                    | Client and API together, reloading on change                                                                                                                                                                                                                               |
-| `pnpm build`                  | Builds the client into `client/dist`                                                                                                                                                                                                                                       |
-| `pnpm start`                  | The API, serving the built client when `NODE_ENV=production`                                                                                                                                                                                                               |
-| `pnpm lint` / `pnpm format`   | oxlint / Prettier                                                                                                                                                                                                                                                          |
-| `pnpm typecheck`              | TypeScript across every package                                                                                                                                                                                                                                            |
-| `pnpm test`                   | Unit tests in every package                                                                                                                                                                                                                                                |
-| `pnpm test:e2e`               | The browser suites (smoke, auth, leaderboard, game, table) in Chromium and then Firefox, against `E2E_BASE_URL`, default http://localhost:3000; `pnpm test:e2e game --browser=firefox` runs one in one browser. Needs `pnpm exec playwright install chromium firefox` once |
-| `pnpm db:up` / `pnpm db:down` | Start and stop the local Postgres                                                                                                                                                                                                                                          |
-| `pnpm db:migrate`             | Apply the migrations in `server/migrations`                                                                                                                                                                                                                                |
-| `pnpm db:seed`                | Wipe the database and reseed the demo state                                                                                                                                                                                                                                |
-| `pnpm db:seed:empty`          | Seed only if there are no players yet; Railway runs this on every boot                                                                                                                                                                                                     |
-| `pnpm db:cleanup`             | The nightly clean-up, by hand                                                                                                                                                                                                                                              |
-| `pnpm moderate`               | Rename, remove, list or scan accounts; see Looking after the live site                                                                                                                                                                                                     |
+| Script                        | Does                                                                                                                                                                    |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm dev`                    | Client and API together, reloading on change                                                                                                                            |
+| `pnpm build`                  | Builds the client into `client/dist`, with the home page prerendered                                                                                                    |
+| `pnpm start`                  | The API, serving the built client when `NODE_ENV=production`                                                                                                            |
+| `pnpm lint` / `pnpm format`   | oxlint / Prettier                                                                                                                                                       |
+| `pnpm typecheck`              | TypeScript across every package                                                                                                                                         |
+| `pnpm test`                   | Unit tests in every package                                                                                                                                             |
+| `pnpm test:e2e`               | The browser suites in Chromium and then Firefox, against `E2E_BASE_URL` (default http://localhost:3000); `pnpm test:e2e game --browser=firefox` runs one in one browser |
+| `pnpm test:prod`              | The live site's critical path, or another production build's with `E2E_BASE_URL`                                                                                        |
+| `pnpm db:up` / `pnpm db:down` | Start and stop the local Postgres                                                                                                                                       |
+| `pnpm db:migrate`             | Apply the migrations in `server/migrations`                                                                                                                             |
+| `pnpm db:seed`                | Wipe the database and reseed the demo state                                                                                                                             |
+| `pnpm db:seed:empty`          | Seed only if there are no players yet; Railway runs this on every boot                                                                                                  |
+| `pnpm db:cleanup`             | The nightly clean-up, by hand                                                                                                                                           |
+| `pnpm moderate`               | Rename, remove, list or scan accounts; see Looking after the live site                                                                                                  |
+
+The browser suites need `pnpm exec playwright install chromium firefox` once.
 
 ## How the code is arranged
 
 ```
 client/   the web app
-server/   the API
+  src/game/table/   the 3D table: the factory, the disks, playback
+  src/game/text/    the text table and its layouts
+  src/pages/        the README, leaderboard, profiles, compendium and account pages
+server/   the API, auth, migrations and the nightly clean-up
 shared/   game rules and data, imported by both
 e2e/      browser suites, plain Playwright scripts
 ```
 
 Imports run one way, and oxlint enforces it: the client and the server may use `shared`, `shared` uses neither, and neither imports the other.
 
-## The table
-
-The game is played on a 3D table by default: P03's factory, after Inscryption's Act 3, built with React Three Fiber in `client/src/game/table`. Every card is a floppy disk modelled in code, its face drawn from the card data on a canvas with the 2022 art as a hologram, so a card's numbers change on the table as they change in the rules. The rules engine reports what each move did as a list of events, and the table plays them back one at a time, so a card lunges, a number rises off what it hit, and the dead sink away. A unit test folds the events of whole games and checks the table always lands on the rules' own state.
-
-The same game can be played as text, which reads well on a phone held upright and works with a screen reader. The switch is on both tables and is remembered per browser; an upright phone is offered the text table rather than a sideways one. On a phone held sideways the 3D table takes the whole screen.
-
-The 2022 game was set in Leshy's cabin; that scene, its models and the card models the art was rendered from are in the history before the factory replaced them.
-
-In development, `window.__game` exposes the table's state and where things are on screen, which the `table` browser suite uses to click the models.
-
 ## The API
 
-| Route                              | Does                                                                                                  |
-| ---------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `/api/auth/*`                      | Sign up, sign in by email or username, rename, delete the account, sign out; handled by Better Auth   |
-| `GET /api/me`                      | The signed-in player, their best score and games played                                               |
-| `POST /api/games`                  | Starts a game with a seed the server picks, or resumes the unfinished one                             |
-| `POST /api/games/:id/moves`        | Saves the moves since the last save; the server replays the whole game, and scores it once it is over |
-| `POST /api/games/:id/forfeit`      | Walks away: a loss on the turn reached                                                                |
-| `GET /api/leaderboard`             | Players ranked by their best game                                                                     |
-| `GET /api/players/:username/stats` | A player's record: wins, losses, best score, recent games                                             |
+| Route                              | Does                                                                                                   |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `/api/auth/*`                      | Sign up, sign in by email or username or as a guest, rename, delete the account, sign out; Better Auth |
+| `GET /api/me`                      | The signed-in player, their best score and games played                                                |
+| `POST /api/games`                  | Starts a game with a seed the server picks, or resumes the unfinished one                              |
+| `POST /api/games/:id/moves`        | Saves the moves since the last save; the server replays the whole game, and scores it once it is over  |
+| `POST /api/games/:id/forfeit`      | Walks away: a loss on the turn reached                                                                 |
+| `GET /api/leaderboard?page=`       | Players ranked by their best game, twenty to a page; guests are left off                               |
+| `GET /api/players/:username/stats` | A player's record: wins, losses, rank, favorite card, best game, recent games                          |
+| `GET /api/players/:username/games` | A player's whole history, ten games to a page                                                          |
 
-A score is never sent, only moves: the server replays them with the same rules engine the browser plays with, refuses any illegal one, and scores only a finished game. Every figure is computed from the stored games, and a player can only ever be shown under their own username. Sign-in attempts are rate limited by the client's real address and game submissions per player; the browser suite clears the counters first when it runs against a local database. The tests run against a real Postgres database whose name must end in `_test`.
+Every figure is computed from the stored games, and a player can only ever be shown under their own username. Sign-in attempts are rate limited by the client's real address, and games per player.
 
 ## Looking after the live site
 
@@ -116,8 +151,9 @@ Built by Adrian Jimenez, rewritten from his 2022 bootcamp project ([original rep
 - **The button's cap:** from [Scifi button](https://sketchfab.com/3d-models/scifi-button-8dcd82d477e441d7b6789f1851924b5f) by lorib2306 (CC BY 4.0), cut from its stand.
 - **The ceiling light:** [Weathered Fluorescent Light/Lamp](https://sketchfab.com/3d-models/weathered-fluorescent-lightlamp-07c2805b50b6476f8e0ad467fae00b82) by Mark Peters (CC BY 4.0).
 - **The factory's metal:** Metal029, DiamondPlate008C and CorrugatedSteel005 from [ambientCG](https://ambientcg.com) (CC0).
-- **The cards:** Adrian Jimenez's art from the 2022 card models, rendered out once and shown on each disk's screen.
+- **The cards:** Adrian Jimenez's 1-bit pixel art, drawn for the rebuild in a sprite editor made for it; it replaced the 2022 card art.
 - **The name filter:** word lists from [obscenity](https://github.com/jo3-l/obscenity) (MIT) and [LDNOOBW](https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words) (CC BY 4.0).
+- **Fonts:** IBM Plex Sans and Plex Mono, VT323 and Pirata One (all SIL Open Font License), through [Fontsource](https://fontsource.org).
 - **The game** is a tribute to Inscryption by Daniel Mullins Games.
 
 ## License

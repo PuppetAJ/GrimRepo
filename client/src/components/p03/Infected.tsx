@@ -1,9 +1,12 @@
-import { lazy, Suspense, useCallback, useEffect, useState, useSyncExternalStore } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState, useSyncExternalStore, type ComponentType } from 'react'
 import { Corruption } from './Corruption.tsx'
 import { FrameDamage } from './FrameDamage.tsx'
 
 const loadTerminal = () => import('./Terminal.tsx')
-const Terminal = lazy(loadTerminal)
+// Code that can't arrive, as when the page is left mid-load or a deploy renames it, leaves the frame empty, not an error.
+const Terminal = lazy<ComponentType<{ lines: readonly string[]; user: string | undefined }>>(() =>
+  loadTerminal().catch(() => ({ default: () => null })),
+)
 
 type Phase = 'clean' | 'glitch' | 'broken'
 
@@ -71,7 +74,8 @@ export function Infected({ lines, user }: { lines: readonly string[] | null; use
   // The takeover starts once the screenshot has been seen, or after a moment on a slow connection.
   useEffect(() => {
     if (phase !== 'clean') return
-    void loadTerminal()
+    // Only a head start: leaving the page can cut it short, and the terminal loads for real when it is shown.
+    loadTerminal().catch(() => {})
     const timer = window.setTimeout(() => setPhase('glitch'), loaded ? CLEAN_MS : CLEAN_MS * 2.5)
     return () => window.clearTimeout(timer)
   }, [phase, loaded])

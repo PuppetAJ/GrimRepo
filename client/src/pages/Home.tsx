@@ -140,8 +140,8 @@ export function Home() {
         </section>
         <section className="flex flex-col gap-1 border-t pt-5">
           <h2 className="font-semibold">Latest release</h2>
-          <div className="font-mono text-sm text-primary">v2.0.0-dev</div>
-          <p className="text-sm text-muted-foreground">Being rebuilt from a 2022 bootcamp project.</p>
+          <div className="font-mono text-sm text-primary">v2.0.0</div>
+          <p className="text-sm text-muted-foreground">Rebuilt from a 2022 bootcamp project.</p>
         </section>
       </aside>
     </div>
