@@ -12,9 +12,12 @@ export const ENGINE = process.env.E2E_BROWSER === 'firefox' ? 'firefox' : 'chrom
 console.log(`against ${BASE} in ${ENGINE}`)
 
 export async function launch({ width = 1280, height = 800 } = {}) {
-  // Headless Chrome has no GPU and only draws WebGL in software when asked to, which the 3D table needs.
+  // Headless browsers on a machine with no GPU only draw WebGL in software when asked to, which the 3D table needs.
   const browser =
-    ENGINE === 'firefox' ? await firefox.launch() : await chromium.launch({ args: ['--enable-unsafe-swiftshader'] })
+    ENGINE === 'firefox'
+      ? // On CI, E2E_HEADED runs it in a virtual display, where Mesa's software OpenGL can draw WebGL.
+        await firefox.launch({ headless: !process.env.E2E_HEADED, firefoxUserPrefs: { 'webgl.force-enabled': true } })
+      : await chromium.launch({ args: ['--enable-unsafe-swiftshader'] })
   const context = await browser.newContext({ viewport: { width, height } })
   const page = await context.newPage()
   page.setDefaultTimeout(20_000)
@@ -119,7 +122,8 @@ export const visibleText = (page) => page.locator('body').innerText()
 
 const selectorFor = (action) => {
   if (action.type === 'draw') return `[data-action="draw-${action.from}"]`
-  if (action.type === 'select') return `[data-action="select"][data-uid="${action.uid}"]`
+  // A hand card is never disabled, only marked so, and a click while a move plays back is refused; so wait for it.
+  if (action.type === 'select') return `[data-action="select"][data-uid="${action.uid}"]:not([aria-disabled="true"])`
   if ('lane' in action) return `[data-action="${action.type}"][data-lane="${action.lane}"]`
   return `[data-action="${action.type}"]`
 }
@@ -132,7 +136,15 @@ export async function playWithBot(page, { stopAfterTurn = Infinity } = {}) {
   const actions = []
   while (state.status === 'playing' && state.turn <= stopAfterTurn) {
     const action = nextBotAction(state)
-    await page.locator(selectorFor(action)).first().click()
+    try {
+      await page.locator(selectorFor(action)).first().click()
+    } catch (error) {
+      // What was wanted, and what the table showed instead, for a failure on CI that can't be watched.
+      console.log(`  The bot wanted ${JSON.stringify(action)} on turn ${state.turn}; the table said:`)
+      console.log(`  ${(await page.locator('[data-table]').innerText()).replace(/\s+/g, ' ').slice(0, 600)}`)
+      await page.screenshot({ path: 'e2e-failure.png' }).catch(() => {})
+      throw error
+    }
     const result = apply(state, action)
     if (!result.ok) throw new Error(`the mirror refused ${JSON.stringify(action)}: ${result.reason}`)
     state = result.state
