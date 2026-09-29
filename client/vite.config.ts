@@ -81,7 +81,8 @@ const BUDGET = { entry: 150, three: 400, other: 40 }
 
 const budget: Plugin = {
   name: 'bundle-budget',
-  apply: 'build',
+  // The browser's bundles only; the prerender's server build never reaches a visitor.
+  apply: (_config, { command, isSsrBuild }) => command === 'build' && !isSsrBuild,
   generateBundle(_options, bundle) {
     const over = Object.values(bundle).flatMap((chunk) => {
       if (chunk.type !== 'chunk') return []

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import { Corruption } from './Corruption.tsx'
 import { FrameDamage } from './FrameDamage.tsx'
 
@@ -40,11 +40,23 @@ function corrupt(progress: number): string {
     .join('')
 }
 
+// Nothing changes once React has the page, so there is nothing to subscribe to.
+const unchanging = () => () => {}
+const taken = () => true
+const notYet = () => false
+
 /** The README's gameplay screenshot, which P03 takes over: it tears, then boots into his terminal. */
 export function Infected({ lines, user }: { lines: readonly string[] | null; user: string | undefined }) {
-  const [phase, setPhase] = useState<Phase>(firstPhase)
+  // While React takes over the prerendered page it matches its HTML, clean; after that, the visit's own phase.
+  const hydrated = useSyncExternalStore(unchanging, taken, notYet)
+  const [chosen, setPhase] = useState<Phase | null>(null)
+  const phase = chosen ?? (hydrated ? firstPhase() : 'clean')
   const [loaded, setLoaded] = useState(false)
   const [tick, setTick] = useState(0)
+  // A prerendered screenshot can finish loading before React takes over, and so before its onLoad is listened for.
+  const shot = useCallback((image: HTMLImageElement | null) => {
+    if (image?.complete) setLoaded(true)
+  }, [])
 
   useEffect(() => {
     if (!import.meta.env.DEV) return
@@ -164,10 +176,13 @@ export function Infected({ lines, user }: { lines: readonly string[] | null; use
         ) : (
           <div className="relative h-full overflow-hidden rounded-md border">
             <img
+              ref={shot}
               src="/readme/table.webp"
               alt="The 3D table: P03 behind a board of floppy-disk cards"
               width={960}
               height={540}
+              // The home page's largest element: fetched first, as soon as the prerendered HTML names it.
+              fetchPriority="high"
               onLoad={() => setLoaded(true)}
               className="size-full object-cover object-top"
             />
