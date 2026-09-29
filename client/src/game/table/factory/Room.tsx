@@ -1,0 +1,90 @@
+import { useTexture } from '@react-three/drei'
+import { useEffect, useMemo } from 'react'
+import * as THREE from 'three'
+import { TABLE_Y } from '../layout.ts'
+import { MOOD } from '../mood.ts'
+import { TINT } from '../palette.ts'
+import { GLOW, X } from './constants.ts'
+import { metal, surfaces, weathered } from './surfaces.ts'
+
+// The console's top is 10.4 by 7.4, centred at z -9.9; its trim is four bars, each x, z, width and depth.
+const TRIM: [number, number, number, number][] = [
+  [X, -6.26, 10.52, 0.12],
+  [X, -13.54, 10.52, 0.12],
+  [X - 5.2, -9.9, 0.12, 7.4],
+  [X + 5.2, -9.9, 0.12, 7.4],
+]
+
+/** The console the game is played on, the floor and the walls. */
+export function Room() {
+  const clean = metal(useTexture(surfaces('table')), [4, 3])
+  const floor = metal(useTexture(surfaces('floor')), [12, 12])
+  const wall = metal(useTexture(surfaces('wall')), [8, 3])
+  // Keyed on the textures, not the object holding them, which is new on every render: the grime is painted once.
+  const table = useMemo(
+    () => ({ map: weathered(clean.map, 11, 1), normalMap: clean.normalMap, roughnessMap: clean.roughnessMap }),
+    [clean.map, clean.normalMap, clean.roughnessMap],
+  )
+  const floorMap = useMemo(() => weathered(floor.map, 5, 0.7), [floor.map])
+  useEffect(
+    () => () => {
+      table.map.dispose()
+      floorMap.dispose()
+    },
+    [table, floorMap],
+  )
+  const rough = { metalness: 0.55, normalScale: new THREE.Vector2(1.6, 1.6) }
+  return (
+    <>
+      {/* The console: its top is the table. */}
+      <mesh position={[X, TABLE_Y / 2, -9.9]}>
+        <boxGeometry args={[10.4, TABLE_Y, 7.4]} />
+        {[0, 1, 3, 4, 5].map((side) => (
+          <meshStandardMaterial key={side} attach={`material-${side}`} {...wall} color="#2a3138" metalness={0.7} />
+        ))}
+        <meshStandardMaterial attach="material-2" {...table} {...rough} color="#8a98a6" roughness={0.85} />
+      </mesh>
+      {/* A dark steel trim round the table's edge, raised off the top, so it reads where the table ends. */}
+      {TRIM.map(([x, z, width, depth], i) => (
+        <mesh key={i} position={[x, TABLE_Y + 0.03, z]}>
+          <boxGeometry args={[width, 0.1, depth]} />
+          {/* Dark steel, part metal and faintly lit: pure metal with nothing to reflect renders black. */}
+          <meshStandardMaterial
+            {...clean}
+            color="#4a535b"
+            metalness={0.6}
+            roughness={0.38}
+            emissive={TINT.fill}
+            emissiveIntensity={MOOD.trimGlow}
+          />
+        </mesh>
+      ))}
+      {/* A thin lit edge along the console, the only line of light near the player. */}
+      <mesh position={[X, TABLE_Y - 0.05, -6.18]}>
+        <boxGeometry args={[10.4, 0.03, 0.03]} />
+        <meshBasicMaterial color={GLOW} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[X, 0, -10]}>
+        <planeGeometry args={[60, 60]} />
+        <meshStandardMaterial {...floor} map={floorMap} color="#3c444c" metalness={0.7} />
+      </mesh>
+      <mesh position={[X, 10, -22]}>
+        <planeGeometry args={[40, 20]} />
+        <meshStandardMaterial {...wall} color="#2f363d" metalness={0.7} />
+      </mesh>
+      {[-1, 1].map((sign) => (
+        <mesh key={sign} position={[X + sign * 13, 10, -10]} rotation={[0, -sign * (Math.PI / 2), 0]}>
+          <planeGeometry args={[30, 20]} />
+          <meshStandardMaterial {...wall} color="#2a3037" metalness={0.7} />
+        </mesh>
+      ))}
+      {/* Pipes along the back wall, for something to catch the light. */}
+      {[9.2, 12.6, 16.1].map((y, i) => (
+        <mesh key={y} position={[X, y, -21.6]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.22 + i * 0.04, 0.22 + i * 0.04, 38, 12]} />
+          <meshStandardMaterial color="#20262c" metalness={0.8} roughness={0.5} />
+        </mesh>
+      ))}
+    </>
+  )
+}

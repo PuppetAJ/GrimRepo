@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react'
-import { CARDS, SIGILS, TIP, type CardDef } from 'shared'
+import { SIGILS } from 'shared'
 import { api } from '../../lib/api.ts'
-import { Sprite } from '../../game/CardReader.tsx'
-import { spriteOf } from '../../game/sprites.ts'
 import { number } from '../../lib/format.ts'
+import { DECK, find, HELP, PAGES, STEPS } from './commandData.ts'
+import { CardUpClose, Cost, Dim, Lesson } from './CommandOutput.tsx'
 
 export type Context = {
   user: string | undefined
@@ -13,144 +13,7 @@ export type Context = {
 }
 export type Commands = typeof import('./commands.tsx')
 
-const Dim = ({ children }: { children: ReactNode }) => <span className="text-p03-dim">{children}</span>
-const Say = ({ children }: { children: ReactNode }) => <p className="text-p03">{children}</p>
-
-// The deck the player draws from, then Boilerplate; Y2K is not spoken of.
-const DECK = Object.values(CARDS).filter((card) => card.id !== 'Y2K')
-const PAGES: Record<string, string> = {
-  '~': '/',
-  '/': '/',
-  '..': '/',
-  readme: '/',
-  leaderboard: '/leaderboard',
-  cards: '/cards',
-  game: '/game',
-  play: '/game',
-  account: '/account',
-  stats: '/stats',
-}
-
-const HELP: [string, string][] = [
-  ['tutorial', 'The rules, since you clearly need them'],
-  ['cards', 'Every card in your deck. Weak, all of them'],
-  ['card <name>', 'One card, up close'],
-  ['sigils', 'What the sigils do'],
-  ['rules', 'The whole game on one screen'],
-  ['top', 'The five who got lucky'],
-  ['whoami', 'Who you are. Nobody, probably'],
-  ['p03', 'Me. Obviously'],
-  ['play', 'Sit down. Finally'],
-  ['cd <page>', 'Readme, leaderboard, cards, game, account'],
-  ['history', 'Everything you typed. I kept it'],
-  ['clear', 'Wipe the screen. Not my memory'],
-]
-
-function Cost({ cost }: { cost: number }) {
-  if (!cost) return <Dim>free</Dim>
-  return (
-    <span aria-label={`costs ${cost}`} className="text-[#ff9a2e]">
-      {'◆'.repeat(cost)}
-    </span>
-  )
-}
-
-function Art({ id, size = 'size-24' }: { id: string; size?: string }) {
-  return (
-    <span className={`${size} flex shrink-0 items-center justify-center border border-[#2f6b3d] p-2 text-p03`}>
-      <Sprite grid={spriteOf(id)} className="size-full" />
-    </span>
-  )
-}
-
-function CardUpClose({ card }: { card: CardDef }) {
-  return (
-    <div className="flex gap-4 py-1">
-      <Art id={card.id} size="size-28 sm:size-32" />
-      <div className="flex flex-col">
-        <Say>{card.name}</Say>
-        <p>
-          <Cost cost={card.cost} /> <Dim>·</Dim> <span className="whitespace-nowrap">attack {card.attack}</span>{' '}
-          <Dim>·</Dim> <span className="whitespace-nowrap">health {card.health}</span>
-        </p>
-        {card.sigils.length ? (
-          card.sigils.map((sigil) => (
-            <p key={sigil}>
-              <span className="text-p03">{SIGILS[sigil].name}</span>: {SIGILS[sigil].text}
-            </p>
-          ))
-        ) : (
-          <Dim>// no sigils</Dim>
-        )}
-        {card.id === 'Boilerplate' ? <Dim>// the endless pile; worth one sacrifice</Dim> : null}
-      </div>
-    </div>
-  )
-}
-
-const find = (name: string): CardDef | undefined => {
-  const wanted = name.toLowerCase().replace(/[^a-z0-9]/g, '')
-  return Object.values(CARDS).find(
-    (card) => card.id.toLowerCase() === wanted || card.name.toLowerCase().replace(/[^a-z0-9]/g, '') === wanted,
-  )
-}
-
-type Step = { title: string; body: ReactNode; art?: string }
-const STEPS: Step[] = [
-  {
-    title: 'The goal',
-    body: `Listen up, I'm only explaining this once. There's a scale between us. Your damage tips it your way, mine tips it mine. First to tip it to ${TIP} wins. Win fast and it scores more, but I won't let you win quickly.`,
-  },
-  {
-    title: 'Draw',
-    body: "Every turn starts with one draw. Your deck, or a Boilerplate from the pile that never runs out. Filler, but you'll need it. If your hand is full with 7 cards, you can't draw anymore.",
-  },
-  {
-    title: 'Free cards',
-    art: 'HelloWorld',
-    body: "You can play a card with no cost whenever you want into one of the four lanes. I'll be playing across from you.",
-  },
-  {
-    title: 'Sacrifices',
-    art: 'DestroyEnemyYou',
-    body: "A card with a cost needs sacrifices. Pick it, then mark your cards on the table until they cover the cost. Each card is worth its own cost. Cards with no cost are still worth 1. They die when the new card lands, and it can take a lane they emptied. Leshy invented this. It's the one good idea he ever had.",
-  },
-  {
-    title: 'EXECUTE',
-    body: "Press EXECUTE, or E, to end your turn. Your cards attack left to right. Each hits the card across from it, or me if the lane's open. Don't get used to that.",
-  },
-  {
-    title: 'My queue',
-    art: 'Firewall',
-    body: "My cards queue in my back row and step up when the lane in front clears. Overkill carries into the card behind. It never reaches the scale. I designed it that way. You're welcome.",
-  },
-  {
-    title: 'Sigils',
-    art: 'FourOhFour',
-    body: "Some cards carry sigils. FourOhFour deletes the opposing side every time it's played. Cheap, I'd never use something like that. Type sigils for a list of the rest of them.",
-  },
-  {
-    title: 'Reading the table',
-    body: "Hold left click on a card or monitor to read it up close. Click a monitor to pin it. That's everything. Type play. We've got Transcending to do.",
-  },
-]
 let step = 0
-
-function Lesson({ at }: { at: number }) {
-  const lesson = STEPS[at] as Step
-  return (
-    <div className="flex flex-col gap-1">
-      <Say>
-        [{at + 1}/{STEPS.length}] {lesson.title}
-      </Say>
-      <div className="flex gap-4">
-        {lesson.art ? <Art id={lesson.art} /> : null}
-        <p className="max-w-3xl">{lesson.body}</p>
-      </div>
-      <Dim>{at + 1 < STEPS.length ? '// next (n), back (b), or tutorial <step>' : '// back (b), or play'}</Dim>
-    </div>
-  )
-}
 
 function tutorial(to: number): ReactNode {
   step = Math.max(0, Math.min(STEPS.length - 1, to))
