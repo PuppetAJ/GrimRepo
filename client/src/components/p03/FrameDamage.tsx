@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import tornCorner from './torn-corner.svg'
 
 type Edge = 'top' | 'bottom' | 'left' | 'right'
 /** A break in one edge: where along it (percent), how long, how far the broken piece is thrown out, and sideways. */
@@ -102,50 +103,18 @@ function Along({ edge, at, children }: { edge: Edge; at: number; children: React
   )
 }
 
-/** The corner torn clean off: the border gone in a ragged step, and the torn-off chip hanging just outside. */
+/** The corner torn clean off, drawn for the top-right and turned to the others about the frame's corner. */
 function Torn({ corner }: { corner: string }) {
+  // Placed so the drawing's origin, 22px in and 12px down, sits on the corner.
   const style = {
-    top: corner.startsWith('top') ? 0 : undefined,
-    bottom: corner.startsWith('bottom') ? -1 : undefined,
-    left: corner.endsWith('left') ? 0 : undefined,
-    right: corner.endsWith('right') ? -1 : undefined,
-    // A pixel square, not nothing: a browser skips painting an SVG with no size. Its origin sits on the corner.
-    width: 1,
-    height: 1,
+    top: corner.startsWith('top') ? -12 : undefined,
+    bottom: corner.startsWith('bottom') ? -20 : undefined,
+    left: corner.endsWith('left') ? -22 : undefined,
+    right: corner.endsWith('right') ? -7 : undefined,
+    transformOrigin: '22px 12px',
+    transform: `scale(${corner.endsWith('left') ? -1 : 1}, ${corner.startsWith('bottom') ? -1 : 1})`,
   }
-  // Drawn for the top-right corner and turned to the others.
-  const turn = {
-    'top-right': '',
-    'top-left': 'scale(-1,1)',
-    'bottom-right': 'scale(1,-1)',
-    'bottom-left': 'scale(-1,-1)',
-  }[corner]
-  return (
-    <svg className="absolute overflow-visible" style={style} shapeRendering="crispEdges">
-      <g transform={turn}>
-        {/* The gap, stepped like torn paper. */}
-        <rect x={-22} y={-1} width={23} height={2} fill={GROUND} />
-        <rect x={-1} y={-1} width={2} height={20} fill={GROUND} />
-        <rect x={-14} y={0} width={14} height={3} fill={GROUND} />
-        <rect x={-4} y={0} width={4} height={12} fill={GROUND} />
-        <rect x={-8} y={0} width={8} height={7} fill={GROUND} />
-        {/* The ragged edge left behind. */}
-        <rect x={-22} y={1} width={8} height={1} fill={GREEN} opacity={0.6} />
-        <rect x={-14} y={3} width={6} height={1} fill={GREEN} opacity={0.6} />
-        <rect x={-8} y={7} width={4} height={1} fill={GREEN} opacity={0.6} />
-        <rect x={-4} y={12} width={3} height={1} fill={GREEN} opacity={0.6} />
-        <rect x={-2} y={13} width={1} height={6} fill={GREEN} opacity={0.6} />
-        {/* The chip, thrown up and out, and its crumbs. */}
-        <rect x={-10} y={-9} width={9} height={1} fill={GREEN} />
-        <rect x={1} y={-8} width={1} height={7} fill={GREEN} />
-        <rect x={-11} y={-9} width={1} height={1} fill={RED} />
-        <rect x={2} y={-8} width={1} height={1} fill={CYAN} />
-        <rect x={4} y={-12} width={2} height={2} fill={GREEN} opacity={0.7} />
-        <rect x={-15} y={-5} width={1} height={1} fill={GREEN} opacity={0.7} />
-        <rect x={6} y={-3} width={1} height={1} fill={GREEN} opacity={0.7} />
-      </g>
-    </svg>
-  )
+  return <img src={tornCorner} alt="" width={29} height={32} className="absolute max-w-none" style={style} />
 }
 
 /** Laid over a frame whose border is 1px, breaking it where P03 got through. */

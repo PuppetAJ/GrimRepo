@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="29" height="32" viewBox="-22 -12 29 32" shape-rendering="crispEdges">
+  <!-- The top-right corner, its origin at the frame's corner: the gap stepped like torn paper, in the card's colour. -->
+  <g fill="#151318">
+    <rect x="-22" y="-1" width="23" height="2"/>
+    <rect x="-1" y="-1" width="2" height="20"/>
+    <rect x="-14" y="0" width="14" height="3"/>
+    <rect x="-4" y="0" width="4" height="12"/>
+    <rect x="-8" y="0" width="8" height="7"/>
+  </g>
+  <!-- The ragged edge left behind. -->
+  <g fill="#7dff9a" fill-opacity="0.6">
+    <rect x="-22" y="1" width="8" height="1"/>
+    <rect x="-14" y="3" width="6" height="1"/>
+    <rect x="-8" y="7" width="4" height="1"/>
+    <rect x="-4" y="12" width="3" height="1"/>
+    <rect x="-2" y="13" width="1" height="6"/>
+  </g>
+  <!-- The chip, thrown up and out, fringed red and cyan, and its crumbs. -->
+  <rect x="-10" y="-9" width="9" height="1" fill="#7dff9a"/>
+  <rect x="1" y="-8" width="1" height="7" fill="#7dff9a"/>
+  <rect x="-11" y="-9" width="1" height="1" fill="#ff4d6d" fill-opacity="0.7"/>
+  <rect x="2" y="-8" width="1" height="1" fill="#4de1ff" fill-opacity="0.6"/>
+  <g fill="#7dff9a" fill-opacity="0.7">
+    <rect x="4" y="-12" width="2" height="2"/>
+    <rect x="-15" y="-5" width="1" height="1"/>
+    <rect x="6" y="-3" width="1" height="1"/>
+  </g>
+</svg>
