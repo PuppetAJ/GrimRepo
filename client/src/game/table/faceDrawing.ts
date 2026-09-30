@@ -52,8 +52,8 @@ const RARE: Palette = {
 
 const tints = new Map<string, HTMLCanvasElement>()
 
-function tinted(image: HTMLImageElement, colour: string): HTMLCanvasElement {
-  const key = `${image.src}:${colour}`
+function tinted(image: HTMLImageElement, color: string): HTMLCanvasElement {
+  const key = `${image.src}:${color}`
   let layer = tints.get(key)
   if (layer) return layer
   layer = document.createElement('canvas')
@@ -62,7 +62,7 @@ function tinted(image: HTMLImageElement, colour: string): HTMLCanvasElement {
   const paint = layer.getContext('2d') as CanvasRenderingContext2D
   paint.drawImage(image, 0, 0)
   paint.globalCompositeOperation = 'source-in'
-  paint.fillStyle = colour
+  paint.fillStyle = color
   paint.fillRect(0, 0, layer.width, layer.height)
   tints.set(key, layer)
   return layer
@@ -74,11 +74,11 @@ function pixels(
   x: number,
   y: number,
   scale: number,
-  colour: string,
+  color: string,
 ) {
   context.save()
   context.imageSmoothingEnabled = false
-  context.drawImage(tinted(image, colour), x, y, image.naturalWidth * scale, image.naturalHeight * scale)
+  context.drawImage(tinted(image, color), x, y, image.naturalWidth * scale, image.naturalHeight * scale)
   context.restore()
 }
 
@@ -103,7 +103,7 @@ function diskPath(context: CanvasRenderingContext2D, mirrored = false) {
 }
 
 // Centers on the glyphs' ink because VT323's line box sits high.
-function centred(context: CanvasRenderingContext2D, text: string, x: number, y: number) {
+function centered(context: CanvasRenderingContext2D, text: string, x: number, y: number) {
   // measureText bounds depend on the current baseline, so set it first.
   context.textAlign = 'left'
   context.textBaseline = 'alphabetic'
@@ -123,9 +123,9 @@ function clearHoles(context: CanvasRenderingContext2D) {
 const recess = ([x0, y0, x1, y1]: readonly [number, number, number, number]) =>
   [x0 * W, y0 * H, (x1 - x0) * W, (y1 - y0) * H] as const
 
-function screen(context: CanvasRenderingContext2D, area: readonly [number, number, number, number], colour: string) {
+function screen(context: CanvasRenderingContext2D, area: readonly [number, number, number, number], color: string) {
   const [x, y, w, h] = recess(area)
-  context.fillStyle = colour
+  context.fillStyle = color
   context.fillRect(x, y, w, h)
   context.fillStyle = 'rgb(0 0 0 / 0.22)'
   for (let line = y; line < y + h; line += 3) context.fillRect(x, line, w, 1)
@@ -133,15 +133,15 @@ function screen(context: CanvasRenderingContext2D, area: readonly [number, numbe
 
 const sprites = new Map<string, HTMLCanvasElement>()
 
-function spriteLayer(image: HTMLImageElement, scale: number, colour: string): HTMLCanvasElement {
-  const key = `${image.src}:${colour}:${scale}`
+function spriteLayer(image: HTMLImageElement, scale: number, color: string): HTMLCanvasElement {
+  const key = `${image.src}:${color}:${scale}`
   let layer = sprites.get(key)
   if (layer) return layer
   layer = document.createElement('canvas')
   layer.width = image.naturalWidth * scale
   layer.height = image.naturalHeight * scale
   const paint = layer.getContext('2d') as CanvasRenderingContext2D
-  pixels(paint, image, 0, 0, scale, colour)
+  pixels(paint, image, 0, 0, scale, color)
   paint.globalCompositeOperation = 'destination-out'
   paint.fillStyle = 'rgb(0 0 0 / 0.35)'
   for (let line = 1; line < layer.height; line += 3) paint.fillRect(0, line, layer.width, 1)
@@ -196,7 +196,7 @@ export function drawFace(context: CanvasRenderingContext2D, unit: Unit, layer: L
   if (layer === 'content') {
     context.fillStyle = palette.plateInk
     fitText(context, def.name.toUpperCase(), (size) => `bold ${size}px VT323`, 60, lw * 0.9)
-    centred(context, def.name.toUpperCase(), lx + lw / 2, ly + lh / 2)
+    centered(context, def.name.toUpperCase(), lx + lw / 2, ly + lh / 2)
   }
 
   const [sx, sy, sw, sh] = recess(RECESS.screen)
@@ -238,9 +238,9 @@ export function drawFace(context: CanvasRenderingContext2D, unit: Unit, layer: L
   pixels(context, iconImage('health'), hx + hw - 6 - 8 * icon, hy + hh / 2 - 4 * icon, icon, palette.line)
   context.font = Math.max(unit.attack, unit.health) > 99 ? '40px VT323' : '64px VT323'
   context.fillStyle = palette.line
-  centred(context, String(unit.attack), ax + aw / 2 + 12, ay + ah / 2)
+  centered(context, String(unit.attack), ax + aw / 2 + 12, ay + ah / 2)
   context.fillStyle = unit.health < unit.maxHealth ? palette.hurt : palette.line
-  centred(context, String(unit.health), hx + hw / 2 - 12, hy + hh / 2)
+  centered(context, String(unit.health), hx + hw / 2 - 12, hy + hh / 2)
 }
 
 export function drawBack(context: CanvasRenderingContext2D): void {

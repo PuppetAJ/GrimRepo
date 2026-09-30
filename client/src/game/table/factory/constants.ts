@@ -11,8 +11,8 @@ export const STILL = typeof window !== 'undefined' && window.matchMedia('(prefer
 
 const WHITE = new THREE.Color()
 /** Leans a lamp color toward P03's green by `tint`. */
-export const lamp = (colour: string, tint: number) =>
+export const lamp = (color: string, tint: number) =>
   '#' +
-  WHITE.set(colour)
+  WHITE.set(color)
     .lerp(new THREE.Color(TINT.glow), tint * 0.6)
     .getHexString()
