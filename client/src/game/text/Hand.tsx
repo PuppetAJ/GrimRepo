@@ -37,7 +37,7 @@ export function Hand() {
                     ? act({ type: 'select', uid: unit.uid })
                     : !selected && !busy && showRefusal(`card-${unit.uid}`)
               }
-              className={`w-full rounded-md p-1 transition-transform ${selected ? '-translate-y-3 outline-2 outline-p03 outline-dashed' : allowed ? 'hover:-translate-y-1' : 'brightness-50 saturate-50'}`}
+              className={`w-full rounded-md p-1 transition-transform motion-reduce:transition-none ${selected ? '-translate-y-3 outline-2 outline-p03 outline-dashed' : allowed ? 'hover:-translate-y-1' : 'brightness-50 saturate-50'}`}
             >
               <span
                 key={refusal.what === `card-${unit.uid}` ? refusal.count : 0}

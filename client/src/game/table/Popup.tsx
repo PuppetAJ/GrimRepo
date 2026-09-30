@@ -1,6 +1,7 @@
 import { useFrame } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
+import { STILL } from './factory/constants.ts'
 import type { Vec3 } from './layout.ts'
 
 export function Popup({
@@ -45,7 +46,7 @@ export function Popup({
   useFrame(() => {
     if (!sprite.current) return
     const t = Math.min(1, (performance.now() - born) / 1000)
-    sprite.current.position.set(at[0], at[1] + t * 0.6, at[2])
+    sprite.current.position.set(at[0], at[1] + (STILL ? 0 : t * 0.6), at[2])
     material.opacity = 1 - t * t
   })
   return <sprite ref={sprite} material={material} scale={[1.5, 0.56, 1]} renderOrder={10} />

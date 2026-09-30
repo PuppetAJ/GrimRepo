@@ -334,6 +334,27 @@
       opacity: 0;
     }
   }
+  /* Numbers fade where they appear, and cards fade where they stood, rather than flying off. */
+  @keyframes rise {
+    from {
+      opacity: 1;
+      transform: translate(-50%, -50%);
+    }
+    to {
+      opacity: 0;
+      transform: translate(-50%, -50%);
+    }
+  }
+  @keyframes fold-away {
+    to {
+      opacity: 0;
+    }
+  }
+  @keyframes offer-up {
+    to {
+      opacity: 0;
+    }
+  }
 }
 
 .crt {

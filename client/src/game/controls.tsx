@@ -190,13 +190,13 @@ export function ScaleBar({
       >
         <span
           aria-hidden
-          className={`absolute inset-y-0 transition-all duration-300 ${scale > 0 ? 'bg-foreground' : 'bg-death'}`}
+          className={`absolute inset-y-0 transition-all duration-300 motion-reduce:transition-none ${scale > 0 ? 'bg-foreground' : 'bg-death'}`}
           style={{ left: `${Math.min(50, knot)}%`, width: `${reach}%` }}
         />
         <span aria-hidden className="absolute inset-y-[-3px] left-1/2 w-px bg-p03-dim" />
         <span
           aria-hidden
-          className="absolute inset-y-[-4px] w-1 -translate-x-1/2 rounded-sm bg-p03 transition-all duration-300"
+          className="absolute inset-y-[-4px] w-1 -translate-x-1/2 rounded-sm bg-p03 transition-all duration-300 motion-reduce:transition-none"
           style={{ left: `${knot}%` }}
         />
       </span>

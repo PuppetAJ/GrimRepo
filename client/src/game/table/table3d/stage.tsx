@@ -3,6 +3,7 @@ import { easing } from 'maath'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { cursorCss, onCursor } from '../cursor.ts'
+import { STILL } from '../factory/constants.ts'
 import { BOARD_CENTER, CAMERA, type CameraView } from '../layout.ts'
 import { MOOD } from '../mood.ts'
 
@@ -12,9 +13,15 @@ export function CameraRig({ view }: { view: CameraView }) {
   const target = useRef(new THREE.Vector3(...CAMERA[view].target))
   useFrame(({ camera, pointer }, delta) => {
     const [x, y, z] = CAMERA[view].position
-    seat.set(x + pointer.x * 0.12, y + pointer.y * 0.06, z)
-    easing.damp3(camera.position, seat, 0.18, delta)
-    easing.damp3(target.current, CAMERA[view].target, 0.18, delta)
+    // With reduced motion the camera jumps between views and doesn't follow the pointer.
+    if (STILL) {
+      camera.position.set(x, y, z)
+      target.current.set(...CAMERA[view].target)
+    } else {
+      seat.set(x + pointer.x * 0.12, y + pointer.y * 0.06, z)
+      easing.damp3(camera.position, seat, 0.18, delta)
+      easing.damp3(target.current, CAMERA[view].target, 0.18, delta)
+    }
     camera.lookAt(target.current)
   })
   return null

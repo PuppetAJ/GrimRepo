@@ -39,7 +39,7 @@ function Occupant({
       {unit ? (
         <span
           key={unit.uid}
-          className={`block size-full transition-transform duration-200 ${tilted ? '-translate-y-1 rotate-6' : ''}`}
+          className={`block size-full transition-transform duration-200 motion-reduce:transition-none ${tilted ? '-translate-y-1 rotate-6' : ''}`}
           style={
             isNew(unit.uid)
               ? { animation: `${row === 'board' ? 'arrive-up' : 'arrive-down'} 280ms ease-out` }
