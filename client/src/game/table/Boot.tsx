@@ -45,7 +45,7 @@ export function Boot({ stage, progress = 0, files = [] }: { stage: BootStage; pr
       aria-label={words}
       className={`absolute inset-0 z-30 grid place-items-center bg-p03-ground transition-opacity duration-400 ${stage === 'done' ? 'pointer-events-none opacity-0' : 'opacity-100'}`}
     >
-      <div className="p03-screen w-[min(34rem,90%)] rounded-lg border border-[#2f6b3d] p-5 font-terminal text-lg leading-snug text-p03 sm:text-xl">
+      <div className="p03-screen w-[min(34rem,90%)] rounded-lg border border-p03-edge p-5 font-terminal text-lg leading-snug text-p03 sm:text-xl">
         {lines.map((line, i) => (
           <p key={i} className={`whitespace-pre ${line.startsWith(' ') ? 'text-p03-dim' : ''}`}>
             {line}

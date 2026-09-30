@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
+import { forTable } from '../shortcuts.ts'
 
-/** E rings the bell, except while typing. */
+/** E rings the bell. */
 export function useBellKey(canPress: boolean, ring: () => void) {
   const latest = useRef(ring)
   useEffect(() => {
@@ -8,8 +9,7 @@ export function useBellKey(canPress: boolean, ring: () => void) {
   })
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key.toLowerCase() !== 'e' || event.repeat || event.metaKey || event.ctrlKey || event.altKey) return
-      if ((event.target as HTMLElement).tagName === 'INPUT') return
+      if (event.key.toLowerCase() !== 'e' || event.repeat || !forTable(event)) return
       if (canPress) latest.current()
     }
     window.addEventListener('keydown', onKey)

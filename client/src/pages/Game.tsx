@@ -88,6 +88,7 @@ export function Game() {
     return (
       // Negative margins give the table most of the gutter; on phones, all of it.
       <div className={layout === 'phone' ? '-mx-(--gutter)' : '-mx-[calc(var(--gutter)-0.75rem)]'}>
+        <h1 className="sr-only">Play against P03</h1>
         {/* Remount on a new deal or reload so playback never shows the last game. */}
         <TerminalTable key={game.generation} game={game} seat={seat} on3d={() => choose('3d')} layout={layout} />
       </div>
@@ -95,6 +96,14 @@ export function Game() {
 
   return (
     <div className="relative -mx-(--gutter) -my-8 h-[calc(100dvh-7rem)] min-h-[24rem] bg-[#050403] short:fixed short:inset-0 short:z-40 short:m-0 short:h-dvh short:min-h-0">
+      <h1 className="sr-only">Play against P03</h1>
+      {/* The 3D table is drawn, not read, so the first stop offers the text table; it shows once focused, like a skip link. */}
+      <Button
+        onClick={() => choose('text')}
+        className="sr-only focus-visible:not-sr-only focus-visible:absolute focus-visible:top-3 focus-visible:left-3 focus-visible:z-50"
+      >
+        Play the text table, which a screen reader can follow
+      </Button>
       {upright ? (
         <TurnSideways onText={() => choose('text')} />
       ) : (

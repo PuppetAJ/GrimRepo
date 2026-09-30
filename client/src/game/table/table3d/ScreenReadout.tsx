@@ -22,7 +22,7 @@ export function ScreenReadout({
     <div
       role={label ? 'region' : undefined}
       aria-label={label}
-      className={`p03-screen relative flex flex-col overflow-hidden rounded-md border-2 border-[#2f6b3d] px-3 py-2 font-terminal leading-snug ${className}`}
+      className={`p03-screen relative flex flex-col overflow-hidden rounded-md border-2 border-p03-edge px-3 py-2 font-terminal leading-snug ${className}`}
     >
       <span aria-hidden className="crt-glass pointer-events-none absolute inset-0" />
       <p className="flex shrink-0 justify-between gap-2">

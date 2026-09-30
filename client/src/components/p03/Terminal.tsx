@@ -145,7 +145,7 @@ export default function Terminal({ lines, user }: { lines: readonly string[]; us
         <FaultyScreen />
       </Suspense>
       <Glass />
-      <div className="relative z-10 border-b border-[#2f6b3d]/70 bg-p03-ground/80 px-4 py-1 text-lg text-p03-dim sm:px-6">
+      <div className="relative z-10 border-b border-p03-edge/70 bg-p03-ground/80 px-4 py-1 text-lg text-p03-dim sm:px-6">
         p03@factory: ~/grim-repo
       </div>
       <div
@@ -233,7 +233,7 @@ function Line({ entry, typed, run }: { entry: Entry; typed: number | null; run: 
               key={command}
               type="button"
               onClick={() => run(command)}
-              className="border border-[#2f6b3d] px-2 leading-tight text-p03 hover:border-p03 focus-visible:outline-2 focus-visible:outline-p03"
+              className="border border-p03-edge px-2 leading-tight text-p03 hover:border-p03 focus-visible:outline-2 focus-visible:outline-p03"
             >
               {command}
             </button>

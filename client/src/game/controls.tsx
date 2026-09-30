@@ -1,7 +1,18 @@
 import { X } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
-import { Link, useNavigate } from 'react-router'
-import { card, costOf, SIGILS, TIP, worthOf, type Action, type Slot, type Unit } from 'shared'
+import { Link } from 'react-router'
+import {
+  type Action,
+  card,
+  costOf,
+  type GameState,
+  HAND_LIMIT,
+  SIGILS,
+  type Slot,
+  TIP,
+  type Unit,
+  worthOf,
+} from 'shared'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,18 +48,38 @@ export function owed(summoning: Unit, board: Slot[], marked: number[]): number {
   return Math.max(0, costOf(summoning) - paid)
 }
 
+/** The turn began with a full hand, so its draw was skipped. */
+export const skippedDraw = (state: GameState) => state.drawn && state.player.hand.length >= HAND_LIMIT
+
+/** Why a click on a card or a lane did nothing, to finish "Can't do that because …". */
+export function whyNot(state: GameState, target: { card: Unit } | { lane: number }): string {
+  if (!state.drawn) return 'you need to draw a card first'
+  if ('card' in target) {
+    const onTable = state.player.board.reduce((sum, unit) => sum + (unit ? worthOf(unit) : 0), 0)
+    const spare = onTable ? `only ${onTable}` : 'nothing'
+    return `${card(target.card.card).name} costs ${costOf(target.card)} and there's ${spare} on the table to sacrifice`
+  }
+  const summoning = state.summon ? state.player.hand.find((unit) => unit.uid === state.summon?.uid) : undefined
+  if (!summoning) return "you haven't picked a card from your hand to play"
+  const left = owed(summoning, state.player.board, state.summon?.marked ?? [])
+  if (left > 0) return `${card(summoning.card).name} still needs ${left} more sacrificed`
+  return 'that lane is taken'
+}
+
 /** What the player can do next, for the prompt line. */
-export function prompt(mustDraw: boolean, summoning: Unit | undefined, left = 0, over = false): string {
+export function prompt(mustDraw: boolean, summoning: Unit | undefined, left = 0, over = false, full = false): string {
   if (over) return 'Saving the result…'
   if (mustDraw) return 'Draw a card to start your turn.'
-  if (!summoning) return 'Play a card, or press the button.'
+  if (!summoning)
+    return full
+      ? 'Your hand is full, so no draw. Play a card, or press the button.'
+      : 'Play a card, or press the button.'
   const name = card(summoning.card).name
   if (left > 0) return `Summoning ${name}: sacrifice ${'◆'.repeat(left)} from the table.`
   return `Summoning ${name}: pick a lane.`
 }
 
 export function GameOver({ result, className = '' }: { result: Finished; className?: string }) {
-  const navigate = useNavigate()
   return (
     <section role="status" className={`flex flex-col gap-3 rounded border border-p03 p-4 ${className}`}>
       <p className="text-3xl text-p03">
@@ -58,7 +89,11 @@ export function GameOver({ result, className = '' }: { result: Finished; classNa
         {number(result.score)} points{result.isBest ? '. A new best.' : `. Your best is ${number(result.best)}.`}
       </p>
       <div className="flex flex-wrap gap-3 font-sans text-base">
-        <Button onClick={() => navigate('/leaderboard', { state: { result } })}>See the leaderboard</Button>
+        <Button asChild>
+          <Link to="/leaderboard" state={{ result }}>
+            See the leaderboard
+          </Link>
+        </Button>
         <Button variant="outline" onClick={() => window.location.reload()}>
           Play again
         </Button>
@@ -147,7 +182,7 @@ export function SeatNote({ seat }: { seat: Exclude<Seat, null> }) {
         type="button"
         onClick={close}
         aria-label="Close the note"
-        className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+        className="grid size-6 shrink-0 place-items-center rounded text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
       >
         <X className="size-4" />
       </button>
@@ -190,13 +225,13 @@ export function ScaleBar({
       >
         <span
           aria-hidden
-          className={`absolute inset-y-0 transition-all duration-300 ${scale > 0 ? 'bg-foreground' : 'bg-death'}`}
+          className={`absolute inset-y-0 transition-all duration-300 motion-reduce:transition-none ${scale > 0 ? 'bg-foreground' : 'bg-death'}`}
           style={{ left: `${Math.min(50, knot)}%`, width: `${reach}%` }}
         />
         <span aria-hidden className="absolute inset-y-[-3px] left-1/2 w-px bg-p03-dim" />
         <span
           aria-hidden
-          className="absolute inset-y-[-4px] w-1 -translate-x-1/2 rounded-sm bg-p03 transition-all duration-300"
+          className="absolute inset-y-[-4px] w-1 -translate-x-1/2 rounded-sm bg-p03 transition-all duration-300 motion-reduce:transition-none"
           style={{ left: `${knot}%` }}
         />
       </span>

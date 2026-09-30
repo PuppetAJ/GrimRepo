@@ -6,6 +6,7 @@ import type { Unit } from 'shared'
 import * as THREE from 'three'
 import { useBatch } from './Batch.tsx'
 import { claimCursor, releaseCursor, type CursorKind } from './cursor.ts'
+import { STILL } from './factory/constants.ts'
 import { kindOf } from './kind.ts'
 import { MOOD } from './mood.ts'
 import { Disk, facePlanes, type DiskHandle } from './Disk.tsx'
@@ -149,7 +150,7 @@ export function Card({
       camera.localToWorld(position)
       const since = (now - shook.current) / 1000
       // Slow and wide enough to survive the easing below.
-      const no = since < 0.7 ? 0.28 * Math.sin(since * 30) * Math.exp(-since * 5) : 0
+      const no = !STILL && since < 0.7 ? 0.28 * Math.sin(since * 30) * Math.exp(-since * 5) : 0
       rotation.copy(camera.quaternion).multiply(roll.setFromAxisAngle(Z, angle + no))
       scale.setScalar(size * (hovered || look === 'selected' ? 1.25 : 1))
     } else {
@@ -159,16 +160,17 @@ export function Card({
       if (look === 'marked') rotation.multiply(roll.setFromAxisAngle(Z, 0.09))
       scale.setScalar(1)
     }
-    if (lunge && now - lunge.at < LUNGE_MS)
+    if (!STILL && lunge && now - lunge.at < LUNGE_MS)
       position.z += lunge.toward * 0.4 * Math.sin((Math.PI * (now - lunge.at)) / LUNGE_MS)
     const leaving = leavingAt === undefined ? 0 : Math.min(1, (now - leavingAt) / LEAVE_MS)
     const fold = THREE.MathUtils.smoothstep(leaving, 0, 0.45)
     const away = THREE.MathUtils.smoothstep(leaving, 0.4, 1)
-    if (leavingHow === 'sacrificed') {
+    // With reduced motion a leaving card folds shut where it stands instead of flying off.
+    if (!STILL && leavingHow === 'sacrificed') {
       position.y += away * 0.9
       rotation.multiply(roll.setFromAxisAngle(Z, away * 1.6))
       scale.multiplyScalar(1 - away * 0.95)
-    } else {
+    } else if (!STILL) {
       // A dead card slides toward its owner's side of the table.
       position.z += away * 1.6 * (place.at === 'board' ? 1 : -1)
       position.y += Math.sin(away * Math.PI) * 0.12

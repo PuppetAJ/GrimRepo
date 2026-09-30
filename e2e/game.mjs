@@ -29,6 +29,23 @@ section('A whole game')
       (await page.locator('[data-action="ringBell"]:not(:disabled)').count()) === 0,
   )
 
+  // Tab from the table to P03's first queued card: the reader shows it, as a pointer would.
+  await page.locator('[data-table="text"]').focus()
+  let reached = null
+  for (let press = 0; press < 40 && !reached; press++) {
+    await page.keyboard.press('Tab')
+    reached = await page.evaluate(() => {
+      const focused = document.activeElement
+      return focused?.getAttribute('data-look')?.startsWith('back:') ? focused.getAttribute('aria-label') : null
+    })
+  }
+  const queued = reached?.split(': ')[1]?.split(',')[0] ?? ''
+  check(
+    "a keyboard reaches P03's queued cards and reads them",
+    Boolean(queued) && (await page.locator('[data-table="text"] aside').last().innerText()).includes(queued),
+    reached ?? 'no queued card reached',
+  )
+
   const { state } = await playWithBot(page)
   const expected = summary(state)
   await page
@@ -48,7 +65,7 @@ section('A whole game')
   )
   check('P03 narrated it', /P03> /.test(await visibleText(page)))
 
-  await page.getByRole('button', { name: 'See the leaderboard' }).click()
+  await page.getByRole('link', { name: 'See the leaderboard' }).click()
   await page.getByRole('heading', { name: 'Contributors' }).waitFor()
   check(
     'the result greets the player on the leaderboard',
@@ -65,7 +82,7 @@ section('A whole game')
   await page.goto(`${BASE}/players/${player.username}`)
   await page.getByRole('heading', { name: player.username }).waitFor()
   // The history loads after the page, and its loading placeholders are a list too.
-  const rows = page.locator('section ol:not([role="status"]) > li')
+  const rows = page.locator('section ol:not([aria-hidden]) > li')
   await rows.first().waitFor()
   const history = await rows.first().innerText()
   check(
@@ -87,7 +104,7 @@ section('Resuming')
   const seed = await page.locator('[data-seed]').getAttribute('data-seed')
   const { state } = await playWithBot(page, { stopAfterTurn: 2 })
   await page.getByText('saved', { exact: true }).waitFor()
-  const consoleRegion = page.getByRole('region', { name: "P03's console" })
+  const consoleRegion = page.getByRole('log', { name: "P03's console" })
   const before = (await consoleRegion.innerText())
     .split('\n')
     .filter((line) => line.startsWith('P03>') && !line.includes('You came back'))

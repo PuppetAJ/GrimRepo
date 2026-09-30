@@ -18,7 +18,7 @@ export function Cost({ cost }: { cost: number }) {
 
 export function Art({ id, size = 'size-24' }: { id: string; size?: string }) {
   return (
-    <span className={`${size} flex shrink-0 items-center justify-center border border-[#2f6b3d] p-2 text-p03`}>
+    <span className={`${size} flex shrink-0 items-center justify-center border border-p03-edge p-2 text-p03`}>
       <PixelArt src={cardArt(id)} className="size-full" />
     </span>
   )
