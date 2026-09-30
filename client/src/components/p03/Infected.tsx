@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useState, useSyncExternalStore, type ComponentType } from 'react'
+import { prefersReducedMotion } from '../../lib/motion.ts'
 import { Corruption } from './Corruption.tsx'
 import { FrameDamage } from './FrameDamage.tsx'
 
@@ -22,7 +23,7 @@ const AFTER = '![P03 was here](/dev/null)'.padEnd(BEFORE.length)
 const NOISE = '#$%&*+=/<>?{}[]█▓▒'
 
 function firstPhase(): Phase {
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return 'broken'
+  if (prefersReducedMotion()) return 'broken'
   try {
     // Plays once per session.
     return sessionStorage.getItem(SEEN_KEY) ? 'broken' : 'clean'
