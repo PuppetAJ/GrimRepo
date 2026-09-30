@@ -34,6 +34,7 @@ const PACE: Record<GameEvent['type'], number> = {
   sacrificed: 240,
   placed: 285,
   wiped: 488,
+  phaseChanged: 488,
   attacked: 225,
   damaged: 195,
   overkill: 165,
@@ -139,6 +140,7 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
       })
       break
     case 'wiped':
+    case 'phaseChanged':
       for (const uid of event.uids) leave(uid)
       break
   }

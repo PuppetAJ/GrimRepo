@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { BOILERPLATE, CARDS, DEBUG_CARD, PLAYER_DECK } from '../cards.ts'
 import { apply, createGame } from './game.ts'
-import { cardAt, play, refused, table, uidOf } from './test-support.ts'
+import { cardAt, deckCards, play, refused, table, uidOf } from './test-support.ts'
 import { HAND_LIMIT } from './types.ts'
 
 describe('the opening', () => {
@@ -16,7 +16,7 @@ describe('the opening', () => {
   it('never deals the debug card, unless asked for it in development', () => {
     for (let seed = 0; seed < 200; seed++) {
       const state = createGame({ seed })
-      assert.ok(![...state.player.hand.map((unit) => unit.card), ...state.player.deck].includes(DEBUG_CARD))
+      assert.ok(![...state.player.hand.map((unit) => unit.card), ...deckCards(state)].includes(DEBUG_CARD))
     }
     assert.ok(createGame({ seed: 1, debug: true }).player.hand.some((unit) => unit.card === DEBUG_CARD))
   })
@@ -83,7 +83,7 @@ describe('drawing', () => {
     assert.ok(events.some((event) => event.type === 'reshuffled'))
     const drawn = after.player.hand.at(-1)?.card
     assert.ok(drawn && drawn !== 'Mainframe' && drawn !== 'Bug', `drew ${drawn}`)
-    assert.ok(!after.player.deck.includes('Mainframe') && !after.player.deck.includes('Bug'))
+    assert.ok(!deckCards(after).includes('Mainframe') && !deckCards(after).includes('Bug'))
   })
 })
 

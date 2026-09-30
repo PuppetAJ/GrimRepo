@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { apply, createGame } from './game.ts'
 import { LANES, type Action, type GameEvent, type GameState } from './types.ts'
-import { makeUnit } from './units.ts'
+import { drawUnit, makeUnit } from './units.ts'
 
 type Row = (string | null)[]
 
@@ -20,10 +20,14 @@ export function table({
   scale?: number
 }): GameState {
   const state = createGame({ seed: 7 })
-  const row = (ids: Row) =>
-    [...Array(LANES).keys()].map((lane) => (ids[lane] ? makeUnit(state, ids[lane] as string) : null))
+  // Taken from the library where the card is in it, as a drawn card would be.
+  const unit = (id: string) => {
+    const source = state.player.library.findIndex((entry) => entry.card === id)
+    return source < 0 ? makeUnit(state, id) : drawUnit(state, source)
+  }
+  const row = (ids: Row) => [...Array(LANES).keys()].map((lane) => (ids[lane] ? unit(ids[lane] as string) : null))
   state.drawn = true
-  state.player.hand = hand.map((id) => makeUnit(state, id))
+  state.player.hand = hand.map(unit)
   state.player.board = row(board)
   state.opponent.front = row(front)
   state.opponent.back = row(back)
@@ -57,3 +61,6 @@ export const uidOf = (state: GameState, card: string): number => {
 }
 
 export const cardAt = (row: GameState['player']['board'], lane: number) => row[lane]?.card ?? null
+
+export const deckCards = (state: GameState): string[] =>
+  state.player.deck.map((source) => state.player.library[source]?.card as string)

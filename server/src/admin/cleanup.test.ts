@@ -36,6 +36,27 @@ it('clears the demo account’s open game and month-old abandoned games, and not
   assert.deepEqual(left, [recent], `demo game ${demoGame} and abandoned ${abandoned} should be gone`)
 })
 
+it('clears the demo account’s open run and month-old abandoned runs, and nothing else', async () => {
+  await auth.api.signUpEmail({ body: demoAccount })
+  const demo = await app.call('POST', '/api/auth/sign-in/username', {
+    body: { username: 'demo', password: demoAccount.password },
+  })
+  await app.call('POST', '/api/runs', { cookie: demo.cookie })
+  const player = await app.call('POST', '/api/auth/sign-up/email', { body: newPlayer() })
+  const recent = (await app.call('POST', '/api/runs', { cookie: player.cookie })).body.id as number
+  const stale = await app.call('POST', '/api/auth/sign-up/email', { body: newPlayer() })
+  const abandoned = (await app.call('POST', '/api/runs', { cookie: stale.cookie })).body.id as number
+  await pool.query(`UPDATE runs SET started_at = now() - interval '40 days' WHERE id = $1`, [abandoned])
+
+  const removed = await nightlyCleanup()
+  assert.equal(removed['demoRun'], 1)
+  assert.equal(removed['abandonedRuns'], 1)
+  assert.deepEqual(
+    (await pool.query<{ id: number }>('SELECT id FROM runs')).rows.map((row) => row.id),
+    [recent],
+  )
+})
+
 it('sweeps expired sessions and stale rate-limit rows', async () => {
   const player = await app.call('POST', '/api/auth/sign-up/email', { body: newPlayer() })
   await pool.query(`UPDATE sessions SET expires_at = now() - interval '1 day'`)

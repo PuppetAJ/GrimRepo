@@ -1,9 +1,11 @@
 import express from 'express'
 import { rateLimit } from 'express-rate-limit'
+import { SIGILS, type SigilId } from 'shared'
 import { z } from 'zod'
 import { USERNAME_PATTERN } from '../auth/auth.ts'
 import { requireUser, type SignedIn } from '../auth/session.ts'
 import { forfeitGame, GameError, leaderboard, playerGames, playerStats, recordMoves, startGame } from '../db/games.ts'
+import { forfeitRun, recordRunMoves, startRun } from '../db/runs.ts'
 
 export const api = express.Router()
 
@@ -22,6 +24,26 @@ const action = z.discriminatedUnion('type', [
 
 const moves = z.strictObject({ from: z.number().int().min(0), actions: z.array(action).max(1_000) })
 
+const small = z.number().int().min(0).max(9)
+const cardId = z.number().int().positive()
+
+const runAction = z.discriminatedUnion('type', [
+  z.strictObject({ type: z.literal('go'), node: z.string().regex(/^\d-\d$/) }),
+  z.strictObject({ type: z.literal('play'), action }),
+  z.strictObject({ type: z.literal('take'), index: small }),
+  z.strictObject({ type: z.literal('buff'), card: cardId }),
+  z.strictObject({
+    type: z.literal('transfer'),
+    from: cardId,
+    to: cardId,
+    sigil: z.enum(Object.keys(SIGILS) as [SigilId, ...SigilId[]]),
+  }),
+  z.strictObject({ type: z.literal('choose'), option: small }),
+  z.strictObject({ type: z.literal('leave') }),
+])
+
+const runMoves = z.strictObject({ from: z.number().int().min(0), actions: z.array(runAction).max(1_000) })
+
 // Keyed per player, since only signed-in players reach these routes.
 const perPlayer = (limit: number) =>
   rateLimit({
@@ -37,7 +59,7 @@ const perPlayer = (limit: number) =>
 const startLimiter = perPlayer(20)
 const movesLimiter = perPlayer(120)
 
-const gameId = (raw: unknown): number | null => {
+const idOf = (raw: unknown): number | null => {
   const id = Number(raw)
   return Number.isInteger(id) && id > 0 ? id : null
 }
@@ -60,7 +82,7 @@ api.post('/games', requireUser, startLimiter, async (_req, res) => {
 })
 
 api.post('/games/:id/moves', requireUser, movesLimiter, async (req, res) => {
-  const id = gameId(req.params['id'])
+  const id = idOf(req.params['id'])
   const parsed = moves.safeParse(req.body)
   if (!id || !parsed.success) {
     res.status(400).json({ error: 'Invalid moves', issues: parsed.error?.issues.map((issue) => issue.message) ?? [] })
@@ -75,13 +97,47 @@ api.post('/games/:id/moves', requireUser, movesLimiter, async (req, res) => {
 })
 
 api.post('/games/:id/forfeit', requireUser, movesLimiter, async (req, res) => {
-  const id = gameId(req.params['id'])
+  const id = idOf(req.params['id'])
   if (!id) {
     res.status(404).json({ error: 'No such game in progress' })
     return
   }
   try {
     res.json(await forfeitGame((res.locals['user'] as SignedIn).id, id))
+  } catch (error) {
+    if (!(error instanceof GameError)) throw error
+    res.status(error.status).json(error.body)
+  }
+})
+
+api.post('/runs', requireUser, startLimiter, async (_req, res) => {
+  const run = await startRun((res.locals['user'] as SignedIn).id)
+  res.status(run.resumed ? 200 : 201).json(run)
+})
+
+api.post('/runs/:id/moves', requireUser, movesLimiter, async (req, res) => {
+  const id = idOf(req.params['id'])
+  const parsed = runMoves.safeParse(req.body)
+  if (!id || !parsed.success) {
+    res.status(400).json({ error: 'Invalid moves', issues: parsed.error?.issues.map((issue) => issue.message) ?? [] })
+    return
+  }
+  try {
+    res.json(await recordRunMoves((res.locals['user'] as SignedIn).id, id, parsed.data.from, parsed.data.actions))
+  } catch (error) {
+    if (!(error instanceof GameError)) throw error
+    res.status(error.status).json(error.body)
+  }
+})
+
+api.post('/runs/:id/forfeit', requireUser, movesLimiter, async (req, res) => {
+  const id = idOf(req.params['id'])
+  if (!id) {
+    res.status(404).json({ error: 'No such run in progress' })
+    return
+  }
+  try {
+    res.json(await forfeitRun((res.locals['user'] as SignedIn).id, id))
   } catch (error) {
     if (!(error instanceof GameError)) throw error
     res.status(error.status).json(error.body)

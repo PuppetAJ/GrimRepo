@@ -33,7 +33,8 @@ export function nextBotAction(state: GameState, strategy: Strategy = 'greedy'): 
     // Boilerplate only when something in hand can't be paid for yet.
     const short = state.player.hand.some((unit) => costOf(unit) > units(state.player.board).length)
     const hasFuel = state.player.hand.some((unit) => unit.card === BOILERPLATE)
-    return { type: 'draw', from: short && !hasFuel ? 'boilerplate' : 'deck' }
+    const deck = allowed('draw').some((action) => action.type === 'draw' && action.from === 'deck')
+    return { type: 'draw', from: deck && !(short && !hasFuel) ? 'deck' : 'boilerplate' }
   }
 
   const summon = state.summon

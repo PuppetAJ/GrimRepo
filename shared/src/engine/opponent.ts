@@ -1,4 +1,5 @@
 import { card, OPPONENT_POOL, type CardDef } from '../cards.ts'
+import { encounter } from '../encounters.ts'
 import type { Rng } from '../rng.ts'
 import { makeUnit } from './units.ts'
 import { LANES, type GameEvent, type GameState, type Slot } from './types.ts'
@@ -74,6 +75,28 @@ export function queue(state: GameState, rng: Rng, count: number, turn: number, e
     // A pick among the best few keeps P03 sensible but not predictable or merciless.
     const def = rng.pick(suited.slice(0, CHOICE_WIDTH))
     const unit = makeUnit(state, def.id)
+    state.opponent.back[lane] = unit
+    events.push({ type: 'queued', lane, unit })
+  }
+}
+
+/** The planned lane, or the free one nearest it. */
+function nearestFree(state: GameState, lane: number): number | undefined {
+  return [...Array(LANES).keys()]
+    .sort((a, b) => Math.abs(a - lane) - Math.abs(b - lane) || a - b)
+    .find((candidate) => !state.opponent.back[candidate])
+}
+
+/** Queues the encounter's next planned turn, and P03's usual picks once the plan runs out. */
+export function queuePlan(state: GameState, rng: Rng, events: GameEvent[]): void {
+  const plan = encounter(state.opponent.encounter as string).phases[state.opponent.phase] ?? []
+  const turn = plan[state.opponent.step]
+  state.opponent.step += 1
+  if (!turn) return queue(state, rng, queueCountFor(state.turn, rng), state.turn, events)
+  for (const queued of turn) {
+    const lane = nearestFree(state, queued.lane)
+    if (lane === undefined) return
+    const unit = makeUnit(state, 'card' in queued ? queued.card : rng.pick(queued.pick))
     state.opponent.back[lane] = unit
     events.push({ type: 'queued', lane, unit })
   }

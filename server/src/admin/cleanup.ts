@@ -9,10 +9,15 @@ export async function nightlyCleanup(): Promise<Record<string, number>> {
       `DELETE FROM games WHERE status = 'playing' AND user_id IN (SELECT id FROM users WHERE username = $1)`,
       [demoAccount.username],
     ),
+    demoRun: await count(
+      `DELETE FROM runs WHERE status = 'playing' AND user_id IN (SELECT id FROM users WHERE username = $1)`,
+      [demoAccount.username],
+    ),
     // A month-old unfinished game is abandoned, so it is dropped unscored.
     abandonedGames: await count(
       `DELETE FROM games WHERE status = 'playing' AND started_at < now() - interval '30 days'`,
     ),
+    abandonedRuns: await count(`DELETE FROM runs WHERE status = 'playing' AND started_at < now() - interval '30 days'`),
     // A guest still playing has a live session, so they keep games they may yet claim by signing up.
     staleGuests: await count(
       `DELETE FROM users WHERE is_anonymous AND created_at < now() - interval '7 days'

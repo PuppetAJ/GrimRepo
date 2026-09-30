@@ -28,6 +28,7 @@ export {
   TIP,
   TURN_LIMIT,
   type Action,
+  type DeckCard,
   type GameEvent,
   type GameState,
   type Result,
@@ -35,6 +36,23 @@ export {
   type Slot,
   type Unit,
 } from './engine/types.ts'
-export { costOf, worthOf } from './engine/units.ts'
+export { costOf, deckCard, worthOf } from './engine/units.ts'
 export { Rng } from './rng.ts'
-export { SCORE_TURN_BASELINE, scoreBattle, type Outcome } from './scoring.ts'
+export { SCORE_TURN_BASELINE, scoreBattle, scoreRun, type Outcome } from './scoring.ts'
+export { cardsIn, ENCOUNTERS, encounter, STAGES, type Encounter, type Plan, type Queued } from './encounters.ts'
+export { nextRunAction, playRun } from './run/bot.ts'
+export { findNode, generateStage } from './run/map.ts'
+export { applyRun, createRun, legalRunActions, reachable, replayRun, STARTER_DECK, type RunReplay } from './run/run.ts'
+export { SCENES, scene, type Effect, type Scene } from './run/scenes.ts'
+export {
+  RUN_RULES_VERSION,
+  type MapNode,
+  type NodeKind,
+  type RunAction,
+  type RunCard,
+  type RunEvent,
+  type RunResult,
+  type RunState,
+  type StageMap,
+  type Visit,
+} from './run/types.ts'
