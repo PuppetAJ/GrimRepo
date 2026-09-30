@@ -36,7 +36,11 @@ export function Layout() {
   const name = user?.displayUsername ?? user?.username
 
   async function signOut() {
-    await authClient.signOut()
+    // A network failure rejects, where a refusal comes back as an error.
+    const { error } = await authClient.signOut().catch((failure: unknown) => ({
+      error: { message: failure instanceof Error ? failure.message : String(failure) },
+    }))
+    if (error) return void toast.error(`Could not sign out: ${error.message}`)
     toast.success('Signed out')
     navigate('/')
   }

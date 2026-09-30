@@ -185,6 +185,8 @@ section('Two tabs')
   await second.locator('[data-seed]').waitFor()
   const hand = (page) => page.locator('[data-action="select"]').evaluateAll((cards) => cards.map((c) => c.ariaLabel))
 
+  // A background tab gets no animation frames in headed Firefox, so each tab is brought forward before it's used.
+  await first.bringToFront()
   await first.locator('[data-action="draw-deck"]').click()
   await first.getByText('saved', { exact: true }).waitFor()
   const moved = await hand(first)
@@ -193,6 +195,7 @@ section('Two tabs')
     await new Promise((resolve) => setTimeout(resolve, 1000))
     await route.continue()
   })
+  await second.bringToFront()
   await second.locator('[data-action="draw-boilerplate"]').click()
   await second.getByText(/moved on in another tab/).waitFor()
   // The second tab's own Boilerplate is gone and the first tab's draw is in its place.
