@@ -36,12 +36,15 @@ export function useTableLayout(layout: Layout) {
   }, [phone, covering, sideways])
 
   const [handSection, setHandSection] = useState<HTMLElement | null>(null)
+  // Pixels beside the board: the mid layout's 13rem reader and its gap, or the sideways phone's 21rem column.
+  const aside = layout === 'mid' ? 13 * 16 + 12 : sideways ? 21 * 16 + 32 : phone ? 16 : 0
+  const smallestLane = layout === 'mid' ? 76 : 40
+  // A scrolling phone is limited by width only.
   const { setArea, lane: laneSize } = useLaneSize(
     compact,
     handSection,
-    layout === 'mid' ? 13 * 16 + 12 : sideways ? 21 * 16 + 32 : phone ? 16 : 0,
-    layout === 'mid' ? 76 : 40,
-    // A scrolling phone is limited by width only.
+    aside,
+    smallestLane,
     scrolling ? 'width' : phone,
   )
 
