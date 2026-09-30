@@ -1,6 +1,7 @@
 import { RotateCw } from 'lucide-react'
-import { Component, lazy, Suspense, useState, type ReactNode } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { Button } from '@/components/ui/button.tsx'
+import { LoadFailed } from '../components/LoadFailed.tsx'
 import { Failure, Loading } from '../components/States.tsx'
 import type { Seat } from '../game/controls.tsx'
 import { Boot } from '../game/table/Boot.tsx'
@@ -38,22 +39,15 @@ function askedLayout(): Layout | null {
   return asked === 'wide' || asked === 'mid' || asked === 'phone' ? asked : null
 }
 
-/** Catches a model that fails to load or a lost WebGL context. */
-class TableFailed extends Component<{ onText: () => void; children: ReactNode }, { failed: boolean }> {
-  state = { failed: false }
-  static getDerivedStateFromError() {
-    return { failed: true }
-  }
-  render() {
-    if (!this.state.failed) return this.props.children
-    return (
-      <div role="alert" className="flex h-full flex-col items-center justify-center gap-4 px-6 text-center">
-        <p className="font-terminal text-2xl text-p03">The 3D table could not be set.</p>
-        <p className="text-sm text-muted-foreground">The game is saved; the text table plays the same one.</p>
-        <Button onClick={this.props.onText}>Play the text version</Button>
-      </div>
-    )
-  }
+/** Shown when a model fails to load or the WebGL context is lost. */
+function TableFailed({ onText }: { onText: () => void }) {
+  return (
+    <div role="alert" className="flex h-full flex-col items-center justify-center gap-4 px-6 text-center">
+      <p className="font-terminal text-2xl text-p03">The 3D table could not be set.</p>
+      <p className="text-sm text-muted-foreground">The game is saved; the text table plays the same one.</p>
+      <Button onClick={onText}>Play the text version</Button>
+    </div>
+  )
 }
 
 function TurnSideways({ onText }: { onText: () => void }) {
@@ -104,12 +98,12 @@ export function Game() {
       {upright ? (
         <TurnSideways onText={() => choose('text')} />
       ) : (
-        <TableFailed onText={() => choose('text')}>
+        <LoadFailed fallback={<TableFailed onText={() => choose('text')} />}>
           <Suspense fallback={<Boot stage="code" />}>
             {/* Remount on a new deal or reload so the table rebuilds from the current state. */}
             <Table3D key={game.generation} game={game} seat={seat} onText={() => choose('text')} />
           </Suspense>
-        </TableFailed>
+        </LoadFailed>
       )}
     </div>
   )
