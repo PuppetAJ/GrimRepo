@@ -74,7 +74,9 @@ export function CardBatch({ assets, children }: { assets: Assets; children: Reac
     () => ({
       take: (kind) => {
         let slot = 0
-        while (used.current[kind].has(slot) && slot < MOST - 1) slot++
+        while (used.current[kind].has(slot)) slot++
+        // Two cards sharing a slot would draw one in the wrong place, so running out fails loudly.
+        if (slot >= MOST) throw new Error(`The table batches at most ${MOST} ${kind} cards at once`)
         used.current[kind].add(slot)
         fit(kind)
         return slot
