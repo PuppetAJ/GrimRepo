@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button.tsx'
 import { Input } from '@/components/ui/input.tsx'
 import { Label } from '@/components/ui/label.tsx'
 import { PasswordInput } from '../components/PasswordInput.tsx'
-import { authClient, authError, DEMO } from '../lib/auth.ts'
+import { authClient, authError, DEMO, settled } from '../lib/auth.ts'
 import { P03Line } from '../components/p03/P03Line.tsx'
 
 export function Account() {
@@ -39,7 +39,7 @@ export function Account() {
     const username = field.value.trim()
     if (!/^[A-Za-z0-9_]{3,20}$/.test(username)) return refuse('3 to 20 letters, digits or underscores')
     setRenaming(true)
-    const { error } = await authClient.updateUser({ username } as Parameters<typeof authClient.updateUser>[0])
+    const { error } = await settled(authClient.updateUser({ username } as Parameters<typeof authClient.updateUser>[0]))
     setRenaming(false)
     if (error) return refuse(authError(error, 'That name did not work'))
     setRenameError(null)
@@ -48,7 +48,7 @@ export function Account() {
   }
 
   async function remove() {
-    const { error } = await authClient.deleteUser({ password })
+    const { error } = await settled(authClient.deleteUser({ password }))
     if (error) return setDeleteError(authError(error, 'That did not work'))
     toast.success('Your account and its games are gone')
     navigate('/', { replace: true })

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button.tsx'
 import { Input } from '@/components/ui/input.tsx'
 import { Label } from '@/components/ui/label.tsx'
 import { PasswordInput } from '../components/PasswordInput.tsx'
-import { authClient, authError } from '../lib/auth.ts'
+import { authClient, authError, settled } from '../lib/auth.ts'
 import { P03Line } from '../components/p03/P03Line.tsx'
 
 // The server checks all of this too; this only saves a round trip and explains the rule.
@@ -39,7 +39,7 @@ export function SignUp() {
     }
     setBusy(true)
     setErrors({})
-    const { error } = await authClient.signUp.email({ ...parsed.data, name: parsed.data.username })
+    const { error } = await settled(authClient.signUp.email({ ...parsed.data, name: parsed.data.username }))
     setBusy(false)
     if (error)
       return setErrors({

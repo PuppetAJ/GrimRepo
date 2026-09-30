@@ -13,7 +13,11 @@ console.log(`against ${BASE} in ${ENGINE}`)
 
 // Collected from every page a suite opens, so an error on any of them fails the run.
 const pageErrors = []
-const listen = (page) => page.on('pageerror', (error) => pageErrors.push(error.message))
+const listen = (page) => {
+  page.on('pageerror', (error) => pageErrors.push(error.message))
+  // E2E_DEBUG=1 names each request that fails, since Firefox's NetworkError says nothing of which one.
+  if (process.env.E2E_DEBUG) page.on('requestfailed', (request) => console.log(`  [request failed] ${request.url()}`))
+}
 
 export async function launch({ width = 1280, height = 800 } = {}) {
   // Without a GPU, headless browsers draw WebGL in software only when asked, and the 3D table needs it.
@@ -128,7 +132,8 @@ export async function signUp(page, player) {
 export async function signInAsDemo(page) {
   await page.goto(`${BASE}/login`)
   await page.getByRole('button', { name: 'Play as the demo account' }).click()
-  await page.getByRole('button', { name: 'Account menu' }).waitFor()
+  // The demo's own name: a guest from an earlier check would show the menu before the sign-in lands.
+  await page.getByRole('button', { name: 'Account menu' }).filter({ hasText: 'demo' }).waitFor()
 }
 
 /** A new guest, as Quick battle makes, with its own game and its own rate-limit count. */
