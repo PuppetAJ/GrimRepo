@@ -1,19 +1,29 @@
 import { card } from '../cards.ts'
-import type { GameState, Slot, Unit } from './types.ts'
+import type { DeckCard, GameState, Slot, Unit } from './types.ts'
 
-export function makeUnit(state: GameState, id: string): Unit {
+export const deckCard = (id: string): DeckCard => {
   const def = card(id)
-  const unit = {
-    uid: state.nextUid,
-    card: id,
-    attack: def.attack,
-    health: def.health,
-    maxHealth: def.health,
-    sigils: [...def.sigils],
-  }
-  state.nextUid += 1
-  return unit
+  return { card: id, attack: def.attack, health: def.health, sigils: [...def.sigils] }
 }
+
+function unitOf(state: GameState, from: DeckCard): Unit {
+  state.nextUid += 1
+  return {
+    uid: state.nextUid - 1,
+    card: from.card,
+    attack: from.attack,
+    health: from.health,
+    maxHealth: from.health,
+    sigils: [...from.sigils],
+  }
+}
+
+export const makeUnit = (state: GameState, id: string): Unit => unitOf(state, deckCard(id))
+
+export const drawUnit = (state: GameState, source: number): Unit => ({
+  ...unitOf(state, state.player.library[source] as DeckCard),
+  source,
+})
 
 export const costOf = (unit: Unit): number => card(unit.card).cost
 
