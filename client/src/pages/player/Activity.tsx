@@ -54,6 +54,7 @@ export function Activity({ stats }: { stats: PlayerStats }) {
           {/* Reversed so a scrolling grid starts at the latest weeks without script. */}
           <div
             tabIndex={0}
+            role="group"
             aria-label="Activity grid, scrolls sideways"
             className="flex flex-row-reverse overflow-x-auto pb-1 focus-visible:outline-2 focus-visible:outline-ring"
           >

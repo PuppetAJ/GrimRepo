@@ -64,7 +64,7 @@ export function SignIn() {
         <Button variant="outline" disabled={busy} onClick={() => void signIn(DEMO.username, DEMO.password)}>
           Play as the demo account
         </Button>
-        <Button asChild variant="ghost" disabled={busy}>
+        <Button asChild variant="ghost">
           <Link to="/game">Or play a game of your own as a guest</Link>
         </Button>
       </div>
