@@ -131,9 +131,11 @@ export async function signUp(page, player) {
 
 export async function signInAsDemo(page) {
   await page.goto(`${BASE}/login`)
+  // The sign-in's own response: a guest from an earlier check shows the account menu before it lands.
+  const signedIn = page.waitForResponse((response) => response.url().includes('/api/auth/sign-in/') && response.ok())
   await page.getByRole('button', { name: 'Play as the demo account' }).click()
-  // The demo's own name: a guest from an earlier check would show the menu before the sign-in lands.
-  await page.getByRole('button', { name: 'Account menu' }).filter({ hasText: 'demo' }).waitFor()
+  await signedIn
+  await page.getByRole('button', { name: 'Account menu' }).waitFor()
 }
 
 /** A new guest, as Quick battle makes, with its own game and its own rate-limit count. */
