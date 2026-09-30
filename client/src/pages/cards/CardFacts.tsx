@@ -20,7 +20,7 @@ export function Facts({ def, sigils = 'max-h-28' }: { def: CardDef; sigils?: str
         <span>Attack: {def.attack}</span>
         <span>Health: {def.health}</span>
       </p>
-      {/* Each sigil beside its icon; past a few, the list scrolls rather than stretching the card. */}
+      {/* Past a few sigils the list scrolls instead of stretching the card. */}
       {def.sigils.length ? (
         <ul
           tabIndex={0}
@@ -46,7 +46,7 @@ export function Facts({ def, sigils = 'max-h-28' }: { def: CardDef; sigils?: str
   )
 }
 
-/** A card as the text table draws it, on P03's screen. */
+/** A card as the text table draws it. */
 export function Screen({ def, className = '' }: { def: CardDef; className?: string }) {
   return (
     <div className={`p03-screen relative overflow-hidden border border-[#2f6b3d] p-2 font-terminal ${className}`}>

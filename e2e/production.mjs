@@ -1,8 +1,7 @@
-// The live site's critical path, run after a deploy: `pnpm test:prod`, or against another production build with
-// E2E_BASE_URL. It signs nobody up and plays only as a guest, whom the nightly clean-up removes, so the board stays clean.
+// Plays only as a guest, whom the nightly clean-up removes, so the live board stays clean.
 import { chromium, firefox } from 'playwright'
 
-// The live site unless told otherwise; set before the shared helpers load, since they read it as they do.
+// Set before lib.mjs loads, since it reads this at import.
 process.env.E2E_BASE_URL ??= 'https://grimrepo.up.railway.app'
 const { BASE, ENGINE, reporter, resetRateLimits, stamp } = await import('./lib.mjs')
 
@@ -62,7 +61,6 @@ section('The pages')
 
 section('Playing')
 {
-  // A guest, dealt straight into the text table: no account, and off the board.
   await page.goto(BASE, { waitUntil: 'networkidle' })
   await page.evaluate(() => localStorage.setItem('grimrepo:table', 'text'))
   await page.getByRole('link', { name: 'Quick battle' }).click()
@@ -84,7 +82,7 @@ section('Playing')
 
 section('Guessing')
 {
-  // Last, since it leaves this address unable to sign in for a minute. A made-up name, so no real account is touched.
+  // Last, since it locks this address out of sign-in for a minute; a made-up name touches no real account.
   const statuses = []
   for (let attempt = 0; attempt < 6; attempt++) {
     const response = await page.request.post(`${BASE}/api/auth/sign-in/username`, {

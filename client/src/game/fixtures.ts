@@ -1,9 +1,9 @@
 import { card, CARDS, PLAYER_DECK, SIGILS, TIP, type GameState, type SigilId, type Unit } from 'shared'
 
-// Fixed states to lay the tables out against, loaded with ?fixture=<name> in development or a test build.
+// Fixed states for checking layouts, loaded with ?fixture=<name> in dev and test builds.
 export const FIXTURES_ON = import.meta.env.DEV || import.meta.env.VITE_TEST_HANDLE === '1'
 
-// A card carries three sigils at most; the worst case is the three that take the most words to explain.
+// The three sigils with the longest text, since a card carries three at most.
 const MOST_SIGILS = (Object.keys(SIGILS) as SigilId[])
   .sort((a, b) => SIGILS[b].text.length - SIGILS[a].text.length)
   .slice(0, 3)
@@ -22,7 +22,6 @@ const unit = (id: string, { sigils, hurt = 0 }: { sigils?: SigilId[]; hurt?: num
   }
 }
 
-/** Everything at its most: every lane filled, a full hand, three sigils on a card, the longest names and numbers. */
 function worst(): GameState {
   uid = 0
   const hand = [
@@ -61,7 +60,7 @@ function worst(): GameState {
       ],
       back: [unit('ForkBomb'), unit('Mainframe', { sigils: MOST_SIGILS }), unit('Sandbox'), unit('Bug')],
     },
-    // Halfway through summoning the dearest card, so the prompt, the marks and a lifted card all show.
+    // Mid-summon, so the prompt, the marks and a lifted card all show.
     summon: { uid: hand[0]!.uid, marked: [1] },
     nextUid: 100,
   }
@@ -81,10 +80,9 @@ export function fixture(): { name: string; state: GameState; log: string[] } | n
   return { name, state: make(), log: [`P03> Fixture "${name}": played here and never saved.`, ...log] }
 }
 
-/** A card as hard to lay out as any can be: the longest name, the top cost, huge numbers and three sigils, the most a card takes. */
 export const WORST_CARD = 'WorstCase'
 
-/** Puts the worst-case card in the card table, in development and test builds only, for the compendium to show. */
+/** Adds the worst-case card to CARDS in dev and test builds, for the compendium. */
 export function withWorstCard(): boolean {
   if (!FIXTURES_ON) return false
   CARDS[WORST_CARD] ??= {

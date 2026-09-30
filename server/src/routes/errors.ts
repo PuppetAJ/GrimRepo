@@ -1,6 +1,6 @@
 import type { ErrorRequestHandler } from 'express'
 
-/** The last word on anything that threw: a short JSON error, with details only outside production. */
+/** Hides error details in production. */
 export function errorHandler({ production }: { production: boolean }): ErrorRequestHandler {
   return (error: unknown, _req, res, next) => {
     if (res.headersSent) return next(error)

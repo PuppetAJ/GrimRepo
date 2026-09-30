@@ -7,7 +7,6 @@ import { MOOD } from '../mood.ts'
 import { TINT } from '../palette.ts'
 import { GLOW, lamp, X } from './constants.ts'
 
-/** The three Mox gems, in the gem module from the battery's drone: its gems stand behind a glass front, turned to the player's seat. */
 export function GemModule() {
   const { scene } = useGLTF('/models/gems.glb', false, false)
   useLayoutEffect(
@@ -26,11 +25,10 @@ export function GemModule() {
       }),
     [scene],
   )
-  // Turned to the seat, then tipped back a little, since the eye is just above it.
+  // Tipped back a little, since the eye sits just above it.
   return <primitive object={scene} position={[2.25, TABLE_Y, -12.4]} rotation={[-0.17, -0.48, 0, 'YXZ']} scale={0.9} />
 }
 
-/** The lamp on the player's left: a post, an arm, and a bar of light that flickers now and then. */
 export function Lamp() {
   const light = useRef<THREE.PointLight>(null)
   // The weathered fluorescent light by Mark Peters (CC BY); its emissive map marks the tubes, which glow in the palette's light.
@@ -73,7 +71,6 @@ export function Lamp() {
   )
 }
 
-/** A rack of drums hanging on the right that turns over slowly, so the room is never still. */
 export function DrumRack() {
   const drums = useRef<THREE.Group>(null)
   useFrame((_, delta) => drums.current?.children.forEach((drum) => (drum.rotation.x += delta * 0.4)))
@@ -101,7 +98,6 @@ export function DrumRack() {
   )
 }
 
-/** A rack on the right of the status screen with P03's hammer and pliers hung on it (not usable yet), and springs on the floor. */
 export function Props() {
   const steel = { color: '#20262c', metalness: 0.85, roughness: 0.45 }
   const hammer = useGLTF('/models/hammer.glb', false, false).scene
@@ -119,7 +115,6 @@ export function Props() {
             <meshStandardMaterial {...steel} />
           </mesh>
         ))}
-        {/* Hung by its head, handle down. */}
         <primitive object={hammer} position={[-0.5, 0.2, 0.26]} rotation={[0, 0, Math.PI / 2]} scale={0.7} />
         <primitive object={pliers} position={[0.5, 0.2, 0.26]} rotation={[0, Math.PI / 2, 0]} scale={0.7} />
         <pointLight color={TINT.light} position={[0, 0.4, 1.2]} intensity={MOOD.rackLight} distance={4} decay={2} />

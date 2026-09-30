@@ -1,4 +1,4 @@
-/* Tailwind v4 is configured here rather than in a tailwind.config.js. */
+/* Tailwind v4 is configured here; there is no tailwind.config.js. */
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
@@ -11,12 +11,11 @@
 @import '@fontsource/vt323/400.css';
 
 @custom-variant dark (&:is(.dark *));
-/* Phones held sideways, where the 3D table takes the whole screen. */
+/* Landscape phones, where the 3D table fills the screen. */
 @custom-variant short (@media (max-height: 32rem));
-/* Tall enough, turned upright, for the landscape table's bigger pieces around the board. */
+/* Tall enough for the landscape table's larger pieces around the board. */
 @custom-variant tall (@media (min-height: 44rem));
 
-/* `:root` holds the values; `@theme inline` maps each to the Tailwind name shadcn's components use. */
 @theme inline {
   --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
   --font-heading: var(--font-sans);
@@ -24,7 +23,6 @@
   --font-display: 'Pirata One', serif;
   --font-terminal: 'VT323', ui-monospace, monospace;
 
-  /* Where the player page's sidebar sits beside it; named so it sorts after the smaller breakpoints. */
   --breakpoint-profile: 65.625rem;
 
   --color-ring: var(--ring);
@@ -46,7 +44,7 @@
   --color-foreground: var(--foreground);
   --color-background: var(--background);
 
-  /* Not shadcn tokens: the page chrome, deaths, and P03, whose green nothing else may use. */
+  /* Not shadcn tokens; nothing but P03 may use the p03 greens. */
   --color-chrome: var(--chrome);
   --color-death: var(--death);
   --color-p03: var(--p03);
@@ -59,12 +57,10 @@
   --radius-xl: calc(var(--radius) * 1.4);
 }
 
-/* The cursed repository: violet-grey surfaces, a soft green accent, red for deaths. */
 :root,
 .dark {
   color-scheme: dark;
 
-  /* The page's side margin: 16px on a small phone, growing with the window to 48px from about 960px. */
   --gutter: clamp(1rem, 5vw, 3rem);
 
   --background: #111013;
@@ -121,15 +117,14 @@
 }
 
 @layer utilities {
-  /* Pixel art as a mask, so it takes the element's background colour and stays sharp at any size. */
+  /* A mask, so the art takes the element's background color and stays sharp at any size. */
   .pixel-art {
     mask-size: contain;
     mask-repeat: no-repeat;
     mask-position: center;
     image-rendering: pixelated;
   }
-  /* The halo round a P03 screen, as if it lit the page around it. */
-  /* Layered as light falls off, bright and tight close in and fading far out, rather than one even haze. */
+  /* Several layers so the glow falls off like light instead of an even haze. */
   .p03-glow {
     box-shadow:
       0 0 1px rgb(125 255 154 / 0.3),
@@ -137,21 +132,19 @@
       0 0 18px rgb(125 255 154 / 0.07),
       0 0 48px rgb(125 255 154 / 0.045);
   }
-  /* A fainter halo, for P03's screens that sit among the page's own content. */
   .p03-glow-soft {
     box-shadow:
       0 0 1px rgb(125 255 154 / 0.2),
       0 0 6px rgb(125 255 154 / 0.06),
       0 0 24px rgb(125 255 154 / 0.03);
   }
-  /* Phosphor text: the glow hugs each letter and fades in steps, as the halos do. */
   .p03-text-glow {
     text-shadow:
       0 0 1px rgb(125 255 154 / 0.55),
       0 0 4px rgb(125 255 154 / 0.22),
       0 0 12px rgb(125 255 154 / 0.1);
   }
-  /* P03's screen: scanlines under phosphor text. Never under body copy. */
+  /* Not for body copy. */
   .p03-screen {
     background-color: var(--p03-ground);
     background-image: repeating-linear-gradient(0deg, rgb(0 0 0 / 0.3) 0 1px, transparent 1px 3px);
@@ -163,14 +156,12 @@
   }
 }
 
-/* The terminal's cursor: lit, then dark, about once a second. */
 @keyframes blink {
   50% {
     opacity: 0;
   }
 }
 
-/* A change on the scale's readout, rising and fading; reduced motion keeps only the fade. */
 @keyframes health-change {
   from {
     opacity: 1;
@@ -182,7 +173,6 @@
   }
 }
 
-/* The prompt, shaken and reddened when the player tries something it does not allow yet; reduced motion keeps the red. */
 @keyframes nudge {
   0%,
   60% {
@@ -219,7 +209,6 @@
   }
 }
 
-/* Inside the table's frame, 3D or text, the pointer is P03's green; what can be clicked gets a badge. */
 [data-table] {
   cursor:
     url(/cursors/arrow.svg) 2 2,
@@ -230,7 +219,7 @@
     url(/cursors/point.svg) 2 2,
     pointer;
 }
-/* The same icons the 3D table shows, on the buttons that do the same things. */
+/* Same cursors the 3D table uses for these actions. */
 [data-table] [data-action='draw-deck']:not(:disabled) {
   cursor:
     url(/cursors/draw.svg) 2 2,
@@ -252,7 +241,6 @@
     pointer;
 }
 
-/* The Act 2 text table's moves, played back one at a time as on the 3D table. */
 @keyframes shake {
   0%,
   100% {
@@ -348,12 +336,11 @@
   }
 }
 
-/* The Act 2 table's monitor: a faint circuit grid behind it, and glass over it. */
 .crt {
   background-image: repeating-linear-gradient(0deg, rgb(0 0 0 / 0.07) 0 1px, transparent 1px 3px);
 }
 .crt-glass {
-  /* A faint grain over the dark corners, so their gradient does not fall into visible steps. */
+  /* Noise over the vignette hides gradient banding. */
   background:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='128'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='128' height='128' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E"),
     radial-gradient(ellipse at center, transparent 55%, rgb(0 0 0 / 0.55) 100%),

@@ -2,7 +2,7 @@ import { lazy, type ComponentType } from 'react'
 
 type Props = { bright?: number; className?: string }
 
-// P03's screen is decoration: it loads after the page, and if it cannot, the page simply goes without it.
+// Decoration only: it loads after the page, and a failed load renders nothing.
 export const FaultyScreen = lazy((): Promise<{ default: ComponentType<Props> }> =>
   import('./FaultyScreen.tsx').catch(() => ({ default: () => null })),
 )

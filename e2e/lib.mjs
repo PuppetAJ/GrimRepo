@@ -1,4 +1,3 @@
-/** Shared setup for the browser suites. Mirrors the ones in Chunkd and Wicken. */
 import pg from 'pg'
 import { chromium, firefox } from 'playwright'
 import { isOffensive } from '../server/src/auth/names.ts'
@@ -6,21 +5,21 @@ import { apply, createGame, nextBotAction } from '../shared/src/index.ts'
 
 export const BASE = process.env.E2E_BASE_URL ?? 'http://localhost:3000'
 
-/** The engine the suites drive: Chromium, or Firefox's Gecko (which Zen runs on) with `E2E_BROWSER=firefox`. */
+/** Firefox stands in for Zen, which runs on Gecko; choose it with E2E_BROWSER=firefox. */
 export const ENGINE = process.env.E2E_BROWSER === 'firefox' ? 'firefox' : 'chromium'
 
-// Printed because the default is the dev server, and a suite run against the wrong one fails oddly.
+// The default is the dev server, and a run against the wrong one fails oddly.
 console.log(`against ${BASE} in ${ENGINE}`)
 
-// Uncaught errors from every page a suite opens, launched or fresh, so any of them fails the run.
+// Collected from every page a suite opens, so an error on any of them fails the run.
 const pageErrors = []
 const listen = (page) => page.on('pageerror', (error) => pageErrors.push(error.message))
 
 export async function launch({ width = 1280, height = 800 } = {}) {
-  // Headless browsers on a machine with no GPU only draw WebGL in software when asked to, which the 3D table needs.
+  // Without a GPU, headless browsers draw WebGL in software only when asked, and the 3D table needs it.
   const browser =
     ENGINE === 'firefox'
-      ? // On CI, E2E_HEADED runs it in a virtual display, where Mesa's software OpenGL can draw WebGL.
+      ? // On CI, E2E_HEADED runs Firefox in a virtual display, where Mesa's software OpenGL can draw WebGL.
         await firefox.launch({ headless: !process.env.E2E_HEADED, firefoxUserPrefs: { 'webgl.force-enabled': true } })
       : await chromium.launch({ args: ['--enable-unsafe-swiftshader'] })
   const context = await browser.newContext({ viewport: { width, height } })
@@ -33,7 +32,7 @@ export async function launch({ width = 1280, height = 800 } = {}) {
   return { browser, context, page, pageErrors, close: () => browser.close() }
 }
 
-/** Waits until the 3D table can be played: its controls are up and P03's boot screen has faded away. */
+/** Waits for the table's controls and for P03's boot screen to go. */
 export async function tableReady(page, timeout = 60_000) {
   await page.getByRole('button', { name: /Look at the board|Look up/ }).waitFor({ timeout })
   await page.getByRole('status', { name: /^Setting the table/ }).waitFor({ state: 'detached', timeout })
@@ -67,7 +66,7 @@ export function reporter() {
   return { check, section, report, results }
 }
 
-/** Clears the sign-in and sign-up counters on a local or CI database only; live runs must fit the real limits. */
+/** Local or CI databases only; live runs must fit the real limits. */
 export async function resetRateLimits() {
   const local = /^http:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(BASE)
   if (!local || !process.env.DATABASE_URL) return
@@ -77,7 +76,7 @@ export async function resetRateLimits() {
   await client.end()
 }
 
-/** A second tab in the same context: same cookies, same player. */
+/** Shares the context's cookies, so it is the same player. */
 export async function newTab(context) {
   const page = await context.newPage()
   page.setDefaultTimeout(20_000)
@@ -85,7 +84,7 @@ export async function newTab(context) {
   return page
 }
 
-/** A fresh context, so one check's cookies never leak into the next; `table` picks the text or 3D table up front. */
+/** A fresh context keeps cookies from leaking between checks; `table` picks text or 3D up front. */
 export async function freshPage(browser, { width = 1280, height = 900, table } = {}) {
   const context = await browser.newContext({ viewport: { width, height } })
   if (table) await context.addInitScript((mode) => localStorage.setItem('grimrepo:table', mode), table)
@@ -95,10 +94,10 @@ export async function freshPage(browser, { width = 1280, height = 900, table } =
   return { context, page }
 }
 
-// Consonants only: no vowels, and no digits the name filter reads as letters, so a stamp never spells a blocked word.
+// Consonants only, and no digits the name filter reads as letters, so stamps rarely spell blocked words.
 const STAMP_LETTERS = 'bcdfghjkmnpqrtvwz'
 
-/** A name part from the clock, so a rerun never collides with the players the last one made. */
+/** Clock-based, so a rerun never collides with the last run's players. */
 export function stamp() {
   let left = Date.now() * 1000 + Math.floor(Math.random() * 1000)
   let text = ''
@@ -111,7 +110,7 @@ export function stamp() {
 
 export function newPlayer(prefix = 'e2e') {
   let username = `${prefix}_${stamp()}`.slice(0, 20)
-  // Consonants can still spell a blocked word ('fck'), and sign-up would refuse it; so ask the site's own filter.
+  // Consonants can still spell a blocked word ('fck'), so check with the site's own filter.
   while (isOffensive(username)) username = `${prefix}_${stamp()}`.slice(0, 20)
   return { username, email: `${username}@grimrepo.test`, password: 'a-long-enough-password' }
 }
@@ -132,30 +131,27 @@ export async function signInAsDemo(page) {
   await page.getByRole('button', { name: 'Account menu' }).waitFor()
 }
 
-/** A new guest, as Quick battle makes: its own game, and its own count against the game API's limits. */
+/** A new guest, as Quick battle makes, with its own game and its own rate-limit count. */
 export async function signInAsGuest(page) {
-  // Guests may sign in 10 times a minute; locally, the counter is cleared so a script can make as many as it needs.
+  // Guests may sign in 10 times a minute, so the counter is cleared locally.
   await resetRateLimits()
   await page.context().clearCookies()
   const response = await page.request.post(`${BASE}/api/auth/sign-in/anonymous`, { headers: { origin: BASE } })
   if (!response.ok()) throw new Error(`a guest could not sign in: ${response.status()}`)
 }
 
-/** Visible text, for asserting on what a person would actually read. */
+/** innerText, so only what a person would actually read. */
 export const visibleText = (page) => page.locator('body').innerText()
 
 const selectorFor = (action) => {
   if (action.type === 'draw') return `[data-action="draw-${action.from}"]`
-  // A hand card is never disabled, only marked so, and a click while a move plays back is refused; so wait for it.
+  // Hand cards are only marked disabled, and clicks during playback are refused, so wait for an enabled one.
   if (action.type === 'select') return `[data-action="select"][data-uid="${action.uid}"]:not([aria-disabled="true"])`
   if ('lane' in action) return `[data-action="${action.type}"][data-lane="${action.lane}"]`
   return `[data-action="${action.type}"]`
 }
 
-/**
- * Plays a fresh game through its buttons, with a copy of the engine in step to choose each click. `beforeMove` hears
- * each move and the state it will lead to, before it is clicked.
- */
+/** An engine copy picks each click; `beforeMove` sees each move and its resulting state first. */
 export async function playWithBot(page, { stopAfterTurn = Infinity, beforeMove } = {}) {
   const root = page.locator('[data-seed]')
   await root.waitFor()
@@ -173,13 +169,13 @@ export async function playWithBot(page, { stopAfterTurn = Infinity, beforeMove }
         .locator(selectorFor(action))
         .first()
         .click()
-        // Playwright can miss a click that landed when its button goes as it is pressed; the page's count says so.
+        // Playwright can miss a click whose button vanishes as it's pressed; the page's move count shows it landed.
         .catch(async (error) => {
           if ((await moves()) !== actions.length + 1) throw error
         })
       await page.locator(`[data-seed][data-moves="${start + actions.length + 1}"]`).waitFor()
     } catch (error) {
-      // What was wanted, and what the table showed instead, for a failure on CI that can't be watched.
+      // Logs what the bot wanted and what the table showed, for CI failures no one can watch.
       console.log(`  The bot wanted ${JSON.stringify(action)} on turn ${state.turn}, as move ${actions.length + 1};`)
       console.log(`  the page had made ${await moves()}, and the table said:`)
       console.log(`  ${(await page.locator('[data-table]').innerText()).replace(/\s+/g, ' ').slice(0, 600)}`)
@@ -196,7 +192,7 @@ export async function playWithBot(page, { stopAfterTurn = Infinity, beforeMove }
   return { state, actions }
 }
 
-/** Deletes a player the suite made, signed in as them, so live runs leave nothing on the leaderboard. */
+/** So live runs leave nothing on the leaderboard. */
 export async function deletePlayer(page, player) {
   const response = await page.request.post(`${BASE}/api/auth/delete-user`, {
     data: { password: player.password },

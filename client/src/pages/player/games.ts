@@ -2,7 +2,7 @@ import type { PlayerStats } from '../../lib/api.ts'
 
 export type Game = PlayerStats['recent'][number]
 
-/** A short commit hash from when the game ended, so each game has one and keeps it. */
+/** A fake commit hash derived from when the game ended, so it never changes. */
 export function hashOf(game: Game): string {
   let hash = 2166136261
   for (const letter of game.playedAt) hash = Math.imul(hash ^ letter.charCodeAt(0), 16777619)

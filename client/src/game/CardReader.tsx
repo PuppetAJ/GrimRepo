@@ -1,10 +1,9 @@
 import { card, SIGILS, type Unit } from 'shared'
 import { cardArt, iconArt, type IconId } from './art.ts'
 
-// A card drawn for reading, in the text table's reader, its magnifier, and the 3D table's.
 const INK = '#0b1f12'
 
-/** A PNG of pixel art, drawn in the text's colour. */
+/** Masks the PNG so it takes the current text color. */
 export function PixelArt({ src, className = '' }: { src: string; className?: string }) {
   return <span aria-hidden className={`pixel-art block bg-current ${className}`} style={{ maskImage: `url(${src})` }} />
 }
@@ -13,14 +12,13 @@ export function Art({ id }: { id: string }) {
   return <PixelArt src={cardArt(id)} className="h-[92%] w-[92%] text-[#0b1f12]" />
 }
 
-/** A sigil's icon, or the sword or the shield. */
 export function Sigil({
   id,
   size = 18,
   color = INK,
 }: {
   id: IconId
-  /** Pixels, or any CSS length, such as em to follow the text beside it. */
+  /** Pixels, or any CSS length. */
   size?: number | string
   color?: string
 }) {
@@ -33,23 +31,17 @@ export function Sigil({
   )
 }
 
-// A card's height to its width, the shape every flat card is drawn at: a playing card's, near enough.
+// Height to width, close to a playing card.
 export const CARD_RATIO = 7 / 5
 
-/**
- * A card as Act 2 draws it, shaped loosely like the 3D table's floppy disks: a clipped corner and a steel shutter at
- * the top, then the art, the sigils and the numbers, each in a band of fixed height. A card without sigils keeps
- * their band empty, so every card is laid out the same and nothing moves between them.
- */
 export function PixelCard({ unit }: { unit: Unit }) {
   const def = card(unit.card)
   const rare = def.tier === 'S'
   return (
     <span
-      // Its print is sized from its own width, so a small card on a short window stays legible.
+      // Print is sized from the card's own width, so a small card on a short window stays legible.
       className={`@container relative flex aspect-[5/7] w-full flex-col overflow-hidden text-[#0b1f12] [clip-path:polygon(0_0,86%_0,100%_9%,100%_100%,0_100%)] ${rare ? 'bg-[#f3c6c0]' : 'bg-[#a9e7b8]'} bg-[repeating-linear-gradient(0deg,rgb(0_0_0/0.07)_0_1px,transparent_1px_3px)]`}
     >
-      {/* The shutter, and its window. */}
       <span aria-hidden className="absolute top-0 left-[22%] z-10 h-[7%] w-[46%] rounded-b-sm bg-[#b9c3c8]">
         <span className="absolute top-[18%] right-[16%] h-[62%] w-[20%] bg-[#0b1f12]" />
       </span>
@@ -57,7 +49,7 @@ export function PixelCard({ unit }: { unit: Unit }) {
       <span
         className={`mx-[6%] flex h-[50%] shrink-0 flex-col border-2 border-[#0b1f12]/70 ${rare ? 'bg-[#e8aea8]' : 'bg-[#8fd3a0]'}`}
       >
-        {/* The cost on a row of its own above the art, so however small the card, it never sits on the art. */}
+        {/* Its own row, so the cost never overlaps the art on a small card. */}
         {def.cost ? (
           <span className="flex shrink-0 justify-end gap-[2cqw] px-[3cqw] pt-[3cqw]" aria-hidden>
             {[...Array(def.cost).keys()].map((i) => (
@@ -69,13 +61,13 @@ export function PixelCard({ unit }: { unit: Unit }) {
           <Art id={unit.card} />
         </span>
       </span>
-      {/* Many sigils share the band's width; without any, the band stays, empty. */}
+      {/* The band stays even when empty, so every card lays out the same. */}
       <span className="flex h-[19%] shrink-0 items-center justify-center gap-[2cqw]">
         {unit.sigils.map((sigil) => (
           <Sigil key={sigil} id={sigil} size={`${Math.min(20, 86 / unit.sigils.length - 2)}cqw`} />
         ))}
       </span>
-      {/* Long numbers print smaller, so nothing runs off the card. */}
+      {/* Long numbers shrink so they don't run off the card. */}
       <span
         className="flex flex-1 items-end justify-between px-[5cqw] pb-[3cqw] leading-none"
         style={{
@@ -95,7 +87,6 @@ export function PixelCard({ unit }: { unit: Unit }) {
   )
 }
 
-/** A card read in full: its name and cost, the art large, every sigil spelled out, and its stats. */
 export function ReaderBody({ unit }: { unit: Unit }) {
   return (
     <>
@@ -109,11 +100,11 @@ export function ReaderBody({ unit }: { unit: Unit }) {
           </span>
         ) : null}
       </p>
-      {/* The art gives way first when the reader is short, down to a floor, and never grows past a cap. */}
+      {/* The art shrinks first when the reader is short. */}
       <div className="grid h-[min(13rem,45cqi)] min-h-16 place-items-center overflow-hidden rounded-sm border-2 border-[#0b1f12] bg-[#8fd3a0] bg-[repeating-linear-gradient(0deg,rgb(0_0_0/0.06)_0_1px,transparent_1px_3px)]">
         <Art id={unit.card} />
       </div>
-      {/* Room kept for the sigils whether a card has any or not, so nothing moves between cards; it scrolls past two. */}
+      {/* Fixed height, so nothing moves between cards with and without sigils. */}
       <div className="flex h-24 min-h-12 flex-col gap-2 overflow-y-auto">
         {unit.sigils.map((sigil) => (
           <p key={sigil} className="flex gap-2 text-xl leading-tight">
@@ -143,7 +134,6 @@ export function ReaderBody({ unit }: { unit: Unit }) {
   )
 }
 
-/** The same, lying flat: the art beside the words, for a short space. */
 export function FlatReaderBody({ unit }: { unit: Unit }) {
   return (
     <>

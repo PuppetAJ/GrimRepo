@@ -8,7 +8,7 @@ import { BELL, CARD, DECK, PILE, slot } from '../layout.ts'
 
 declare global {
   interface Window {
-    /** Development only: the table's state and a way to find things on screen, for the browser suite. */
+    /** Development only; the browser suite drives the table through it. */
     __game?: {
       state: () => GameState
       view: () => View
@@ -62,7 +62,7 @@ export function TestHandle({ game, view, busy, skip }: { game: Ready; view: View
         const object = scene.getObjectByName(`card-${what.uid}`)
         return object ? onScreen(object.localToWorld(new THREE.Vector3(0, CARD.height * 0.36, 0))) : null
       },
-      // What one frame costs: counted over a single render, with post-processing's passes included.
+      // Pausing autoReset counts one whole frame, post-processing passes included.
       stats: () =>
         new Promise((resolve) => {
           requestAnimationFrame(() => {

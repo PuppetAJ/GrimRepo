@@ -5,8 +5,7 @@ import { PixelCard } from '../game/CardReader.tsx'
 import type { PlayerStats } from '../lib/api.ts'
 import { ago, number } from '../lib/format.ts'
 
-// A mockup until runs exist: the death card a run ends with, built from three cards in the final deck. Cost and art
-// from one card, stats from another, a sigil from a third.
+// A mockup until runs exist; each part comes from a different card in the final deck.
 const PARTS = { cost: 'Crawler', stats: 'ForkBomb', sigil: 'try_catch' } as const
 const DEATH_CARD: Unit = {
   uid: 0,
@@ -17,10 +16,9 @@ const DEATH_CARD: Unit = {
   sigils: [PARTS.sigil],
 }
 
-// The card is never more than this much taller than the words beside it, however wide its box.
+// The most the card's height may exceed the text beside it, as a ratio.
 const CARD_OVER_TEXT = 1.12
 
-/** An element's height, kept up to date as it wraps. */
 function useHeight(): [(element: HTMLElement | null) => void, number] {
   const [element, setElement] = useState<HTMLElement | null>(null)
   const [height, setHeight] = useState(0)
@@ -33,14 +31,12 @@ function useHeight(): [(element: HTMLElement | null) => void, number] {
   return [setElement, height]
 }
 
-/** One pinned thing, boxed as GitHub pins a repository. */
 function PinBox({ children }: { children: ReactNode }) {
   return (
     <div className="@container flex min-w-0 items-center gap-3 rounded-md border bg-card p-3 text-xs">{children}</div>
   )
 }
 
-/** A name, a line about it, and its details, as a pinned repository shows its language and stars. */
 function PinText({
   name,
   about,
@@ -54,7 +50,6 @@ function PinText({
 }) {
   return (
     <div ref={ref} className="flex min-w-0 flex-1 flex-col justify-center gap-1.5">
-      {/* The pin at the end of the name's line, so only the name makes room for it. */}
       <p className="flex min-w-0 items-center gap-2">
         <span className="flex min-w-0 items-center gap-1.5 truncate font-mono text-sm font-semibold text-primary">
           {name}
@@ -74,7 +69,6 @@ function PinText({
   )
 }
 
-/** The death card, a mockup of how runs will use it: as wide as its box allows, as tall as its words at most. */
 function DeathCardPin() {
   const [text, height] = useHeight()
   return (
@@ -99,7 +93,6 @@ function DeathCardPin() {
   )
 }
 
-/** The player's pins: their death card and their best game so far. */
 export function Pinned({ player, className = '' }: { player: PlayerStats; className?: string }) {
   // Any win outscores every loss, so the best game is a win unless there are none.
   const best = player.best
@@ -109,7 +102,7 @@ export function Pinned({ player, className = '' }: { player: PlayerStats; classN
       <h2 id="pinned" className="font-semibold">
         Pinned
       </h2>
-      {/* The card takes the larger share: the best game's few lines never need as much. */}
+      {/* 3:2 because the best game's few lines need less room than the card. */}
       <div className="grid gap-4 @[30rem]:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <DeathCardPin />
         <PinBox>

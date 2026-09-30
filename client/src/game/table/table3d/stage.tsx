@@ -9,7 +9,6 @@ import { MOOD } from '../mood.ts'
 
 const seat = new THREE.Vector3()
 
-/** Eases the camera between the seat and the view over the board, leaning a little towards the pointer. */
 export function CameraRig({ view }: { view: CameraView }) {
   const target = useRef(new THREE.Vector3(...CAMERA[view].target))
   useFrame(({ camera, pointer }, delta) => {
@@ -22,7 +21,7 @@ export function CameraRig({ view }: { view: CameraView }) {
   return null
 }
 
-/** For the table's first frames, draws everything, off-screen too, and a stand-in popup, so no shader is built mid-turn. */
+/** Draws everything for the first frames, off-screen too, so no shader compiles mid-turn. */
 export function WarmUp({ onWarm }: { onWarm: () => void }) {
   const [warm, setWarm] = useState(false)
   const frames = useRef(0)
@@ -31,7 +30,7 @@ export function WarmUp({ onWarm }: { onWarm: () => void }) {
     canvas.width = canvas.height = 4
     const map = new THREE.CanvasTexture(canvas)
     map.colorSpace = THREE.SRGBColorSpace
-    // Made as Popup makes its own, so the shader built is the one it will use.
+    // Matches Popup's material so the shader built here is the one it uses.
     return new THREE.SpriteMaterial({ map, transparent: true, depthTest: false, fog: false, opacity: 0 })
   }, [])
   useEffect(
@@ -41,7 +40,7 @@ export function WarmUp({ onWarm }: { onWarm: () => void }) {
     },
     [material],
   )
-  // Off-screen things are drawn too for these frames, or their shaders wait until the camera first turns to them.
+  // Off-screen objects too, or their shaders wait until the camera first turns to them.
   const { scene } = useThree()
   const culled = useRef<THREE.Object3D[]>([])
   useFrame(() => {
@@ -62,7 +61,7 @@ export function WarmUp({ onWarm }: { onWarm: () => void }) {
   return warm ? null : <sprite material={material} position={BOARD_CENTER} scale={0.01} />
 }
 
-/** Shows the cursor the hovered thing asks for, and looks again on coming back to the tab, where the pointer never left. */
+/** Rechecks what's hovered on returning to the tab, since the pointer never moved. */
 export function CursorSync() {
   const { gl, events } = useThree()
   useEffect(() => {
@@ -70,7 +69,7 @@ export function CursorSync() {
     const again = () => events.update?.()
     const shown = () => document.visibilityState === 'visible' && again()
     window.addEventListener('focus', again)
-    // Zooming resizes the window under a still pointer, so what it is over is looked up again.
+    // Zooming resizes the window under a still pointer, so recheck what it's over.
     window.addEventListener('resize', again)
     document.addEventListener('visibilitychange', shown)
     return () => {
@@ -83,7 +82,6 @@ export function CursorSync() {
   return null
 }
 
-/** The renderer's exposure, from the mood. */
 export function Exposure() {
   const gl = useThree((three) => three.gl)
   useLayoutEffect(() => void (gl.toneMappingExposure = MOOD.exposure), [gl])
@@ -99,7 +97,7 @@ export function NoWebGL({ onText }: { onText: () => void }) {
   )
 }
 
-/** Mounts once everything the table needs has loaded; the room and P03 may still be arriving. */
+/** Mounts once the table's suspended assets load; the room and P03 may still be arriving. */
 export function Loaded({ onLoad }: { onLoad: (loaded: boolean) => void }) {
   useEffect(() => onLoad(true), [onLoad])
   return null

@@ -4,7 +4,7 @@ import { StaticRouter } from 'react-router'
 import { Toaster } from '@/components/ui/sonner.tsx'
 import App from './App.tsx'
 
-/** The home page's first view as HTML, for the build to put in index.html; it must match main.tsx's tree. */
+/** The home page's HTML for the build to put in index.html; must match main.tsx's tree. */
 export async function renderHome(): Promise<string> {
   const { prelude } = await prerender(
     <StrictMode>

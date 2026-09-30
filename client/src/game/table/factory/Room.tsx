@@ -6,7 +6,7 @@ import { TINT } from '../palette.ts'
 import { GLOW, X } from './constants.ts'
 import { GRIMY_TABLE, metal, surfaces } from './surfaces.ts'
 
-// The console's top is 10.4 by 7.4, centred at z -9.9; its trim is four bars, each x, z, width and depth.
+// Each bar is [x, z, width, depth], around the 10.4 by 7.4 console top centered at z -9.9.
 const TRIM: [number, number, number, number][] = [
   [X, -6.26, 10.52, 0.12],
   [X, -13.54, 10.52, 0.12],
@@ -14,17 +14,14 @@ const TRIM: [number, number, number, number][] = [
   [X + 5.2, -9.9, 0.12, 7.4],
 ]
 
-/** The console the game is played on, the floor and the walls. */
 export function Room() {
   const clean = metal(useTexture(surfaces('table')), [4, 3])
-  // The top is the same steel as the trim, with grime over it.
   const table = metal({ ...clean, map: useTexture(GRIMY_TABLE) }, [4, 3])
   const floor = metal(useTexture(surfaces('floor')), [12, 12])
   const wall = metal(useTexture(surfaces('wall')), [8, 3])
   const rough = { metalness: 0.55, normalScale: new THREE.Vector2(1.6, 1.6) }
   return (
     <>
-      {/* The console: its top is the table. */}
       <mesh position={[X, TABLE_Y / 2, -9.9]}>
         <boxGeometry args={[10.4, TABLE_Y, 7.4]} />
         {[0, 1, 3, 4, 5].map((side) => (
@@ -32,11 +29,10 @@ export function Room() {
         ))}
         <meshStandardMaterial attach="material-2" {...table} {...rough} color="#8a98a6" roughness={0.85} />
       </mesh>
-      {/* A dark steel trim round the table's edge, raised off the top, so it reads where the table ends. */}
       {TRIM.map(([x, z, width, depth], i) => (
         <mesh key={i} position={[x, TABLE_Y + 0.03, z]}>
           <boxGeometry args={[width, 0.1, depth]} />
-          {/* Dark steel, part metal and faintly lit: pure metal with nothing to reflect renders black. */}
+          {/* Part metal and faintly lit: pure metal with nothing to reflect renders black. */}
           <meshStandardMaterial
             {...clean}
             color="#4a535b"
@@ -47,7 +43,6 @@ export function Room() {
           />
         </mesh>
       ))}
-      {/* A thin lit edge along the console, the only line of light near the player. */}
       <mesh position={[X, TABLE_Y - 0.05, -6.18]}>
         <boxGeometry args={[10.4, 0.03, 0.03]} />
         <meshBasicMaterial color={GLOW} />
@@ -66,7 +61,6 @@ export function Room() {
           <meshStandardMaterial {...wall} color="#2a3037" metalness={0.7} />
         </mesh>
       ))}
-      {/* Pipes along the back wall, for something to catch the light. */}
       {[9.2, 12.6, 16.1].map((y, i) => (
         <mesh key={y} position={[X, y, -21.6]} rotation={[0, 0, Math.PI / 2]}>
           <cylinderGeometry args={[0.22 + i * 0.04, 0.22 + i * 0.04, 38, 12]} />

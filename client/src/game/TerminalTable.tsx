@@ -6,9 +6,6 @@ import { useTextTable, type Layout } from './text/useTextTable.ts'
 import { WideLayout } from './text/WideLayout.tsx'
 import type { Ready } from './useGame.ts'
 
-// The text table, in P03's green: Inscryption's Act 2 laid out for the width it has, its pieces in `text/`.
-
-/** The text table: a whole game through its buttons, played back one move at a time. */
 export function TerminalTable({
   game,
   seat,

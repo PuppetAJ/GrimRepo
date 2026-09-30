@@ -1,12 +1,12 @@
 import { HAND_LIMIT, type GameEvent, type GameState, type Slot, type Unit } from 'shared'
 
-/** What the 3D table shows: the game as far as its playback has reached, which can trail the real state. */
+/** The game as far as playback has reached, which can trail the real state. */
 export type View = {
   turn: number
   drawn: boolean
   status: GameState['status']
   deck: number
-  /** The damage dealt less the damage taken; the game ends at TIP either way. */
+  /** Damage dealt minus damage taken; the game ends at TIP either way. */
   scale: number
   hand: Unit[]
   board: Slot[]
@@ -41,7 +41,7 @@ function withUnit(view: View, uid: number, change: (unit: Unit) => Unit): View {
   return { ...view, board: update(view.board), front: update(view.front), back: update(view.back) }
 }
 
-/** Moves the view on by one event; folding a turn's events over the view before it gives the view after it. */
+/** Folding a move's events over the view before it gives the view after it. */
 export function step(view: View, event: GameEvent): View {
   switch (event.type) {
     case 'drew':
@@ -103,7 +103,6 @@ export function step(view: View, event: GameEvent): View {
   }
 }
 
-/** Where a unit is on the table in this view, if it is anywhere. */
 export function locate(
   view: View,
   uid: number,

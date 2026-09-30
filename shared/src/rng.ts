@@ -1,4 +1,4 @@
-/** mulberry32: a small, fast, seedable generator. Its whole state is one number, so a game state can carry it. */
+/** mulberry32: its whole state is one number, so a game state can carry it. */
 export function next(state: number): [value: number, state: number] {
   const advanced = (state + 0x6d2b79f5) | 0
   let t = advanced
@@ -7,7 +7,6 @@ export function next(state: number): [value: number, state: number] {
   return [((t ^ (t >>> 14)) >>> 0) / 4294967296, advanced]
 }
 
-/** A mutable cursor over the generator, for code that draws several numbers in a row. */
 export class Rng {
   state: number
 
@@ -21,7 +20,7 @@ export class Rng {
     return value
   }
 
-  /** A whole number from min to max, both included. */
+  /** Includes both min and max. */
   int(min: number, max: number): number {
     return min + Math.floor(this.float() * (max - min + 1))
   }

@@ -1,4 +1,3 @@
-// Every page but the game, checked by axe against WCAG 2.1 A and AA, on a laptop and a 320px phone.
 import AxeBuilder from '@axe-core/playwright'
 import { BASE, launch, reporter, resetRateLimits, signInAsDemo } from './lib.mjs'
 
@@ -6,7 +5,7 @@ await resetRateLimits()
 const { page, context, pageErrors, close } = await launch()
 const { check, section, report } = reporter()
 
-// The README already taken over, so the terminal is what gets checked, not the screenshot before it.
+// Start with the README taken over, so axe checks the terminal, not the screenshot before it.
 await context.addInitScript(() => sessionStorage.setItem('grimrepo:infected', '1'))
 
 const PAGES = [
@@ -23,11 +22,11 @@ const PAGES = [
 async function audit(name, path) {
   await page.goto(`${BASE}${path}`)
   await page.waitForLoadState('networkidle')
-  // Past the corruption's growth and the terminal's typing, so what is checked is what stays.
+  // Wait out the corruption's growth and the terminal's typing, so axe checks what stays.
   await page.waitForTimeout(3000)
   const { violations } = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
-    // WebGL is drawn, not read: the canvases carry their own labels.
+    // WebGL is drawn, not read; the canvases carry their own labels.
     .exclude('canvas')
     .analyze()
   const found = violations.flatMap((violation) =>

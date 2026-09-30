@@ -1,4 +1,4 @@
-// The scene's mood: its light, air and glow, as Adrian tuned them.
+// Tuned by eye in the running scene.
 export const MOOD = {
   exposure: 0.65,
   ambient: 0.5,
@@ -9,12 +9,12 @@ export const MOOD = {
   deckLight: 14,
   handLight: 3,
   rackLight: 7.5,
-  // How far the white lamps lean to the palette's own colour.
+  // How far lamps lean toward P03's green, 0 to 1.
   lampTint: 0.7,
   fogNear: 6.5,
   fogFar: 34,
   bloom: 1.4,
-  // Only what is brighter than white glows, so the lamps never make a card glow.
+  // Only overbright pixels bloom, so lamps never make a card glow.
   bloomThreshold: 1,
   bloomRadius: 0.45,
   vignette: 0.75,

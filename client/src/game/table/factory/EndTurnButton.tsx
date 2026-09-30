@@ -7,8 +7,7 @@ import { BELL } from '../layout.ts'
 import { Nudge } from '../Piles.tsx'
 import { LIT } from './constants.ts'
 
-/** The factory's bell: a big red button that says what it does. */
-// The cap's top stands 0.11 above the collar's rim at 0.22; the cap is 0.53 tall at its scale.
+// The cap's top sits 0.11 above the collar rim at 0.22, and the cap is 0.53 tall at this scale.
 const CAP_Y = 0.33 - 0.53
 
 export function EndTurnButton({
@@ -55,7 +54,6 @@ export function EndTurnButton({
   useFrame((_, delta) => {
     pressed.current = Math.max(0, pressed.current - delta * 5)
     if (!cap.current) return
-    // Sunk into the collar, standing just proud of it, and pressed a little further in.
     easing.damp(cap.current.position, 'y', CAP_Y - Math.sin(pressed.current * Math.PI) * 0.06, 0.03, delta)
     glow.emissiveIntensity = active ? 0.55 + Math.sin(performance.now() / 300) * 0.2 : 0.06
   })
@@ -63,7 +61,6 @@ export function EndTurnButton({
   return (
     <group position={BELL}>
       <Nudge active={active} onClick={onClick} size={[1.4, 0.7, 1.4]} label="bell" still cursor="press">
-        {/* A bolted mounting plate, a collar the cap sits in, and the cap. */}
         <mesh position={[0, 0.03, 0]}>
           <boxGeometry args={[1.4, 0.06, 1.4]} />
           <meshStandardMaterial color="#1d2227" metalness={0.8} roughness={0.5} />
@@ -83,7 +80,6 @@ export function EndTurnButton({
         <group ref={cap} position={[0, CAP_Y, 0]}>
           <primitive object={model} scale={1.9} />
         </group>
-        {/* The label on the plate's near edge. */}
         <mesh position={[0, 0.062, 0.62]} rotation={[-Math.PI / 2, 0, 0]}>
           <planeGeometry args={[0.8, 0.2]} />
           <meshBasicMaterial map={label} />

@@ -11,7 +11,7 @@ import type { View } from '../../view.ts'
 import type { CameraView } from '../layout.ts'
 import { ScreenReadout } from './ScreenReadout.tsx'
 
-/** A control's words, hidden on a phone held sideways where the icon stands in; screen readers always get them. */
+// Hidden on a sideways phone, where the icon stands in; screen readers always get it.
 const Label = ({ children }: { children: ReactNode }) => <span className="short:sr-only">{children}</span>
 
 export function Hud({
@@ -53,15 +53,14 @@ export function Hud({
   const ended = game.result && !busy
   return (
     <>
-      {/* Stops above the prompt, so the reader under the scale never runs over it; above the monitors' text. */}
+      {/* Stops above the prompt so the reader never runs over it. */}
       <div className="pointer-events-none absolute top-0 bottom-24 left-0 z-10 flex flex-col items-start p-3 font-terminal sm:p-4">
         <ScaleBar scale={view.scale} className="text-xl sm:text-2xl" />
         <span className="text-lg text-p03-dim sm:text-xl">
           Turn {view.turn} · Deck {view.deck}
         </span>
-        {/* A screen's readout pinned open by a click or a tap, or a hand card lifted by a first tap on touch. */}
         {pinned ? (
-          // It takes the pointer, to be scrolled, and closes with its button or a click elsewhere.
+          // Takes the pointer so it can be scrolled.
           <ScreenReadout
             lines={pinned}
             className="pointer-events-auto mt-2 h-52 max-h-full w-80 text-base"
@@ -75,14 +74,13 @@ export function Hud({
             className="relative mt-2 flex h-40 max-h-full min-h-0 w-72 gap-2 overflow-hidden rounded-md border-2 border-[#2f6b3d] bg-[#a9e7b8] p-2 text-[#0b1f12]"
           >
             <FlatReaderBody unit={lifted} />
-            {/* The glass over a card read up close: scanlines, a rolling band and dark corners. */}
             <span aria-hidden className="crt-glass pointer-events-none absolute inset-0" />
           </div>
         ) : null}
       </div>
 
       <div className="absolute top-0 right-0 z-10 flex flex-col items-end gap-1 p-3 sm:p-4">
-        {/* Words on a laptop; on a phone held sideways, icons, so the row stays off P03's face. */}
+        {/* Icons only on a sideways phone, so the row stays off P03's face. */}
         <div className="flex flex-wrap justify-end">
           <Button
             size="sm"
@@ -104,7 +102,7 @@ export function Hud({
               <Label>{fullScreen.on ? 'Leave full screen' : 'Full screen'}</Label>
             </Button>
           ) : null}
-          {/* The site header is hidden on a phone held sideways and in full screen, so the way out is here. */}
+          {/* The site header is hidden on a sideways phone and in full screen, so the exit lives here. */}
           <Button
             size="sm"
             variant="ghost"
@@ -137,13 +135,13 @@ export function Hud({
       ) : (
         <>
           <div className="pointer-events-none absolute bottom-0 left-0 flex w-[26%] flex-col gap-1 p-3 font-terminal sm:p-4">
-            {/* The monitor beside P03 shows the log; this copy is for screen readers. */}
+            {/* A screen reader copy of the log the monitor beside P03 shows. */}
             <ol aria-live="polite" className="sr-only">
               {last.map((line, index) => (
                 <li key={game.log.length - last.length + index}>{line}</li>
               ))}
             </ol>
-            {/* Remounted on each hint, so the shake plays again. */}
+            {/* Keyed on hint so the shake replays. */}
             <p
               key={hint}
               className={`text-lg leading-tight text-p03 sm:text-xl ${hint ? 'animate-[nudge_0.6s_ease-out]' : ''}`}

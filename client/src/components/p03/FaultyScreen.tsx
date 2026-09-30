@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react'
 const VERTEX = `attribute vec2 corner;
 void main() { gl_Position = vec4(corner, 0.0, 1.0); }`
 
-// Glyphs of lit dots in a grid; slow noise brings patches of them up and down, and now and then a row slips.
+// Dot-matrix glyphs lit in slow noise patches, with the odd row slipping sideways.
 const FRAGMENT = `precision mediump float;
 uniform float time;
 uniform float bright;
@@ -37,12 +37,12 @@ void main() {
 
 const FRAME_MS = 1000 / 20
 
-/** P03's screen behind the text: a faulty terminal of dim glyphs. Still under reduced motion; nothing without WebGL. */
+/** Dim glyph noise behind P03's text; static under reduced motion, absent without WebGL. */
 export default function FaultyScreen({ bright = 0.2, className = '' }: { bright?: number; className?: string }) {
   const holderRef = useRef<HTMLSpanElement>(null)
 
   useEffect(() => {
-    // A fresh canvas each time, since a context lost on cleanup cannot be had again from the same one.
+    // A fresh canvas each time, since a context lost on cleanup can't be restored on the same one.
     const element = document.createElement('canvas')
     element.className = 'block size-full [image-rendering:pixelated]'
     const gl = element.getContext('webgl', { antialias: false, powerPreference: 'low-power' })
@@ -69,7 +69,7 @@ export default function FaultyScreen({ bright = 0.2, className = '' }: { bright?
     const time = gl.getUniformLocation(program, 'time')
     gl.uniform1f(gl.getUniformLocation(program, 'bright'), bright)
 
-    // One canvas pixel to a CSS pixel: the dots are two pixels wide, so there is nothing finer to draw.
+    // One canvas pixel per CSS pixel; the dots are two pixels wide, so nothing finer is needed.
     const fit = () => {
       element.width = Math.max(1, element.clientWidth)
       element.height = Math.max(1, element.clientHeight)

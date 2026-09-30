@@ -13,7 +13,7 @@ import { useAsync } from '../lib/useAsync.ts'
 import { Activity } from './player/Activity.tsx'
 import { History } from './player/History.tsx'
 
-// The charts bring Recharts, so they load after the rest of the profile, in a box their size.
+// The charts bring Recharts, so they load lazily into a box their size.
 const ScoreChart = lazy(() => import('../components/Charts.tsx').then((charts) => ({ default: charts.ScoreChart })))
 const TurnsChart = lazy(() => import('../components/Charts.tsx').then((charts) => ({ default: charts.TurnsChart })))
 const chartBox = <div className="h-full min-h-72 rounded-lg border bg-card" />
@@ -59,16 +59,14 @@ export function Player() {
 
   return (
     <div className="flex flex-col gap-10 profile:flex-row profile:items-start">
-      {/* Beside the page from 1320px, where the column left fits the heatmap and activity side by side; above it before. */}
       <aside className="@container w-full profile:w-72">
         <div className="grid items-center gap-5 @[43rem]:grid-cols-[minmax(15rem,1fr)_auto] @[43rem]:gap-x-12">
-          {/* Stacked, the picture sits beside the name, as GitHub lays a profile out on a phone; beside the page, above it. */}
           <div className="flex items-center gap-5 profile:flex-col profile:items-start">
             <Avatar name={player.username} size="lg" className="profile:self-center" />
             <div className="@container w-full min-w-0 flex-1">
               <h1 className="truncate text-3xl font-semibold">{player.username}</h1>
               <p className="whitespace-nowrap text-muted-foreground">
-                Joined {/* The month in full where the line has room, shortened so it stays on one line where not. */}
+                Joined {/* Short month where the long one would wrap. */}
                 <span className="@max-[12rem]:hidden">
                   {new Date(player.joinedAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                 </span>
@@ -80,14 +78,7 @@ export function Player() {
               </p>
             </div>
           </div>
-          {/*
-            Stacked, the numbers are badges, as at the top of a README: the name on grey, the value on green, each
-            column as wide as its widest badge so their edges line up. Beside the name, two columns of three with room to
-            breathe; under it, set off by a rule, across the width in three of two, then two of three; on the smallest
-            phones they go, as the page below shows the same numbers. Their icons wherever there is room for them. Under
-            the name a long label takes its short form, and its shortest on the smallest phones, and a value too long for its column ends in an ellipsis, whole
-            on hover; beside it, a value is held to 14 characters, so the badges never outgrow the room kept for them.
-          */}
+          {/* Values cap at 14ch beside the name so the badges never outgrow the room kept for them. */}
           <div className="hidden border-t pt-4 profile:hidden @[21rem]:block @[43rem]:border-t-0 @[43rem]:pt-0">
             <dl className="grid grid-cols-2 gap-2 font-mono text-xs @[38rem]:grid-cols-3 @[43rem]:w-fit @[43rem]:grid-cols-2">
               {facts.map((fact) => (
@@ -117,7 +108,6 @@ export function Player() {
               ))}
             </dl>
           </div>
-          {/* In the sidebar, a table of icon, name and number, one to a line, and the pins under a rule. */}
           <dl className="hidden gap-y-2 border-t pt-4 text-sm profile:grid">
             {facts.map((fact) => (
               <div key={fact.label} className="flex items-center gap-2 whitespace-nowrap">
@@ -134,7 +124,6 @@ export function Player() {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col gap-7">
-        {/* Stacked, the pins come first under the name, as GitHub shows them; beside the page, they are in the sidebar. */}
         <Pinned player={player} className="profile:hidden" />
         <Activity stats={player} />
         {player.recent.length ? (

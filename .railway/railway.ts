@@ -1,6 +1,6 @@
 import { defineRailway, github, postgres, preserve, project, service } from 'railway/iac'
 
-/** Every service must be listed and named as the dashboard names it: an omission reads as a deletion. */
+/** List every service under its dashboard name: an omission reads as a deletion. */
 export default defineRailway(() => {
   // Deploy only once GitHub's checks have passed.
   const repository = github('PuppetAJ/GrimRepo', { checkSuites: true })
@@ -15,22 +15,21 @@ export default defineRailway(() => {
     deploy: {
       healthcheckPath: '/health',
       healthcheckTimeout: 100,
-      // Stops after ten idle minutes and wakes on the next request, so idle hours are not billed.
+      // Sleeps after ten idle minutes, so idle hours aren't billed.
       sleepApplication: true,
       numReplicas: 1,
     },
     env: {
       NODE_ENV: 'production',
       PORT: '8080',
-      // Railway resolves this to the database's own connection string.
+      // Railway resolves this reference to the database's connection string.
       DATABASE_URL: '${{Postgres.DATABASE_URL}}',
       APP_URL: 'https://grimrepo.up.railway.app',
-      // Set once with the Railway CLI and never written here; listed so applying does not delete it.
+      // Set with the Railway CLI, never here; listed so applying doesn't delete it.
       BETTER_AUTH_SECRET: preserve(),
     },
   })
 
-  // Every night at 04:00 UTC: the demo account's open game, abandoned games, and expired auth records.
   const cleanup = service('Cleanup', {
     source: repository,
     build: 'pnpm install --frozen-lockfile',
@@ -43,7 +42,7 @@ export default defineRailway(() => {
     env: {
       NODE_ENV: 'production',
       DATABASE_URL: '${{Postgres.DATABASE_URL}}',
-      // The clean-up loads the app's environment check, which will not start without it.
+      // The clean-up loads the app's env check, which refuses to start without it.
       BETTER_AUTH_SECRET: '${{GrimRepo.BETTER_AUTH_SECRET}}',
     },
   })

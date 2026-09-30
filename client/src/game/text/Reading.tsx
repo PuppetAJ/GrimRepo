@@ -5,22 +5,21 @@ import { Dialog, DialogContent, DialogTitle } from '../../components/ui/dialog.t
 import { useTable } from './context.ts'
 import { Panel } from './Panel.tsx'
 
-/** What to do now, nudged when something is tried too soon. */
+/** What the player should do next; nudges when a move is refused. */
 export function PromptLine() {
-  const { said, refused, layout } = useTable()
+  const { promptText, refusal, layout } = useTable()
   return (
     <p
-      key={refused.count}
-      title={said}
+      key={refusal.count}
+      title={promptText}
       className={`text-p03-dim ${layout === 'phone' ? 'w-full text-lg leading-tight text-p03' : layout === 'mid' ? 'w-full truncate text-[clamp(1rem,4.4cqi,1.25rem)]' : 'w-full truncate text-center text-[clamp(1rem,4cqi,1.5rem)]'}`}
-      style={refused.count ? { animation: 'nudge 0.6s ease-out' } : undefined}
+      style={refusal.count ? { animation: 'nudge 0.6s ease-out' } : undefined}
     >
-      {said}
+      {promptText}
     </p>
   )
 }
 
-/** The card being looked at, in full: flat, art beside the words, where the reader is wide enough. */
 export function ReaderPanel() {
   const { inspected, readerBox, readerFlat, compact } = useTable()
   return (
@@ -41,7 +40,6 @@ export function ReaderPanel() {
   )
 }
 
-/** A held card, drawn large beside the finger or pointer until let go. */
 export function Magnifier() {
   const { magnified } = useTable()
   if (!magnified) return null
@@ -49,7 +47,7 @@ export function Magnifier() {
     <div
       aria-hidden
       className="pointer-events-none fixed z-[60] w-40 drop-shadow-[0_0_12px_rgb(0_0_0/0.8)]"
-      // Above the finger, or beside it where there is no room above.
+      // Above the finger so it isn't hidden, or beside it when there's no room above.
       style={
         magnified.y - 250 >= 8
           ? { left: Math.min(Math.max(8, magnified.x - 80), window.innerWidth - 168), top: magnified.y - 250 }
@@ -60,18 +58,17 @@ export function Magnifier() {
       }
     >
       <PixelCard unit={magnified.unit} />
-      {/* The same glass as the 3D table's magnified cards. */}
+      {/* Matches the glass on the 3D table's magnified cards. */}
       <span className="crt-glass absolute inset-0 [clip-path:polygon(0_0,86%_0,100%_9%,100%_100%,0_100%)]" />
     </div>
   )
 }
 
-/** The phone's reader: a tapped card in a modal over the blurred table. */
+/** The phone's card reader. */
 export function Inspector() {
-  const { reading, setReading, at, result, state, busy, mustDraw, legal } = useTable()
-  const unit = at(reading)
-  // Why a card in the hand could not be picked, where that is why it opened; beside the close button, in the space it
-  // leaves.
+  const { reading, setReading, unitAt, result, state, busy, mustDraw, legal } = useTable()
+  const unit = unitAt(reading)
+  // Why a hand card can't be picked, when that's why the reader opened.
   const note =
     !reading || !('uid' in reading) || result
       ? null

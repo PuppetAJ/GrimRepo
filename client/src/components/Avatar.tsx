@@ -6,7 +6,6 @@ const sizes = {
   lg: 'size-20 text-4xl sm:size-24 sm:text-5xl profile:size-64 profile:text-9xl',
 }
 
-/** Initials in a circle; the only picture a player has for now. */
 export function Avatar({
   name,
   size = 'md',

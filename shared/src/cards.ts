@@ -12,7 +12,6 @@ export type CardDef = {
   sigils: SigilId[]
 }
 
-/** What each sigil does, for the card face and the rules page. */
 export const SIGILS: Record<SigilId, { name: string; text: string }> = {
   segfault: { name: 'Segfault', text: 'When played, destroys every card on the other side of the table.' },
   bypass: { name: 'Bypass', text: 'Attacks the opponent directly, over any card in the way.' },
@@ -23,7 +22,7 @@ export const SIGILS: Record<SigilId, { name: string; text: string }> = {
   hotfix: { name: 'Hotfix', text: 'Heals 1 at the end of each turn.' },
 }
 
-// The 2022 stat lines in their order, so every seed deals as before, under names from P03's factory.
+// Order matters: reordering changes what every seed deals.
 const table: [string, string, Tier, number, number, number, SigilId[]?][] = [
   ['OffCenterDiv', 'OffCenterDiv', 'E', 0, 6, 0],
   ['HelloWorld', 'Hello World', 'E', 1, 1, 0],
@@ -50,9 +49,9 @@ const table: [string, string, Tier, number, number, number, SigilId[]?][] = [
   ['FourOhFour', 'FourOhFour', 'A', 4, 0, 4, ['segfault']],
   ['RubberDuck', 'RubberDuck', 'A', 4, 12, 3],
   ['Mainframe', 'Mainframe', 'A', 13, 13, 3],
-  // A debug card from 2022: it ends any game in one turn, so it is in no deck.
+  // Debug card: it ends any game in one turn, so it is in no deck.
   ['Y2K', 'Y2K', 'S', 2000, 2000, 0],
-  // The squirrel: free fuel for sacrifices, drawn from a pile that never runs out.
+  // Free fuel for sacrifices, drawn from a pile that never runs out.
   ['Boilerplate', 'Boilerplate', 'E', 0, 1, 0],
 ]
 
@@ -66,10 +65,9 @@ export const CARDS: Record<string, CardDef> = Object.fromEntries(
 export const BOILERPLATE = 'Boilerplate'
 export const DEBUG_CARD = 'Y2K'
 
-/** The player's deck: every card but the debug card and the side pile's. */
 export const PLAYER_DECK: string[] = Object.keys(CARDS).filter((id) => id !== DEBUG_CARD && id !== BOILERPLATE)
 
-/** The opponent never gets the board wipe, or it could clear the player's side on a whim. */
+/** No board wipe, or P03 could clear the player's side on a whim. */
 export const OPPONENT_POOL: string[] = PLAYER_DECK.filter((id) => !CARDS[id]?.sigils.includes('segfault'))
 
 export function card(id: string): CardDef {

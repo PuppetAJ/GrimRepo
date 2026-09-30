@@ -4,13 +4,13 @@ import { countCardsPlayed } from './db/games.ts'
 import { env, isProduction } from './config/env.ts'
 
 async function start(): Promise<void> {
-  // Connect first, so a database that never answers fails the boot instead of every request.
+  // Connect first, so an unreachable database fails the boot instead of every request.
   await checkDatabase()
-  // Games finished before cards were counted are counted once; after that this finds none.
+  // A one-off backfill; later boots find nothing to count.
   const counted = await countCardsPlayed()
   if (counted) console.log(`Counted the cards played in ${counted} earlier games.`)
 
-  // Railway's edge controls X-Forwarded-For, so there its first entry is the client.
+  // Railway's edge sets X-Forwarded-For, so its first entry is the real client there.
   createApp({ production: isProduction, firstForwarded: Boolean(process.env['RAILWAY_ENVIRONMENT']) }).listen(
     env.PORT,
     () => {

@@ -9,7 +9,7 @@ export const api = express.Router()
 
 const lane = z.number().int().min(0).max(3)
 
-// Exactly the engine's actions; anything else, including a score, is refused before the replay.
+// Only the engine's actions; anything else, a score included, is refused before the replay.
 const action = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('draw'), from: z.enum(['deck', 'boilerplate']) }),
   z.strictObject({ type: z.literal('select'), uid: z.number().int().positive() }),
@@ -22,7 +22,7 @@ const action = z.discriminatedUnion('type', [
 
 const moves = z.strictObject({ from: z.number().int().min(0), actions: z.array(action).max(1_000) })
 
-// Per player rather than per address, since only a signed-in player can get this far.
+// Keyed per player, since only signed-in players reach these routes.
 const perPlayer = (limit: number) =>
   rateLimit({
     windowMs: 60_000,
@@ -33,7 +33,7 @@ const perPlayer = (limit: number) =>
     legacyHeaders: false,
   })
 
-// A game saves at every bell, so a minute of play is a handful of saves; starting is rarer still.
+// A game saves at each bell, so a minute of play needs only a handful of saves.
 const startLimiter = perPlayer(20)
 const movesLimiter = perPlayer(120)
 
@@ -42,7 +42,6 @@ const gameId = (raw: unknown): number | null => {
   return Number.isInteger(id) && id > 0 ? id : null
 }
 
-// A page number from the address; anything that is not one is the first page.
 const pageQuery = z.coerce.number().int().min(1).catch(1)
 
 api.get('/leaderboard', async (req, res) => {

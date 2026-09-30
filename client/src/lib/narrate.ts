@@ -1,12 +1,11 @@
 import { apply, card, createGame, type Action, type GameEvent, type GameState, type Unit } from 'shared'
 
-/** Where the scale stands, in P03's words. */
 const lead = (scale: number) =>
   scale === 0 ? 'The scale is level.' : scale > 0 ? `You lead by ${scale}.` : `I lead by ${-scale}.`
 
 const lane = (index: number) => `lane ${index + 1}`
 
-// P03's asides, picked by a number from the game rather than at random, so a reload tells the same story.
+// Picked by a number from the game, not at random, so a reload replays the same lines.
 const pick = (lines: string[], key: number) => lines[Math.abs(key) % lines.length] as string
 const BIG_HIT = 5
 const TAUNTS = ['Now THAT is synergy.', 'Feel that?', 'Leshy never hit that hard.', 'Too easy.']
@@ -15,7 +14,7 @@ const LOSSES = ['RNG.', 'Pure luck.', 'I meant to do that.', '']
 const PLAYS = ["Oh, NOW you're trying.", 'Finally, a real card.', 'Cute.']
 const PATIENCE = ['Hurry up.', "We've got Transcending to do.", 'Any day now, challenger.', 'Still here? Fine.']
 
-/** Every unit either state knows about, so an event can name a card that has since died. */
+// Includes the events' units, so an event can name a card that has since died.
 function names(before: GameState, events: GameEvent[]): Map<number, string> {
   const known = new Map<number, string>()
   const add = (unit: Unit | null | undefined) => unit && known.set(unit.uid, card(unit.card).name)
@@ -25,7 +24,6 @@ function names(before: GameState, events: GameEvent[]): Map<number, string> {
   return known
 }
 
-/** Plain lines for the console, in P03's voice where P03 is the one acting. */
 export function narrate(before: GameState, events: GameEvent[]): string[] {
   const known = names(before, events)
   const name = (uid: number) => known.get(uid) ?? 'a card'
@@ -93,7 +91,7 @@ export function narrate(before: GameState, events: GameEvent[]): string[] {
   })
 }
 
-/** What the table looks like before the first move: P03's opening queue. */
+/** Console lines for the table before the first move. */
 export function opening(state: GameState): string[] {
   const queued = state.opponent.back.flatMap((unit, index) =>
     unit ? [`I queued ${card(unit.card).name} behind ${lane(index)}.`] : [],
@@ -101,7 +99,7 @@ export function opening(state: GameState): string[] {
   return ['New game. You done gawking? Good. Draw.', ...queued]
 }
 
-/** The whole console for a saved game, rebuilt move by move so a reload loses nothing. */
+/** Rebuilds a saved game's state and console lines; null if a move fails to apply. */
 export function history(seed: number, actions: readonly Action[]): { state: GameState; lines: string[] } | null {
   let state = createGame({ seed })
   const lines = opening(state)

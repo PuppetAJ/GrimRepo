@@ -6,11 +6,10 @@ function remove(row: Slot[], uid: number): number {
   return lane
 }
 
-/** Every card on one side attacks, lane by lane, left to right. */
 export function attack(state: GameState, side: Side, events: GameEvent[]): void {
   const attackers = side === 'player' ? state.player.board : state.opponent.front
   const defenders = side === 'player' ? state.opponent.front : state.player.board
-  // The player's hits tip the scale their way; P03's tip it back.
+  // A positive scale favors the player.
   const toward = side === 'player' ? 1 : -1
 
   for (let lane = 0; lane < LANES; lane++) {
@@ -50,7 +49,7 @@ export function attack(state: GameState, side: Side, events: GameEvent[]): void 
           lane: aimed,
           row: 'front',
         })
-        // Overkill carries into the queued card behind, and never reaches a player.
+        // Overkill carries into the queued card behind, never to a player.
         const behind = side === 'player' ? state.opponent.back[aimed] : null
         if (left < 0 && behind) overkill(state, aimed, behind, -left, events)
       }

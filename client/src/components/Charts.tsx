@@ -17,7 +17,6 @@ import { AsTable, Frame, Legend, Tip } from './charts/parts.tsx'
 const MARGIN = { top: 12, right: 8, bottom: 8, left: 0 }
 const TICK = { fill: 'var(--muted-foreground)', fontSize: 11, fontFamily: 'var(--font-mono)' }
 
-/** The axis on the left: nothing, half and the most. */
 function Scale({ top, format }: { top: number; format: (value: number) => string }) {
   return (
     <YAxis
@@ -33,7 +32,6 @@ function Scale({ top, format }: { top: number; format: (value: number) => string
   )
 }
 
-/** Each game's score, oldest on the left, dotted in the colour of how it ended. */
 export function ScoreChart({ games }: { games: Game[] }) {
   const top = Math.max(1, ...games.map((game) => game.score))
   return (
@@ -81,7 +79,6 @@ export function ScoreChart({ games }: { games: Game[] }) {
   )
 }
 
-/** How many turns each game lasted, as bars in the colour of how it ended. */
 export function TurnsChart({ games }: { games: Game[] }) {
   const top = Math.max(1, ...games.map((game) => game.turns))
   return (

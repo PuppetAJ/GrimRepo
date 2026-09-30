@@ -1,4 +1,3 @@
-/** A shell prompt: P03's own in green, a visitor's name in amber, so who typed what is plain. */
 export function Prompt({ who, path }: { who: string; path: string }) {
   const p03 = who === 'p03'
   return (

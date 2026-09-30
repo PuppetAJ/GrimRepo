@@ -6,6 +6,5 @@ export const authClient = createAuthClient({ plugins: [usernameClient(), anonymo
 
 export const DEMO = { username: 'demo', password: 'demo-password' }
 
-/** Better Auth's error for a failed call, or a plain fallback. */
 export const authError = (error: { message?: string } | null | undefined, fallback: string): string =>
   error?.message || fallback

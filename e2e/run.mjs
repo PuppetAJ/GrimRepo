@@ -1,5 +1,4 @@
-// Runs the browser suites one after another, in Chromium and then Firefox; they share a database, so never in parallel.
-// Usage: node e2e/run.mjs [suite ...] [--browser=chromium|firefox]
+// Usage: node e2e/run.mjs [suite ...] [--browser=chromium|firefox]; suites share a database, so never in parallel.
 import { spawn } from 'node:child_process'
 
 const suites = ['smoke', 'auth', 'leaderboard', 'game', 'table', 'a11y']

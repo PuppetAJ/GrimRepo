@@ -11,7 +11,7 @@ export { diskMaterials } from './diskMaterials.ts'
 const { width: w, height: h } = CARD
 const { middleTop: MT, middleBottom: MB } = SECTIONS
 
-/** A strip of the face or back for one section, with its UVs mapped to that strip of the drawn card. */
+// UVs map to the matching strip of the drawn face.
 function sheetGeometry(from: number, to: number, anchor: 'top' | 'bottom', mirrored: boolean) {
   const height = (to - from) * h
   const geometry = new THREE.PlaneGeometry(w, height).translate(0, anchor === 'top' ? -height / 2 : height / 2, 0)
@@ -37,7 +37,7 @@ export type DiskHandle = { setOpen: (open: number) => void }
 
 let planes: Record<'front' | 'content' | 'back', THREE.BufferGeometry> | null = null
 
-/** An open disk's face, what shows on it, and its back, each as one plane: an open disk's three sheets line up into one. */
+/** Single planes are enough for an open disk, whose three sheets line up. */
 export const facePlanes = () =>
   (planes ??= {
     front: new THREE.PlaneGeometry(w, h).translate(0, 0, FACE_Z),
@@ -45,11 +45,10 @@ export const facePlanes = () =>
     back: new THREE.PlaneGeometry(w, h).rotateY(Math.PI).translate(0, 0, BACK_Z),
   })
 
-/** Where each section sits, open (1) or closed (0): the top and bottom keep their size and the middle compresses between. */
+// open runs from 0 (closed) to 1; only the middle section compresses.
 function poseAt(open: number) {
   const height = h * (DISK.compact + (1 - DISK.compact) * open)
   const spare = height - h * (1 - MB + MT)
-  // The rails run from the guides under the housing to the feet on the bottom section.
   const guides = height / 2 - HOUSING.bottom * h
   const feet = -height / 2 + (1 - MB + 0.035) * h
   return {
@@ -65,7 +64,7 @@ function poseAt(open: number) {
 type Baked = Record<'plastic' | 'dark' | 'metal', THREE.BufferGeometry>
 const baked = new Map<number, Baked>()
 
-/** A whole disk at rest, open or closed, merged into one geometry per material, for stacks drawn as instances. */
+/** One merged geometry per material, for instanced stacks. */
 export function bakedDisk(open: 0 | 1): Baked {
   let found = baked.get(open)
   if (found) return found
@@ -90,17 +89,13 @@ export function bakedDisk(open: 0 | 1): Baked {
   return found
 }
 
-/**
- * The disk, open (1) or closed (0) or on its way: the top and bottom sections keep their size and the middle
- * compresses between them, with the rails spanning the gap. `setOpen` moves it without a render.
- */
+/** open runs from 0 (closed) to 1; the `setOpen` handle animates it without a render. */
 export const Disk = forwardRef<
   DiskHandle,
   {
     open?: number
     kind?: 'common' | 'rare'
     front?: THREE.Material | null
-    /** What the face shows, on a sheet over the front; the card fades it as the disk closes. */
     content?: THREE.Material | null
     back?: THREE.Material | null
   }

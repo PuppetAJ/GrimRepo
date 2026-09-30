@@ -1,7 +1,7 @@
 import type { Action, Outcome } from 'shared'
 
 export type LeaderboardRow = { rank: number; username: string; bestScore: number; games: number; wins: number }
-/** One page of the board, with first place's score to scale the bars by. */
+/** `top` is first place's score, for scaling the bars. */
 export type BoardPage = { players: LeaderboardRow[]; page: number; pages: number; total: number; top: number }
 
 export type PlayerStats = {
@@ -18,11 +18,11 @@ export type PlayerStats = {
   averageTurns: number | null
   days: { date: string; games: number; losses: number }[]
   recent: FinishedGame[]
-  // Their best game, the first time they reached that score; null before any.
+  // The first game that reached their best score.
   best: FinishedGame | null
-  // Their place on the leaderboard; null for a guest or before a finished game.
+  // Null for a guest or before a finished game.
   rank: number | null
-  // The card they play most, Boilerplate aside, as its id; null before any is counted.
+  // Id of the card played most, excluding Boilerplate.
   favoriteCard: string | null
 }
 

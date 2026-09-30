@@ -8,20 +8,20 @@ import { MOOD } from '../mood.ts'
 import { TINT } from '../palette.ts'
 import { LIT, X } from './constants.ts'
 
-// Smug is the happy face in cyan; the faces are from the faces pack.
+// Smug reuses the happy face texture.
 type Mood = 'smug' | 'happy' | 'impatient' | 'choking' | 'dying' | 'whiteflag'
 const MOODS = ['happy', 'impatient', 'choking', 'dying', 'whiteflag'] as const
 type Face = (typeof MOODS)[number]
 
 let faces: Promise<Record<Face, THREE.Texture>> | null = null
 
-/** P03's faces, white on black, so the screen's glow gives them the palette's colour. */
+// White on black, so the screen's emissive color tints them.
 function loadFaces(): Promise<Record<Face, THREE.Texture>> {
   const loader = new THREE.TextureLoader()
   faces ??= Promise.all(
     MOODS.map(async (mood): Promise<[Face, THREE.Texture]> => {
       const texture = await loader.loadAsync(`/p03/screen/${mood}.png`)
-      // The pack's faces are stored upside down, as the game's textures were.
+      // The pack stores its faces upside down.
       texture.flipY = true
       texture.colorSpace = THREE.SRGBColorSpace
       texture.magFilter = THREE.NearestFilter
@@ -82,7 +82,7 @@ function P03({ mood }: { mood: Mood }) {
   useLayoutEffect(() => {
     const screen = (scene.getObjectByName('Head-RenderTargetPlane') as THREE.Mesh)
       .material as THREE.MeshStandardMaterial
-    // Light only, on a flat plane of its own, so nothing in the room can shade half of the face.
+    // Emissive only, so no light in the room can shade half the face.
     screen.map = null
     screen.color.set('#000000')
     screen.alphaTest = 0
@@ -104,7 +104,7 @@ function P03({ mood }: { mood: Mood }) {
     head.rotation.z = rest(head).rotation.z + Math.sin(t * 0.6) * 0.03 + droop
     head.rotation.y = rest(head).rotation.y + Math.sin(t * 0.37) * 0.07 + shake
     headCrank.rotation.z = rest(headCrank).rotation.z + t * 0.8
-    // The arm's crank rocks rather than spins: a full turn swings its grip through the body.
+    // The arm's crank rocks rather than spins, since a full turn swings its grip through the body.
     armCrank.rotation.z = rest(armCrank).rotation.z + Math.sin(t * 0.7) * 0.35
     arm.rotation.z = rest(arm).rotation.z + Math.sin(t * 0.8) * 0.06
     const snap = Math.max(0, Math.sin(t * 1.3)) ** 8 * 0.35

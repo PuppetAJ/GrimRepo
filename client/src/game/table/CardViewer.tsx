@@ -7,8 +7,6 @@ import { Disk, type DiskHandle } from './Disk.tsx'
 import { backTexture, faceContent, faceLights, faceTexture, loadCardAssets } from './faces.ts'
 import { FactoryEffects } from './Factory.tsx'
 
-// The compendium's 3D view: one card on its disk, lit and graded as the factory table lights it.
-
 function Lights() {
   return (
     <>
@@ -29,7 +27,6 @@ function Lights() {
   )
 }
 
-/** One disk, opening and closing as it does when drawn, turning slowly if asked. */
 function Card({ unit, open, turn }: { unit: Unit; open: boolean; turn: boolean }) {
   const assets = use(loadCardAssets())
   const group = useRef<THREE.Group>(null)
@@ -55,7 +52,7 @@ function Card({ unit, open, turn }: { unit: Unit; open: boolean; turn: boolean }
   useFrame((_, delta) => {
     if (turn && group.current) group.current.rotation.y += delta * 0.6
     if (!turn && group.current) group.current.rotation.y = THREE.MathUtils.damp(group.current.rotation.y, 0, 4, delta)
-    // The same easing and fade the game uses when a card is drawn.
+    // Matches the easing and fade of a card drawn on the table.
     openness.current = THREE.MathUtils.damp(openness.current, open ? 1 : 0, 6, delta)
     disk.current?.setOpen(openness.current)
     materials.content.emissiveIntensity = 1.1 * openness.current * openness.current
@@ -88,7 +85,6 @@ export default function CardViewer({ unit, open, turn }: { unit: Unit; open: boo
       <color attach="background" args={['#02070c']} />
       <Lights />
       <Card unit={unit} open={open} turn={turn} />
-      {/* A floor to the horizon under the disk: large squares, each divided into fainter small ones. */}
       <Grid
         infiniteGrid
         position={[0, -0.8, 0]}

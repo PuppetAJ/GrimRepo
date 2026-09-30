@@ -15,7 +15,7 @@ export type LeaderboardRow = { rank: number; username: string; bestScore: number
 
 export type FinishedGame = { outcome: Outcome; turns: number; score: number; forfeited: boolean; playedAt: string }
 
-/** One page of a player's finished games, newest first. */
+/** Games are newest first. */
 export type GamesPage = { games: FinishedGame[]; page: number; pages: number; total: number }
 
 export type PlayerStats = {
@@ -32,11 +32,11 @@ export type PlayerStats = {
   averageTurns: number | null
   days: { date: string; games: number; losses: number }[]
   recent: FinishedGame[]
-  // Their best game, the first time they reached that score; null before any.
+  // The earliest game to reach the best score.
   best: FinishedGame | null
-  // Their place on the leaderboard; null for a guest or before a finished game.
+  // Null for a guest or before a finished game.
   rank: number | null
-  // The card they play most, Boilerplate aside; null before any is counted.
+  // Boilerplate is not counted.
   favoriteCard: string | null
 }
 
@@ -59,7 +59,7 @@ export class GameError extends Error {
 // A real game is a few hundred actions; this bounds a hostile one.
 const MAX_ACTIONS = 5_000
 
-/** The player's unfinished game, or a new one with a seed only the server chose. */
+/** Resumes the open game or deals a new one; the server picks the seed so a client can't choose its deal. */
 export async function startGame(userId: string, rulesChanged = false): Promise<OpenGame> {
   const open = await pool.query<{ id: number; seed: string; actions: Action[]; rules_version: number }>(
     `SELECT id, seed, actions, rules_version FROM games WHERE user_id = $1 AND status = 'playing'`,
@@ -67,7 +67,7 @@ export async function startGame(userId: string, rulesChanged = false): Promise<O
   )
   const existing = open.rows[0]
   if (existing && existing.rules_version !== RULES_VERSION) {
-    // Begun under older rules, so it may no longer replay: dropped unscored, and a fresh deal takes its place.
+    // A game from other rules may not replay, so it is dropped unscored.
     await pool.query(`DELETE FROM games WHERE id = $1 AND status = 'playing'`, [existing.id])
     return startGame(userId, true)
   }
@@ -80,12 +80,12 @@ export async function startGame(userId: string, rulesChanged = false): Promise<O
      ON CONFLICT (user_id) WHERE status = 'playing' DO NOTHING RETURNING id`,
     [userId, seed, RULES_VERSION],
   )
-  // Two tabs starting at once: the other one won, so resume its game.
+  // The one-open-game index rejected a concurrent start, so resume that game.
   if (!created.rows[0]) return startGame(userId, rulesChanged)
   return { id: created.rows[0].id, seed, actions: [], resumed: false, rulesChanged }
 }
 
-/** Appends moves to an open game after replaying the whole record; scores it if the game is over. */
+/** Replays the whole record before saving, so only legal moves are ever stored. */
 export async function recordMoves(userId: string, gameId: number, from: number, moves: Action[]): Promise<MovesResult> {
   const client = await pool.connect()
   try {
@@ -98,7 +98,7 @@ export async function recordMoves(userId: string, gameId: number, from: number, 
     if (!game) throw new GameError(404, { error: 'No such game in progress' })
     if (game.rules_version !== RULES_VERSION)
       throw new GameError(409, { error: 'The rules changed', rulesChanged: true })
-    // Moves only ever append, so a retried or stale request cannot rewrite what was already played.
+    // Moves only append, so a retried or stale request can't rewrite earlier play.
     if (from !== game.actions.length) throw new GameError(409, { error: 'Out of step', expected: game.actions.length })
 
     const all = [...game.actions, ...moves]
@@ -125,7 +125,7 @@ export async function recordMoves(userId: string, gameId: number, from: number, 
   }
 }
 
-/** Walking away: the game ends as a loss on the turn it had reached. */
+/** Scores the game as a loss on the turn it reached. */
 export async function forfeitGame(userId: string, gameId: number): Promise<MovesResult> {
   const client = await pool.connect()
   try {
@@ -183,10 +183,7 @@ async function finish(
   return { outcome, turns, score, best, isBest: score >= best }
 }
 
-/**
- * Counts the cards played in finished games that have moves but no count yet, as games finished before the count
- * existed; run as the server starts. A game its rules can no longer replay is counted as none.
- */
+/** Backfills card counts at startup; a game that fails to replay counts no cards. */
 export async function countCardsPlayed(): Promise<number> {
   const { rows } = await pool.query<{ id: number; seed: string; actions: Action[] }>(
     `SELECT id, seed, actions FROM games
@@ -200,11 +197,11 @@ export async function countCardsPlayed(): Promise<number> {
   return rows.length
 }
 
-// The charts show the last twenty games, so they stay a readable width; the history pages through every game.
+// Twenty keeps the stats charts a readable width.
 export const RECENT_GAMES = 20
 export const HISTORY_PAGE = 10
 
-/** A page of a player's history, the last page if asked for one past it; null for a player who does not exist. */
+/** A page past the end returns the last page. */
 export async function playerGames(username: string, page: number): Promise<GamesPage | null> {
   const { rows } = await pool.query<{ id: string; total: number }>(
     `SELECT u.id, COUNT(g.id)::int AS total
@@ -233,10 +230,10 @@ export async function playerGames(username: string, page: number): Promise<Games
 
 export const BOARD_PAGE = 20
 
-/** One page of the board, with first place's score for scale; the last page if asked for one past it. */
+/** top is first place's score, for scale. */
 export type BoardPage = { players: LeaderboardRow[]; page: number; pages: number; total: number; top: number }
 
-/** Players ranked by their best finished game; ties share a rank and sort by name. Ranks count across every page, and guests are left off until they sign up. */
+/** Ranks by best score across all pages; ties share a rank, and guests are left off. */
 export async function leaderboard(page = 1): Promise<BoardPage> {
   const { rows: sizes } = await pool.query<{ total: number; top: number }>(
     `SELECT COUNT(DISTINCT g.user_id)::int AS total, COALESCE(MAX(g.score), 0)::int AS top
@@ -262,7 +259,6 @@ export async function leaderboard(page = 1): Promise<BoardPage> {
   return { players: rows, page: at, pages, total, top }
 }
 
-/** Everything the stats page shows, or null for a player who does not exist. */
 export async function playerStats(username: string): Promise<PlayerStats | null> {
   const { rows } = await pool.query<{
     id: string
@@ -296,7 +292,7 @@ export async function playerStats(username: string): Promise<PlayerStats | null>
        FROM games WHERE user_id = $1 AND status = 'finished' ORDER BY played_at DESC, id DESC LIMIT $2`,
       [player.id, RECENT_GAMES],
     ),
-    // Half a year of days, for the activity grid on the stats page.
+    // 182 days fills the stats page's half-year activity grid.
     pool.query<{ date: string; games: number; losses: number }>(
       `SELECT to_char(played_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS date,
               COUNT(*)::int AS games,
@@ -310,7 +306,7 @@ export async function playerStats(username: string): Promise<PlayerStats | null>
        FROM games WHERE user_id = $1 AND status = 'finished' ORDER BY score DESC, played_at, id LIMIT 1`,
       [player.id],
     ),
-    // Ranked as the leaderboard ranks, among players who have signed up.
+    // Must rank exactly as leaderboard() does.
     pool.query<{ rank: number }>(
       `SELECT rank FROM (
          SELECT u.id, RANK() OVER (ORDER BY MAX(g.score) DESC)::int AS rank
@@ -320,7 +316,7 @@ export async function playerStats(username: string): Promise<PlayerStats | null>
        ) ranked WHERE id = $1`,
       [player.id],
     ),
-    // Boilerplate is free and endless, so it would be nearly everyone's favourite; ties go to the name first.
+    // Boilerplate is free, so it would top almost everyone's count.
     pool.query<{ card: string }>(
       `SELECT played.key AS card
        FROM games, jsonb_each_text(games.cards) AS played

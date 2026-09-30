@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="29" height="32" viewBox="-22 -12 29 32" shape-rendering="crispEdges">
-  <!-- The top-right corner, its origin at the frame's corner: the gap stepped like torn paper, in the card's colour. -->
+  <!-- The top-right corner, its origin at the frame's corner: the gap stepped like torn paper, in the card's color. -->
   <g fill="#151318">
     <rect x="-22" y="-1" width="23" height="2"/>
     <rect x="-1" y="-1" width="2" height="20"/>

@@ -3,15 +3,15 @@ import { demoAccount } from './demo.ts'
 
 const LETTERS = 'abcdefghijklmnopqrstuvwxyz0123456789'
 
-/** A guest's name: guest_ and six random letters or digits, unique in practice and reserved from sign-up. */
+/** Unique in practice (36^6 names), and reserved from sign-up. */
 export function guestName(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(6))
   return `guest_${[...bytes].map((byte) => LETTERS[byte % LETTERS.length]).join('')}`
 }
 
-/** A guest who signs up or signs in brings their games; the account's own open game, if any, wins over theirs. */
+/** The account's own open game, if any, wins over the guest's. */
 export async function claimGuestGames(guestId: string, account: { id: string; username?: string | null }) {
-  // The demo account is shared, so a guest's games never land in it.
+  // The demo account is shared, so guests' games never land in it.
   if (account.username === demoAccount.username) return
   const client = await pool.connect()
   try {

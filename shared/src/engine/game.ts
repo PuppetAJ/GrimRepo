@@ -17,7 +17,7 @@ import { costOf, makeUnit, units, worthOf } from './units.ts'
 
 export type GameOptions = {
   seed: number
-  /** Development only: deals the debug card, so a test can reach the end in one turn. */
+  /** Deals the debug card, which ends a game in one turn; development and tests only. */
   debug?: boolean
 }
 
@@ -36,7 +36,7 @@ export function createGame({ seed, debug = false }: GameOptions): GameState {
     opponent: { front: Array(LANES).fill(null), back: Array(LANES).fill(null) },
     summon: null,
   }
-  // Three from the deck and one Boilerplate, so the first turn always has something to play.
+  // The Boilerplate guarantees the first turn has something to play.
   for (let i = 0; i < 3; i++) state.player.hand.push(makeUnit(state, state.player.deck.shift() as string))
   state.player.hand.push(makeUnit(state, BOILERPLATE))
   if (debug) state.player.hand.push(makeUnit(state, DEBUG_CARD))
@@ -48,7 +48,7 @@ export function createGame({ seed, debug = false }: GameOptions): GameState {
 
 const fail = (reason: string): Result => ({ ok: false, reason })
 
-// Settled when the turn starts: a full hand skips the draw for the whole turn, even once a card is played.
+// A full hand at turn start skips the draw for the whole turn, even after a card is played.
 const mustDraw = (state: GameState): boolean => !state.drawn
 
 const paid = (state: GameState): number =>
@@ -58,7 +58,7 @@ const onBoard = (state: GameState): number => units(state.player.board).reduce((
 
 const validLane = (lane: number): boolean => Number.isInteger(lane) && lane >= 0 && lane < LANES
 
-/** Applies one action to a copy of the state; the original is never changed. */
+/** Never mutates the given state. */
 export function apply(current: GameState, action: Action): Result {
   if (current.status !== 'playing') return fail('The game is over')
   const state = structuredClone(current)
@@ -71,7 +71,7 @@ export function apply(current: GameState, action: Action): Result {
     let id = BOILERPLATE
     if (action.from === 'deck') {
       if (state.player.deck.length === 0) {
-        // Rebuilt from the cards not in hand or on the table, so nothing is ever drawn twice at once.
+        // Rebuilt without cards in hand or on the table, so no card is ever in two places.
         const inPlay = new Set([...state.player.hand, ...units(state.player.board)].map((unit) => unit.card))
         state.player.deck = rng.shuffle(PLAYER_DECK.filter((cardId) => !inPlay.has(cardId)))
         if (state.player.deck.length === 0) return fail('The deck is empty')
@@ -151,7 +151,6 @@ export function apply(current: GameState, action: Action): Result {
   return { ok: true, state, events }
 }
 
-/** The bell: the player's cards attack, then the opponent clears dead code, advances, attacks, and queues more. */
 function playTurn(state: GameState, rng: Rng, events: GameEvent[]): void {
   attack(state, 'player', events)
   if (state.scale >= TIP) return finish(state, 'win', events)
@@ -189,7 +188,6 @@ function finish(state: GameState, outcome: 'win' | 'loss', events: GameEvent[]):
   events.push({ type: 'gameOver', outcome, turns: state.turn })
 }
 
-/** Every action the rules allow right now; the bot and the fuzz tests choose from this. */
 export function legalActions(state: GameState): Action[] {
   if (state.status !== 'playing') return []
   if (mustDraw(state))
@@ -222,7 +220,7 @@ export function legalActions(state: GameState): Action[] {
 
 export type Replay = { ok: true; state: GameState; events: GameEvent[] } | { ok: false; index: number; reason: string }
 
-/** Plays a game again from its seed and actions; any illegal step makes the whole record invalid. */
+/** Any illegal action invalidates the whole record. */
 export function replay(seed: number, actions: readonly Action[], options: { debug?: boolean } = {}): Replay {
   let state = createGame({ seed, debug: options.debug })
   const events: GameEvent[] = []
@@ -235,14 +233,12 @@ export function replay(seed: number, actions: readonly Action[], options: { debu
   return { ok: true, state, events }
 }
 
-/** How many times each card was played in a game, from its replayed events: for a player's favourite card. */
 export function cardsPlayed(events: readonly GameEvent[]): Record<string, number> {
   const counts: Record<string, number> = {}
   for (const event of events) if (event.type === 'placed') counts[event.unit.card] = (counts[event.unit.card] ?? 0) + 1
   return counts
 }
 
-/** The finished game's result, in the shape the scoring takes. */
 export function summary(state: GameState): { outcome: 'win' | 'loss'; turns: number } | null {
   if (state.status === 'playing') return null
   return { outcome: state.status === 'won' ? 'win' : 'loss', turns: state.turn }

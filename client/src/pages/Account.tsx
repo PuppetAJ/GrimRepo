@@ -123,7 +123,7 @@ export function Account() {
   )
 }
 
-/** Shown to the demo account instead of the forms, which the server would refuse anyway. */
+/** Replaces the forms, which the server would refuse for the demo account anyway. */
 function DemoNotice() {
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-4">
@@ -142,7 +142,6 @@ function DemoNotice() {
   )
 }
 
-/** Shown to a guest instead of the forms: what a guest account is, and how to keep what they've played. */
 function GuestNotice({ name }: { name: string }) {
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-4">

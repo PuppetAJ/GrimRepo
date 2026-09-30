@@ -10,7 +10,7 @@ export function level(games: number): number {
   return games <= 4 ? 3 : 4
 }
 
-/** Half a year of days, oldest first, each with how much was played and whether it went badly. */
+/** 26 weeks of days, oldest first; `bad` means more losses than wins. */
 export function grid(days: PlayerStats['days']) {
   const byDate = new Map(days.map((day) => [day.date, day]))
   const today = new Date()

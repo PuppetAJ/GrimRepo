@@ -7,13 +7,9 @@ import { useTable } from './context.ts'
 import { Panel } from './Panel.tsx'
 import type { BoardRow } from './useTextTable.ts'
 
-// How long a lunge takes, as on the 3D table.
+// Matches the 3D table's lunge.
 const LUNGE_MS = 240
 
-/**
- * What stands in a lane as the moves play back: the card, arriving or lunging; a card on its way out, folding away
- * toward its owner or offered up; and the numbers rising off it.
- */
 function Occupant({
   row,
   lane,
@@ -21,7 +17,7 @@ function Occupant({
   playback,
   empty = null,
   tilted = false,
-  fresh,
+  isNew,
 }: {
   row: BoardRow
   lane: number
@@ -29,11 +25,11 @@ function Occupant({
   playback: Playback
   empty?: ReactNode
   tilted?: boolean
-  /** Whether a card arrived after the page loaded, and so arrives on screen too. */
-  fresh: (uid: number) => boolean
+  /** True for cards dealt since the page loaded; only those animate in. */
+  isNew: (uid: number) => boolean
 }) {
   const lunge = unit ? playback.lunges.get(unit.uid) : undefined
-  // Keyed by when it began, a lunge plays once, the moment it is added.
+  // Keyed by start time below, so each lunge plays its animation once.
   const striking = lunge
   const leaving = playback.leaving.filter((gone) => gone.row === row && gone.lane === lane)
   const popups = playback.popups.filter(
@@ -46,7 +42,7 @@ function Occupant({
           key={unit.uid}
           className={`block size-full transition-transform duration-200 ${tilted ? '-translate-y-1 rotate-6' : ''}`}
           style={
-            fresh(unit.uid)
+            isNew(unit.uid)
               ? { animation: `${row === 'board' ? 'arrive-up' : 'arrive-down'} 280ms ease-out` }
               : undefined
           }
@@ -71,7 +67,6 @@ function Occupant({
           key={`gone-${gone.unit.uid}`}
           aria-hidden
           className="absolute inset-0"
-          // Dead, it folds shut and goes toward its owner; sacrificed, it is offered up.
           style={
             {
               animation: `${gone.how === 'sacrificed' ? 'offer-up' : 'fold-away'} 550ms ease-in forwards`,
@@ -112,15 +107,27 @@ export function Rising({
 const CELL =
   'flex shrink-0 select-none items-center justify-center rounded-md border-2 p-1 [-webkit-touch-callout:none]'
 
-/** P03's queue and row over the player's row, four lanes each, with the numbers rising off whoever is hit. */
 export function Board() {
-  const { view, playback, state, legal, busy, act, result, over, compact, tapToRead, look, fresh, refuse, shaking } =
-    useTable()
+  const {
+    view,
+    playback,
+    state,
+    legal,
+    busy,
+    act,
+    result,
+    gameOver,
+    compact,
+    tapToRead,
+    inspectProps,
+    isNew,
+    showRefusal,
+    refusalShake,
+  } = useTable()
   const { laneSize, setReading } = useTable()
   const faces = playback.popups.filter((popup) => 'face' in popup.spot)
   return (
     <Panel className="relative flex flex-col gap-2">
-      {/* P03's face above the board and the player's below it, where hits to either land. */}
       {faces.map((popup) => (
         <Rising
           key={popup.id}
@@ -133,7 +140,7 @@ export function Board() {
         {view.back.map((unit, i) => (
           <div
             key={i}
-            {...look({ row: 'back', lane: i }, unit)}
+            {...inspectProps({ row: 'back', lane: i }, unit)}
             aria-label={unit ? `Queued in lane ${i + 1}: ${describe(unit)}` : `Lane ${i + 1}: nothing queued`}
             onClick={tapToRead && unit ? () => setReading({ row: 'back', lane: i }) : undefined}
             className={`${CELL} border-[#1f3a26] brightness-75`}
@@ -141,7 +148,7 @@ export function Board() {
           >
             <Occupant
               row="back"
-              fresh={fresh}
+              isNew={isNew}
               lane={i}
               unit={unit}
               playback={playback}
@@ -154,13 +161,13 @@ export function Board() {
         {view.front.map((unit, i) => (
           <div
             key={i}
-            {...look({ row: 'front', lane: i }, unit)}
+            {...inspectProps({ row: 'front', lane: i }, unit)}
             aria-label={unit ? `P03's lane ${i + 1}: ${describe(unit)}` : `P03's lane ${i + 1}: empty`}
             onClick={tapToRead && unit ? () => setReading({ row: 'front', lane: i }) : undefined}
             className={`${CELL} border-[#1f3a26]`}
             style={laneSize}
           >
-            <Occupant row="front" lane={i} unit={unit} playback={playback} fresh={fresh} />
+            <Occupant row="front" lane={i} unit={unit} playback={playback} isNew={isNew} />
           </div>
         ))}
       </div>
@@ -169,7 +176,7 @@ export function Board() {
         {view.board.map((unit, i) => {
           const action = laneAction(legal, i)
           const marked = state.summon?.marked.includes(i) ?? false
-          // Paid for: a marked lane is where the card goes, so it says so, over the card being given up.
+          // Once the cost is paid, the marked lane is where the new card goes.
           const paid = marked && action?.type === 'place'
           const verb =
             action?.type === 'mark'
@@ -180,7 +187,7 @@ export function Board() {
                   ? 'Play here'
                   : null
           const label = `Lane ${i + 1}: ${unit ? describe(unit) : 'empty'}${verb ? `. ${verb}` : ''}${marked ? ', marked for sacrifice' : ''}`
-          // A dashed outline on what can be clicked, red where a card would be given up, as in Act 2.
+          // Red marks a card that would be sacrificed.
           const frame = paid
             ? 'border-dashed border-p03'
             : marked
@@ -190,25 +197,25 @@ export function Board() {
                 : action
                   ? 'border-dashed border-p03/60 hover:border-p03'
                   : 'border-[#1f3a26]'
-          // The lane's card stays put while the lane becomes clickable and back, so nothing plays again.
+          // The button overlays the lane, so the card underneath never remounts and replays its entrance.
           return (
             <div
               key={i}
               aria-label={action ? undefined : label}
-              {...look({ row: 'board', lane: i }, unit)}
+              {...inspectProps({ row: 'board', lane: i }, unit)}
               onClick={
                 action
                   ? undefined
                   : tapToRead && unit
                     ? () => setReading({ row: 'board', lane: i })
-                    : () => !busy && refuse(`lane-${i}`)
+                    : () => !busy && showRefusal(`lane-${i}`)
               }
               className={`${CELL} relative ${frame}`}
-              style={{ ...laneSize, ...shaking(`lane-${i}`) }}
+              style={{ ...laneSize, ...refusalShake(`lane-${i}`) }}
             >
               <Occupant
                 row="board"
-                fresh={fresh}
+                isNew={isNew}
                 lane={i}
                 unit={unit}
                 playback={playback}
@@ -240,7 +247,7 @@ export function Board() {
           )
         })}
       </div>
-      {over && result ? (
+      {gameOver && result ? (
         <div className="absolute inset-0 grid place-items-center bg-black/60 p-4">
           <GameOver result={result} className="w-full max-w-md bg-p03-ground/95 font-terminal text-xl" />
         </div>

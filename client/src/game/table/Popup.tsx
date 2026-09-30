@@ -3,7 +3,6 @@ import { useEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
 import type { Vec3 } from './layout.ts'
 
-/** A number rising off the table and fading: damage, healing, or a note such as overkill. */
 export function Popup({
   text,
   tone,

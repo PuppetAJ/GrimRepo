@@ -8,10 +8,10 @@ import { useAsync } from '../../lib/useAsync.ts'
 import { hashOf, messageOf, type Game } from './games.ts'
 import { Trace } from './Trace.tsx'
 
-// Games on a page of the history, as the server sends them.
+// Must match the server's page size.
 const HISTORY = 10
 
-/** Every game the player finished, ten to a page, newest first; the page is in the address, so Back returns to it. */
+/** The page lives in the URL, so Back returns to it. */
 export function History({ username, lastLoss }: { username: string; lastLoss: Game | undefined }) {
   const [search, setSearch] = useSearchParams()
   const page = Math.max(1, Number(search.get('page')) || 1)
@@ -49,7 +49,7 @@ export function History({ username, lastLoss }: { username: string; lastLoss: Ga
         </p>
       ) : null}
       {pinned ? <Trace game={lastLoss} /> : null}
-      {/* While a page loads, placeholder rows keep the list its height, so nothing below it jumps. */}
+      {/* Placeholder rows hold the list's height, so nothing below it jumps. */}
       {history.status === 'loading' ? (
         <ol role="status" aria-label="Loading games" className={pinned ? '' : 'mt-3'}>
           {[...Array(HISTORY).keys()].map((row) => (

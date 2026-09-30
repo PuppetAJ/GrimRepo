@@ -8,7 +8,6 @@ import { COSTS, DECK, matches, SORTS, sorted, type Sort } from './cards/deck.ts'
 import { Grid } from './cards/Grid.tsx'
 import { Viewer } from './cards/Viewer.tsx'
 
-/** Every card in the factory, searchable, as a grid or one at a time on its disk. */
 export function Cards() {
   const [search, setSearch] = useSearchParams()
   const query = search.get('q') ?? ''
@@ -24,7 +23,7 @@ export function Cards() {
   const chosen = cards.find((def) => def.id === search.get('card')) ?? cards[0] ?? DECK[0]!
   const field = useId()
 
-  // Built from the address as it is now, not as of the last render, so two quick changes both stick.
+  // Built from the current URL, not the last render's, so two quick changes both stick.
   const change = (changes: Record<string, string | null>) => {
     const next = new URLSearchParams(window.location.search)
     for (const [key, value] of Object.entries(changes)) {
@@ -58,10 +57,6 @@ export function Cards() {
             className="pl-9"
           />
         </div>
-        {/*
-          The settings are one group: beside the search while the whole line fits there, under it when not, and only
-          wrapping among themselves when even a line of their own is too narrow.
-        */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
             <label className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -88,7 +83,7 @@ export function Cards() {
               {descending ? <ArrowDownWideNarrow aria-hidden /> : <ArrowUpNarrowWide aria-hidden />}
             </Button>
           </div>
-          {/* One line down to a 320px phone: tighter buttons there rather than a wrap. */}
+          {/* Tighter buttons on phones keep this on one line down to 320px. */}
           <div role="group" aria-label="Filter by cost" className="flex items-center gap-1">
             <span className="mr-1 text-sm text-muted-foreground">Cost:</span>
             {COSTS.map((cost) => {

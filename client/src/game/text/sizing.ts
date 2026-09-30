@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import { CARD_RATIO } from '../CardReader.tsx'
 
-// From this wide, the reader has room for the art beside the words, and lies flat; narrower, it stands them in a column.
+// Narrower than this, the art and words don't fit side by side.
 const FLAT_READER = 416
 
-/** Whether the reader lies flat, decided by the reader's own width rather than the window's. */
+/** Decided by the reader's own width, not the window's. */
 export function useFlatReader(): [(element: HTMLDivElement | null) => void, boolean] {
   const [box, setBox] = useState<HTMLDivElement | null>(null)
   const [flat, setFlat] = useState(false)
@@ -17,7 +17,7 @@ export function useFlatReader(): [(element: HTMLDivElement | null) => void, bool
   return [setBox, flat]
 }
 
-/** The largest lane that fits the space given, four across and three down: the board takes the window's height. */
+/** The largest lane that fits four across and three rows down. */
 export function useLaneSize(
   compact: boolean,
   hand: HTMLElement | null,
@@ -31,11 +31,9 @@ export function useLaneSize(
   useEffect(() => {
     if (!area) return
     const fit = () => {
-      // The panel's padding and border, the gaps between lanes, and the line between P03's rows and the player's.
-      // Filling, the board's column is only as wide as the board, so the window's width is what limits it.
+      // 28 is the panel's padding and border; a filling board's column fits the board, so measure the window.
       const width = ((fill ? window.innerWidth : area.clientWidth) - aside - 28 - 3 * (compact ? 4 : 8)) / 4
-      // Compact, the lanes take up whatever room the hand leaves above the window's bottom, three rows of them,
-      // measured as if the page were scrolled to the top, so scrolling never grows the board.
+      // Measured as if scrolled to the top, so scrolling never grows the board.
       const table = hand?.closest<HTMLElement>('[data-table]')
       const fixed = table ? getComputedStyle(table).position === 'fixed' : false
       const scrolled = (fixed ? 0 : window.scrollY) + (table?.scrollTop ?? 0)
@@ -46,8 +44,7 @@ export function useLaneSize(
           : fill === 'width'
             ? Infinity
             : (area.clientHeight - 28 - 3 * 8 - 2) / 3 / CARD_RATIO
-      // Never smaller than the floor, so a short phone still has a board to play on; never taller than the window, so
-      // it can still be seen whole.
+      // Never taller than the window, so the whole board stays visible.
       const tallest = (window.innerHeight - 24 - 28 - 3 * 4 - 2) / 3 / CARD_RATIO
       current.current = Math.floor(Math.min(width, Math.max(floor, Math.min(height, tallest))))
       setSize(current.current)
@@ -65,11 +62,11 @@ export function useLaneSize(
   return { setArea, lane: { width: size, height: size * CARD_RATIO } }
 }
 
-/** A scrolling list that keeps to its newest line as lines arrive, unless it has been scrolled back to read. */
+/** Keeps a list on its newest line unless the reader has scrolled back. */
 export function useStuckToBottom(content: unknown) {
   const box = useRef<HTMLElement | null>(null)
   const stuck = useRef(true)
-  // A list that appears, as in a modal, opens on its newest line.
+  // A list that mounts later, as in a modal, opens on its newest line.
   const attach = useCallback((element: HTMLElement | null) => {
     box.current = element
     stuck.current = true
@@ -86,14 +83,10 @@ export function useStuckToBottom(content: unknown) {
   return [attach, onScroll] as const
 }
 
-// The widest the table grows, and how tall it may be for its width, so a big window does not stretch it into a tower.
+// Width cap and height-to-width cap, so a big window doesn't stretch the table.
 const MOST_WIDE = 1792
 const MOST_TALL = 0.62
 
-/**
- * The table's size: as wide as the page allows up to a cap, as tall as the window below it allows, and no taller than
- * its width suits. In full screen it is the same, centred on the whole screen.
- */
 export function useFit(full: boolean) {
   const frame = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState<CSSProperties>({ width: '100%', height: '75dvh' })
@@ -110,13 +103,12 @@ export function useFit(full: boolean) {
       } else {
         const parent = element.parentElement as HTMLElement
         const style = getComputedStyle(parent)
-        // Inside the page's padding.
         const inner = parent.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
         width = Math.min(MOST_WIDE, inner)
-        // From where the table starts on the page, however tall the header is at this zoom.
+        // Measured from the table's top, since the header's height changes with zoom.
         room = window.innerHeight - (element.getBoundingClientRect().top + window.scrollY) - margin
       }
-      // Never shorter than its columns need: on a window smaller still, the page scrolls rather than cutting parts off.
+      // 600 is the least the columns need; smaller windows scroll the page instead of clipping.
       const height = Math.max(600, Math.min(room, width * MOST_TALL))
       setSize(
         full

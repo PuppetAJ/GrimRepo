@@ -1,4 +1,3 @@
-/** Moderation from the command line: rename, remove, list recent accounts, or scan every name. Usage is in the README. */
 import { flaggedAccounts, ModerationError, recentAccounts, removeAccount, renameAccount } from '../admin/moderation.ts'
 import { pool } from '../config/db.ts'
 

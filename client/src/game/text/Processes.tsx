@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 
 const PROCESSES = ['p03.core', 'scale.svc', 'sacrifice.d', 'lane.watch', 'gc.reaper', 'deck.shuf']
 
-/** P03's idle process monitor, in the space under the button; shown once its heading and a line fit, and scrolling. */
 export function Processes() {
   const [tick, setTick] = useState(0)
   const [box, setBox] = useState<HTMLDivElement | null>(null)
@@ -13,7 +12,7 @@ export function Processes() {
   }, [])
   useEffect(() => {
     if (!box) return
-    // The heading and one line, each about 1.5rem, and the padding.
+    // 4.5rem: the heading and one line at about 1.5rem each, plus padding.
     const measure = () =>
       setFits(box.clientHeight >= 4.5 * parseFloat(getComputedStyle(document.documentElement).fontSize))
     measure()
@@ -21,7 +20,7 @@ export function Processes() {
     observer.observe(box)
     return () => observer.disconnect()
   }, [box])
-  // A steady wander rather than noise, from the tick, so it reads as work being done.
+  // Smooth waves instead of random noise, so the load reads as steady work.
   const load = (i: number) =>
     Math.round(4 + 4 * (1 + Math.sin(tick * 0.7 + i * 1.9)) * (0.5 + 0.5 * Math.cos(tick * 0.23 + i)))
   return (

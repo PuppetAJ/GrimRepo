@@ -9,20 +9,20 @@ const GROUND = '#0a0e0a'
 const DECAY = ['#3f8f55', '#1b3a24']
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#$%&*+=/<>?{}[]'
 const BLOCKS = '█▓▒'
-// The cluster reaches its far edge after this long; each cell glitches for a moment as it arrives, then settles.
+// Seconds for the cluster to reach its far edge, and for each cell to settle after arriving.
 const GROWTH = 2.4
 const SETTLE = 0.6
-// Clusters breaking out of a frame move faster than those creeping inside one.
+// Clusters outside a frame grow faster than those inside one.
 const FAST_GROWTH = 1
 const FAST_SETTLE = 0.3
 const FRAME_MS = 100
-// Once settled, a few characters at a time keep changing, so each one turns over every few seconds.
+// Share of settled cells changed per tick, so each turns over every few seconds.
 const SHIMMER_MS = 160
 const SHIMMER_SHARE = 0.04
 
 type Cell = { x: number; y: number; color: string; block: boolean; final: string; arrives: number }
 
-/** A fixed pattern for a seed, so a cluster looks the same on every visit and never shifts the page. */
+// Seeded, so a cluster looks the same on every visit.
 function cells(cols: number, rows: number, corner: Corner, seed: number, falloff: number, growth: number): Cell[] {
   let state = seed
   const random = () => {
@@ -36,9 +36,7 @@ function cells(cols: number, rows: number, corner: Corner, seed: number, falloff
       const dy = corner.startsWith('bottom') ? (rows - 1 - row) / rows : row / rows
       const distance = Math.min(1, Math.hypot(dx, dy))
       if (random() >= (1 - distance) ** falloff) continue
-      // Solid blocks and holes near the corner, letters decaying further out.
       const block = random() < 1 - distance
-      // Mostly lit, with a few dark holes among the blocks and fading letters further out.
       const shade = random()
       const color = block
         ? shade < 0.75
@@ -54,7 +52,7 @@ function cells(cols: number, rows: number, corner: Corner, seed: number, falloff
   return found
 }
 
-/** P03's corruption creeping in from a corner, then flickering on: decorative, hidden from screen readers, never over text. */
+/** Decorative corner corruption; never place it over text. */
 export function Corruption({
   cols,
   rows,
@@ -68,7 +66,7 @@ export function Corruption({
   rows: number
   corner: Corner
   seed: number
-  // Dense keeps more of the cluster lit away from its corner.
+  // Keeps more of the cluster lit away from its corner.
   dense?: boolean
   fast?: boolean
   className?: string
@@ -102,7 +100,6 @@ export function Corruption({
       }
     }
 
-    // Only while the cluster is on screen and the tab is in front; offscreen it holds still.
     const shimmer = () => {
       let visible = true
       const seen = new IntersectionObserver(([entry]) => (visible = entry?.isIntersecting ?? true))
@@ -159,7 +156,7 @@ export function Corruption({
       ref={canvas}
       aria-hidden
       style={{ width: cols * CELL_W, height: rows * CELL_H }}
-      // The same phosphor glow as P03's text.
+      // Canvas ignores text-shadow, so the phosphor glow is a drop-shadow filter.
       className={`pointer-events-none absolute [filter:drop-shadow(0_0_1px_rgb(125_255_154/0.35))_drop-shadow(0_0_4px_rgb(125_255_154/0.1))] ${className}`}
     />
   )

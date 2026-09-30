@@ -17,7 +17,7 @@ export const GUEST_IS_READ_ONLY =
 export const DEMO_IS_READ_ONLY =
   'Everyone shares the demo account, so it cannot be renamed, deleted or given a new password. Make an account of your own to change these.'
 
-// Anything that would change or remove the shared account for every other visitor.
+// Routes that would change the shared demo account for everyone.
 const DEMO_LOCKED = new Set(['/update-user', '/delete-user', '/change-password', '/change-email', '/set-password'])
 
 export const authOptions = {
@@ -26,7 +26,7 @@ export const authOptions = {
   basePath: '/api/auth',
   secret: env.BETTER_AUTH_SECRET,
 
-  // The same pool as the game queries, so there is one connection budget.
+  // Shares the game queries' pool, so there is one connection budget.
   database: pool,
 
   emailAndPassword: {
@@ -38,12 +38,12 @@ export const authOptions = {
     username({
       minUsernameLength: 3,
       maxUsernameLength: 20,
-      // Letters, digits and underscores only, so a name is safe in a URL and on the leaderboard.
+      // Keeps names safe in URLs and on the leaderboard.
       usernameValidator: (value) => USERNAME_PATTERN.test(value) && !isOffensive(value),
       displayUsernameValidator: (value) => USERNAME_PATTERN.test(value),
       schema: { user: { fields: { displayUsername: 'display_username' } } },
     }),
-    // One click to play, no form: a throwaway account, whose games follow the guest into a real one.
+    // A guest's games follow it into the account it signs up or signs in to.
     anonymous({
       emailDomainName: 'guest.grimrepo.invalid',
       generateName: guestName,
@@ -55,7 +55,7 @@ export const authOptions = {
   databaseHooks: {
     user: {
       create: {
-        // Every account needs a username; a guest's is the name it was given.
+        // Every account needs a username, so a guest's is its generated name.
         before: async (user) => {
           if (!(user as { isAnonymous?: boolean }).isAnonymous) return
           const name = user.name.toLowerCase()
@@ -66,7 +66,6 @@ export const authOptions = {
   },
 
   hooks: {
-    // The shown name is always the username as typed; otherwise a player could display as someone else.
     before: createAuthMiddleware(async (ctx) => {
       if (DEMO_LOCKED.has(ctx.path)) {
         const session = await getSessionFromCtx(ctx)
@@ -78,7 +77,7 @@ export const authOptions = {
       const body = (ctx.body ?? {}) as Record<string, unknown>
       const username = body['username']
       if (typeof username === 'string') {
-        // Reserved names only bind requests from outside; the seed makes the demo account through the same API.
+        // Reserved names bind HTTP requests only, since the seed creates the demo account through this API.
         if (isOffensive(username) || (ctx.request && isReserved(username))) {
           throw new APIError('BAD_REQUEST', { message: NAME_REFUSED })
         }
@@ -89,7 +88,7 @@ export const authOptions = {
           }
         }
       }
-      // The shown name, and Better Auth's unused name field, only ever follow the username.
+      // The shown name always equals the username, so no one can display as someone else.
       delete body['displayUsername']
       delete body['name']
       if (typeof username === 'string') {
@@ -111,17 +110,17 @@ export const authOptions = {
     },
     expiresIn: 60 * 60 * 24 * 7,
     updateAge: 60 * 60 * 24,
-    // Deleting an account needs the password, or a sign-in from the last ten minutes.
+    // Deleting an account needs the password or a sign-in from the last ten minutes.
     freshAge: 60 * 10,
   },
   user: {
     modelName: 'users',
     fields: { emailVerified: 'email_verified', createdAt: 'created_at', updatedAt: 'updated_at' },
     additionalFields: {
-      // input: false, or a player could unlock a name a moderator had set.
+      // input: false, or a player could unlock a name a moderator set.
       nameLocked: { type: 'boolean', fieldName: 'name_locked', required: false, input: false, defaultValue: false },
     },
-    // A player can remove themselves; their games go with them through the foreign key.
+    // The foreign key cascades, so a deleted player's games go too.
     deleteUser: { enabled: true },
   },
   account: {
@@ -145,12 +144,12 @@ export const authOptions = {
   },
 
   advanced: {
-    // app.ts always overwrites this with the address it resolved, so a client cannot choose it.
+    // app.ts always overwrites this header, so a client can't spoof its address.
     ipAddress: { ipAddressHeaders: [CLIENT_IP_HEADER] },
   },
 
   rateLimit: {
-    // Better Auth only limits in production by default; on everywhere so the tests exercise it.
+    // Better Auth limits only in production by default; on everywhere so the tests exercise it.
     enabled: true,
     storage: 'database',
     modelName: 'rate_limits',
@@ -158,7 +157,7 @@ export const authOptions = {
     window: 60,
     max: 100,
     customRules: {
-      // Every page load asks for the session; it reveals nothing and guesses nothing.
+      // Every page load calls this, and it can't be used to guess credentials.
       '/get-session': false,
       '/sign-in/email': { window: 60, max: 5 },
       '/sign-in/username': { window: 60, max: 5 },

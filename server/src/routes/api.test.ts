@@ -36,7 +36,7 @@ const step = (state: GameState, action: Action) => {
   return result.state
 }
 
-/** The bot's whole game for a seed, cut into the per-bell saves the client makes. */
+/** Split into the per-bell saves the client makes. */
 function botGame(seed: number) {
   const { state, actions } = playOut(createGame({ seed }), step)
   const turns: Action[][] = []
