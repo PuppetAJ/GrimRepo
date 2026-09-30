@@ -85,14 +85,14 @@ export function Scene({
           active={can({ type: 'draw', from: 'deck' } as Partial<Action>)}
           onClick={() => act({ type: 'draw', from: 'deck' })}
           hint={hint}
-          full={!busy && !game.result && state.player.hand.length >= HAND_LIMIT && !state.drawn}
+          full={!busy && !game.result && state.drawn && state.player.hand.length >= HAND_LIMIT}
         />
         <Pile
           assets={assets}
           active={can({ type: 'draw', from: 'boilerplate' } as Partial<Action>)}
           onClick={() => act({ type: 'draw', from: 'boilerplate' })}
           hint={hint}
-          full={!busy && !game.result && state.player.hand.length >= HAND_LIMIT && !state.drawn}
+          full={!busy && !game.result && state.drawn && state.player.hand.length >= HAND_LIMIT}
         />
         <EndTurnButton active={can({ type: 'ringBell' })} rung={rung} onClick={() => act({ type: 'ringBell' })} />
         <Lanes view={view} legal={legal} act={act} play={TINT.play} aimed={aimed} onAim={setAimed} />

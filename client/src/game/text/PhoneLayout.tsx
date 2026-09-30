@@ -59,7 +59,7 @@ function Menu() {
             {fullScreen.on ? 'Exit full screen' : 'Full screen'}
           </button>
         ) : null}
-        <Forfeit forfeit={game.forfeit} className={`${MENU_BUTTON} h-auto`}>
+        <Forfeit forfeit={game.forfeit} disabled={game.state.status !== 'playing'} className={`${MENU_BUTTON} h-auto`}>
           <Flag aria-hidden />
           Forfeit
         </Forfeit>

@@ -6,6 +6,7 @@ import {
   freshPage,
   launch,
   newPlayer,
+  newTab,
   playWithBot,
   reporter,
   resetRateLimits,
@@ -133,6 +134,83 @@ section('Resuming')
     (await page.locator('[data-seed]').getAttribute('data-seed')) !== seed && /Turn 1/.test(await visibleText(page)),
   )
   check('and the test player is removed afterwards', await deletePlayer(page, resumer))
+  await context.close()
+}
+
+section('A result that does not save at first')
+{
+  // The bell that ends the game is saved over a connection that has just dropped, and comes back a moment later.
+  const { context, page } = await freshPage(browser, { table: 'text' })
+  const player = await signUp(page, newPlayer('Offline'))
+  await page.goto(`${BASE}/game`)
+  const dropped = async (route) => route.abort('internetdisconnected')
+  const { state } = await playWithBot(page, {
+    beforeMove: async (_action, next) => {
+      if (next.status !== 'playing') await page.route('**/api/games/*/moves', dropped)
+    },
+  })
+  await page.getByText('Saving the result…').first().waitFor()
+  check('the game over waits for its result, and says so', true)
+  check(
+    'and walking away is not offered, as it would record a loss',
+    await page.getByRole('button', { name: 'Forfeit' }).first().isDisabled(),
+  )
+  await page.unroute('**/api/games/*/moves', dropped)
+  const expected = summary(state)
+  const shown = await page
+    .getByRole('status')
+    .filter({ hasText: /You (win|lose)/ })
+    .innerText({ timeout: 15_000 })
+    .catch(() => '')
+  check(
+    'once the connection is back, the result is saved and shown',
+    expected.outcome === 'win'
+      ? shown.includes(`You win in ${expected.turns} turns`)
+      : shown.includes(`You lose on turn ${expected.turns}`),
+    `${JSON.stringify(expected)} vs ${shown || 'nothing'}`,
+  )
+  check('and the test player is removed afterwards', await deletePlayer(page, player))
+  await context.close()
+}
+
+section('Two tabs')
+{
+  // The same player in two tabs: the first moves the game on, and the second, out of step, picks it up from the server.
+  const { context, page: first } = await freshPage(browser, { table: 'text' })
+  const player = await signUp(first, newPlayer('Tabs'))
+  await first.goto(`${BASE}/game`)
+  await first.locator('[data-seed]').waitFor()
+  const second = await newTab(context)
+  await second.goto(`${BASE}/game`)
+  await second.locator('[data-seed]').waitFor()
+  const hand = (page) => page.locator('[data-action="select"]').evaluateAll((cards) => cards.map((c) => c.ariaLabel))
+
+  // A background tab gets no animation frames in headed Firefox, so each tab is brought forward before it's used.
+  await first.bringToFront()
+  await first.locator('[data-action="draw-deck"]').click()
+  await first.getByText('saved', { exact: true }).waitFor()
+  const moved = await hand(first)
+  // Held back a second, as on a slow connection, so the refusal lands after the draw has finished playing.
+  await second.route('**/api/games/*/moves', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+    await route.continue()
+  })
+  await second.bringToFront()
+  await second.locator('[data-action="draw-boilerplate"]').click()
+  await second.getByText(/moved on in another tab/).waitFor()
+  // The second tab's own Boilerplate is gone and the first tab's draw is in its place.
+  const caughtUp = await second
+    .waitForFunction(
+      (want) =>
+        JSON.stringify([...document.querySelectorAll('[data-action="select"]')].map((c) => c.ariaLabel)) === want,
+      JSON.stringify(moved),
+      { timeout: 10_000 },
+    )
+    .then(() => true)
+    .catch(() => false)
+  check('a tab out of step shows the game as the other tab left it', caughtUp, `${await hand(second)} vs ${moved}`)
+  check('and asks for no second draw', (await second.locator('[data-action^="draw-"]:not(:disabled)').count()) === 0)
+  check('and the test player is removed afterwards', await deletePlayer(first, player))
   await context.close()
 }
 

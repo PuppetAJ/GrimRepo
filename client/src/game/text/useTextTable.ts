@@ -41,8 +41,8 @@ export function useTextTable({
   const legal = busy || result ? [] : legalActions(state)
   const summoning = state.summon ? state.player.hand.find((unit) => unit.uid === state.summon?.uid) : undefined
   const mustDraw = has(legal, { type: 'draw' })
-  // At the limit the draw is skipped; the piles say so.
-  const handFull = !busy && !result && state.player.hand.length >= HAND_LIMIT && !state.drawn
+  // A turn that starts with a full hand skips its draw; the piles say why they can't be drawn from.
+  const handFull = !busy && !result && state.drawn && state.player.hand.length >= HAND_LIMIT
   // Where the pointer was, not the card that was there: a card played into that lane shows at once.
   const [looking, setLooking] = useState<Place | null>(null)
   const fullScreen = useFullScreen({ fallback: phone })
@@ -197,7 +197,12 @@ export function useTextTable({
   )
   const said = busy
     ? "P03's turn…"
-    : prompt(mustDraw, summoning, summoning ? owed(summoning, state.player.board, state.summon?.marked ?? []) : 0)
+    : prompt(
+        mustDraw,
+        summoning,
+        summoning ? owed(summoning, state.player.board, state.summon?.marked ?? []) : 0,
+        state.status !== 'playing',
+      )
 
   /** The table's own element: the game it shows, and a held card being read rather than played. */
   const frameProps = {

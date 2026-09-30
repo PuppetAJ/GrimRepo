@@ -61,7 +61,7 @@ export function Hand() {
 export function Piles() {
   const { view, mustDraw, handFull, act, compact, phone, sideways, refused, shaking } = useTable()
   const size = sideways ? 'w-10' : phone ? 'w-8 tall:w-10' : compact ? 'w-12 sm:w-16' : 'w-20'
-  const full = handFull ? `Your hand is full (${HAND_LIMIT}): no draw this turn` : undefined
+  const full = handFull ? `Your hand is full (${HAND_LIMIT})` : undefined
   return (
     <div
       key={refused.count}

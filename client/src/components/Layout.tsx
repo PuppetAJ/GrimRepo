@@ -1,6 +1,7 @@
 import { ChevronDown, LogIn, LogOut, Menu, Settings, UserPlus, UserRound } from 'lucide-react'
 import { Suspense } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
+import { LoadFailed, ReloadPage } from './LoadFailed.tsx'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button.tsx'
 import {
@@ -28,13 +29,18 @@ const PAGE = 'mx-auto w-full max-w-[100rem]'
 
 export function Layout() {
   const session = authClient.useSession()
-  const playing = useLocation().pathname.startsWith('/game')
+  const { pathname } = useLocation()
+  const playing = pathname.startsWith('/game')
   const navigate = useNavigate()
   const user = session.data?.user as { displayUsername?: string; username?: string; isAnonymous?: boolean } | undefined
   const name = user?.displayUsername ?? user?.username
 
   async function signOut() {
-    await authClient.signOut()
+    // A network failure rejects, where a refusal comes back as an error.
+    const { error } = await authClient.signOut().catch((failure: unknown) => ({
+      error: { message: failure instanceof Error ? failure.message : String(failure) },
+    }))
+    if (error) return void toast.error(`Could not sign out: ${error.message}`)
     toast.success('Signed out')
     navigate('/')
   }
@@ -150,9 +156,12 @@ export function Layout() {
       <main className="flex-1 px-(--gutter) py-8">
         {/* Capped and centred like the bars, so a browser zoomed far out keeps a readable page; the table fills it all. */}
         <div className={playing ? '' : PAGE}>
-          <Suspense fallback={<Loading label="Loading" />}>
-            <Outlet />
-          </Suspense>
+          {/* Keyed by the path, so leaving a page that failed clears the failure. */}
+          <LoadFailed key={pathname} fallback={<ReloadPage />}>
+            <Suspense fallback={<Loading label="Loading" />}>
+              <Outlet />
+            </Suspense>
+          </LoadFailed>
         </div>
       </main>
 

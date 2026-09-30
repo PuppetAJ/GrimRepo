@@ -117,7 +117,7 @@ export function Hud({
             </Link>
           </Button>
           {game.result ? null : (
-            <Forfeit forfeit={game.forfeit} className="h-8 px-3">
+            <Forfeit forfeit={game.forfeit} disabled={game.state.status !== 'playing'} className="h-8 px-3">
               <Flag aria-hidden />
               <Label>Forfeit</Label>
             </Forfeit>
@@ -150,7 +150,12 @@ export function Hud({
             >
               {busy
                 ? "P03's turn…"
-                : prompt(mustDraw, summoning, summoning ? owed(summoning, view.board, view.summon?.marked ?? []) : 0)}
+                : prompt(
+                    mustDraw,
+                    summoning,
+                    summoning ? owed(summoning, view.board, view.summon?.marked ?? []) : 0,
+                    game.state.status !== 'playing',
+                  )}
             </p>
           </div>
 

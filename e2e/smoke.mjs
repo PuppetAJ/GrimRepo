@@ -1,10 +1,10 @@
 // The app boots, the client reaches the API, accounts and scores work end to end. Grows as pages arrive.
 import { apply, createGame, nextBotAction, summary } from '../shared/src/index.ts'
-import { BASE, deletePlayer, launch, reporter, resetRateLimits, stamp } from './lib.mjs'
+import { BASE, deletePlayer, freshPage, launch, reporter, resetRateLimits, stamp } from './lib.mjs'
 
 await resetRateLimits()
 
-const { page, pageErrors, close } = await launch()
+const { browser, page, pageErrors, close } = await launch()
 const { check, section, report } = reporter()
 
 section('The API')
@@ -227,6 +227,34 @@ section('Accounts and scores')
     headers: { origin: BASE },
   })
   check('and the test player is removed afterwards', await deletePlayer(page, player))
+}
+
+section('A page whose code is gone')
+{
+  // As after a deploy, when an open tab asks for a chunk the new build no longer has: in development or in a build.
+  const { context, page: stale } = await freshPage(browser)
+  await stale.route(/\/(pages\/Cards\.tsx|assets\/Cards-[^/]*\.js)/, (route) => route.abort())
+  await stale.goto(BASE)
+  await stale.getByRole('heading', { name: 'Grim Repo', level: 1 }).waitFor()
+  await stale.getByRole('link', { name: 'Cards' }).click()
+  const failed = await stale
+    .getByRole('alert')
+    .filter({ hasText: "This page didn't load" })
+    .waitFor()
+    .then(() => true)
+    .catch(() => false)
+  check('offers a reload instead of a blank page', failed)
+  check('and keeps the header', await stale.getByRole('link', { name: 'Leaderboard' }).isVisible())
+  await stale.getByRole('link', { name: 'README', exact: true }).click()
+  check(
+    'and leaving it clears the failure',
+    await stale
+      .getByRole('heading', { name: 'Grim Repo', level: 1 })
+      .waitFor()
+      .then(() => true)
+      .catch(() => false),
+  )
+  await context.close()
 }
 
 await close()

@@ -71,7 +71,11 @@ export function Controls() {
             {fullScreen.on ? 'Exit full screen' : 'Full screen'}
           </button>
         ) : null}
-        <Forfeit forfeit={game.forfeit} className={`${SIDE_BUTTON} h-auto flex-1 justify-center`} />
+        <Forfeit
+          forfeit={game.forfeit}
+          disabled={game.state.status !== 'playing'}
+          className={`${SIDE_BUTTON} h-auto flex-1 justify-center`}
+        />
       </div>
       <div className="flex justify-between font-sans text-sm text-p03-dim">
         <button type="button" onClick={on3d} className="underline hover:text-p03">

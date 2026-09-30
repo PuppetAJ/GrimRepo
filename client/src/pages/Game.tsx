@@ -97,7 +97,8 @@ export function Game() {
       // Into most of the page's side padding, so the table has the width and only thin gutters remain; a phone's
       // table goes edge to edge.
       <div className={layout === 'phone' ? '-mx-(--gutter)' : '-mx-[calc(var(--gutter)-0.75rem)]'}>
-        <TerminalTable game={game} seat={seat} on3d={() => choose('3d')} layout={layout} />
+        {/* Set again from the state on a new deal or a reload, as the 3D table is, so its playback never shows the last game. */}
+        <TerminalTable key={game.generation} game={game} seat={seat} on3d={() => choose('3d')} layout={layout} />
       </div>
     )
 
