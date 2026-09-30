@@ -12,6 +12,10 @@ export const ENGINE = process.env.E2E_BROWSER === 'firefox' ? 'firefox' : 'chrom
 // Printed because the default is the dev server, and a suite run against the wrong one fails oddly.
 console.log(`against ${BASE} in ${ENGINE}`)
 
+// Uncaught errors from every page a suite opens, launched or fresh, so any of them fails the run.
+const pageErrors = []
+const listen = (page) => page.on('pageerror', (error) => pageErrors.push(error.message))
+
 export async function launch({ width = 1280, height = 800 } = {}) {
   // Headless browsers on a machine with no GPU only draw WebGL in software when asked to, which the 3D table needs.
   const browser =
@@ -24,8 +28,7 @@ export async function launch({ width = 1280, height = 800 } = {}) {
   page.setDefaultTimeout(20_000)
   page.setDefaultNavigationTimeout(30_000)
 
-  const pageErrors = []
-  page.on('pageerror', (error) => pageErrors.push(error.message))
+  listen(page)
 
   return { browser, context, page, pageErrors, close: () => browser.close() }
 }
@@ -80,6 +83,7 @@ export async function freshPage(browser, { width = 1280, height = 900, table } =
   if (table) await context.addInitScript((mode) => localStorage.setItem('grimrepo:table', mode), table)
   const page = await context.newPage()
   page.setDefaultTimeout(20_000)
+  listen(page)
   return { context, page }
 }
 
