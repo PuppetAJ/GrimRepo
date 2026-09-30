@@ -110,6 +110,8 @@ export function useTextTable({
     'data-seed': state.seed,
     'data-moves': game.moves,
     'data-table': 'text',
+    // Focusable, so a click anywhere on the table puts focus here and its shortcuts work.
+    tabIndex: -1,
     ...holdFrameProps,
   }
 

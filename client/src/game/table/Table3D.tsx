@@ -7,6 +7,7 @@ import { type Seat, has } from '../controls.tsx'
 import { useFullScreen } from '../fullScreen.ts'
 import type { Ready } from '../useGame.ts'
 import { FlatReaderBody } from '../CardReader.tsx'
+import { forTable } from '../shortcuts.ts'
 import { disposeFaces, loadCardAssets } from './faces.ts'
 import { CAMERA, type CameraView } from './layout.ts'
 import { logLines, statusLines } from './Factory.tsx'
@@ -60,7 +61,7 @@ export default function Table3D({ game, seat, onText }: { game: Ready; seat: Sea
   })
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.metaKey || event.ctrlKey || event.altKey || (event.target as HTMLElement).tagName === 'INPUT') return
+      if (!forTable(event)) return
       const key = event.key.toLowerCase()
       if (key === 'w') setCamera('board')
       else if (key === 'd' || key === 's') setCamera('table')
@@ -119,6 +120,8 @@ export default function Table3D({ game, seat, onText }: { game: Ready; seat: Sea
       data-seed={game.state.seed}
       data-moves={game.moves}
       data-table="3d"
+      // Focusable, so a click anywhere on the table puts focus here and its shortcuts work.
+      tabIndex={-1}
       className={fullScreen.on ? 'fixed inset-0 z-40 bg-[#050403]' : 'relative h-full w-full'}
     >
       <Canvas
