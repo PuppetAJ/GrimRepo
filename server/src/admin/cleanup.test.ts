@@ -48,15 +48,27 @@ it('sweeps expired sessions and stale rate-limit rows', async () => {
   assert.equal((await app.call('GET', '/api/me', { cookie: player.cookie })).status, 401)
 })
 
-it('removes guests who never signed up within a week, and their games', async () => {
+it('removes guests who never signed up within a week and stopped playing, and their games', async () => {
   const fresh = await app.call('POST', '/api/auth/sign-in/anonymous')
   const old = await app.call('POST', '/api/auth/sign-in/anonymous', { headers: { 'x-forwarded-for': '10.0.0.2' } })
   await openGame(old.cookie)
   const oldId = (await app.call('GET', '/api/auth/get-session', { cookie: old.cookie })).body.user.id
   await pool.query(`UPDATE users SET created_at = now() - interval '8 days' WHERE id = $1`, [oldId])
+  await pool.query(`UPDATE sessions SET expires_at = now() - interval '1 day' WHERE user_id = $1`, [oldId])
   const removed = await nightlyCleanup()
   assert.equal(removed['staleGuests'], 1)
   assert.equal((await pool.query('SELECT 1 FROM users WHERE is_anonymous')).rowCount, 1)
   assert.equal((await pool.query('SELECT 1 FROM games')).rowCount, 0)
   assert.equal((await app.call('GET', '/api/me', { cookie: fresh.cookie })).status, 200)
+})
+
+it('keeps a guest older than a week who is still playing, and their games', async () => {
+  const guest = await app.call('POST', '/api/auth/sign-in/anonymous')
+  await openGame(guest.cookie)
+  const id = (await app.call('GET', '/api/auth/get-session', { cookie: guest.cookie })).body.user.id
+  await pool.query(`UPDATE users SET created_at = now() - interval '8 days' WHERE id = $1`, [id])
+  const removed = await nightlyCleanup()
+  assert.equal(removed['staleGuests'], 0)
+  assert.equal((await pool.query('SELECT 1 FROM games WHERE user_id = $1', [id])).rowCount, 1)
+  assert.equal((await app.call('GET', '/api/me', { cookie: guest.cookie })).status, 200)
 })
