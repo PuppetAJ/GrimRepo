@@ -17,7 +17,7 @@ function Occupant({
   playback,
   empty = null,
   tilted = false,
-  fresh,
+  isNew,
 }: {
   row: BoardRow
   lane: number
@@ -26,7 +26,7 @@ function Occupant({
   empty?: ReactNode
   tilted?: boolean
   /** True for cards dealt since the page loaded; only those animate in. */
-  fresh: (uid: number) => boolean
+  isNew: (uid: number) => boolean
 }) {
   const lunge = unit ? playback.lunges.get(unit.uid) : undefined
   // Keyed by start time below, so each lunge plays its animation once.
@@ -42,7 +42,7 @@ function Occupant({
           key={unit.uid}
           className={`block size-full transition-transform duration-200 ${tilted ? '-translate-y-1 rotate-6' : ''}`}
           style={
-            fresh(unit.uid)
+            isNew(unit.uid)
               ? { animation: `${row === 'board' ? 'arrive-up' : 'arrive-down'} 280ms ease-out` }
               : undefined
           }
@@ -108,8 +108,22 @@ const CELL =
   'flex shrink-0 select-none items-center justify-center rounded-md border-2 p-1 [-webkit-touch-callout:none]'
 
 export function Board() {
-  const { view, playback, state, legal, busy, act, result, over, compact, tapToRead, look, fresh, refuse, shaking } =
-    useTable()
+  const {
+    view,
+    playback,
+    state,
+    legal,
+    busy,
+    act,
+    result,
+    gameOver,
+    compact,
+    tapToRead,
+    inspectProps,
+    isNew,
+    showRefusal,
+    refusalShake,
+  } = useTable()
   const { laneSize, setReading } = useTable()
   const faces = playback.popups.filter((popup) => 'face' in popup.spot)
   return (
@@ -126,7 +140,7 @@ export function Board() {
         {view.back.map((unit, i) => (
           <div
             key={i}
-            {...look({ row: 'back', lane: i }, unit)}
+            {...inspectProps({ row: 'back', lane: i }, unit)}
             aria-label={unit ? `Queued in lane ${i + 1}: ${describe(unit)}` : `Lane ${i + 1}: nothing queued`}
             onClick={tapToRead && unit ? () => setReading({ row: 'back', lane: i }) : undefined}
             className={`${CELL} border-[#1f3a26] brightness-75`}
@@ -134,7 +148,7 @@ export function Board() {
           >
             <Occupant
               row="back"
-              fresh={fresh}
+              isNew={isNew}
               lane={i}
               unit={unit}
               playback={playback}
@@ -147,13 +161,13 @@ export function Board() {
         {view.front.map((unit, i) => (
           <div
             key={i}
-            {...look({ row: 'front', lane: i }, unit)}
+            {...inspectProps({ row: 'front', lane: i }, unit)}
             aria-label={unit ? `P03's lane ${i + 1}: ${describe(unit)}` : `P03's lane ${i + 1}: empty`}
             onClick={tapToRead && unit ? () => setReading({ row: 'front', lane: i }) : undefined}
             className={`${CELL} border-[#1f3a26]`}
             style={laneSize}
           >
-            <Occupant row="front" lane={i} unit={unit} playback={playback} fresh={fresh} />
+            <Occupant row="front" lane={i} unit={unit} playback={playback} isNew={isNew} />
           </div>
         ))}
       </div>
@@ -188,20 +202,20 @@ export function Board() {
             <div
               key={i}
               aria-label={action ? undefined : label}
-              {...look({ row: 'board', lane: i }, unit)}
+              {...inspectProps({ row: 'board', lane: i }, unit)}
               onClick={
                 action
                   ? undefined
                   : tapToRead && unit
                     ? () => setReading({ row: 'board', lane: i })
-                    : () => !busy && refuse(`lane-${i}`)
+                    : () => !busy && showRefusal(`lane-${i}`)
               }
               className={`${CELL} relative ${frame}`}
-              style={{ ...laneSize, ...shaking(`lane-${i}`) }}
+              style={{ ...laneSize, ...refusalShake(`lane-${i}`) }}
             >
               <Occupant
                 row="board"
-                fresh={fresh}
+                isNew={isNew}
                 lane={i}
                 unit={unit}
                 playback={playback}
@@ -233,7 +247,7 @@ export function Board() {
           )
         })}
       </div>
-      {over && result ? (
+      {gameOver && result ? (
         <div className="absolute inset-0 grid place-items-center bg-black/60 p-4">
           <GameOver result={result} className="w-full max-w-md bg-p03-ground/95 font-terminal text-xl" />
         </div>

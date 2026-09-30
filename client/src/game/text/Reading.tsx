@@ -7,15 +7,15 @@ import { Panel } from './Panel.tsx'
 
 /** What the player should do next; nudges when a move is refused. */
 export function PromptLine() {
-  const { said, refused, layout } = useTable()
+  const { promptText, refusal, layout } = useTable()
   return (
     <p
-      key={refused.count}
-      title={said}
+      key={refusal.count}
+      title={promptText}
       className={`text-p03-dim ${layout === 'phone' ? 'w-full text-lg leading-tight text-p03' : layout === 'mid' ? 'w-full truncate text-[clamp(1rem,4.4cqi,1.25rem)]' : 'w-full truncate text-center text-[clamp(1rem,4cqi,1.5rem)]'}`}
-      style={refused.count ? { animation: 'nudge 0.6s ease-out' } : undefined}
+      style={refusal.count ? { animation: 'nudge 0.6s ease-out' } : undefined}
     >
-      {said}
+      {promptText}
     </p>
   )
 }
@@ -66,8 +66,8 @@ export function Magnifier() {
 
 /** The phone's card reader. */
 export function Inspector() {
-  const { reading, setReading, at, result, state, busy, mustDraw, legal } = useTable()
-  const unit = at(reading)
+  const { reading, setReading, unitAt, result, state, busy, mustDraw, legal } = useTable()
+  const unit = unitAt(reading)
   // Why a hand card can't be picked, when that's why the reader opened.
   const note =
     !reading || !('uid' in reading) || result

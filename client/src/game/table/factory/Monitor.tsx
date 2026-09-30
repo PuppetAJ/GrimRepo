@@ -38,11 +38,11 @@ export const Monitor = memo(function Monitor({
   onPin?: (screen: Screen) => void
 }) {
   const cancelHold = useRef<(() => void) | null>(null)
-  const letGo = () => {
+  const endHold = () => {
     cancelHold.current?.()
     cancelHold.current = null
   }
-  useEffect(() => letGo, [])
+  useEffect(() => endHold, [])
   const texture = useMemo(() => {
     const canvas = document.createElement('canvas')
     canvas.width = 512
@@ -65,11 +65,11 @@ export const Monitor = memo(function Monitor({
       rotation={[0, turn, 0]}
       onPointerDown={(event) => {
         if (!onHold || (event.pointerType !== 'touch' && event.button !== 0)) return
-        letGo()
+        endHold()
         cancelHold.current = startHold(event, (x, y) => onHold(screen, x, y))
       }}
-      onPointerUp={letGo}
-      onPointerCancel={letGo}
+      onPointerUp={endHold}
+      onPointerCancel={endHold}
       onClick={(event) => {
         event.stopPropagation()
         // A hold was for reading; a click or tap pins the readout.

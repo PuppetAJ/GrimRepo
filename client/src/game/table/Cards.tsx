@@ -74,11 +74,11 @@ export function Card({
   const hovered = pointed || raised
   const touched = useRef(false)
   const cancelHold = useRef<(() => void) | null>(null)
-  const letGo = () => {
+  const endHold = () => {
     cancelHold.current?.()
     cancelHold.current = null
   }
-  useEffect(() => letGo, [])
+  useEffect(() => endHold, [])
   const self = useRef({})
   const clickable = Boolean(onClick)
   useEffect(() => {
@@ -233,11 +233,11 @@ export function Card({
     onPointerDown: (event: ThreeEvent<PointerEvent>) => {
       touched.current = event.pointerType === 'touch'
       if (!onHold || (!touched.current && event.button !== 0)) return
-      letGo()
+      endHold()
       cancelHold.current = startHold(event, onHold)
     },
-    onPointerUp: letGo,
-    onPointerCancel: letGo,
+    onPointerUp: endHold,
+    onPointerCancel: endHold,
     onPointerOver: (event: ThreeEvent<PointerEvent>) => {
       event.stopPropagation()
       setPointed(true)

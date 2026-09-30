@@ -46,15 +46,15 @@ export function useTextTable({
   const covering = phone && fullScreen.on
   const phoneFrame = useRef<HTMLDivElement>(null)
   const { frame, size } = useFit(fullScreen.on)
-  const short = (typeof size.height === 'number' ? size.height : 900) < 760
-  const at = (place: Place | null) =>
+  const shortTable = (typeof size.height === 'number' ? size.height : 900) < 760
+  const unitAt = (place: Place | null) =>
     !place
       ? null
       : 'uid' in place
         ? (view.hand.find((unit) => unit.uid === place.uid) ?? null)
         : (view[place.row][place.lane] ?? null)
   // Keeps the last card pointed at, so a zoom moving the page under a still pointer doesn't empty the reader.
-  const inspected = summoning ?? at(looking) ?? null
+  const inspected = summoning ?? unitAt(looking) ?? null
   const [magnified, setMagnified] = useState<{ unit: Unit; x: number; y: number } | null>(null)
   const [readerBox, readerFlat] = useFlatReader()
   const [menu, setMenu] = useState(false)
@@ -66,7 +66,7 @@ export function useTextTable({
   const user = (authClient.useSession().data?.user as { displayUsername?: string } | undefined)?.displayUsername
   const hold = useRef<ReturnType<typeof setTimeout> | null>(null)
   const held = useRef(false)
-  const letGo = () => {
+  const endHold = () => {
     if (hold.current) clearTimeout(hold.current)
     hold.current = null
     setMagnified(null)
@@ -90,7 +90,7 @@ export function useTextTable({
         : key.startsWith('uid:')
           ? { uid: Number(key.slice(4)) }
           : { row: key.split(':')[0] as BoardRow, lane: Number(key.split(':')[1]) }
-      const unit = at(place)
+      const unit = unitAt(place)
       if (place && unit) setLooking(place)
       setMagnified((last) => (last ? { unit: unit ?? last.unit, x: touch.clientX, y: touch.clientY } : last))
     }
@@ -109,7 +109,7 @@ export function useTextTable({
     }
   })
   /** Props that let a lane or hand card be read by pointing, focus or holding. */
-  const look = (place: Place, unit: Slot | Unit = null) => ({
+  const inspectProps = (place: Place, unit: Slot | Unit = null) => ({
     'data-look': 'uid' in place ? `uid:${place.uid}` : `${place.row}:${place.lane}`,
     onPointerEnter: () => unit && setLooking(place),
     onFocus: () => unit && setLooking(place),
@@ -123,8 +123,8 @@ export function useTextTable({
         setMagnified({ unit, x, y })
       }, 280)
     },
-    onPointerUp: letGo,
-    onPointerCancel: letGo,
+    onPointerUp: endHold,
+    onPointerCancel: endHold,
     // A touch keeps its hold until lifted; a mouse leaving early cancels the pending hold.
     onPointerLeave: (event: PointerEvent) => {
       if (event.pointerType === 'touch' || magnified) return
@@ -141,11 +141,11 @@ export function useTextTable({
         ),
       ),
   )
-  const fresh = (uid: number) => !present.has(uid)
-  const [refused, setRefused] = useState({ what: '', count: 0 })
-  const refuse = (what: string) => setRefused((last) => ({ what, count: last.count + 1 }))
-  const shaking = (what: string): CSSProperties | undefined =>
-    refused.count && (refused.what === what || (what === 'piles' && mustDraw))
+  const isNew = (uid: number) => !present.has(uid)
+  const [refusal, setRefused] = useState({ what: '', count: 0 })
+  const showRefusal = (what: string) => setRefused((last) => ({ what, count: last.count + 1 }))
+  const refusalShake = (what: string): CSSProperties | undefined =>
+    refusal.count && (refusal.what === what || (what === 'piles' && mustDraw))
       ? { animation: 'shake 0.45s' }
       : undefined
   const canPress = has(legal, { type: 'ringBell' })
@@ -181,7 +181,7 @@ export function useTextTable({
     // A scrolling phone is limited by width only.
     scrolling ? 'width' : phone,
   )
-  const said = busy
+  const promptText = busy
     ? "P03's turn…"
     : prompt(
         mustDraw,
@@ -229,8 +229,8 @@ export function useTextTable({
     phoneFrame,
     frame,
     size,
-    short,
-    at,
+    shortTable,
+    unitAt,
     magnified,
     readerBox,
     readerFlat,
@@ -244,17 +244,17 @@ export function useTextTable({
     reading,
     setReading,
     user,
-    look,
-    fresh,
-    refused,
-    refuse,
-    shaking,
+    inspectProps,
+    isNew,
+    refusal,
+    showRefusal,
+    refusalShake,
     canPress,
     setArea,
     laneSize,
     setHandSection,
-    said,
-    over: Boolean(result) && !busy,
+    promptText,
+    gameOver: Boolean(result) && !busy,
     frameProps,
   }
 }

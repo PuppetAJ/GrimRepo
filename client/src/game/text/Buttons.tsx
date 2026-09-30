@@ -12,7 +12,7 @@ export function SaveStatus({ className }: { className: string }) {
 }
 
 export function ExecuteButton() {
-  const { canPress, act, layout, compact, phone, sideways, short } = useTable()
+  const { canPress, act, layout, compact, phone, sideways, shortTable } = useTable()
   return (
     <button
       type="button"
@@ -37,7 +37,7 @@ export function ExecuteButton() {
           'EXECUTE'
         )}
       </span>
-      {short || compact ? null : <span className="text-sm text-p03-dim">press the button · E</span>}
+      {shortTable || compact ? null : <span className="text-sm text-p03-dim">press the button · E</span>}
     </button>
   )
 }
