@@ -24,7 +24,7 @@ export function WideLayout() {
       >
         <FaultyScreenShader />
         <span aria-hidden className="crt-glass pointer-events-none absolute inset-0 z-30" />
-        <aside className="relative z-10 flex min-h-0 flex-col gap-3 overflow-hidden">
+        <aside aria-label="Turn and scale" className="relative z-10 flex min-h-0 flex-col gap-3 overflow-hidden">
           <Panel className="flex items-center justify-between text-2xl">
             <span className="text-p03">Turn {view.turn}</span>
             <SaveStatus className="text-base text-p03-dim" />
@@ -44,7 +44,7 @@ export function WideLayout() {
             <PromptLine />
           </div>
         </section>
-        <aside className="relative z-10 flex min-h-0 flex-col gap-3 overflow-hidden">
+        <aside aria-label="Card and console" className="relative z-10 flex min-h-0 flex-col gap-3 overflow-hidden">
           <ReaderPanel />
           <ConsolePanel />
           <CancelButton />

@@ -2,7 +2,6 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { easing } from 'maath'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
-import { Button } from '@/components/ui/button.tsx'
 import { cursorCss, onCursor } from '../cursor.ts'
 import { BOARD_CENTER, CAMERA, type CameraView } from '../layout.ts'
 import { MOOD } from '../mood.ts'
@@ -86,15 +85,6 @@ export function Exposure() {
   const gl = useThree((three) => three.gl)
   useLayoutEffect(() => void (gl.toneMappingExposure = MOOD.exposure), [gl])
   return null
-}
-
-export function NoWebGL({ onText }: { onText: () => void }) {
-  return (
-    <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center">
-      <p className="font-terminal text-2xl text-p03">This browser cannot draw the 3D table.</p>
-      <Button onClick={onText}>Play the text version</Button>
-    </div>
-  )
 }
 
 /** Mounts once the table's suspended assets load; the room and P03 may still be arriving. */

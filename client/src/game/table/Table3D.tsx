@@ -18,7 +18,7 @@ import { Hud } from './table3d/Hud.tsx'
 import { COARSE, LOG_READ, type Reader, type Readout, unitOf } from './table3d/reader.ts'
 import { Scene } from './table3d/Scene.tsx'
 import { ScreenReadout } from './table3d/ScreenReadout.tsx'
-import { CursorSync, Exposure, Loaded, NoWebGL } from './table3d/stage.tsx'
+import { CursorSync, Exposure, Loaded } from './table3d/stage.tsx'
 
 export default function Table3D({ game, seat, onText }: { game: Ready; seat: Seat; onText: () => void }) {
   const assets = use(loadCardAssets())
@@ -127,7 +127,6 @@ export default function Table3D({ game, seat, onText }: { game: Ready; seat: Sea
         gl={{ antialias: false }}
         camera={{ fov: 60, near: 0.05, far: 200, position: CAMERA.table.position }}
         onCreated={({ gl }) => (gl.toneMapping = THREE.ACESFilmicToneMapping)}
-        fallback={<NoWebGL onText={onText} />}
         aria-hidden
         onPointerMissed={() => (peek !== null || pinned !== null) && reader.lift(null)}
         // The long-press menu would block holding a finger on a card to read it.
