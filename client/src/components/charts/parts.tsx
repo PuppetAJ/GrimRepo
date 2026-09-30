@@ -16,7 +16,7 @@ export function Frame({ title, note, children }: { title: string; note?: string;
   )
 }
 
-/** The games again as a table, for screen readers, in place of the picture. */
+/** The chart's data as a table for screen readers. */
 export function AsTable({ games, caption }: { games: Game[]; caption: string }) {
   return (
     // Hidden by a wrapper: Firefox still draws a hidden table's caption.
@@ -46,7 +46,6 @@ export function AsTable({ games, caption }: { games: Game[]; caption: string }) 
   )
 }
 
-/** The game under the pointer: which one, how it ended, what it scored and when. */
 export function Tip({
   count,
   active,

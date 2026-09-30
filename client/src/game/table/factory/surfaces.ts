@@ -1,4 +1,3 @@
-// The metal surfaces the room is built from.
 import * as THREE from 'three'
 
 export function metal(maps: Record<'map' | 'normalMap' | 'roughnessMap', THREE.Texture>, repeat: [number, number]) {

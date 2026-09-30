@@ -127,7 +127,7 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
           <img
             src="/p03/happy.png"
             alt="P03's face, smug"
-            // The faces pack stores them upside down, as the model's texture reads them.
+            // The face textures are stored upside down.
             className="h-20 -scale-y-100 [filter:sepia(1)_hue-rotate(70deg)_saturate(3)] [image-rendering:pixelated]"
           />
           <p>
@@ -189,7 +189,7 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
 
 const NAMES = [...HELP.map(([command]) => command.split(' ')[0] as string), 'next', 'back']
 
-/** The rest of a command or a card's name, if only one thing fits. */
+/** Completes a command or card name when exactly one matches. */
 export function complete(input: string): string | null {
   const [name = '', ...rest] = input.split(' ')
   if (rest.length === 0) {

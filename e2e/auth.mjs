@@ -1,4 +1,3 @@
-// Signing up, in and out, the demo account, redirects, renaming and deleting an account.
 import {
   BASE,
   deletePlayer,
@@ -183,7 +182,7 @@ section('Changing an account')
   await page.getByLabel('New username').fill(renamed)
   await page.getByRole('button', { name: 'Rename' }).click()
   await page.getByText(`You are now ${renamed}`).waitFor()
-  // The header catches up a moment after the message on a slow connection, so wait for it rather than read it once.
+  // On a slow connection the header updates a moment after the message, so wait for it.
   const headerUpdated = await page
     .getByRole('button', { name: 'Account menu' })
     .filter({ hasText: renamed })

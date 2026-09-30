@@ -7,10 +7,10 @@ import tornCorner from './torn-corner.svg'
 type Edge = 'top' | 'bottom' | 'left' | 'right'
 type Corner = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left'
 
-// Each break is drawn along a top edge, its origin 5px in and 10px down where the border line starts.
+// Each break SVG is drawn for a top edge, its origin 5px in and 10px down on the border line.
 const BREAKS = { long: breakLong, medium: breakMedium, short: breakShort }
 
-// Where P03 broke each frame: a break's edge, how far along it (percent) and its size, then the corner torn off.
+// Each break is [edge, percent along it, size].
 const DAMAGE: Record<string, { breaks: [Edge, number, keyof typeof BREAKS][]; corner: Corner }> = {
   terminal: {
     breaks: [
@@ -41,7 +41,6 @@ const DAMAGE: Record<string, { breaks: [Edge, number, keyof typeof BREAKS][]; co
   },
 }
 
-// Where a break's origin sits on each edge, and how it turns to face out of the frame.
 const EDGES: Record<Edge, (at: number) => CSSProperties> = {
   top: (at) => ({ left: `${at}%`, top: 0 }),
   bottom: (at) => ({ left: `${at}%`, top: '100%', transform: 'scaleY(-1)' }),
@@ -49,9 +48,8 @@ const EDGES: Record<Edge, (at: number) => CSSProperties> = {
   right: (at) => ({ left: '100%', top: `${at}%`, transform: 'rotate(90deg)' }),
 }
 
-/** The corner torn clean off, drawn for the top-right and turned to the others about the frame's corner. */
 function Torn({ corner }: { corner: Corner }) {
-  // Placed so the drawing's origin, 22px in and 12px down, sits on the corner.
+  // Drawn for the top-right; its origin, 22px in and 12px down, sits on the corner.
   const style = {
     top: corner.startsWith('top') ? -12 : undefined,
     bottom: corner.startsWith('bottom') ? -20 : undefined,
@@ -63,7 +61,7 @@ function Torn({ corner }: { corner: Corner }) {
   return <img src={tornCorner} alt="" width={29} height={32} className="absolute max-w-none" style={style} />
 }
 
-/** Laid over a frame whose border is 1px, breaking it where P03 got through. */
+/** For frames with a 1px border, which the break SVGs line up with. */
 export function FrameDamage({ frame }: { frame: keyof typeof DAMAGE }) {
   const damage = DAMAGE[frame]!
   return (
@@ -76,7 +74,7 @@ export function FrameDamage({ frame }: { frame: keyof typeof DAMAGE }) {
           key={`${edge}-${at}`}
           src={BREAKS[size]}
           alt=""
-          // A phone keeps the breaks along the top and bottom; ones down the sides would crowd the words beside it.
+          // Side breaks would crowd the text on phones.
           className={`absolute -mt-2.5 -ml-1.25 max-w-none origin-[5px_10px] ${edge === 'left' || edge === 'right' ? 'max-sm:hidden' : ''}`}
           style={EDGES[edge](at)}
         />

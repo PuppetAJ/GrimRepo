@@ -1,6 +1,6 @@
 import { pool } from '../config/db.ts'
 
-/** Empties every table between tests, after checking this really is a test database. */
+/** Refuses any database not named *_test. */
 export async function resetDatabase(): Promise<void> {
   const { rows } = await pool.query<{ name: string }>('SELECT current_database() AS name')
   if (!rows[0]?.name.endsWith('_test')) throw new Error(`Refusing to wipe ${rows[0]?.name}`)
@@ -8,7 +8,7 @@ export async function resetDatabase(): Promise<void> {
   await pool.query('TRUNCATE games, rate_limits, verifications, users RESTART IDENTITY CASCADE')
 }
 
-/** A player straight into the table, past sign-up and its rate limit, for tests that need many and never sign in. */
+/** Skips sign-up and its rate limit, for tests that need many players. */
 export async function insertPlayer(username: string): Promise<void> {
   await pool.query(
     `INSERT INTO users (id, name, email, username, display_username) VALUES ($1, $1, $2, lower($1), $1)`,
@@ -16,7 +16,6 @@ export async function insertPlayer(username: string): Promise<void> {
   )
 }
 
-/** A finished game straight into the table, for tests about ranking and stats rather than play; `cards` as counted. */
 export async function insertGame(
   username: string,
   outcome: 'win' | 'loss',
@@ -32,7 +31,7 @@ export async function insertGame(
   )
 }
 
-/** An unfinished game begun under some earlier version of the rules. */
+/** An open game under the given rules version. */
 export async function insertOldGame(username: string, rulesVersion: number): Promise<number> {
   const { rows } = await pool.query<{ id: number }>(
     `INSERT INTO games (user_id, seed, status, rules_version, actions)

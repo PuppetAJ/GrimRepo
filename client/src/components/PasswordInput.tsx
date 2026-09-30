@@ -2,7 +2,6 @@ import { Eye, EyeOff } from 'lucide-react'
 import { useState, type ComponentProps } from 'react'
 import { Input } from '@/components/ui/input.tsx'
 
-/** A password field with a real button to show what was typed. */
 export function PasswordInput(props: ComponentProps<typeof Input>) {
   const [shown, setShown] = useState(false)
   return (

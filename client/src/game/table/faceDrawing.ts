@@ -3,7 +3,7 @@ import { cardImage, iconImage } from '../art.ts'
 import { CORNER_HOLES, DISK, RECESS, SCREEN_DIVIDER, SECTIONS, SIGIL_BAND } from './layout.ts'
 import { TINT } from './palette.ts'
 
-// The face is drawn at the card's own shape, so nothing is stretched.
+// The card's own aspect ratio, so the face isn't stretched.
 export const W = 300
 export const H = 504
 
@@ -19,8 +19,6 @@ function fitText(
   while (size > 12 && context.measureText(text).width > width) context.font = font(--size)
 }
 
-// The cards are Act 3's floppy disks. The disk itself is geometry (Disk.tsx); this draws what shows in
-// its recesses: the label sticker, the screen with the art, a divider and the sigils, and the two stat boxes.
 type Palette = {
   body: string
   screen: string
@@ -41,7 +39,6 @@ const COMMON: Palette = {
   cost: '#ff9a2e',
   hurt: '#ff4d5e',
 }
-// The rare card: a red disk, a white label, salmon light.
 const RARE: Palette = {
   body: '#5a1622',
   screen: '#2a0c16',
@@ -55,7 +52,6 @@ const RARE: Palette = {
 
 const tints = new Map<string, HTMLCanvasElement>()
 
-/** An image recoloured at its own size, made once per image and colour. */
 function tinted(image: HTMLImageElement, colour: string): HTMLCanvasElement {
   const key = `${image.src}:${colour}`
   let layer = tints.get(key)
@@ -72,7 +68,6 @@ function tinted(image: HTMLImageElement, colour: string): HTMLCanvasElement {
   return layer
 }
 
-/** Pixel art scaled up by a whole number, without blurring. */
 function pixels(
   context: CanvasRenderingContext2D,
   image: HTMLImageElement,
@@ -87,7 +82,7 @@ function pixels(
   context.restore()
 }
 
-/** The disk's outline on the canvas, with the clipped corner; outside it the canvas stays clear. The back is seen mirrored, so its clip is on the left. */
+// The back is seen mirrored, so its clipped corner is on the left.
 function diskPath(context: CanvasRenderingContext2D, mirrored = false) {
   const clip = DISK.clip * W
   context.beginPath()
@@ -107,9 +102,9 @@ function diskPath(context: CanvasRenderingContext2D, mirrored = false) {
   context.closePath()
 }
 
-/** Text centred on its own ink, not the font's line box, which VT323 sets high. */
+// Centers on the glyphs' ink because VT323's line box sits high.
 function centred(context: CanvasRenderingContext2D, text: string, x: number, y: number) {
-  // The bounds are measured from the baseline in force, so it is set before measuring.
+  // measureText bounds depend on the current baseline, so set it first.
   context.textAlign = 'left'
   context.textBaseline = 'alphabetic'
   const box = context.measureText(text)
@@ -120,7 +115,7 @@ function centred(context: CanvasRenderingContext2D, text: string, x: number, y: 
   context.textBaseline = 'middle'
 }
 
-/** The corner holes go right through the disk, so the sheets are clear there (the material discards clear pixels). */
+// The holes go through the disk; the material's alphaTest discards the cleared pixels.
 function clearHoles(context: CanvasRenderingContext2D) {
   for (const [x0, y0, x1, y1] of CORNER_HOLES) context.clearRect(x0 * W, y0 * H, (x1 - x0) * W, (y1 - y0) * H)
 }
@@ -138,7 +133,6 @@ function screen(context: CanvasRenderingContext2D, area: readonly [number, numbe
 
 const sprites = new Map<string, HTMLCanvasElement>()
 
-/** A card's art at a whole-pixel scale, scanlined like projected light, made once per card, colour and size. */
 function spriteLayer(image: HTMLImageElement, scale: number, colour: string): HTMLCanvasElement {
   const key = `${image.src}:${colour}:${scale}`
   let layer = sprites.get(key)
@@ -155,7 +149,6 @@ function spriteLayer(image: HTMLImageElement, scale: number, colour: string): HT
   return layer
 }
 
-/** A sprite centred in its area, as large as whole pixels allow, glowing like the rest of the screen. */
 function sprite(
   context: CanvasRenderingContext2D,
   image: HTMLImageElement,
@@ -180,11 +173,7 @@ function sprite(
 
 export type Layer = 'base' | 'content' | 'lights'
 
-/**
- * The face is drawn in layers: `base` is the plastic, the sticker and the dark screens, which stay when the disk
- * closes; `content` is what shows on them (name, art, cost, sigils, numerals) on a clear ground, which fades out;
- * `lights` is the content on black, for the emissive map, so only the screens' contents glow.
- */
+/** base stays when the disk closes, content fades out with it, and lights is content on black for the emissive map. */
 export function drawFace(context: CanvasRenderingContext2D, unit: Unit, layer: Layer): void {
   const def = card(unit.card)
   const palette = def.tier === 'S' ? RARE : COMMON
@@ -199,7 +188,6 @@ export function drawFace(context: CanvasRenderingContext2D, unit: Unit, layer: L
   context.textAlign = 'center'
   context.textBaseline = 'middle'
 
-  // The label across the top, and the name on it.
   const [lx, ly, lw, lh] = recess(RECESS.label)
   if (layer === 'base') {
     context.fillStyle = palette.plate
@@ -211,7 +199,6 @@ export function drawFace(context: CanvasRenderingContext2D, unit: Unit, layer: L
     centred(context, def.name.toUpperCase(), lx + lw / 2, ly + lh / 2)
   }
 
-  // The screens: the dark grounds on the base, and what they show on the content.
   const [sx, sy, sw, sh] = recess(RECESS.screen)
   const [ax, ay, aw, ah] = recess(RECESS.attack)
   const [hx, hy, hw, hh] = recess(RECESS.health)
@@ -226,7 +213,6 @@ export function drawFace(context: CanvasRenderingContext2D, unit: Unit, layer: L
     return
   }
 
-  // The art above the divider, the sigils below it, the cost in the top-right corner.
   const divider = SCREEN_DIVIDER * H
   sprite(context, cardImage(unit.card), sx + sw * 0.03, sy + sh * 0.08, sw * 0.94, divider - sy - sh * 0.1, palette)
   const cells = 4
@@ -247,7 +233,6 @@ export function drawFace(context: CanvasRenderingContext2D, unit: Unit, layer: L
     )
   }
 
-  // Attack and health, each in its own box beside its icon: the sword on the outer side of the one, the shield of the other.
   const icon = 3
   pixels(context, iconImage('attack'), ax + 6, ay + ah / 2 - 4 * icon, icon, palette.line)
   pixels(context, iconImage('health'), hx + hw - 6 - 8 * icon, hy + hh / 2 - 4 * icon, icon, palette.line)
@@ -258,7 +243,6 @@ export function drawFace(context: CanvasRenderingContext2D, unit: Unit, layer: L
   centred(context, String(unit.health), hx + hw / 2 - 12, hy + hh / 2)
 }
 
-/** The back of the disk: the sunken panel, darker than the rim, with the shadow of the hub's disc; the parts are geometry on top. */
 export function drawBack(context: CanvasRenderingContext2D): void {
   context.clearRect(0, 0, W, H)
   context.fillStyle = COMMON.body

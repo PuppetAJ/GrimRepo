@@ -3,10 +3,9 @@ import * as THREE from 'three'
 import { CARD, LANE_GAP, lanes, ROW_Z, slot, TABLE_Y } from '../layout.ts'
 import { LIT } from './constants.ts'
 
-// Drawn for the lanes in layout.ts: slots outlined in the palette's light, with gears, and arrows on P03's queue.
+// The texture is drawn to match the lanes in layout.ts.
 export const BOARD = '/textures/board.webp'
 
-/** The board, projected onto the table. */
 export function TechBoard() {
   const width = (lanes.length - 1) * LANE_GAP + CARD.width + 0.5
   const depth = ROW_Z.board - ROW_Z.back + CARD.height + 0.5

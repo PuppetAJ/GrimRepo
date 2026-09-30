@@ -3,10 +3,6 @@ import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import type { Target } from '../reading.ts'
 
-/**
- * While a held finger or mouse button keeps the magnifier up, reads whatever card or screen is under it as it moves; a
- * finger's page stays still.
- */
 export function HeldReader({
   on,
   onMove,
@@ -28,7 +24,7 @@ export function HeldReader({
       const box = gl.domElement.getBoundingClientRect()
       pointer.set(((x - box.left) / box.width) * 2 - 1, -((y - box.top) / box.height) * 2 + 1)
       raycaster.setFromCamera(pointer, camera)
-      // The nearest card or screen under it: each is a group named for what it is.
+      // Relies on cards and screens being groups named card-<uid> and screen-<name>.
       let target: Target | null = null
       for (const hit of raycaster.intersectObjects(scene.children, true)) {
         let object: THREE.Object3D | null = hit.object
@@ -42,6 +38,7 @@ export function HeldReader({
       latest.current.onMove(target, x, y)
     }
     const touchMove = (event: TouchEvent) => {
+      // Keeps the page still under a held finger.
       event.preventDefault()
       const touch = event.touches[0]
       if (touch) at(touch.clientX, touch.clientY)

@@ -8,7 +8,7 @@ import { unitOf } from './deck.ts'
 // three.js loads only when someone opens a card in 3D.
 const CardViewer = lazy(() => import('../../game/table/CardViewer.tsx'))
 
-/** A browser that can't draw WebGL says so here, rather than the page failing; the cards view still shows every card. */
+/** Catches browsers that can't draw WebGL. */
 class DiskFailed extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false }
   static getDerivedStateFromError() {
@@ -43,7 +43,7 @@ export function Viewer({
     <div className="grid gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]">
       <ul
         aria-label="Cards"
-        // Shorter stacked over the 3D view, so the card is not pushed far down; beside it, as tall as the view.
+        // Shorter when stacked, so the 3D view isn't pushed far down.
         className="flex max-h-80 flex-col overflow-y-auto rounded-lg border bg-card lg:max-h-[36rem]"
       >
         {cards.map((def) => (
@@ -64,7 +64,7 @@ export function Viewer({
       </ul>
       <section
         aria-label={chosen.name}
-        // On a phone the details sit under the disk rather than over it, so neither covers the other.
+        // Phones put the details under the disk so neither covers the other.
         className="min-w-0 overflow-hidden rounded-lg border bg-[#02070c] sm:relative sm:h-[28rem] lg:h-[36rem]"
       >
         <div className="relative h-80 sm:absolute sm:inset-0 sm:h-auto">
@@ -79,7 +79,6 @@ export function Viewer({
               <CardViewer unit={unitOf(chosen)} open={open} turn={turn} />
             </DiskFailed>
           </Suspense>
-          {/* The same card as the text table draws it, in the corner, dismissed with its cross and brought back after. */}
           {flat ? (
             <div className="absolute top-3 right-3 w-20 sm:w-32">
               <Screen def={chosen} />
@@ -101,11 +100,11 @@ export function Viewer({
             Drag to turn<span className="max-sm:hidden">, scroll to zoom</span>
           </p>
         </div>
-        {/* Over the foot of the canvas on a fade, so it reads against the factory's dark; under it on a phone. */}
+        {/* The fade keeps the text readable over the canvas. */}
         <div className="flex flex-wrap items-end justify-between gap-3 border-t px-4 pt-3 pb-4 sm:absolute sm:inset-x-0 sm:bottom-0 sm:border-t-0 sm:bg-gradient-to-t sm:from-[#02070c] sm:via-[#02070c]/85 sm:to-transparent sm:pt-10">
           <div className="flex min-w-0 flex-col gap-1">
             <h2 className="font-semibold">{chosen.name}</h2>
-            {/* About two and a half sigils over the disk, so it stays in view; the list scrolls to the rest. */}
+            {/* About two and a half sigils, so the disk stays in view. */}
             <Facts def={chosen} sigils="max-h-[3.75rem]" />
           </div>
           <div className="flex gap-2">

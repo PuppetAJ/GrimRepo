@@ -1,6 +1,6 @@
 import type { SigilId } from 'shared'
 
-// One PNG per card and per icon, black on clear; a card without its own art shows the placeholder.
+// Black-on-transparent PNGs, keyed by file name.
 const byName = (files: Record<string, string>) =>
   Object.fromEntries(Object.entries(files).map(([path, url]) => [path.slice(path.lastIndexOf('/') + 1, -4), url]))
 
@@ -15,7 +15,7 @@ export const iconArt = (id: IconId): string => ICONS[id] as string
 const images = new Map<string, HTMLImageElement>()
 let decoding: Promise<void> | null = null
 
-/** Decodes every image once, for the 3D table's canvases, which can only draw what has loaded. */
+/** The 3D table's canvases can only draw decoded images, so it awaits this first. */
 export function loadArt(): Promise<void> {
   decoding ??= Promise.all(
     [...Object.values(CARDS), ...Object.values(ICONS)].map(async (url) => {

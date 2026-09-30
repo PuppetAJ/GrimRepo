@@ -58,7 +58,7 @@ describe('a thousand random games', () => {
       let moves = 0
       while (state.status === 'playing') {
         const legal = legalActions(state)
-        // Ring the bell often enough that random play does not wander forever.
+        // Ring the bell often so random play can't wander forever.
         const action =
           rng.float() < 0.3 && legal.some((a) => a.type === 'ringBell')
             ? ({ type: 'ringBell' } as Action)
@@ -95,7 +95,7 @@ describe('a thousand random games', () => {
 })
 
 describe('the balance', () => {
-  // Measured when P03 learned to read the board: about 28% for the greedy bot and 34% for the lane-focused one.
+  // Measured at about 28% for the greedy bot and 34% for the lanes bot.
   const rate = (strategy: 'greedy' | 'lanes') => {
     let wins = 0
     for (let seed = 1; seed <= 500; seed++) {

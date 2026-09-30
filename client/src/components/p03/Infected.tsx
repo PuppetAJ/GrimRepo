@@ -3,7 +3,7 @@ import { Corruption } from './Corruption.tsx'
 import { FrameDamage } from './FrameDamage.tsx'
 
 const loadTerminal = () => import('./Terminal.tsx')
-// Code that can't arrive, as when the page is left mid-load or a deploy renames it, leaves the frame empty, not an error.
+// A chunk that fails to load, such as after a deploy renames it, leaves the frame empty instead of throwing.
 const Terminal = lazy<ComponentType<{ lines: readonly string[]; user: string | undefined }>>(() =>
   loadTerminal().catch(() => ({ default: () => null })),
 )
@@ -11,7 +11,7 @@ const Terminal = lazy<ComponentType<{ lines: readonly string[]; user: string | u
 type Phase = 'clean' | 'glitch' | 'broken'
 
 const SEEN_KEY = 'grimrepo:infected'
-// Development only: the home page's replay button sends this to play the takeover again.
+// Dev only: the home page's replay button dispatches this.
 export const REPLAY_EVENT = 'grimrepo:replay'
 const CLEAN_MS = 1100
 const GLITCH_MS = 900
@@ -24,14 +24,13 @@ const NOISE = '#$%&*+=/<>?{}[]█▓▒'
 function firstPhase(): Phase {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return 'broken'
   try {
-    // Once a visit: after that the README is simply already infected.
+    // Plays once per session.
     return sessionStorage.getItem(SEEN_KEY) ? 'broken' : 'clean'
   } catch {
     return 'clean'
   }
 }
 
-/** The caption part way from the README's to P03's: settled letters, noise at the front, the old ones behind. */
 function corrupt(progress: number): string {
   return [...BEFORE]
     .map((letter, index) => {
@@ -43,20 +42,20 @@ function corrupt(progress: number): string {
     .join('')
 }
 
-// Nothing changes once React has the page, so there is nothing to subscribe to.
+// Hydration happens once, so there is nothing to subscribe to.
 const unchanging = () => () => {}
 const taken = () => true
 const notYet = () => false
 
-/** The README's gameplay screenshot, which P03 takes over: it tears, then boots into his terminal. */
+/** The README screenshot that P03 corrupts into a terminal. */
 export function Infected({ lines, user }: { lines: readonly string[] | null; user: string | undefined }) {
-  // While React takes over the prerendered page it matches its HTML, clean; after that, the visit's own phase.
+  // Stays clean until hydrated, so it matches the prerendered HTML before reading matchMedia or sessionStorage.
   const hydrated = useSyncExternalStore(unchanging, taken, notYet)
   const [chosen, setPhase] = useState<Phase | null>(null)
   const phase = chosen ?? (hydrated ? firstPhase() : 'clean')
   const [loaded, setLoaded] = useState(false)
   const [tick, setTick] = useState(0)
-  // A prerendered screenshot can finish loading before React takes over, and so before its onLoad is listened for.
+  // The prerendered image can load before hydration, so onLoad alone may miss it.
   const shot = useCallback((image: HTMLImageElement | null) => {
     if (image?.complete) setLoaded(true)
   }, [])
@@ -71,10 +70,10 @@ export function Infected({ lines, user }: { lines: readonly string[] | null; use
     return () => window.removeEventListener(REPLAY_EVENT, replay)
   }, [])
 
-  // The takeover starts once the screenshot has been seen, or after a moment on a slow connection.
+  // A slow connection gets longer to show the screenshot first.
   useEffect(() => {
     if (phase !== 'clean') return
-    // Only a head start: leaving the page can cut it short, and the terminal loads for real when it is shown.
+    // Prefetch only; the lazy Terminal loads it again when shown.
     loadTerminal().catch(() => {})
     const timer = window.setTimeout(() => setPhase('glitch'), loaded ? CLEAN_MS : CLEAN_MS * 2.5)
     return () => window.clearTimeout(timer)
@@ -88,7 +87,7 @@ export function Infected({ lines, user }: { lines: readonly string[] | null; use
       try {
         sessionStorage.setItem(SEEN_KEY, '1')
       } catch {
-        // Without storage it plays again next time; no harm.
+        // Without storage it just plays again next visit.
       }
     }, GLITCH_MS)
     return () => {
@@ -114,7 +113,7 @@ export function Infected({ lines, user }: { lines: readonly string[] | null; use
               </Suspense>
             </div>
             <FrameDamage frame="terminal" />
-            {/* Where P03 got in, the corruption creeps out from every corner; on a phone, where it would cover words, only the title bar's. */}
+            {/* Phones get only the title bar's corner, where the corruption covers no text. */}
             <Corruption
               dense
               cols={26}
@@ -185,7 +184,7 @@ export function Infected({ lines, user }: { lines: readonly string[] | null; use
               alt="The 3D table: P03 behind a board of floppy-disk cards"
               width={960}
               height={540}
-              // The home page's largest element: fetched first, as soon as the prerendered HTML names it.
+              // The home page's LCP element.
               fetchPriority="high"
               onLoad={() => setLoaded(true)}
               className="size-full object-cover object-top"
@@ -198,7 +197,6 @@ export function Infected({ lines, user }: { lines: readonly string[] | null; use
   )
 }
 
-/** Slices of the screenshot knocked sideways, going greener as P03 gets in. */
 function Tears({ tick }: { tick: number }) {
   return (
     <div aria-hidden className="absolute inset-0">

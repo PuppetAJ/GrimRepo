@@ -3,7 +3,6 @@ import { describe, has } from '../controls.tsx'
 import { PixelCard } from '../CardReader.tsx'
 import { useTable } from './context.ts'
 
-/** The hand, in a box the cards scroll in, so a full hand never runs over the controls or the piles. */
 export function Hand() {
   const { view, state, legal, busy, act, layout, compact, phone, sideways, tapToRead, look, fresh, refused } =
     useTable()
@@ -16,8 +15,7 @@ export function Hand() {
         const selected = unit.uid === state.summon?.uid
         const allowed = has(legal, { type: 'select', uid: unit.uid } as Partial<Action>)
         return (
-          // The pointer is watched here, and the button is never disabled, so every card can be read and a card
-          // that cannot be played yet can say so by shaking.
+          // The button is never disabled, so an unplayable card can still be read and shake when clicked.
           <div
             key={unit.uid}
             {...look({ uid: unit.uid }, unit)}
@@ -26,13 +24,12 @@ export function Hand() {
           >
             <button
               type="button"
-              // On a phone a card that cannot be played still opens to be read.
+              // On a phone an unplayable card still opens the reader, so it isn't marked disabled.
               aria-disabled={!allowed && !selected && !tapToRead}
               aria-pressed={selected}
               aria-label={`${describe(unit)}, costs ${card(unit.card).cost}`}
               data-action="select"
               data-uid={unit.uid}
-              // On a phone, a tap selects the card if it can; otherwise, or on the card already selected, it reads it.
               onClick={() =>
                 tapToRead && (selected || !allowed)
                   ? setReading({ uid: unit.uid })
@@ -57,7 +54,6 @@ export function Hand() {
   )
 }
 
-/** The deck and the Boilerplate pile, boxed like the hand, except in the wide layout, where they stand on its edge. */
 export function Piles() {
   const { view, mustDraw, handFull, act, compact, phone, sideways, refused, shaking } = useTable()
   const size = sideways ? 'w-10' : phone ? 'w-8 tall:w-10' : compact ? 'w-12 sm:w-16' : 'w-20'

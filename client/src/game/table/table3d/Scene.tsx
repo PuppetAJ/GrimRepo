@@ -46,14 +46,14 @@ export function Scene({
   rung: number
   camera: CameraView
   hint: number
-  /** The card last tried before the draw, which shakes. */
+  /** uid of the card last tried before drawing; it shakes. */
   hinted: number | null
   onHint: (uid: number) => void
-  /** Called once everything has loaded and every shader is built. */
+  /** Fires once everything has loaded and every shader is compiled. */
   onWarm: () => void
 }) {
   const { state, act } = game
-  // Moves come from the real state, and wait while P03's turn plays out.
+  // Legal moves come from the real state, not the view being played back.
   const legal = busy || game.result ? [] : legalActions(state)
   const can = (match: Partial<Action>) => has(legal, match)
   const count = view.hand.length
@@ -66,7 +66,7 @@ export function Scene({
     <CardBatch assets={assets}>
       <Selection>
         <CameraRig view={camera} />
-        {/* One boundary, so the stand-in popup is drawn only once every light and the fog are in place. */}
+        {/* One boundary, so the stand-in popup draws only once every light and the fog are in place. */}
         <Suspense fallback={null}>
           <Factory
             view={view}
@@ -113,10 +113,10 @@ export function Scene({
               raised={reader.peek === unit.uid}
               onHold={(x, y) => reader.hold({ card: unit.uid }, x, y)}
               onClick={
-                // On touch every card can be tapped, to read it; with a mouse, only one that can do something.
+                // On touch every card is tappable, to read it; with a mouse, only one that can act.
                 selected || selectable || can({ type: 'draw' }) || COARSE
                   ? (_event, touch) => {
-                      // On touch, the first tap lifts the card and reads it; the second plays it.
+                      // On touch the first tap lifts and reads the card; the second plays it.
                       if (touch && !selected && reader.peek !== unit.uid) return reader.lift(unit)
                       reader.lift(null)
                       if (selected) act({ type: 'cancel' })
@@ -145,7 +145,7 @@ export function Scene({
                 assets={assets}
                 onClick={action ? () => act(action) : undefined}
                 cursor={action?.type === 'mark' || action?.type === 'unmark' ? 'mark' : 'point'}
-                // A card on the board covers its lane, so it passes the aim on to it.
+                // A board card covers its lane, so it passes the hover on to it.
                 onHover={row === 'board' ? (on) => setAimed(on ? lane : null) : undefined}
                 onHold={(x, y) => reader.hold({ card: unit.uid }, x, y)}
               />
@@ -165,7 +165,7 @@ export function Scene({
         {playback.popups.map((popup) => (
           <Popup key={popup.id} text={popup.text} tone={popup.tone} position={popup.position} born={popup.at} />
         ))}
-        {/* In development, or in a build made with VITE_TEST_HANDLE=1 for measuring and testing it. */}
+        {/* VITE_TEST_HANDLE=1 exposes it in a production build too, for measuring. */}
         {import.meta.env.DEV || import.meta.env.VITE_TEST_HANDLE === '1' ? (
           <TestHandle game={game} view={view} busy={busy} skip={skip} />
         ) : null}

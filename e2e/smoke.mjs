@@ -1,4 +1,3 @@
-// The app boots, the client reaches the API, accounts and scores work end to end. Grows as pages arrive.
 import { apply, createGame, nextBotAction, summary } from '../shared/src/index.ts'
 import { BASE, deletePlayer, freshPage, launch, reporter, resetRateLimits, stamp } from './lib.mjs'
 
@@ -24,9 +23,8 @@ section('The home page')
   check('it has the name', (await page.getByRole('heading', { name: 'Grim Repo' }).count()) === 1)
   check('and a title', (await page.title()) === 'Grim Repo')
 
-  // The top maintainers come from the API, so seeing them means the client reached it.
   const maintainers = page.getByRole('heading', { name: 'Top maintainers' }).locator('..')
-  // The shortlog link is there from the start; a player's link only arrives from the API.
+  // Player links arrive only from the API; the shortlog link is there from the start.
   const reached = await maintainers
     .locator('a[href^="/players/"]')
     .first()
@@ -104,7 +102,7 @@ section('The compendium')
   await page.goto(`${BASE}/cards`)
   await page.getByRole('heading', { name: 'Compendium' }).waitFor()
   const names = page.locator('main li h2')
-  // Development and test builds add a worst-case card, for checking layouts against, at the end.
+  // Development and test builds append a worst-case card for checking layouts.
   const listed = (await names.allInnerTexts()).filter((name) => name !== 'destroyEverything(everyone)')
   check('every card a player can hold is listed', listed.length === 26, String(listed.length))
   await page.getByLabel('Sort').selectOption('attack')
@@ -182,7 +180,7 @@ section('Accounts and scores')
     JSON.stringify(opened),
   )
 
-  // The bot plays the dealt game here and the whole record goes up at once; the server replays it.
+  // The bot plays the dealt game here, then sends the whole record for the server to replay.
   let state = createGame({ seed: opened.seed })
   const actions = []
   while (state.status === 'playing') {
@@ -221,7 +219,7 @@ section('Accounts and scores')
   await page.request.post(`${BASE}/api/auth/sign-out`, { data: {}, headers: { origin: BASE } })
   check('signing out ends the session', (await page.request.get(`${BASE}/api/me`)).status() === 401)
 
-  // Sign back in to remove the player, so a run against the live site leaves nothing behind.
+  // Sign back in to delete the player, so a live run leaves nothing behind.
   await page.request.post(`${BASE}/api/auth/sign-in/email`, {
     data: { email: player.email, password: player.password },
     headers: { origin: BASE },
@@ -231,7 +229,7 @@ section('Accounts and scores')
 
 section('A page whose code is gone')
 {
-  // As after a deploy, when an open tab asks for a chunk the new build no longer has: in development or in a build.
+  // Mimics an open tab asking for a chunk a new deploy removed, in development or a build.
   const { context, page: stale } = await freshPage(browser)
   await stale.route(/\/(pages\/Cards\.tsx|assets\/Cards-[^/]*\.js)/, (route) => route.abort())
   await stale.goto(BASE)

@@ -4,7 +4,7 @@ export type BootStage = 'code' | 'assets' | 'warming' | 'done'
 
 const WIDTH = 28
 
-/** A progress bar in text: filled to `share` (0 to 1), or a block sweeping back and forth when there is no share yet. */
+// A null share sweeps a block back and forth instead of filling.
 function bar(share: number | null, tick: number): string {
   if (share === null) {
     const at = Math.abs((tick % (WIDTH * 2 - 2)) - (WIDTH - 1))
@@ -14,10 +14,7 @@ function bar(share: number | null, tick: number): string {
   return '#'.repeat(filled) + '-'.repeat(WIDTH - filled)
 }
 
-/**
- * P03 booting the factory, over the table while it loads, so the room is never seen being put together. It fades
- * out once the models are in and every shader is built.
- */
+/** Covers the table while it loads, so the room is never seen being put together. */
 export function Boot({ stage, progress = 0, files = [] }: { stage: BootStage; progress?: number; files?: string[] }) {
   const [tick, setTick] = useState(0)
   const [gone, setGone] = useState(false)

@@ -3,7 +3,6 @@ import type { TextTable } from './useTextTable.ts'
 
 export const TableContext = createContext<TextTable | null>(null)
 
-/** The text table a piece belongs to. */
 export function useTable(): TextTable {
   const table = use(TableContext)
   if (!table) throw new Error('A text table piece is outside its table')

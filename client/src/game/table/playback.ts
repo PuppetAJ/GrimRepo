@@ -2,7 +2,7 @@ import type { GameEvent, GameState, Unit } from 'shared'
 import { locate, project, step, type View } from '../view.ts'
 import { DECK, P03_HAND, PILE, slot, TABLE_Y, type Row, type Vec3 } from './layout.ts'
 
-/** Where a popup belongs on the board, for tables that lay it out as a page rather than in 3D. */
+/** Where a popup lands on the text table, which has no 3D positions. */
 export type Spot = { row: Row; lane: number } | { face: 'player' | 'opponent' }
 export type Popup = {
   id: number
@@ -15,17 +15,15 @@ export type Popup = {
 export type Leaving = { unit: Unit; row: Row; lane: number; at: number; how: 'died' | 'sacrificed' }
 export type Lunge = { at: number; toward: 1 | -1 }
 
-/** The view plus what is moving: attacks, numbers rising, and cards on their way out. */
 export type Playback = {
   view: View
   lunges: Map<number, Lunge>
   popups: Popup[]
   leaving: Leaving[]
-  /** Where a card first appears, for cards that arrive from the deck, the pile or P03. */
   spawns: Map<number, Vec3>
 }
 
-// How long each event holds the stage before the next one plays, in milliseconds.
+// Milliseconds each event holds before the next one plays.
 const PACE: Record<GameEvent['type'], number> = {
   drew: 285,
   reshuffled: 225,
@@ -52,11 +50,11 @@ const PACE: Record<GameEvent['type'], number> = {
 
 export const pace = (event: GameEvent): number => PACE[event.type]
 
-/** P03's turn and anything else long enough that the player should wait for it. */
+/** True for events long enough that the player should wait, such as P03's turn. */
 export const holdsTheTable = (events: GameEvent[]): boolean =>
   events.some((event) => event.type === 'attacked' || event.type === 'turnStarted' || event.type === 'gameOver')
 
-// Faces the numbers float from when a hit lands on a player rather than a card.
+// Where popups rise from when a hit lands on a player rather than a card.
 const FACE: Record<'player' | 'opponent', Vec3> = {
   player: [-1.975, TABLE_Y + 0.35, -8.0],
   opponent: [-1.975, TABLE_Y + 0.9, -12.3],
@@ -78,12 +76,11 @@ function where(view: View, uid: number): { row: Row; lane: number; unit: Unit } 
   return unit ? { row: found.at, lane: found.lane, unit } : null
 }
 
-/** Plays one event: the view moves on, and anything worth animating is noted with the time it began. */
 export function advance(playback: Playback, event: GameEvent, now: number): Playback {
   const { view } = playback
   const next: Playback = {
     view: step(view, event),
-    // A lunge is kept only while it plays, so a card drawn again later does not strike twice.
+    // Lunges expire so a card drawn again later doesn't strike twice.
     lunges: new Map([...playback.lunges].filter(([, lunge]) => now - lunge.at < 1000)),
     popups: playback.popups.filter((popup) => now - popup.at < POPUP_MS),
     leaving: playback.leaving.filter((card) => now - card.at < LEAVE_MS),
@@ -147,7 +144,7 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
   return next
 }
 
-/** Drops the popups and departing cards whose time is up, and nothing else, so it is safe mid-turn. */
+/** Touches only expired popups and exits, so it is safe mid-turn. */
 export function tidy(playback: Playback, now: number): Playback {
   return {
     ...playback,
@@ -156,7 +153,7 @@ export function tidy(playback: Playback, now: number): Playback {
   }
 }
 
-/** Once the queue is empty the view is the real state; the reducer is tested to agree, so this only tidies. */
+/** Snaps the view to the real state once the queue is empty. */
 export function settle(playback: Playback, state: GameState, now: number): Playback {
   return {
     ...playback,

@@ -7,7 +7,7 @@ import { defineConfig, type Plugin } from 'vite'
 // API_PORT points a second client at a second API.
 const api = `http://localhost:${process.env['API_PORT'] ?? 3001}`
 
-// The local mockup page lives in mockups/ (gitignored); without the slash Vite would serve the app's 404 instead.
+// Without the trailing slash Vite serves the app's 404 instead of the local mockups/ page.
 const mockupsSlash: Plugin = {
   name: 'mockups-slash',
   configureServer(server) {
@@ -18,19 +18,19 @@ const mockupsSlash: Plugin = {
   },
 }
 
-// Gzipped kilobytes each chunk may reach before the build fails: every page's code, the 3D code, the charts, and any other.
+// Gzipped KB each chunk may reach before the build fails.
 const BUDGET = { entry: 150, three: 400, charts: 120, other: 40 }
 
 const budget: Plugin = {
   name: 'bundle-budget',
-  // The browser's bundles only; the prerender's server build never reaches a visitor.
+  // Browser bundles only; the prerender's server build never reaches a visitor.
   apply: (_config, { command, isSsrBuild }) => command === 'build' && !isSsrBuild,
   generateBundle(_options, bundle) {
     const over = Object.values(bundle).flatMap((chunk) => {
       if (chunk.type !== 'chunk') return []
-      // three.js and the factory share one chunk between the table and the compendium; it is the 3D budget.
+      // The table and the compendium share one three.js chunk, which gets the 3D budget.
       const three = chunk.moduleIds.some((id) => id.includes('/node_modules/three/'))
-      // Recharts is only on a player's page, below the fold, loaded after the rest of it.
+      // Recharts loads only on a player's page, below the fold, so it gets its own budget.
       const charts = chunk.moduleIds.some((id) => id.includes('/node_modules/recharts/'))
       const limit = chunk.isEntry ? BUDGET.entry : three ? BUDGET.three : charts ? BUDGET.charts : BUDGET.other
       const size = gzipSync(chunk.code).length / 1024
@@ -43,7 +43,7 @@ const budget: Plugin = {
 export default defineConfig({
   plugins: [react(), tailwindcss(), mockupsSlash, budget],
 
-  // Mirrors the "@/*" alias in tsconfig.json for shadcn/ui's components.
+  // Must match the "@/*" alias in tsconfig.json, which shadcn/ui's components use.
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
@@ -60,7 +60,7 @@ export default defineConfig({
   build: {
     // The repository is public, so source maps give nothing away and make production traces readable.
     sourcemap: true,
-    // three is most of the table's chunk, which is loaded only at the table; the budget above guards the sizes.
+    // three makes the table's chunk large, but only the table loads it; the budget above guards sizes.
     chunkSizeWarningLimit: 1400,
   },
 })

@@ -51,7 +51,7 @@ export function Card({
 }: {
   unit: Unit
   summoning?: boolean
-  /** Counts up each time this card is tried when it cannot be played; each one shakes it. */
+  /** Each increment shakes the card, as when an unplayable card is tried. */
   shake?: number
   place: Place
   spawn?: Vec3
@@ -60,15 +60,12 @@ export function Card({
   leavingHow?: 'died' | 'sacrificed'
   look?: Look
   assets: Assets
-  /** Told whether a finger made the click, since on touch a first tap only lifts a hand card. */
+  /** `touch` is true for a finger, since a first tap only lifts a hand card. */
   onClick?: (event: ThreeEvent<MouseEvent>, touch: boolean) => void
-  /** Told when the pointer arrives on the card and leaves it. */
   onHover?: (on: boolean) => void
-  /** Told when a finger or the mouse's button has held the card, and where. */
   onHold?: (x: number, y: number) => void
-  /** Held up as if pointed at, as a hand card tapped once on touch is. */
+  /** Shown as hovered, for a hand card tapped once on touch. */
   raised?: boolean
-  /** How the pointer looks over the card when it can be clicked. */
   cursor?: CursorKind
 }) {
   const mesh = useRef<THREE.Object3D>(null)
@@ -92,8 +89,7 @@ export function Card({
   const placed = useRef(false)
   const face = faceTexture(unit, assets)
   const back = useMemo(() => backTexture(), [])
-  // Each card owns its materials so it can glow or fade alone; the textures are shared. The alpha test keeps the
-  // clipped corner from writing depth where there is nothing to see.
+  // Per-card materials so each can glow or fade alone; alphaTest keeps the clipped corner out of the depth buffer.
   const [front, rear, content] = useMemo(
     () => [
       new THREE.MeshStandardMaterial({ roughness: 0.85, transparent: true, alphaTest: 0.5 }),
@@ -114,10 +110,10 @@ export function Card({
   rear.map = back
   content.map = faceContent(unit, assets)
   content.emissiveMap = faceLights(unit, assets)
-  // A card drawn from the deck starts closed, as it lay in the deck, and opens on the way to the hand.
+  // A spawn at the deck means a draw, which starts closed and opens on the way to the hand.
   const fromDeck = Boolean(spawn && spawn[0] === DECK[0] && spawn[2] === DECK[2])
   const open = useRef(fromDeck ? 0 : 1)
-  // Once open and staying, the body is drawn with every other card's in one batch, and only the face is the card's own.
+  // Once open and at rest, the body joins the shared batch and only the face stays the card's own.
   const batch = useBatch()
   const kind = card(unit.card).tier === 'S' ? 'rare' : 'common'
   const [settled, setSettled] = useState(!fromDeck)
@@ -152,15 +148,12 @@ export function Card({
       })
       position.set(...local)
       camera.localToWorld(position)
-      // A refused card shakes its head: a quick side-to-side roll that dies away.
       const since = (now - shook.current) / 1000
       // Slow and wide enough to survive the easing below.
       const no = since < 0.7 ? 0.28 * Math.sin(since * 30) * Math.exp(-since * 5) : 0
       rotation.copy(camera.quaternion).multiply(roll.setFromAxisAngle(Z, angle + no))
-      // A disk grows in the hand when picked up, as Act 3's do.
       scale.setScalar(size * (hovered || look === 'selected' ? 1.25 : 1))
     } else {
-      // A card marked for sacrifice lifts and tilts off the table, so the choice is plain to see.
       const lift = look === 'marked' ? 0.12 : hovered && onClick ? 0.04 : 0
       position.set(...slot(place.at, place.lane, lift))
       rotation.copy(FLAT)
@@ -170,8 +163,6 @@ export function Card({
     if (lunge && now - lunge.at < LUNGE_MS)
       position.z += lunge.toward * 0.4 * Math.sin((Math.PI * (now - lunge.at)) / LUNGE_MS)
     const leaving = leavingAt === undefined ? 0 : Math.min(1, (now - leavingAt) / LEAVE_MS)
-    // A card that goes first folds shut, its display going dark, and then goes: offered up, it rises, turns and
-    // shrinks away; dead, it sinks into the table.
     const fold = THREE.MathUtils.smoothstep(leaving, 0, 0.45)
     const away = THREE.MathUtils.smoothstep(leaving, 0.4, 1)
     if (leavingHow === 'sacrificed') {
@@ -179,16 +170,15 @@ export function Card({
       rotation.multiply(roll.setFromAxisAngle(Z, away * 1.6))
       scale.multiplyScalar(1 - away * 0.95)
     } else {
-      // Dead, it slides off the board toward whoever played it, the player's way or P03's, shrinking as it goes.
+      // A dead card slides toward its owner's side of the table.
       position.z += away * 1.6 * (place.at === 'board' ? 1 : -1)
       position.y += Math.sin(away * Math.PI) * 0.12
       scale.multiplyScalar(1 - THREE.MathUtils.smoothstep(away, 0.5, 1) * 0.95)
     }
-    // A disk's plastic does not fade, so once it has gone it is hidden.
+    // The plastic can't fade, so a gone card is hidden instead.
     card.visible = leaving < 1
 
     open.current = leavingAt === undefined ? THREE.MathUtils.damp(open.current, 1, 9, delta) : 1 - fold
-    // Drawn from the deck, it lifts toward the player in an arc as it opens, a little larger at the top of it.
     if (fromDeck && leavingAt === undefined && open.current < 0.995) {
       const arc = Math.sin(open.current * Math.PI)
       position.y += arc * 0.3
@@ -210,8 +200,6 @@ export function Card({
       batch.place(kind, seat.current, card.matrix, look === 'dim' ? 0.45 : 1)
     }
 
-    // A card that can be sacrificed pulses red; a marked one holds it.
-    // Only the screen and the numerals glow, from their own map, as brightly as the mood asks.
     const rest = MOOD.cardGlow
     const pulse = look === 'markable' ? 0.12 + 0.1 * Math.sin(now / 160) : 0
     const glow =
@@ -224,21 +212,21 @@ export function Card({
             : hovered && onClick
               ? rest + 0.15
               : rest
-    // A closing disk turns its display off: the sticker and screens stay, and what they show fades out, its light first.
+    // Squared so the glow dies before the content fades as the disk closes.
     content.emissiveIntensity = glow * open.current * open.current
     content.emissive.set(look === 'marked' || look === 'markable' ? '#ff4040' : '#ffffff')
     front.color.setScalar(look === 'dim' ? 0.45 : 1)
     content.color.setScalar(look === 'dim' ? 0.45 : 1)
     front.opacity = rear.opacity = 1 - away
     content.opacity = (1 - away) * open.current
-    // The alpha test discards the clear ground and, as the content fades, everything else too.
+    // Raising alphaTest with the fade discards the fading content along with the clear ground.
     content.alphaTest = Math.max(0.001, content.opacity * 0.5)
   })
 
   const handlers = {
     onClick: (event: ThreeEvent<MouseEvent>) => {
       event.stopPropagation()
-      // A hold was a look, not a play.
+      // A hold was for reading, not playing.
       if (holding()) return
       onClick?.(event, touched.current)
     },
@@ -259,14 +247,14 @@ export function Card({
       setPointed(false)
       onHover?.(false)
     },
-    // Stopped here too, or what lies behind the card is hovered again on the next move.
+    // Stop here too, or whatever lies behind the card is hovered again on the next move.
     onPointerMove: (event: ThreeEvent<PointerEvent>) => event.stopPropagation(),
   }
 
   return (
     <group ref={mesh} name={`card-${unit.uid}`} {...handlers}>
       {batched ? (
-        // Tagged for the cards' own soft glow; a card on the move is untagged until it settles.
+        // Select tags it for the card glow; a moving card stays untagged until it settles.
         <Select enabled>
           <mesh geometry={facePlanes().content} material={content} />
         </Select>

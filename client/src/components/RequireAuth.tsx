@@ -3,10 +3,7 @@ import { Navigate } from 'react-router'
 import { authClient } from '../lib/auth.ts'
 import { Failure, Loading } from './States.tsx'
 
-/**
- * Sends someone signed out to the sign-in page; with guest, signs them in as a guest instead, so the table is one
- * click from anywhere.
- */
+/** Redirects signed-out visitors to sign in, or with `guest`, signs them in as a guest. */
 export function RequireAuth({ children, guest = false }: { children: ReactNode; guest?: boolean }) {
   const session = authClient.useSession()
   const [refused, setRefused] = useState<string | null>(null)
@@ -24,7 +21,7 @@ export function RequireAuth({ children, guest = false }: { children: ReactNode; 
     return () => {
       current = false
     }
-    // Once per sign-out; the session's own refetch is stable enough to leave out.
+    // Once per sign-out; session.refetch is stable enough to leave out.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [guest, signedOut])
 

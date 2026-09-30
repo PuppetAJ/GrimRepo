@@ -5,7 +5,7 @@ import { makeUnit } from './units.ts'
 
 type Row = (string | null)[]
 
-/** A game after this turn's draw, with exactly the cards given and nothing else on the table. */
+/** A game past this turn's draw with only the given cards on the table. */
 export function table({
   hand = [],
   board = [],
@@ -31,7 +31,7 @@ export function table({
   return state
 }
 
-/** Applies actions that must all be legal, returning the final state and every event. */
+/** Asserts every action is legal. */
 export function play(state: GameState, ...actions: Action[]): { state: GameState; events: GameEvent[] } {
   const events: GameEvent[] = []
   let current = state

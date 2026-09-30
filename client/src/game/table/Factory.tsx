@@ -23,9 +23,6 @@ export { FactoryP03 } from './factory/P03.tsx'
 export { Scale } from './factory/Scale.tsx'
 export { TechBoard } from './factory/TechBoard.tsx'
 
-// P03's factory, after Inscryption's Act 3: dark metal lit by P03's green screens. Built here in code.
-
-/** Everything around the table: the room, the light, the screens and the props. */
 export function Factory({
   view,
   log,
@@ -34,9 +31,7 @@ export function Factory({
 }: {
   view: View
   log: string[]
-  /** Told when a screen is clicked or tapped, which pins its readout open. */
   onPin?: (screen: Screen) => void
-  /** Told when a finger or the mouse's button has held a screen, and where. */
   onHold?: (screen: Screen, x: number, y: number) => void
 }) {
   const lines = useMemo(() => logLines(log), [log])
@@ -49,7 +44,6 @@ export function Factory({
       <fog attach="fog" args={[TINT.fog, MOOD.fogNear, MOOD.fogFar]} />
       <ambientLight color={TINT.ambient} intensity={MOOD.ambient} />
       <hemisphereLight color={TINT.hemisphere} groundColor="#000000" intensity={MOOD.hemisphere} />
-      {/* A little light over the deck and the pile, and over the player's hands. */}
       <pointLight
         color={lamp(TINT.cool, MOOD.lampTint)}
         position={[X + 3.3, TABLE_Y + 2.2, -8.6]}
@@ -64,7 +58,6 @@ export function Factory({
         distance={6}
         decay={2}
       />
-      {/* A cool lamp over the board, so the cards read. */}
       <spotLight
         color={lamp(TINT.spot, MOOD.lampTint)}
         position={[X, 13, -8.2]}
@@ -88,9 +81,9 @@ export function Factory({
 const LOG_AT: Vec3 = [X - 4.3, 9.5, -14.2]
 const STATUS_AT: Vec3 = [X + 4.3, 9.5, -14.2]
 
-/** Everything in the room that no move changes, kept out of the re-render each move brings. */
+// Memoized so a move doesn't re-render the static room.
 const Fixtures = memo(function Fixtures() {
-  // The dust is drawn as at 1x whatever the resolution, so it looks the same when the resolution adapts.
+  // Pin the dust to 1x so its size holds when the resolution adapts.
   const dust = useRef<THREE.Points>(null)
   useFrame(() => {
     const material = dust.current?.material as { pixelRatio?: number } | undefined
@@ -105,7 +98,6 @@ const Fixtures = memo(function Fixtures() {
       <Suspense fallback={null}>
         <GemModule />
       </Suspense>
-      {/* Dust drifting in the light, hanging still for anyone who asks for less motion. */}
       <Sparkles
         ref={dust}
         count={MOOD.dustCount}
@@ -120,7 +112,7 @@ const Fixtures = memo(function Fixtures() {
   )
 })
 
-// Fetched as soon as the table's code arrives, alongside the card art, rather than as each part first renders.
+// Preload on import so the models arrive with the card art, not on first render.
 for (const url of [
   '/models/p03.glb',
   '/models/battery.glb',

@@ -31,7 +31,7 @@ export function Leaderboard() {
   const session = authClient.useSession()
   const me = (session.data?.user as { username?: string } | undefined)?.username
   const guest = Boolean((session.data?.user as { isAnonymous?: boolean } | undefined)?.isAnonymous)
-  // Set by the game page when a game ends, so the result greets the player here.
+  // Set by the game page when a game ends.
   const result = (useLocation().state as { result?: Finished } | null)?.result
 
   return (
@@ -54,7 +54,6 @@ export function Leaderboard() {
               : `Turn ${result.turns} and you're done. Weak cards. Total lack of synergy.`}{' '}
             {result.isBest ? "A new best. Don't let it go to your head." : 'Not even your best.'}
           </p>
-          {/* A guest's score is kept, but off the board until they sign up. */}
           {guest ? (
             <p className="relative z-30 mt-2 font-sans text-sm text-foreground">
               You&apos;re playing as a guest, so this score isn&apos;t on the board.{' '}
@@ -71,9 +70,8 @@ export function Leaderboard() {
         <p className="font-mono text-sm text-muted-foreground">git shortlog --quick-battles --since="last reset"</p>
       </div>
 
-      {/* At least the rest of the screen tall, so the rows arriving push nothing on screen down. */}
+      {/* Reserves height so the page doesn't jump when the rows arrive. */}
       <div className="min-h-[65dvh]">
-        {/* Placeholder rows shaped like the real ones, so the page is about its full height before the data comes. */}
         {board.status === 'loading' ? (
           <ol role="status" aria-label="Loading the leaderboard" className="overflow-hidden rounded-lg border bg-card">
             {[...Array(5).keys()].map((i) => (
@@ -103,7 +101,7 @@ export function Leaderboard() {
           </p>
         ) : null}
         {board.status === 'ready' && board.data.players.length > 0 ? (
-          // Not clipped, so first place's corruption can creep out past the board's edges.
+          // Not clipped, so first place's corruption can spill past the board's edges.
           <div className="rounded-lg border bg-card">
             <table className="w-full border-collapse text-left">
               <caption className="sr-only">Players by their best score</caption>
@@ -125,7 +123,6 @@ export function Leaderboard() {
               </thead>
               <tbody>
                 {board.data.players.map((row, index) =>
-                  // P03 takes over first place, which is only ever the top of the first page.
                   index === 0 && board.data.page === 1 ? (
                     <FirstPlace key={row.username} row={row} mine={row.username.toLowerCase() === me} />
                   ) : (
@@ -181,25 +178,22 @@ function Played({ row }: { row: LeaderboardRow }) {
   )
 }
 
-/** First place, taken over by P03: he keeps an eye on whoever is winning. */
 function FirstPlace({ row, mine }: { row: LeaderboardRow; mine: boolean }) {
   return (
-    // Isolated, so P03's screen can sit behind the row's words and in front of its ground.
+    // Isolated so the negative-z layers sit behind the text but above the row's background.
     <tr className="p03-screen relative isolate border-y border-[#2f6b3d] font-terminal">
       <td className="py-4 pr-4 pl-4 text-xl text-p03-dim sm:pr-5 sm:pl-6">
         <Suspense fallback={null}>
           <FaultyScreen className="-z-10" />
         </Suspense>
         <Glass />
-        {/* The halo, from a layer, since a table row does not reliably take a shadow of its own. */}
+        {/* A table row doesn't reliably take a box-shadow, so the glow is its own layer. */}
         <span aria-hidden className="p03-glow-soft pointer-events-none absolute inset-0 -z-20" />
         <FrameDamage frame="row" />
-        {/* P03's corruption creeps in from the row's four corners, above and below the rank and the score. */}
         <Corruption dense cols={12} rows={2} corner="top-left" seed={37} className="top-0 left-0" />
         <Corruption dense cols={9} rows={2} corner="bottom-left" seed={43} className="bottom-0 left-0" />
         <Corruption dense cols={14} rows={2} corner="top-right" seed={31} className="top-0 right-0" />
         <Corruption dense cols={10} rows={2} corner="bottom-right" seed={41} className="right-0 bottom-0" />
-        {/* And out past both ends of the board, into the page's margins, where there is room for it. */}
         <Corruption
           dense
           fast

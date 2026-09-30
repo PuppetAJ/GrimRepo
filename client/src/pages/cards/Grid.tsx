@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button.tsx'
 import { Facts, Screen } from './CardFacts.tsx'
 
 export function Grid({ cards, onOpen }: { cards: CardDef[]; onOpen: (id: string) => void }) {
-  // As many columns as fit with room for a card's longest words; one card a row before they would squeeze.
+  // 24rem leaves room for a card's longest words; narrower, one card per row.
   return (
     <ul className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,24rem),1fr))] items-start gap-4">
       {cards.map((def) => (

@@ -6,7 +6,6 @@ type Worn = Record<'map' | 'normalMap' | 'roughnessMap', THREE.Texture>
 let worn: Worn | null = null
 let loading: Promise<void> | null = null
 
-/** Worn plastic: grain, scratches and grime, as colour, a normal map and roughness; loaded once with the cards. */
 export function loadPlastic(): Promise<void> {
   const loader = new THREE.TextureLoader()
   const load = (name: string) => loader.loadAsync(`/textures/plastic/${name}.webp`)
@@ -18,15 +17,14 @@ export function loadPlastic(): Promise<void> {
   return loading
 }
 
-// The plastic gives off a little of its own light, since the hand sits far from the factory's lamps.
+// Slightly emissive, since the hand sits far from the factory's lamps.
 const plastics = (body: string, bodyGlow: string) => {
   if (!worn) throw new Error('The plastic is used before loadPlastic() has finished')
   const wear = { ...worn, normalScale: new THREE.Vector2(0.7, 0.7) }
   return {
     plastic: new THREE.MeshStandardMaterial({ color: body, emissive: bodyGlow, metalness: 0.15, ...wear }),
     dark: new THREE.MeshStandardMaterial({ color: '#05090d', roughness: 0.9 }),
-    // The shutter sleeve, the hub, the rails and the side strips: scratched steel. Not fully metallic, since with
-    // nothing to reflect pure steel renders black.
+    // Not fully metallic: with nothing to reflect, pure metal renders black.
     metal: new THREE.MeshStandardMaterial({
       color: '#d4dde3',
       emissive: '#222a32',
@@ -41,6 +39,6 @@ const plastics = (body: string, bodyGlow: string) => {
 }
 type Plastics = ReturnType<typeof plastics>
 const sets: Partial<Record<'common' | 'rare', Plastics>> = {}
-/** The deck's disks in the palette's plastic, red for the rare card; built on first use, once the plastic has loaded. */
+/** Built on first use, which must come after loadPlastic() resolves. */
 export const diskMaterials = (kind: 'common' | 'rare' = 'common'): Plastics =>
   (sets[kind] ??= kind === 'rare' ? plastics('#7a2030', '#2a0a10') : plastics(TINT.disk.body, TINT.disk.glow))

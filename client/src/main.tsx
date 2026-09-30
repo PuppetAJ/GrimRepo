@@ -8,7 +8,7 @@ import './index.css'
 const container = document.getElementById('root')
 if (!container) throw new Error('index.html is missing its #root element')
 
-// The same tree as prerender.tsx renders, so the prerendered home page hydrates cleanly.
+// Must match the tree prerender.tsx renders, so the prerendered home page hydrates cleanly.
 const app = (
   <StrictMode>
     <BrowserRouter>
@@ -18,6 +18,6 @@ const app = (
   </StrictMode>
 )
 
-// The home page arrives prerendered, so React takes over its HTML; every other address starts empty.
+// Only the home page is prerendered; every other route starts empty.
 if (container.hasChildNodes()) hydrateRoot(container, app)
 else createRoot(container).render(app)
