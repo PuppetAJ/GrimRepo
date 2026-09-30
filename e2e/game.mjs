@@ -6,6 +6,7 @@ import {
   freshPage,
   launch,
   newPlayer,
+  newTab,
   playWithBot,
   reporter,
   resetRateLimits,
@@ -133,6 +134,44 @@ section('Resuming')
     (await page.locator('[data-seed]').getAttribute('data-seed')) !== seed && /Turn 1/.test(await visibleText(page)),
   )
   check('and the test player is removed afterwards', await deletePlayer(page, resumer))
+  await context.close()
+}
+
+section('Two tabs')
+{
+  // The same player in two tabs: the first moves the game on, and the second, out of step, picks it up from the server.
+  const { context, page: first } = await freshPage(browser, { table: 'text' })
+  const player = await signUp(first, newPlayer('Tabs'))
+  await first.goto(`${BASE}/game`)
+  await first.locator('[data-seed]').waitFor()
+  const second = await newTab(context)
+  await second.goto(`${BASE}/game`)
+  await second.locator('[data-seed]').waitFor()
+  const hand = (page) => page.locator('[data-action="select"]').evaluateAll((cards) => cards.map((c) => c.ariaLabel))
+
+  await first.locator('[data-action="draw-deck"]').click()
+  await first.getByText('saved', { exact: true }).waitFor()
+  const moved = await hand(first)
+  // Held back a second, as on a slow connection, so the refusal lands after the draw has finished playing.
+  await second.route('**/api/games/*/moves', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+    await route.continue()
+  })
+  await second.locator('[data-action="draw-boilerplate"]').click()
+  await second.getByText(/moved on in another tab/).waitFor()
+  // The second tab's own Boilerplate is gone and the first tab's draw is in its place.
+  const caughtUp = await second
+    .waitForFunction(
+      (want) =>
+        JSON.stringify([...document.querySelectorAll('[data-action="select"]')].map((c) => c.ariaLabel)) === want,
+      JSON.stringify(moved),
+      { timeout: 10_000 },
+    )
+    .then(() => true)
+    .catch(() => false)
+  check('a tab out of step shows the game as the other tab left it', caughtUp, `${await hand(second)} vs ${moved}`)
+  check('and asks for no second draw', (await second.locator('[data-action^="draw-"]:not(:disabled)').count()) === 0)
+  check('and the test player is removed afterwards', await deletePlayer(first, player))
   await context.close()
 }
 

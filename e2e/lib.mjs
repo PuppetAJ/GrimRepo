@@ -77,6 +77,14 @@ export async function resetRateLimits() {
   await client.end()
 }
 
+/** A second tab in the same context: same cookies, same player. */
+export async function newTab(context) {
+  const page = await context.newPage()
+  page.setDefaultTimeout(20_000)
+  listen(page)
+  return page
+}
+
 /** A fresh context, so one check's cookies never leak into the next; `table` picks the text or 3D table up front. */
 export async function freshPage(browser, { width = 1280, height = 900, table } = {}) {
   const context = await browser.newContext({ viewport: { width, height } })
