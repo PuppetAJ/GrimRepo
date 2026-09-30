@@ -137,6 +137,42 @@ section('Resuming')
   await context.close()
 }
 
+section('A result that does not save at first')
+{
+  // The bell that ends the game is saved over a connection that has just dropped, and comes back a moment later.
+  const { context, page } = await freshPage(browser, { table: 'text' })
+  const player = await signUp(page, newPlayer('Offline'))
+  await page.goto(`${BASE}/game`)
+  const dropped = async (route) => route.abort('internetdisconnected')
+  const { state } = await playWithBot(page, {
+    beforeMove: async (_action, next) => {
+      if (next.status !== 'playing') await page.route('**/api/games/*/moves', dropped)
+    },
+  })
+  await page.getByText('Saving the result…').first().waitFor()
+  check('the game over waits for its result, and says so', true)
+  check(
+    'and walking away is not offered, as it would record a loss',
+    await page.getByRole('button', { name: 'Forfeit' }).first().isDisabled(),
+  )
+  await page.unroute('**/api/games/*/moves', dropped)
+  const expected = summary(state)
+  const shown = await page
+    .getByRole('status')
+    .filter({ hasText: /You (win|lose)/ })
+    .innerText({ timeout: 15_000 })
+    .catch(() => '')
+  check(
+    'once the connection is back, the result is saved and shown',
+    expected.outcome === 'win'
+      ? shown.includes(`You win in ${expected.turns} turns`)
+      : shown.includes(`You lose on turn ${expected.turns}`),
+    `${JSON.stringify(expected)} vs ${shown || 'nothing'}`,
+  )
+  check('and the test player is removed afterwards', await deletePlayer(page, player))
+  await context.close()
+}
+
 section('Two tabs')
 {
   // The same player in two tabs: the first moves the game on, and the second, out of step, picks it up from the server.

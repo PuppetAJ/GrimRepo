@@ -152,8 +152,11 @@ const selectorFor = (action) => {
   return `[data-action="${action.type}"]`
 }
 
-/** Plays a fresh game through its buttons, with a copy of the engine in step to choose each click. */
-export async function playWithBot(page, { stopAfterTurn = Infinity } = {}) {
+/**
+ * Plays a fresh game through its buttons, with a copy of the engine in step to choose each click. `beforeMove` hears
+ * each move and the state it will lead to, before it is clicked.
+ */
+export async function playWithBot(page, { stopAfterTurn = Infinity, beforeMove } = {}) {
   const root = page.locator('[data-seed]')
   await root.waitFor()
   let state = createGame({ seed: Number(await root.getAttribute('data-seed')) })
@@ -162,6 +165,9 @@ export async function playWithBot(page, { stopAfterTurn = Infinity } = {}) {
   const moves = async () => Number(await root.getAttribute('data-moves')) - start
   while (state.status === 'playing' && state.turn <= stopAfterTurn) {
     const action = nextBotAction(state)
+    const result = apply(state, action)
+    if (!result.ok) throw new Error(`the mirror refused ${JSON.stringify(action)}: ${result.reason}`)
+    await beforeMove?.(action, result.state)
     try {
       await page
         .locator(selectorFor(action))
@@ -180,8 +186,6 @@ export async function playWithBot(page, { stopAfterTurn = Infinity } = {}) {
       await page.screenshot({ path: 'e2e-failure.png' }).catch(() => {})
       throw error
     }
-    const result = apply(state, action)
-    if (!result.ok) throw new Error(`the mirror refused ${JSON.stringify(action)}: ${result.reason}`)
     state = result.state
     actions.push(action)
     // The page must agree on the turn before the next click, or the mirror has drifted.

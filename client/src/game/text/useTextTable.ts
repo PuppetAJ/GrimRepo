@@ -197,7 +197,12 @@ export function useTextTable({
   )
   const said = busy
     ? "P03's turn…"
-    : prompt(mustDraw, summoning, summoning ? owed(summoning, state.player.board, state.summon?.marked ?? []) : 0)
+    : prompt(
+        mustDraw,
+        summoning,
+        summoning ? owed(summoning, state.player.board, state.summon?.marked ?? []) : 0,
+        state.status !== 'playing',
+      )
 
   /** The table's own element: the game it shows, and a held card being read rather than played. */
   const frameProps = {
