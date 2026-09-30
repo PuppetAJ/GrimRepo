@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 
-/** A float copy of a geometry: loaded models store theirs quantized, which cannot be moved into place and merged. */
+// Loaded models store quantized attributes, which can't be transformed and merged.
 function unpacked(geometry: THREE.BufferGeometry, names: string[]): THREE.BufferGeometry {
   const copy = new THREE.BufferGeometry()
   for (const name of names) {
@@ -15,7 +15,7 @@ function unpacked(geometry: THREE.BufferGeometry, names: string[]): THREE.Buffer
   return copy.toNonIndexed()
 }
 
-/** Merges a model's parts that never move into one mesh per material, once; the parts matching `keep` stay apart. */
+/** Runs once per root; parts matching `keep` stay separate. Returns how many meshes were merged. */
 export function mergeStill(root: THREE.Object3D, keep: RegExp): number {
   if (root.userData['merged']) return 0
   root.userData['merged'] = true

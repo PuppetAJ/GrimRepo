@@ -13,7 +13,7 @@ export type Game =
       id: number
       /** Counts every deal and reload, so a table can tell a fresh start from a move. */
       generation: number
-      /** Every move made in this game, saved or not, for the browser suites to keep in step with. */
+      /** Every move made, saved or not. */
       moves: number
       state: GameState
       log: string[]
@@ -22,7 +22,6 @@ export type Game =
       result: Finished | null
       act: (action: Action) => void
       forfeit: () => Promise<void>
-      /** Hears each move's events as it is made; returns the unsubscribe. */
       subscribe: (listener: Listener) => () => void
     }
 
@@ -32,7 +31,7 @@ type Listener = (events: GameEvent[]) => void
 
 type Table = { id: number; generation: number; moves: number; state: GameState; log: string[] }
 
-// Enough for any real game, so the console always holds the whole story.
+// Enough for any real game, so the console holds the whole log.
 const LOG_LINES = 2_000
 
 let generations = 0
@@ -55,7 +54,7 @@ function open(game: OpenGame): Table {
   }
 }
 
-/** The open game: played here, saved at every draw and bell, and scored on the server. */
+/** Plays the open game locally and saves it at every draw and bell; the server scores it. */
 export function useGame(): Game {
   const [table, setTable] = useState<Table | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -63,11 +62,11 @@ export function useGame(): Game {
   const [unsaved, setUnsaved] = useState(0)
   const [saving, setSaving] = useState(false)
   const [result, setResult] = useState<Finished | null>(null)
-  // What the server has and what has been played since; refs, so a queued save reads them when it runs.
+  // Refs, so a queued save reads them when it runs, not when it was queued.
   const saved = useRef(0)
   const pending = useRef<Action[]>([])
   const chain = useRef<Promise<void>>(Promise.resolve())
-  // Told as each move is made, so a table playing the events back never misses one to batching.
+  // Called on each move, so playback never loses events to React's batching.
   const listeners = useRef(new Set<Listener>())
   const subscribe = useCallback((listener: Listener) => {
     listeners.current.add(listener)
@@ -76,7 +75,7 @@ export function useGame(): Game {
 
   useEffect(() => {
     const fixed = fixture()
-    // Dealt as a reply would be, after the effect, so a fixture loads the way a game does.
+    // Deferred like a server reply, so a fixture loads the same way a game does.
     if (fixed)
       return void Promise.resolve().then(() => {
         generations += 1
@@ -106,13 +105,12 @@ export function useGame(): Game {
   }, [reloads])
 
   const id = table?.id
-  // A save that fails is tried again, a little later each time, until it lands: a finished game has no move left
-  // that would send it.
+  // Failed saves retry with backoff until they land, since a finished game has no later move to send them.
   const retry = useRef<{ timer?: ReturnType<typeof setTimeout>; wait: number }>({ wait: 0 })
   const again = useRef<() => Promise<void>>(() => Promise.resolve())
   useEffect(() => () => clearTimeout(retry.current.timer), [])
 
-  // Saves run one after another, each reading the refs when its turn comes, so none can overlap.
+  // Saves are chained so they never overlap; each reads the refs when it runs.
   const save = useCallback((): Promise<void> => {
     chain.current = chain.current.then(async () => {
       clearTimeout(retry.current.timer)
@@ -126,7 +124,7 @@ export function useGame(): Game {
         retry.current.wait = 0
         if (reply.status === 'finished') setResult(reply)
       } catch (failure) {
-        // Out of step with the server, most likely from another tab: its copy is the truth.
+        // Out of step with the server, usually from another tab; the server's copy wins.
         if (failure instanceof ApiError && failure.status === 409) {
           toast.warning(
             failure.body['rulesChanged']
@@ -161,7 +159,7 @@ export function useGame(): Game {
         toast.error(outcome.reason)
         return
       }
-      // A fixture is played here only.
+      // Fixtures are never saved.
       if (table.id !== -1) pending.current.push(action)
       setUnsaved(pending.current.length)
       for (const listener of listeners.current) listener(outcome.events)
@@ -172,7 +170,7 @@ export function useGame(): Game {
         state: outcome.state,
         log: [...table.log, ...lines].slice(-LOG_LINES),
       })
-      // A draw shows the next card, so it is saved at once; otherwise a reload could peek and draw again.
+      // Save draws at once, or a reload could peek at the next card and draw again.
       if (action.type === 'ringBell' || action.type === 'draw') void save()
     },
     [table, result, save],
@@ -182,10 +180,10 @@ export function useGame(): Game {
   const forfeit = useCallback(async () => {
     if (id === undefined) return
     if (id === -1) return setReloads((n) => n + 1)
-    // Played to the end here, the game's result is still on its way; walking away now would record it as a loss.
+    // The result is still being saved; forfeiting now would record a loss.
     if (over) return
     try {
-      // Anything unsaved is dropped: walking away ends the game where the server last saw it.
+      // Unsaved moves are dropped; the game ends where the server last saw it.
       await chain.current
       setResult(await api.forfeit(id))
     } catch (failure) {

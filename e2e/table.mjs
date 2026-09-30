@@ -1,4 +1,3 @@
-// The 3D table: it draws, a first turn by clicking the models, a whole game to the end, the text switch, and phones.
 import { apply, card, nextBotAction, summary, TIP } from '../shared/src/index.ts'
 import {
   BASE,
@@ -16,7 +15,7 @@ await resetRateLimits()
 const { browser, pageErrors, close } = await launch()
 const { check, section, report } = reporter()
 
-// Software WebGL is slow and the table warms its shaders behind the boot screen, so it gets time to load.
+// Software WebGL is slow and shaders warm up behind the boot screen, hence the long timeout.
 const openTable = async (page) => {
   await page.goto(`${BASE}/game`)
   await page.locator('[data-table="3d"]').waitFor({ timeout: 60_000 })
@@ -76,7 +75,7 @@ section('The 3D table')
     await click({ lane: 2 })
     await until(page, (id) => window.__game.state().player.board[2]?.uid === id, uid)
     check('clicking a lane plays it there', true)
-    // Looking down at the board, as a player does to read their own row, which the hand covers from the seat.
+    // Look down at the board, since the hand covers the player's row from the seat.
     await page.mouse.move(5, 300)
     await page.keyboard.press('w')
     await page.waitForTimeout(1200)
@@ -136,7 +135,7 @@ section('The 3D table')
     )
 
     section('Keys, and a sacrifice')
-    // A Boilerplate from the pile, played into an empty lane, is always there to offer up.
+    // A Boilerplate played into an empty lane is always there to sacrifice.
     const act = (action) => page.evaluate((next) => window.__game.act(next), action)
     await act({ type: 'draw', from: 'boilerplate' })
     await until(page, () => !window.__game.busy() && window.__game.state().drawn)
@@ -168,7 +167,7 @@ section('The 3D table')
     await until(page, () => !window.__game.busy(), undefined, 30_000)
 
     section('To the end')
-    // A copy of the engine picks each move and says what the page's state must become before the next.
+    // An engine copy picks each move and gives the state the page must reach before the next.
     let state = await page.evaluate(() => window.__game.state())
     while (state.status === 'playing') {
       const action = nextBotAction(state)
@@ -198,7 +197,7 @@ section('The 3D table')
   }
 
   section('Full screen')
-  // The page reacts to the browser's fullscreenchange a moment after the request, so wait for what it shows.
+  // The page reacts to fullscreenchange a moment after the request, so wait for what it shows.
   await page.getByRole('button', { name: 'Full screen' }).click()
   await page.getByRole('link', { name: 'Exit' }).waitFor({ state: 'visible' })
   const filled = await page.evaluate(() => {
@@ -227,7 +226,7 @@ section('The 3D table')
   await page.getByRole('heading', { name: 'Contributors' }).waitFor()
   check(
     'the canvas and its handle go with the page',
-    // The leaderboard has canvases of its own for P03's corruption; the table's lived in its frame.
+    // The leaderboard has its own canvases, so look only inside the table's frame.
     await page.evaluate(() => !document.querySelector('[data-table] canvas') && window.__game === undefined),
   )
   check('and the test player is removed afterwards', await deletePlayer(page, player))
@@ -257,7 +256,7 @@ section('Phones')
     box?.height === 390 && box.width === 844,
     JSON.stringify(box),
   )
-  // In the page, scrolled to so it fills the screen; its controls are in a menu.
+  // Scrolled to fill the screen, the text table keeps its controls in a menu.
   await text.getByRole('button', { name: 'Menu' }).click()
   await page.getByRole('button', { name: '3D Table' }).click()
   await tableReady(page)

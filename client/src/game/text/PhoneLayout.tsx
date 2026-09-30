@@ -11,7 +11,6 @@ import { LogBox, LogDialog, TerminalDialog } from './Log.tsx'
 import { MENU_BUTTON, Panel } from './Panel.tsx'
 import { Inspector, Magnifier } from './Reading.tsx'
 
-/** The turn, whether the moves are saved, and the menu's button. */
 function Status() {
   const { view, menu, setMenu } = useTable()
   return (
@@ -31,11 +30,10 @@ function Status() {
   )
 }
 
-/** What the phone has no room for beside the board: the log, the terminal, full screen, forfeiting and leaving. */
 function Menu() {
   const { menu, setMenu, setLogOpen, setTerminalOpen, fullScreen, game, on3d, sideways } = useTable()
   if (!menu) return null
-  // Each closes the menu, so what it opens or changes is there to see.
+  // Close the menu first so it doesn't cover what the choice opens.
   const choose = (then: () => void) => () => {
     setMenu(false)
     then()
@@ -76,16 +74,9 @@ function Menu() {
   )
 }
 
-/**
- * Phone: one screen tall in the page, or covering it in full screen. On its side, the board as tall as it goes in the
- * middle; the turn, the scale and the hand on the left; the piles, the button and what P03 says on the right. Upright,
- * the same pieces stack above and below a board of about the same size. No reader: a tap opens a card and holding one
- * magnifies it.
- */
 export function PhoneLayout() {
   const { frameProps, phoneFrame, covering, sideways, scrolling, seat, setArea, setHandSection, view } = useTable()
-  // In the page and too short to fit, the pieces run on and the page scrolls; otherwise they fill the frame, which
-  // scrolls them itself when it covers a short screen.
+  // Too short in the page, the page scrolls; covering the screen, the frame scrolls instead.
   const flowing = scrolling && !covering
   const pieces = `z-10 gap-2 pt-[max(0.5rem,env(safe-area-inset-top))] pr-[max(0.5rem,env(safe-area-inset-right))] pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(0.5rem,env(safe-area-inset-left))] ${flowing ? 'relative min-h-svh' : 'absolute inset-0'}`
   const board = (
@@ -104,7 +95,7 @@ export function PhoneLayout() {
       ref={phoneFrame}
       className={`p03-screen crt overflow-hidden font-terminal text-xl ${covering ? 'fixed inset-0 z-50' : `relative border-y border-[#2f6b3d] ${flowing ? '' : 'h-svh'}`}`}
     >
-      {/* The screen and the glass stay put while the pieces scroll over them. */}
+      {/* Outside the pieces, so the screen and glass stay put while the pieces scroll. */}
       <FaultyScreen />
       <span aria-hidden className="crt-glass pointer-events-none absolute inset-0 z-30" />
       {sideways ? (
@@ -158,8 +149,7 @@ export function PhoneLayout() {
           </div>
         </div>
       )}
-      {/* The demo's or a guest's note over the table until closed, as the page above is scrolled away; under the turn,
-          so the menu stays in reach. */}
+      {/* Below the status row, so the menu button stays reachable. */}
       {seat ? (
         <div className="absolute inset-x-2 top-16 z-40 rounded bg-background font-sans">
           <SeatNote seat={seat} />

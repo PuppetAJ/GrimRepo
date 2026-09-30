@@ -37,7 +37,7 @@ export function Home() {
 
   return (
     <div className="flex flex-col gap-10 lg:flex-row lg:items-start">
-      {/* Edge to edge on a phone and right under the nav, as GitHub shows a README there, so the words get the room. */}
+      {/* Edge to edge on phones, so the text gets the room. */}
       <article className="relative -mx-(--gutter) -mt-8 min-w-0 flex-1 border-b bg-card sm:mx-0 sm:mt-0 sm:rounded-lg sm:border">
         <div className="border-b px-4 py-3 font-mono text-sm text-muted-foreground sm:px-5">README.md</div>
         <div className="flex flex-col gap-6 px-4 py-8 sm:px-11">
@@ -67,7 +67,6 @@ export function Home() {
             <Button asChild size="lg" variant="outline">
               <Link to="/leaderboard">Leaderboard</Link>
             </Button>
-            {/* Development only: plays P03's takeover of the screenshot again. */}
             {import.meta.env.DEV ? (
               <Button size="lg" variant="ghost" onClick={() => window.dispatchEvent(new Event(REPLAY_EVENT))}>
                 Replay takeover
@@ -79,7 +78,7 @@ export function Home() {
 
           <h2 className="mt-4 border-b pb-2 text-2xl font-semibold">Installation</h2>
           <p className="text-foreground/85">There is no installation. There is only the table. Each turn:</p>
-          {/* It scrolls sideways on a phone, so it takes focus, for the keys to scroll it too. */}
+          {/* Focusable so keyboard users can scroll it sideways on phones. */}
           <pre
             tabIndex={0}
             aria-label="Each turn, as commands"
@@ -98,7 +97,7 @@ export function Home() {
             <li>The dealer does not lose on purpose.</li>
             <li>FourOhFour removes everything on the other side of the table. Working as intended.</li>
             <li>
-              {/* P03 has struck it out, and his redaction moves to the next line whole rather than breaking. */}
+              {/* The redaction wraps to the next line whole instead of breaking. */}
               <s>Y2K is not in the deck.</s>{' '}
               <span className="p03-text-glow relative inline-block bg-p03-ground px-1.5 font-terminal text-lg whitespace-nowrap text-p03 sm:text-xl">
                 <Glass flat />

@@ -1,5 +1,4 @@
-// After the build: the home page's first view goes into dist/index.html, so it shows before the scripts arrive,
-// and the empty page is kept as dist/shell.html for every other address.
+// Prerenders the home page so it shows before scripts load; other routes get dist/shell.html.
 import { readFile, rm, writeFile } from 'node:fs/promises'
 
 const dist = new URL('../dist/', import.meta.url)

@@ -7,7 +7,6 @@ import { number } from '../../lib/format.ts'
 import { FaultyScreen } from '../../components/p03/faultyScreen.ts'
 import { hashOf, type Game } from './games.ts'
 
-/** The newest loss, as P03 prints it: a stack trace. */
 export function Trace({ game }: { game: Game }) {
   const frames = game.forfeited
     ? ['at you.forfeit()', `at factory.table (turn ${game.turns})`]
@@ -15,7 +14,7 @@ export function Trace({ game }: { game: Game }) {
       ? [`at turn.limit(${TURN_LIMIT})`, 'at factory.table (ran out of time)']
       : ['at scale.tip(p03)', `at factory.table (turn ${game.turns})`, 'at deck.synergy() -> null']
   return (
-    // Room around it for the corruption: out of its top corner, one row out of its bottom, and down both sides.
+    // The margins leave room for the corruption outside the frame.
     <div className="relative mx-6 mt-4 mb-5">
       <FrameDamage frame="trace" />
       <Corruption dense fast cols={12} rows={2} corner="bottom-right" seed={43} className="right-0 bottom-full" />
@@ -28,7 +27,6 @@ export function Trace({ game }: { game: Game }) {
           <FaultyScreen className="-z-10" />
         </Suspense>
         <Glass />
-        {/* Inside, up from the bottom of its right end, clear of the text. */}
         <Corruption dense cols={2} rows={5} corner="bottom-right" seed={29} className="right-0 bottom-0" />
         <p className="flex flex-wrap justify-between gap-x-4">
           <span className="text-[#ff7a6b]">

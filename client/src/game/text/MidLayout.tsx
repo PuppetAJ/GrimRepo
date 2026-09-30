@@ -7,7 +7,6 @@ import { Hand, Piles } from './Hand.tsx'
 import { ConsolePanel } from './Log.tsx'
 import { Magnifier, PromptLine, ReaderPanel } from './Reading.tsx'
 
-/** A strip over the board, the reader and console beside it, and the hand below, all sized to fit the window. */
 export function MidLayout() {
   const { frameProps, fullScreen, seat, setArea, setHandSection, view } = useTable()
   return (
@@ -17,7 +16,6 @@ export function MidLayout() {
     >
       <FaultyScreen />
       <span aria-hidden className="crt-glass pointer-events-none absolute inset-0 z-30" />
-      {/* The turn, the scale as a bar, and the button, in one strip over the board. */}
       <div className="relative z-10 flex items-stretch gap-2">
         <div className="flex min-w-0 flex-1 flex-col justify-center gap-1 rounded-md border-2 border-[#2f6b3d] bg-[#07130b] px-2 py-1">
           <p className="flex items-baseline justify-between gap-2 text-lg">
@@ -32,17 +30,17 @@ export function MidLayout() {
         <section aria-label="The table" className="flex flex-none flex-col items-center gap-2">
           <Board />
         </section>
-        {/* Pinned to the board's height so the column never makes the row taller; it takes the width left over. */}
+        {/* Absolutely filled so this column never makes the row taller than the board. */}
         <div className="relative max-w-[32rem] min-w-52 flex-1">
           <div className="absolute inset-0 flex flex-col gap-3 overflow-hidden">
-            {/* Here rather than over the board, where it would take the board's height. */}
+            {/* Above the board, the note would shrink it. */}
             {seat ? <SeatNote seat={seat} /> : null}
             <ReaderPanel />
             <ConsolePanel />
           </div>
         </div>
       </div>
-      {/* The prompt over the hand and Cancel over the piles, in two columns so their edges line up. */}
+      {/* One grid, so the prompt and Cancel line up with the hand and piles below them. */}
       <section
         ref={setHandSection}
         aria-label="Your hand"

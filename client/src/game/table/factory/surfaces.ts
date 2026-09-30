@@ -1,4 +1,3 @@
-// The metal surfaces the room is built from.
 import * as THREE from 'three'
 
 export function metal(maps: Record<'map' | 'normalMap' | 'roughnessMap', THREE.Texture>, repeat: [number, number]) {
@@ -11,7 +10,7 @@ export function metal(maps: Record<'map' | 'normalMap' | 'roughnessMap', THREE.T
   return maps
 }
 
-// CC0 textures from ambientCG, resized to 512 px: Metal029, DiamondPlate008C and CorrugatedSteel005. The floor's colour,
+// CC0 textures from ambientCG, resized to 512 px: Metal029, DiamondPlate008C and CorrugatedSteel005. The floor's color,
 // and the table top's in grimy.webp, have grime painted over them, at 1024 px.
 export const surfaces = (name: string) => ({
   map: `/textures/${name}/color.webp`,

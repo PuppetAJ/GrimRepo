@@ -1,4 +1,3 @@
-// The text table: a whole game through its buttons, resuming after a reload, and walking away.
 import { summary } from '../shared/src/index.ts'
 import {
   BASE,
@@ -65,7 +64,7 @@ section('A whole game')
 
   await page.goto(`${BASE}/players/${player.username}`)
   await page.getByRole('heading', { name: player.username }).waitFor()
-  // The history loads after the page; its placeholder rows are a list too, marked as loading.
+  // The history loads after the page, and its loading placeholders are a list too.
   const rows = page.locator('section ol:not([role="status"]) > li')
   await rows.first().waitFor()
   const history = await rows.first().innerText()
@@ -139,7 +138,7 @@ section('Resuming')
 
 section('A result that does not save at first')
 {
-  // The bell that ends the game is saved over a connection that has just dropped, and comes back a moment later.
+  // The final bell's save hits a dropped connection that comes back a moment later.
   const { context, page } = await freshPage(browser, { table: 'text' })
   const player = await signUp(page, newPlayer('Offline'))
   await page.goto(`${BASE}/game`)
@@ -175,7 +174,7 @@ section('A result that does not save at first')
 
 section('Two tabs')
 {
-  // The same player in two tabs: the first moves the game on, and the second, out of step, picks it up from the server.
+  // The first tab moves the game on; the second, out of step, must catch up from the server.
   const { context, page: first } = await freshPage(browser, { table: 'text' })
   const player = await signUp(first, newPlayer('Tabs'))
   await first.goto(`${BASE}/game`)
@@ -190,7 +189,7 @@ section('Two tabs')
   await first.locator('[data-action="draw-deck"]').click()
   await first.getByText('saved', { exact: true }).waitFor()
   const moved = await hand(first)
-  // Held back a second, as on a slow connection, so the refusal lands after the draw has finished playing.
+  // Delayed a second, like a slow connection, so the refusal lands after the draw finishes playing.
   await second.route('**/api/games/*/moves', async (route) => {
     await new Promise((resolve) => setTimeout(resolve, 1000))
     await route.continue()

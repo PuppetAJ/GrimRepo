@@ -2,7 +2,6 @@ import type { PlayerStats } from '../../lib/api.ts'
 import { Contributions } from './Contributions.tsx'
 import { grid, level, levels } from './grid.ts'
 
-/** The grid's key: its greens, fewest to most, and the red of a losing day; its words shorten when tight, then it wraps. */
 function Legend() {
   return (
     <div
@@ -12,7 +11,7 @@ function Legend() {
       <span className="flex items-center gap-1 @max-[11rem]:gap-[3px]">
         <span className="@max-[14rem]:hidden">Fewer</span>
         <span className="@min-[14rem]:hidden">−</span>
-        {/* At its tightest one of the middle greens goes: four steps say fewer to more as well as five. */}
+        {/* At its tightest one middle green goes; four steps still read as fewer to more. */}
         {levels.map((level, index) => (
           <span key={level} className={`size-3 rounded-[3px] ${level} ${index === 2 ? '@max-[11rem]:hidden' : ''}`} />
         ))}
@@ -34,15 +33,12 @@ export function Activity({ stats }: { stats: PlayerStats }) {
   const played = cells.reduce((sum, cell) => sum + cell.games, 0)
   const bad = cells.filter((cell) => cell.bad).length
   return (
-    // The grid's count beside the heading, as GitHub puts its contributions over its grid, so the two cards below
-    // hold only what they show and come out about the same height. Side by side wherever the column fits the activity
-    // in two columns; one over the other only on a phone.
+    // The count sits by the heading so the two cards below come out about the same height.
     <section aria-labelledby="contributions" className="@container flex flex-col gap-3">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4">
         <h2 id="contributions" className="font-semibold">
           Contributions
         </h2>
-        {/* In words where the line has room, folded to a bar where it does not. */}
         <p className="text-sm text-muted-foreground">
           {played} {played === 1 ? 'game' : 'games'}
           <span className="@max-[20rem]:hidden"> over </span>
@@ -55,7 +51,7 @@ export function Activity({ stats }: { stats: PlayerStats }) {
           aria-label="Activity grid"
           className="@container flex min-w-0 flex-col gap-3 rounded-lg border bg-card p-5"
         >
-          {/* Laid out from the right, so where the grid scrolls it starts at the latest weeks, with no script to put it there. */}
+          {/* Reversed so a scrolling grid starts at the latest weeks without script. */}
           <div
             tabIndex={0}
             aria-label="Activity grid, scrolls sideways"
@@ -64,7 +60,7 @@ export function Activity({ stats }: { stats: PlayerStats }) {
             <div
               role="img"
               aria-label={`${played} games over the last 26 weeks, ${bad} days with more losses than wins`}
-              // The squares fill the card's width down to a legible size; past that, the grid scrolls sideways.
+              // 12px is the smallest legible square; narrower, the grid scrolls sideways.
               className="grid shrink-0 grow grid-flow-col grid-rows-7 gap-[3px] sm:gap-1"
               style={{ gridAutoColumns: 'minmax(12px, 1fr)' }}
             >

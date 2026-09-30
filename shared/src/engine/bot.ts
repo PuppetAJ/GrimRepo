@@ -7,16 +7,13 @@ const value = (unit: Unit): number => unit.attack * 2 + unit.health
 
 export type Strategy = 'greedy' | 'lanes'
 
-/** A lane P03 has walled off from itself: a card of its own with no attack, and nothing able to move up. */
+/** A lane P03 has walled off with a zero-attack card. */
 export const deadLane = (state: GameState, lane: number): boolean => {
   const wall = state.opponent.front[lane]
   return Boolean(wall && wall.attack === 0)
 }
 
-/**
- * Where to put a card. Greedy fills lanes facing an enemy first; 'lanes' plays the wall exploit,
- * leaving P03's walled lanes alone and attacking through the others.
- */
+/** 'lanes' plays the wall exploit, leaving walled lanes alone; greedy fills threatened lanes first. */
 function bestLane(state: GameState, allowed: number[], strategy: Strategy): number | undefined {
   if (strategy === 'lanes') {
     const open = allowed.filter((lane) => !deadLane(state, lane))
@@ -27,13 +24,13 @@ function bestLane(state: GameState, allowed: number[], strategy: Strategy): numb
   return threatened[0] ?? allowed[0]
 }
 
-/** A plain player. Deterministic, so a seed and a strategy always make the same game. */
+/** Deterministic, so a seed and strategy always make the same game. */
 export function nextBotAction(state: GameState, strategy: Strategy = 'greedy'): Action {
   const legal = legalActions(state)
   const allowed = (type: Action['type']) => legal.filter((action) => action.type === type)
 
   if (allowed('draw').length) {
-    // Fuel when something in hand cannot be paid for yet, otherwise a real card.
+    // Boilerplate only when something in hand can't be paid for yet.
     const short = state.player.hand.some((unit) => costOf(unit) > units(state.player.board).length)
     const hasFuel = state.player.hand.some((unit) => unit.card === BOILERPLATE)
     return { type: 'draw', from: short && !hasFuel ? 'boilerplate' : 'deck' }
@@ -84,7 +81,7 @@ export function nextBotAction(state: GameState, strategy: Strategy = 'greedy'): 
   return { type: 'ringBell' }
 }
 
-/** Plays a whole game with the bot, for tests and simulations; stops if it ever loops. */
+/** Stops at limit in case the bot ever loops. */
 export function playOut(
   state: GameState,
   apply: (s: GameState, a: Action) => GameState,

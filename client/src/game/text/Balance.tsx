@@ -5,17 +5,16 @@ import arm from './balance-arm.svg'
 import pan from './balance-pan.svg'
 import stand from './balance-stand.svg'
 
-// Drawn on a 200 by 150 grid, where one unit is half a percent of the scale's width.
+// The SVGs use a 200 by 150 grid, so one SVG unit is 0.5cqw.
 const PANS = [
   { who: 'YOU', side: 'left-[-13cqw]' },
   { who: 'P03', side: 'left-[57cqw]' },
 ]
 
-/** Where the scale stands, drawn as a balance: whoever takes damage has it land in their pan. */
 export function Balance({ scale }: { scale: number }) {
   const lean = Math.max(-1, Math.min(1, scale / TIP))
   const ticks = [...Array(TIP * 2 + 1).keys()].map((i) => i - TIP)
-  // The leader's pan sinks, up to 16 degrees; the pans turn back as much, so they hang straight.
+  // The pans rotate back by the same angle so they hang straight.
   const tilt = { '--tilt': `${-lean * 16}deg` } as CSSProperties
   return (
     <div
@@ -37,7 +36,6 @@ export function Balance({ scale }: { scale: number }) {
               className={`absolute top-[-1cqw] h-[29cqw] w-[26cqw] origin-[13cqw_1cqw] rotate-[calc(var(--tilt)*-1)] ${side}`}
             >
               <img src={pan} alt="" className="size-full max-w-none" />
-              {/* The lead, weighing in the leader's pan. */}
               {(i === 0 ? scale > 0 : scale < 0) ? (
                 <span className="absolute inset-x-0 top-[15cqw] text-center font-terminal text-[9cqw] leading-none text-[#b8f5c4]">
                   x{Math.abs(scale)}
@@ -50,7 +48,6 @@ export function Balance({ scale }: { scale: number }) {
           ))}
         </div>
       </div>
-      {/* The ruler under it, as in Act 2, with the marker at the lead. */}
       <div className="relative mt-1 flex h-4 w-full items-end justify-between border-b-2 border-p03-dim">
         {ticks
           .filter((t) => t % 4 === 0)
@@ -59,7 +56,7 @@ export function Balance({ scale }: { scale: number }) {
           ))}
         <span
           className="absolute -top-3 -translate-x-1/2 text-p03 transition-all duration-300"
-          // Toward whoever leads, as the bar's knot is on the 3D table.
+          // Slides toward the leader's pan, matching the 3D table's scale bar.
           style={{ left: `${50 - lean * 50}%` }}
         >
           ▼

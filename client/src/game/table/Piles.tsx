@@ -10,10 +10,7 @@ import { CARD, DECK, DISK, PILE, type Vec3 } from './layout.ts'
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
 type Click = (event: ThreeEvent<MouseEvent>) => void
 
-/**
- * Lifts and wobbles what it holds when the pointer arrives, so the table answers before anything is clicked.
- * Only when clicking would do something; otherwise it stays still and shows no pointer.
- */
+/** Lifts and wobbles its children on hover, but only when a click would do something. */
 export function Nudge({
   active,
   onClick,
@@ -31,13 +28,12 @@ export function Nudge({
   size: Vec3
   label: string
   lift?: number
-  /** Counts up each time the player should be pointed here; each one jumps and wobbles it. */
+  /** Each increment makes it jump to draw the player's eye. */
   hint?: number
-  /** Stays put when pointed at, as a thing bolted down does. */
+  /** No hover lift, for fixed props. */
   still?: boolean
-  /** The pointer's own look over it, from /cursors/, when it can be clicked. */
   cursor?: 'draw' | 'boilerplate' | 'press'
-  /** How the pointer looks over it when it cannot be clicked for a reason worth showing, such as a full hand. */
+  /** Cursor shown while inactive for a reason worth showing, such as a full hand. */
   blocked?: 'full'
   children: ReactNode
 }) {
@@ -45,7 +41,7 @@ export function Nudge({
   const [hovered, setHovered] = useState(false)
   const since = useRef(0)
   const pointed = useRef(-Infinity)
-  // The cursor follows whether this can be clicked now, not only when the pointer arrives.
+  // The cursor updates when clickability changes mid-hover, not only on arrival.
   const self = useRef({})
   useEffect(() => {
     if (hovered && active) claimCursor(self.current, cursor ?? 'point')
@@ -70,7 +66,7 @@ export function Nudge({
       event.stopPropagation()
       if (active) onClick(event)
     },
-    // Only the nearest thing under the pointer is hovered: the pile and the deck overlap from the seat.
+    // Stop propagation: the pile and deck overlap from the player's seat.
     onPointerOver: (event: ThreeEvent<PointerEvent>) => {
       event.stopPropagation()
       setHovered(true)
@@ -97,20 +93,17 @@ const turn = new THREE.Quaternion()
 const tilt = new THREE.Euler()
 const ONE = new THREE.Vector3(1, 1, 1)
 
-/** A stack's box: exactly as wide and deep as its disks, and loose above them, so moving over it never flickers. */
+// Padded above the disks so hovering the top edge doesn't flicker.
 const stackHeight = (layers: number) => Math.max(1, layers) * pitch + 0.25
 
-/** Where the i-th disk of a stack lies: a little uneven, so the stack reads as a pile of real disks. */
+// Small per-disk offsets so the stack looks hand-piled.
 function place(i: number, faceUp: boolean, into: THREE.Matrix4): THREE.Matrix4 {
   turn.setFromEuler(tilt.set(faceUp ? -Math.PI / 2 : Math.PI / 2, 0, ((i * 5) % 7) * 0.006 - 0.018))
   const at = new THREE.Vector3(((i * 7) % 5) * 0.004 - 0.008, pitch * (i + 0.5), ((i * 3) % 4) * 0.004 - 0.006)
   return into.compose(at, turn, ONE)
 }
 
-/**
- * A stack of disks: face down they lie closed; face up they are open, and only the top one shows its face. The
- * plain ones are drawn as instances, one draw a material for the whole stack, where each would otherwise be ten.
- */
+// Instanced: one draw call per material for the whole stack instead of ten per disk.
 function Stack({
   layers,
   top,
@@ -173,7 +166,6 @@ function Stack({
   )
 }
 
-/** The deck, face down and thinning as it is drawn from. */
 export function Deck({
   count,
   total,
@@ -187,7 +179,7 @@ export function Deck({
   onClick: Click
   active: boolean
   hint?: number
-  /** The hand is at its limit, so the draw is skipped. */
+  /** The hand is full, so drawing is skipped. */
   full?: boolean
 }) {
   const layers = count === 0 ? 0 : Math.max(1, Math.round((count / total) * 12))
@@ -210,7 +202,6 @@ export function Deck({
 
 const BOILERPLATE_UNIT = { uid: 0, card: 'Boilerplate', attack: 0, health: 1, maxHealth: 1, sigils: [] }
 
-/** The Boilerplate pile: free fuel, like Inscryption's squirrels, and it never runs out. */
 export function Pile({
   assets,
   onClick,

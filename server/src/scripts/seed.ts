@@ -8,7 +8,7 @@ import { isProduction } from '../config/env.ts'
 
 const ifEmpty = process.argv.includes('--if-empty')
 
-// Won in few turns, lost late, and so on; each pair is one game as [outcome, turns].
+// Each pair is one game: [outcome, turns].
 const histories: Record<string, [Outcome, number][]> = {
   JohanH: [
     ['win', 9],
@@ -34,7 +34,7 @@ const histories: Record<string, [Outcome, number][]> = {
   ],
 }
 
-// The card each seeded player favours, so their profiles have one; their games have no moves to count it from.
+// Seeded games have no moves to count cards from, so favorites are set here.
 const favorites: Record<string, string> = {
   JohanH: 'RubberDuck',
   PuppetAJ: 'ForkBomb',
@@ -44,7 +44,7 @@ const favorites: Record<string, string> = {
 
 const players = [
   demoAccount,
-  // The original team keeps its names; nobody can sign in as them, since nobody knows the password.
+  // Random passwords, so nobody can sign in as these accounts.
   ...['JohanH', 'PuppetAJ', 'kwm0304'].map((name) => ({
     name,
     username: name,
@@ -64,11 +64,11 @@ async function main(): Promise<void> {
   }
 
   for (const player of players) {
-    // Through Better Auth, so the password is hashed exactly as a real sign-up would hash it.
+    // Through Better Auth, so the password is hashed as a real sign-up hashes it.
     const { user } = await auth.api.signUpEmail({ body: player })
     const games = histories[player.username] ?? []
     for (const [index, [outcome, turns]] of games.entries()) {
-      // Spread across recent days, newest last, so the stats page has some history to show.
+      // Spread over recent days so the stats page has history to show.
       const favorite = favorites[player.username]
       await pool.query(
         `INSERT INTO games (user_id, outcome, turns, score, played_at, cards)

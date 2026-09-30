@@ -4,7 +4,7 @@ import { ago, number } from '../../lib/format.ts'
 import { messageOf } from './games.ts'
 import type { Cell } from './grid.ts'
 
-/** The longest run of days in a row with a game, and the run still going: to today, or yesterday if today has none yet. */
+/** The current run may end yesterday, if today has no games yet. */
 function streaks(cells: Cell[]): { longest: number; current: number } {
   let longest = 0
   let run = 0
@@ -17,7 +17,6 @@ function streaks(cells: Cell[]): { longest: number; current: number } {
   return { longest, current }
 }
 
-/** Beside the grid, as a repository would put it: games committed, merged and reverted, and the player's habits. */
 export function Contributions({ stats, cells }: { stats: PlayerStats; cells: Cell[] }) {
   const played = cells.reduce((sum, cell) => sum + cell.games, 0)
   const lost = stats.days.reduce((sum, day) => sum + day.losses, 0)
@@ -69,8 +68,7 @@ export function Contributions({ stats, cells }: { stats: PlayerStats; cells: Cel
       aria-label="Contribution activity"
       className="@container flex min-w-0 flex-col gap-3 rounded-lg border bg-card p-5"
     >
-      {/* Two columns of three where there is room, one on a phone; spread down the card, so a grid beside it that is a
-          little taller leaves spacing rather than a gap. */}
+      {/* Spread down the card, so a slightly taller grid beside it leaves spacing, not a gap. */}
       <ul className="grid flex-1 content-around gap-x-5 gap-y-3 @[22rem]:grid-cols-2">
         {items.map((item) => (
           <li key={item.title} className="flex items-start gap-3">

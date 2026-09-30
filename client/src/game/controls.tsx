@@ -20,7 +20,6 @@ import { number } from '../lib/format.ts'
 export const has = (legal: Action[], match: Partial<Action>) =>
   legal.some((action) => Object.entries(match).every(([key, value]) => action[key as keyof Action] === value))
 
-/** What clicking one of the player's lanes does now: play there, spare it, or sacrifice what is on it. */
 export function laneAction(legal: Action[], lane: number): Action | null {
   for (const type of ['place', 'unmark', 'mark'] as const)
     if (has(legal, { type, lane } as Partial<Action>)) return { type, lane }
@@ -32,13 +31,13 @@ export function describe(unit: Unit): string {
   return `${card(unit.card).name}, ${unit.attack} attack, ${unit.health} health${sigils ? `, ${sigils}` : ''}`
 }
 
-/** What a summon still costs, in the diamonds on its card, after the cards marked so far. */
+/** What a summon still costs after the cards marked so far. */
 export function owed(summoning: Unit, board: Slot[], marked: number[]): number {
   const paid = marked.reduce((sum, lane) => sum + (board[lane] ? worthOf(board[lane]) : 0), 0)
   return Math.max(0, costOf(summoning) - paid)
 }
 
-/** The line under the table saying what the player can do next. */
+/** What the player can do next, for the prompt line. */
 export function prompt(mustDraw: boolean, summoning: Unit | undefined, left = 0, over = false): string {
   if (over) return 'Saving the result…'
   if (mustDraw) return 'Draw a card to start your turn.'
@@ -104,12 +103,11 @@ export function Forfeit({
   )
 }
 
-/** Who is at the table, when that needs saying: the shared demo account, or a guest who has not signed up. */
+/** Seats that get a note at the table; null gets none. */
 export type Seat = 'demo' | 'guest' | null
 
 const NOTE_KEY = { demo: 'grimrepo:demo-note', guest: 'grimrepo:guest-note' }
 
-/** The demo account's or a guest's note; once closed, it stays closed in this browser. */
 export function SeatNote({ seat }: { seat: Exclude<Seat, null> }) {
   const [open, setOpen] = useState(() => {
     try {
@@ -157,13 +155,11 @@ export function SeatNote({ seat }: { seat: Exclude<Seat, null> }) {
   )
 }
 
-/** How the scale reads aloud and in words. */
 export function scaleWords(scale: number): string {
   if (scale === 0) return 'The scale is level'
   return scale > 0 ? `You lead by ${scale} of ${TIP}` : `P03 leads by ${-scale} of ${TIP}`
 }
 
-/** The scale as a tug of war: a knot pulled from the middle toward whoever leads; at either end, the game is over. */
 export function ScaleBar({
   scale,
   className = '',
@@ -205,7 +201,6 @@ export function ScaleBar({
         />
       </span>
       <span className="text-p03">P03</span>
-      {/* How far the leader is ahead, in the leader's colour. */}
       <span
         className={`relative w-10 tabular-nums ${scale > 0 ? 'text-foreground' : scale < 0 ? 'text-death' : 'text-p03-dim'}`}
       >

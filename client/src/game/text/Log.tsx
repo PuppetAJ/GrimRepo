@@ -4,11 +4,9 @@ import { useTable } from './context.ts'
 import { PromptLine } from './Reading.tsx'
 import { useStuckToBottom } from './sizing.ts'
 
-// P03's terminal, for the phone layout's menu; loaded only when opened.
 const Terminal = lazy(() => import('../../components/p03/Terminal.tsx'))
 const TERMINAL_LINES = ['Lost already? Type help.', 'Or tutorial, if you need it spelled out.']
 
-/** The log's lines, oldest first; a short log sits at the bottom, where the newest line is. */
 function LogItems() {
   const { game } = useTable()
   return game.log.map((line, index) => (
@@ -18,7 +16,6 @@ function LogItems() {
   ))
 }
 
-/** P03's console: the whole log, for the wide and mid layouts. */
 export function ConsolePanel() {
   const { game } = useTable()
   const [box, onScroll] = useStuckToBottom(game.log.length)
@@ -39,13 +36,10 @@ export function ConsolePanel() {
   )
 }
 
-/**
- * The phone's log, scrolled to its end, with what to do now as its newest line. Short and upright, `log` hides the log
- * and leaves the prompt alone rather than a clipped line of it.
- */
+/** `log` is the log's display classes; a short phone hides it to show only the prompt, not a clipped line. */
 export function LogBox({ className, log = 'block' }: { className: string; log?: string }) {
-  const { game, said } = useTable()
-  const [box, onScroll] = useStuckToBottom(`${game.log.length} ${said}`)
+  const { game, promptText } = useTable()
+  const [box, onScroll] = useStuckToBottom(`${game.log.length} ${promptText}`)
   return (
     <div
       ref={box}
@@ -60,7 +54,6 @@ export function LogBox({ className, log = 'block' }: { className: string; log?: 
   )
 }
 
-/** The whole log in a modal, from the phone's menu. */
 export function LogDialog() {
   const { game, logOpen, setLogOpen } = useTable()
   const [box, onScroll] = useStuckToBottom(game.log.length)
@@ -81,7 +74,6 @@ export function LogDialog() {
   )
 }
 
-/** P03's terminal in a modal, from the phone's menu, for anyone who wants to type help. */
 export function TerminalDialog() {
   const { terminalOpen, setTerminalOpen, user } = useTable()
   return (

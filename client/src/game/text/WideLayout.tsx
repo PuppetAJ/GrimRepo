@@ -10,21 +10,18 @@ import { Panel } from './Panel.tsx'
 import { Processes } from './Processes.tsx'
 import { Magnifier, PromptLine, ReaderPanel } from './Reading.tsx'
 
-/** Act 2's layout: the scale and the button on the left, the board in the middle, the reader and console on the right. */
 export function WideLayout() {
   const { frameProps, frame, size, fullScreen, seat, setArea, view } = useTable()
   return (
     <>
-      {/* In full screen, the page behind the table goes dark. */}
       {fullScreen.on ? <div aria-hidden className="fixed inset-0 z-40 bg-[#030604]" /> : null}
       <div
         {...frameProps}
         ref={frame}
-        // Sized to the room it has, in the page or the whole screen; the classes never fight over position or size.
+        // useFit owns size and position; the classes must not set either.
         style={size}
         className={`p03-screen crt grid grid-cols-[17rem_minmax(0,1fr)_22rem] grid-rows-[minmax(0,1fr)_auto] gap-4 overflow-hidden rounded-lg border border-[#2f6b3d] p-4 font-terminal text-2xl ${fullScreen.on ? 'fixed z-50' : 'relative mx-auto'}`}
       >
-        {/* P03's faulty screen behind it all, and the glass over it: scanlines, a rolling band and dark corners. */}
         <FaultyScreen />
         <span aria-hidden className="crt-glass pointer-events-none absolute inset-0 z-30" />
         <aside className="relative z-10 flex min-h-0 flex-col gap-3 overflow-hidden">

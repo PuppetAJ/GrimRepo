@@ -1,4 +1,4 @@
-/** The nightly clean-up; Railway runs it on a schedule, and pnpm db:cleanup runs it by hand. */
+/** Railway runs this nightly; pnpm db:cleanup runs it by hand. */
 import { nightlyCleanup } from '../admin/cleanup.ts'
 import { pool } from '../config/db.ts'
 

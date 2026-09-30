@@ -1,4 +1,4 @@
-// The public pages: the README, the leaderboard, a player's record, and the 404. Needs a seeded database.
+// Needs a seeded database.
 import { BASE, freshPage, launch, reporter, visibleText } from './lib.mjs'
 
 const { browser, pageErrors, close } = await launch()
@@ -7,7 +7,7 @@ const { page } = await freshPage(browser)
 
 section('The README')
 {
-  // React reports a page that doesn't match its prerendered HTML as a console error, not a thrown one.
+  // React reports a hydration mismatch as a console error, not a thrown one.
   const hydration = []
   page.on('console', (message) => {
     if (message.type() === 'error' && /hydrat|#418|#423|#425/i.test(message.text())) hydration.push(message.text())
@@ -15,7 +15,7 @@ section('The README')
   await page.goto(BASE)
   await page.getByRole('heading', { name: 'Grim Repo', level: 1 }).waitFor()
   check('it has the title and the way to play', (await page.getByRole('link', { name: 'Quick battle' }).count()) === 1)
-  // A production build serves the home page already rendered; the dev server never does.
+  // Only a production build serves the home page prerendered.
   const served = await (await page.request.get(BASE)).text()
   if (!served.includes('/@vite/client')) {
     check('a production build serves the README already rendered', served.includes('Grim Repo</h1>'))
@@ -24,7 +24,7 @@ section('The README')
   }
   await page.waitForTimeout(500)
   check('React takes the page over without a mismatch', hydration.length === 0, hydration.join(' | '))
-  // Other suites add players, so the README is checked against the API rather than fixed names.
+  // Other suites add players, so check against the API rather than fixed names.
   const top = (await (await page.request.get(`${BASE}/api/leaderboard`)).json()).players.slice(0, 3)
   const maintainers = page.getByRole('heading', { name: 'Top maintainers' }).locator('..')
   await maintainers.getByRole('link', { name: top[0].username }).waitFor()
@@ -58,14 +58,13 @@ section('The leaderboard')
     ['JohanH', 'PuppetAJ', 'kwm0304', 'demo'].every((name) => texts.some((text) => text.includes(name))),
   )
   check('it never shows an email address', !(await visibleText(page)).includes('@'))
-  // A board of more than one page turns to the next, whose ranks carry on from the first.
   const lower = page.getByRole('button', { name: 'Lower' })
   if (await lower.isVisible()) {
     const rankOf = (text) => Number(text.replace(/\D/g, ''))
     const last = rankOf(await page.locator('tbody > tr > td:first-child').last().innerText())
     await lower.click()
     await page.waitForURL(/page=2/)
-    // The first page's takeover row leaves once the second page has arrived.
+    // The first page's takeover row leaves once the second page arrives.
     await page.getByText('0x01').waitFor({ state: 'detached' })
     const rank = rankOf(await page.locator('tbody > tr > td:first-child').first().innerText())
     check('the next page ranks on from the first, ties included', rank >= last, `${last} then ${rank}`)

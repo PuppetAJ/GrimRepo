@@ -24,7 +24,7 @@ const tabs = [
   { to: '/game', label: 'Play' },
 ]
 
-// The widest the page's content, and the bars' contents above and below it, grow: one edge for all of them.
+// One max width so the header, nav, page and footer line up.
 const PAGE = 'mx-auto w-full max-w-[100rem]'
 
 export function Layout() {
@@ -55,18 +55,16 @@ export function Layout() {
               Public, unfortunately
             </span>
           </div>
-          {/* While the session loads, an invisible button holds the header at its full height, so the page never drops. */}
+          {/* Holds the header's height while the session loads, so the page doesn't jump. */}
           {session.isPending ? (
             <Button variant="outline" aria-hidden tabIndex={-1} className="invisible">
               Sign in
             </Button>
           ) : (
             <>
-              {/* On a laptop, the buttons themselves. */}
               <div className="hidden gap-2 sm:flex">
                 {name ? (
                   <>
-                    {/* A guest's way to keep what they've played, always in reach. */}
                     {user?.isAnonymous ? (
                       <Button asChild>
                         <NavLink to="/signup">Sign up</NavLink>
@@ -96,7 +94,7 @@ export function Layout() {
                   </>
                 )}
               </div>
-              {/* On a phone, all of it behind one menu, so the header never wraps. */}
+              {/* Phones get one menu so the header never wraps. */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" aria-label={name ? 'Account menu' : 'Menu'} className="gap-2 sm:hidden">
@@ -132,11 +130,7 @@ export function Layout() {
         </div>
       </header>
 
-      <nav
-        aria-label="Sections"
-        // On the narrowest phones the tabs spread evenly across the width.
-        className="overflow-x-auto border-b px-(--gutter) text-sm max-[350px]:px-2"
-      >
+      <nav aria-label="Sections" className="overflow-x-auto border-b px-(--gutter) text-sm max-[350px]:px-2">
         <div className={`${PAGE} flex gap-2 max-[350px]:justify-between max-[350px]:gap-0`}>
           {tabs.map((tab) => (
             <NavLink
@@ -154,7 +148,7 @@ export function Layout() {
       </nav>
 
       <main className="flex-1 px-(--gutter) py-8">
-        {/* Capped and centred like the bars, so a browser zoomed far out keeps a readable page; the table fills it all. */}
+        {/* Capped so a browser zoomed far out stays readable; the game table is uncapped. */}
         <div className={playing ? '' : PAGE}>
           {/* Keyed by the path, so leaving a page that failed clears the failure. */}
           <LoadFailed key={pathname} fallback={<ReloadPage />}>
@@ -172,7 +166,6 @@ export function Layout() {
   )
 }
 
-/** A signed-in player's own pages and the way out, in whichever menu holds them. */
 function AccountItems({ name, onSignOut }: { name: string; onSignOut: () => void }) {
   const navigate = useNavigate()
   return (

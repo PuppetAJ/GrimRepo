@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react'
 
-/**
- * Full screen for the whole page rather than the canvas, so dialogs and toasts still show over the table. With
- * `fallback`, a browser with no full-screen API for pages (an iPhone's) gets the table covering the page instead.
- */
+/** Full-screens the page, not the canvas, so dialogs still show; `fallback` covers the page on iPhones. */
 export function useFullScreen({ fallback = false } = {}) {
   const [on, setOn] = useState(() => Boolean(document.fullscreenElement))
   const [covering, setCovering] = useState(false)
@@ -12,7 +9,6 @@ export function useFullScreen({ fallback = false } = {}) {
     document.addEventListener('fullscreenchange', sync)
     return () => {
       document.removeEventListener('fullscreenchange', sync)
-      // Leaving the table leaves full screen too.
       if (document.fullscreenElement) void document.exitFullscreen()
     }
   }, [])
@@ -23,6 +19,5 @@ export function useFullScreen({ fallback = false } = {}) {
       : document.fullscreenElement
         ? void document.exitFullscreen()
         : void document.documentElement.requestFullscreen().catch(() => {})
-  // Without the API or the fallback the button is left out.
   return { supported: native || fallback, on: on || covering, toggle }
 }

@@ -8,13 +8,11 @@ import { claimCursor, releaseCursor } from '../cursor.ts'
 import { BOARD_DEPTH, CARD, lanes, slot, TABLE_Y } from '../layout.ts'
 import { TINT } from '../palette.ts'
 
-/** Glows over the player's lanes that can take a click, and catches the click on empty ones. */
-// Just outside the slot, so it still shows around a card lifted to be sacrificed.
+// Just outside the slot, so it still shows around a card lifted for sacrifice.
 const OUTLINE_W = CARD.width * 1.24
 const OUTLINE_H = CARD.height * 1.16
 
-/** A dashed outline crawling round the slot the pointer is over, so the target is plain whatever sits in it. */
-function TargetOutline({ lane, colour }: { lane: number; colour: string }) {
+function TargetOutline({ lane, color }: { lane: number; color: string }) {
   const line = useRef<{ material: { dashOffset: number } }>(null)
   const [x, , z] = slot('board', lane)
   const [w, h] = [OUTLINE_W / 2, OUTLINE_H / 2]
@@ -32,7 +30,7 @@ function TargetOutline({ lane, colour }: { lane: number; colour: string }) {
         [x - w, 0, z - h],
       ]}
       position={[0, TABLE_Y + BOARD_DEPTH + 0.006, 0]}
-      color={colour}
+      color={color}
       lineWidth={4}
       dashed
       dashSize={0.07}
@@ -53,7 +51,7 @@ export function Lanes({
   legal: Action[]
   act: (action: Action) => void
   play: string
-  /** The lane the pointer is over, whether on the lane or on the card in it. */
+  /** The hovered lane, whether the pointer is on the lane or on the card in it. */
   aimed: number | null
   onAim: (lane: number | null) => void
 }) {
@@ -67,13 +65,13 @@ export function Lanes({
   return (
     <>
       {target && hovered !== null ? (
-        <TargetOutline lane={hovered} colour={target.type === 'place' ? TINT.glow : '#ff4a3d'} />
+        <TargetOutline lane={hovered} color={target.type === 'place' ? TINT.glow : '#ff4a3d'} />
       ) : null}
       {lanes.map((lane) => {
         const action = laneAction(legal, lane)
         const marked = view.summon?.marked.includes(lane) ?? false
         const [x, , z] = slot('board', lane)
-        const colour = action?.type === 'place' ? play : '#ff4a3d'
+        const color = action?.type === 'place' ? play : '#ff4a3d'
         return (
           <mesh
             key={lane}
@@ -89,7 +87,7 @@ export function Lanes({
           >
             <planeGeometry args={[CARD.width * 1.12, CARD.height * 1.08]} />
             <meshBasicMaterial
-              color={colour}
+              color={color}
               transparent
               opacity={marked ? 0.5 : action ? (hovered === lane ? 0.65 : 0.4) : 0}
               depthWrite={false}

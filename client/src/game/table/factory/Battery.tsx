@@ -10,17 +10,16 @@ import { mergeStill } from './mergeStill.ts'
 
 const RED = '#ff4a3d'
 
-/** Act 3's battery, hovering by the table: the scale fills its cells from the leader's end, the player's colour from their end and red from P03's. */
 export function Battery({ view }: { view: View }) {
   const { scene } = useGLTF('/models/battery.glb', false, false)
   const drone = useRef<THREE.Group>(null)
   const { cells, propellers } = useMemo(() => {
-    // The frame never moves, so its pieces are drawn as one; the cells light and the propellers turn, so they stay apart.
+    // The static frame merges into one draw; cells and propellers animate, so they stay separate.
     mergeStill(scene, /^(Cell-\d|Left-Propeller|Right-Propeller)$/)
     return {
       cells: [...Array(BATTERY_CELLS).keys()].map((i) => {
         const cell = scene.getObjectByName(`Cell-${i}`) as THREE.Mesh
-        // Each cell gets its own material, once, so it can light alone.
+        // Cloned once per cell so each can light alone.
         cell.userData['own'] ??= (cell.material as THREE.MeshStandardMaterial).clone()
         cell.material = cell.userData['own'] as THREE.MeshStandardMaterial
         return { material: cell.material as THREE.MeshStandardMaterial, glow: 0, since: 0, on: false }
@@ -32,7 +31,7 @@ export function Battery({ view }: { view: View }) {
   useFrame(({ clock }, delta) => {
     const t = clock.getElapsedTime()
     cells.forEach((cell, i) => {
-      // Counted from the leader's end: full cells burn, and the next glows as far as the scale has reached into it.
+      // Counted from the leader's end; the next cell glows as far as the scale reaches into it.
       const fill = THREE.MathUtils.clamp(Math.abs(lit) - (lit > 0 ? i : BATTERY_CELLS - 1 - i), 0, 1)
       const on = fill > 0
       if (on !== cell.on) {
@@ -40,13 +39,11 @@ export function Battery({ view }: { view: View }) {
         cell.since = t
       }
       if (on) cell.material.emissive.set(lit > 0 ? TINT.you : RED)
-      // A cell stutters as it comes on, like a tube catching.
       const catching = on && t - cell.since < 0.3 ? (Math.sin((t - cell.since) * 90) > 0 ? 1 : 0.15) : 1
       cell.glow = THREE.MathUtils.damp(cell.glow, fill, 10, delta)
       cell.material.emissiveIntensity = cell.glow * catching * 1.6
       cell.material.color.setScalar(0.3 + cell.glow * 0.4)
     })
-    // The propellers spin up with the lead, whoever holds it.
     for (const propeller of propellers) propeller.rotateZ(delta * (8 + Math.abs(lit) * 2))
     if (drone.current) {
       drone.current.position.y = Math.sin(t * 1.4) * 0.05

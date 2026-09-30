@@ -1,10 +1,9 @@
 export type CursorKind = 'arrow' | 'point' | 'draw' | 'boilerplate' | 'press' | 'mark' | 'full'
 
-/** The CSS for one of the table's cursors, green like P03's text, falling back to the browser's own. */
 export const cursorCss = (kind: CursorKind) =>
   `url(/cursors/${kind}.svg) 2 2, ${kind === 'arrow' ? 'default' : 'pointer'}`
 
-// The thing last pointed at owns the cursor; letting go only clears it if nothing has taken it since.
+// The last claimant wins; a release only resets the cursor if nobody claimed it since.
 let owner: object | null = null
 let current: CursorKind = 'arrow'
 const listeners = new Set<(kind: CursorKind) => void>()

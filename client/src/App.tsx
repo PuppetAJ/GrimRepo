@@ -6,7 +6,7 @@ import { Home } from './pages/Home.tsx'
 import { Leaderboard } from './pages/Leaderboard.tsx'
 import { NotFound } from './pages/NotFound.tsx'
 
-// The home page and the leaderboard come with the first load; every other page loads when it is opened.
+// Home and the leaderboard ship in the first load; every other page loads on demand.
 const Account = lazy(() => import('./pages/Account.tsx').then((page) => ({ default: page.Account })))
 const Cards = lazy(() => import('./pages/Cards.tsx').then((page) => ({ default: page.Cards })))
 const Game = lazy(() => import('./pages/Game.tsx').then((page) => ({ default: page.Game })))

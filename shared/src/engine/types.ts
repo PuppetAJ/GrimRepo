@@ -1,16 +1,16 @@
 import type { SigilId } from '../cards.ts'
 
-/** Bumped whenever a change would make an old game replay differently; games record the version they began under. */
+/** Bumped whenever a change would make an old game replay differently. */
 export const RULES_VERSION = 4
 
 export const LANES = 4
-/** The scale tips this far to win: each point of damage to a player moves it one step against them, as in Inscryption. */
+/** Net damage needed to win, or to lose. */
 export const TIP = 24
 export const HAND_LIMIT = 7
 /** A game still going at this turn is lost, which also bounds what the server stores. */
 export const TURN_LIMIT = 200
 
-/** A card in play or in hand; its numbers can change, so it carries its own copy of them. */
+/** Carries its own stats, since they change in play. */
 export type Unit = {
   uid: number
   card: string
@@ -26,17 +26,16 @@ export type GameState = {
   seed: number
   rng: number
   turn: number
-  /** Whether this turn's draw has happened; nothing else can be done before it. */
-  /** The turn's draw is settled: taken, or skipped because the turn began with a full hand. */
+  /** Also true when a full hand at turn start skipped the draw. */
   drawn: boolean
   status: 'playing' | 'won' | 'lost'
   nextUid: number
   debug: boolean
-  /** The damage the player has dealt less the damage taken; at TIP one way or the other, the game is over. */
+  /** Damage dealt minus damage taken; the game ends at TIP either way. */
   scale: number
   player: { deck: string[]; hand: Unit[]; board: Slot[] }
   opponent: { front: Slot[]; back: Slot[] }
-  /** A costly card picked from the hand, and the lanes marked to pay for it. */
+  /** The card being summoned and the lanes marked to pay for it. */
   summon: { uid: number; marked: number[] } | null
 }
 
@@ -51,7 +50,7 @@ export type Action =
 
 export type Side = 'player' | 'opponent'
 
-/** What happened, in order, for the table to play back. */
+/** In order, for the table to play back. */
 export type GameEvent =
   | { type: 'drew'; unit: Unit; from: 'deck' | 'boilerplate' }
   | { type: 'reshuffled'; cards: number }

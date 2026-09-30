@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { CARDS, TIP, type CardDef } from 'shared'
 
-// The deck the player draws from, then Boilerplate; Y2K is not spoken of.
+// Y2K is kept secret.
 export const DECK = Object.values(CARDS).filter((card) => card.id !== 'Y2K')
 export const PAGES: Record<string, string> = {
   '~': '/',

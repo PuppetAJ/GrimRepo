@@ -90,7 +90,7 @@ describe('accounts', () => {
   it('counts attempts per client address, not in one shared bucket', async () => {
     const player = newPlayer()
     await signUp(player)
-    // The last forwarded entry is the one the single trusted proxy added, so it is the client.
+    // With one trusted proxy, the last forwarded entry is the client.
     const from = (address: string) => ({ 'x-forwarded-for': address })
     const guess = (address: string) =>
       app.call('POST', '/api/auth/sign-in/email', {
@@ -211,7 +211,7 @@ describe('the demo account', () => {
   const demo = { name: 'Demo Player', username: 'demo', email: 'demo@grimrepo.test', password: 'demo-password' }
 
   it('cannot be renamed, deleted or given a new password by the visitor using it', async () => {
-    // Made the way the seed makes it: "demo" is reserved for anyone signing up from outside.
+    // Created as the seed does, since "demo" is reserved for HTTP sign-ups.
     await auth.api.signUpEmail({ body: demo })
     const { cookie } = await app.call('POST', '/api/auth/sign-in/username', {
       body: { username: demo.username, password: demo.password },

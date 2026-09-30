@@ -37,7 +37,7 @@ describe('P03', () => {
   })
 
   it('never queues behind a card that will not move while another lane is open', () => {
-    // Lane 0 is walled by a blocker facing an attacker too weak to kill it; lanes 1 to 3 are open.
+    // Lane 0's Firewall faces an attacker too weak to kill it, so that lane never opens.
     for (let seed = 1; seed <= 200; seed++) {
       const state = table({ board: ['HelloWorld'], front: ['Firewall'] })
       const { queued } = queuedBy(state, 3, 12, seed)
@@ -80,7 +80,7 @@ describe('P03', () => {
   })
 
   it('never lets dead code stop its queue from advancing, over whole games', () => {
-    // A wall can become dead code on P03's own turn, by killing what it guarded; it must be gone by the next advance.
+    // A wall becomes dead code on P03's own turn when it kills what it guarded.
     for (let seed = 1; seed <= 300; seed++) {
       let state = createGame({ seed })
       while (state.status === 'playing') {
