@@ -5,9 +5,8 @@ import { SIDE_BUTTON } from './Panel.tsx'
 export function SaveStatus({ className }: { className: string }) {
   const { game } = useTable()
   return (
-    <span className={className} aria-live="polite">
-      {game.saving ? 'saving…' : game.unsaved ? `${game.unsaved} unsaved` : 'saved'}
-    </span>
+    // Not live: a failed save is announced by its toast, and "saved" after every move would only be noise.
+    <span className={className}>{game.saving ? 'saving…' : game.unsaved ? `${game.unsaved} unsaved` : 'saved'}</span>
   )
 }
 

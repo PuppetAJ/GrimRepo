@@ -16,37 +16,35 @@ function LogItems() {
   ))
 }
 
+// A log is announced as it grows, and focusable so a keyboard can scroll it; `log` isn't allowed on a list itself.
+const LOG = { role: 'log', 'aria-label': "P03's console", tabIndex: 0 } as const
+
 export function ConsolePanel() {
   const { game } = useTable()
   const [box, onScroll] = useStuckToBottom(game.log.length)
   return (
-    <section
-      aria-label="P03's console"
-      className="flex min-h-16 flex-1 basis-0 flex-col rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-2 text-base"
-    >
-      <ol
-        ref={box}
-        onScroll={onScroll}
-        aria-live="polite"
-        className="flex min-h-0 flex-1 flex-col overflow-y-auto text-lg"
-      >
-        <LogItems />
-      </ol>
-    </section>
+    <div className="flex min-h-16 flex-1 basis-0 flex-col rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-2 text-base">
+      <div ref={box} onScroll={onScroll} {...LOG} className="flex min-h-0 flex-1 flex-col overflow-y-auto text-lg">
+        <ol className="mt-auto">
+          <LogItems />
+        </ol>
+      </div>
+    </div>
   )
 }
 
-/** `log` is the log's display classes; a short phone hides it to show only the prompt, not a clipped line. */
-export function LogBox({ className, log = 'block' }: { className: string; log?: string }) {
+/** `log` is the log's display classes; a short phone shows only the prompt, the log still read out. */
+export function LogBox({ className, log = '' }: { className: string; log?: string }) {
   const { game, promptText } = useTable()
   const [box, onScroll] = useStuckToBottom(`${game.log.length} ${promptText}`)
   return (
     <div
       ref={box}
       onScroll={onScroll}
+      {...LOG}
       className={`@container flex flex-col gap-1 overflow-y-auto rounded-md border-2 border-[#1f3a26] bg-[#050d07]/70 p-2 ${className}`}
     >
-      <ol aria-live="polite" className={`mt-auto text-base leading-tight text-p03-dim ${log}`}>
+      <ol className={`mt-auto text-base leading-tight text-p03-dim ${log}`}>
         <LogItems />
       </ol>
       <PromptLine />

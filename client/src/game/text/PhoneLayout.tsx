@@ -132,7 +132,7 @@ export function PhoneLayout() {
             <ScaleBar scale={view.scale} fluid className="gap-1 pr-1 text-base" />
           </div>
           <div className="relative z-10 shrink-0">
-            <LogBox className="h-[3.25rem] tall:h-[4.75rem]" log="hidden tall:block" />
+            <LogBox className="h-[3.25rem] tall:h-[4.75rem]" log="sr-only tall:not-sr-only" />
           </div>
           {board}
           <section ref={setHandSection} aria-label="Your hand" className="relative z-10 flex shrink-0">
