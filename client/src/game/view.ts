@@ -74,6 +74,8 @@ export function step(view: View, event: GameEvent): View {
       }
     case 'wiped':
       return { ...view, front: view.front.map(() => null), back: view.back.map(() => null) }
+    case 'phaseChanged':
+      return { ...view, front: view.front.map(() => null), back: view.back.map(() => null), scale: 0 }
     case 'damaged':
       return withUnit(view, event.uid, (unit) => ({ ...unit, health: event.health }))
     case 'struckBack':
