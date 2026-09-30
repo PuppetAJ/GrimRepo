@@ -5,8 +5,8 @@ import { useLayoutEffect, useMemo } from 'react'
 import { TIP } from 'shared'
 import * as THREE from 'three'
 import type { View } from '../../view.ts'
-import { TABLE_Y } from '../layout.ts'
-import { X } from './constants.ts'
+import { CENTER_X, TABLE_Y } from '../layout.ts'
+import {} from './constants.ts'
 
 /** Unused while the battery shows the lead. */
 export function Scale({ view }: { view: View }) {
@@ -28,7 +28,7 @@ export function Scale({ view }: { view: View }) {
     easing.damp(beam.rotation, 'y', lean * 0.45, 0.3, delta)
   })
   return (
-    <group position={[X - 4.7, TABLE_Y, -11.3]} rotation={[0, 0.2, 0]} scale={0.046}>
+    <group position={[CENTER_X - 4.7, TABLE_Y, -11.3]} rotation={[0, 0.2, 0]} scale={0.046}>
       <primitive object={scene} />
       <pointLight color="#9fdcff" position={[0, 40, 30]} intensity={0.02} distance={4} decay={2} />
     </group>

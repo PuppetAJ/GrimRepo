@@ -4,14 +4,14 @@ import { memo, Suspense, useMemo, useRef } from 'react'
 import * as THREE from 'three'
 import type { View } from '../view.ts'
 import { Battery } from './factory/Battery.tsx'
-import { DUST, lamp, STILL, X } from './factory/constants.ts'
+import { DUST, lamp, STILL } from './factory/constants.ts'
 import { Monitor } from './factory/Monitor.tsx'
 import { logLines, statusLines } from './factory/monitorLines.ts'
 import { DrumRack, GemModule, Lamp, Props } from './factory/Props.tsx'
 import { Room } from './factory/Room.tsx'
 import { GRIMY_TABLE, surfaces } from './factory/surfaces.ts'
 import { BOARD } from './factory/TechBoard.tsx'
-import { TABLE_Y, type Vec3 } from './layout.ts'
+import { CENTER_X, TABLE_Y, type Vec3 } from './layout.ts'
 import { MOOD } from './mood.ts'
 import { TINT } from './palette.ts'
 import type { Screen } from './reading.ts'
@@ -46,22 +46,22 @@ export function Factory({
       <hemisphereLight color={TINT.hemisphere} groundColor="#000000" intensity={MOOD.hemisphere} />
       <pointLight
         color={lamp(TINT.cool, MOOD.lampTint)}
-        position={[X + 3.3, TABLE_Y + 2.2, -8.6]}
+        position={[CENTER_X + 3.3, TABLE_Y + 2.2, -8.6]}
         intensity={MOOD.deckLight}
         distance={7}
         decay={1.8}
       />
       <pointLight
         color={lamp(TINT.fill, MOOD.lampTint)}
-        position={[X, TABLE_Y + 1.6, -5.2]}
+        position={[CENTER_X, TABLE_Y + 1.6, -5.2]}
         intensity={MOOD.handLight}
         distance={6}
         decay={2}
       />
       <spotLight
         color={lamp(TINT.spot, MOOD.lampTint)}
-        position={[X, 13, -8.2]}
-        target-position={[X, TABLE_Y, -10.2]}
+        position={[CENTER_X, 13, -8.2]}
+        target-position={[CENTER_X, TABLE_Y, -10.2]}
         angle={0.5}
         penumbra={0.6}
         intensity={MOOD.spot}
@@ -78,8 +78,8 @@ export function Factory({
   )
 }
 
-const LOG_AT: Vec3 = [X - 4.3, 9.5, -14.2]
-const STATUS_AT: Vec3 = [X + 4.3, 9.5, -14.2]
+const LOG_AT: Vec3 = [CENTER_X - 4.3, 9.5, -14.2]
+const STATUS_AT: Vec3 = [CENTER_X + 4.3, 9.5, -14.2]
 
 // Memoized so a move doesn't re-render the static room.
 const Fixtures = memo(function Fixtures() {
@@ -102,7 +102,7 @@ const Fixtures = memo(function Fixtures() {
         ref={dust}
         count={MOOD.dustCount}
         scale={[14, 7, 12]}
-        position={[X, 8.5, -11]}
+        position={[CENTER_X, 8.5, -11]}
         size={MOOD.dustSize}
         speed={STILL ? 0 : MOOD.dustSpeed}
         color={DUST}

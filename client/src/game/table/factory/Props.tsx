@@ -2,10 +2,10 @@ import { useGLTF } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import { useLayoutEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
-import { TABLE_Y } from '../layout.ts'
+import { CENTER_X, TABLE_Y } from '../layout.ts'
 import { MOOD } from '../mood.ts'
 import { TINT } from '../palette.ts'
-import { GLOW, lamp, X } from './constants.ts'
+import { GLOW, lamp } from './constants.ts'
 
 export function GemModule() {
   const { scene } = useGLTF('/models/gems.glb', false, false)
@@ -45,7 +45,7 @@ export function Lamp() {
     tube.emissive.set(lamp(TINT.lamp, MOOD.lampTint)).multiplyScalar(GLOW.g * 0.6 * flicker)
   })
   return (
-    <group position={[X - 6.4, TABLE_Y, -10.6]}>
+    <group position={[CENTER_X - 6.4, TABLE_Y, -10.6]}>
       <mesh position={[0, 1.6, 0]}>
         <cylinderGeometry args={[0.09, 0.12, 3.2, 12]} />
         <meshStandardMaterial color="#20262c" metalness={0.85} roughness={0.4} />
@@ -75,7 +75,7 @@ export function DrumRack() {
   const drums = useRef<THREE.Group>(null)
   useFrame((_, delta) => drums.current?.children.forEach((drum) => (drum.rotation.x += delta * 0.4)))
   return (
-    <group position={[X + 6.2, 12.4, -16.5]} rotation={[0, -0.25, 0]}>
+    <group position={[CENTER_X + 6.2, 12.4, -16.5]} rotation={[0, -0.25, 0]}>
       <mesh position={[0, 0.7, 0]}>
         <boxGeometry args={[5.2, 0.16, 0.9]} />
         <meshStandardMaterial color="#1c2126" metalness={0.8} roughness={0.5} />
@@ -104,7 +104,7 @@ export function Props() {
   const pliers = useGLTF('/models/pliers.glb', false, false).scene
   return (
     <>
-      <group position={[X + 7.7, 8.5, -14.4]} rotation={[0, -0.3, 0]}>
+      <group position={[CENTER_X + 7.7, 8.5, -14.4]} rotation={[0, -0.3, 0]}>
         <mesh>
           <boxGeometry args={[2.2, 2.6, 0.12]} />
           <meshStandardMaterial color="#171c21" metalness={0.8} roughness={0.5} />
@@ -120,9 +120,9 @@ export function Props() {
         <pointLight color={TINT.light} position={[0, 0.4, 1.2]} intensity={MOOD.rackLight} distance={4} decay={2} />
       </group>
       {[
-        [X - 6.8, 0.5, -7.5],
-        [X + 7.4, 0.5, -8.8],
-        [X - 7.6, 1.2, -13],
+        [CENTER_X - 6.8, 0.5, -7.5],
+        [CENTER_X + 7.4, 0.5, -8.8],
+        [CENTER_X - 7.6, 1.2, -13],
       ].map(([x, y, z], i) => (
         <mesh key={i} position={[x as number, y as number, z as number]} rotation={[Math.PI / 2, 0, i]}>
           <torusGeometry args={[0.7, 0.14, 8, 24]} />

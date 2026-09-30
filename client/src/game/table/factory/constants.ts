@@ -2,7 +2,6 @@ import * as THREE from 'three'
 import { prefersReducedMotion } from '../../../lib/motion.ts'
 import { TINT } from '../palette.ts'
 
-export const X = -1.975
 export const LIT = TINT.glow
 export const GLOW = new THREE.Color(...TINT.glowHdr)
 // Pushed past 1 so screens clear the bloom threshold that lamps can't.

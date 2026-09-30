@@ -10,7 +10,7 @@ import { MOOD } from './mood.ts'
 import { Disk, facePlanes, type DiskHandle } from './Disk.tsx'
 import { backTexture, faceContent, faceLights, faceTexture, type loadCardAssets } from './faces.ts'
 import { DECK, handPlace, slot, type Row, type Vec3 } from './layout.ts'
-import { LEAVE_MS, type Lunge } from './playback.ts'
+import { LEAVE_MS, LUNGE_MS, type Lunge } from './playback.ts'
 import { holding, startHold } from './reading.ts'
 
 export { Popup } from './Popup.tsx'
@@ -29,8 +29,6 @@ const rotation = new THREE.Quaternion()
 const roll = new THREE.Quaternion()
 const scale = new THREE.Vector3()
 const Z = new THREE.Vector3(0, 0, 1)
-
-const LUNGE_MS = 240
 
 export function Card({
   unit,
