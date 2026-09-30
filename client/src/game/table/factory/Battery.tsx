@@ -3,9 +3,8 @@ import { useFrame } from '@react-three/fiber'
 import { useMemo, useRef } from 'react'
 import * as THREE from 'three'
 import type { View } from '../../view.ts'
-import { BATTERY_CELLS, leadCells, TABLE_Y } from '../layout.ts'
+import { BATTERY_CELLS, CENTER_X, leadCells, TABLE_Y } from '../layout.ts'
 import { TINT } from '../palette.ts'
-import { X } from './constants.ts'
 import { mergeStill } from './mergeStill.ts'
 
 const RED = '#ff4a3d'
@@ -51,7 +50,7 @@ export function Battery({ view }: { view: View }) {
     }
   })
   return (
-    <group position={[X - 4.8, TABLE_Y + 0.9, -11.3]} rotation={[0, 0.55, 0]}>
+    <group position={[CENTER_X - 4.8, TABLE_Y + 0.9, -11.3]} rotation={[0, 0.55, 0]}>
       <group ref={drone} scale={0.7}>
         <primitive object={scene} />
       </group>

@@ -1,4 +1,4 @@
-import FaultyScreen from '../../components/p03/FaultyScreen.tsx'
+import FaultyScreenShader from '../../components/p03/FaultyScreenShader.tsx'
 import { SeatNote } from '../controls.tsx'
 import { Balance } from './Balance.tsx'
 import { Board } from './Board.tsx'
@@ -22,7 +22,7 @@ export function WideLayout() {
         style={size}
         className={`p03-screen crt grid grid-cols-[17rem_minmax(0,1fr)_22rem] grid-rows-[minmax(0,1fr)_auto] gap-4 overflow-hidden rounded-lg border border-[#2f6b3d] p-4 font-terminal text-2xl ${fullScreen.on ? 'fixed z-50' : 'relative mx-auto'}`}
       >
-        <FaultyScreen />
+        <FaultyScreenShader />
         <span aria-hidden className="crt-glass pointer-events-none absolute inset-0 z-30" />
         <aside className="relative z-10 flex min-h-0 flex-col gap-3 overflow-hidden">
           <Panel className="flex items-center justify-between text-2xl">

@@ -1,8 +1,9 @@
-import { card, type Unit } from 'shared'
+import type { Unit } from 'shared'
 import { CanvasTexture, SRGBColorSpace, type Texture } from 'three'
 import { loadArt } from '../art.ts'
 import { loadPlastic } from './diskMaterials.ts'
 import { drawBack, drawFace, H, W, type Layer } from './faceDrawing.ts'
+import { kindOf } from './kind.ts'
 
 // A token proving the font, art and plastic have loaded.
 type Assets = { font: 'VT323' }
@@ -41,7 +42,7 @@ function drawn(unit: Unit, loaded: Assets, layer: Layer): Texture {
   // The base depends only on rarity; the other layers on everything shown.
   const key =
     layer === 'base'
-      ? `base:${card(unit.card).tier === 'S' ? 'rare' : 'common'}`
+      ? `base:${kindOf(unit)}`
       : `${layer}:${unit.card}:${unit.attack}:${unit.health}:${unit.maxHealth}:${unit.sigils.join(',')}`
   let found = faces.get(key)
   if (!found) {

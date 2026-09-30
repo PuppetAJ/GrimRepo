@@ -3,9 +3,9 @@ import { CARDS, type Unit } from 'shared'
 import * as THREE from 'three'
 import { bakedDisk, diskMaterials, facePlanes } from './Disk.tsx'
 import { backTexture, faceTexture, type loadCardAssets } from './faces.ts'
+import type { Kind } from './kind.ts'
 
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
-export type Kind = 'common' | 'rare'
 
 // Exceeds what a hand, the board and P03's rows can hold.
 const MOST = 32
@@ -74,7 +74,9 @@ export function CardBatch({ assets, children }: { assets: Assets; children: Reac
     () => ({
       take: (kind) => {
         let slot = 0
-        while (used.current[kind].has(slot) && slot < MOST - 1) slot++
+        while (used.current[kind].has(slot)) slot++
+        // Two cards sharing a slot would draw one in the wrong place, so running out fails loudly.
+        if (slot >= MOST) throw new Error(`The table batches at most ${MOST} ${kind} cards at once`)
         used.current[kind].add(slot)
         fit(kind)
         return slot

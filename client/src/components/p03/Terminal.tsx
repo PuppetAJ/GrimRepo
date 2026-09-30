@@ -1,9 +1,10 @@
 import { Suspense, useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router'
+import { prefersReducedMotion } from '../../lib/motion.ts'
 import type { Commands } from './commands.tsx'
 import { Glass } from './Glass.tsx'
 import { pathOf, Prompt } from './Prompt.tsx'
-import { FaultyScreen } from './faultyScreen.ts'
+import { FaultyScreen } from './FaultyScreen.ts'
 
 // Loaded on demand so the terminal renders without waiting for the commands.
 const loadCommands = () => import('./commands.tsx')
@@ -17,8 +18,6 @@ type Entry =
 const TYPE_MS = 28
 const KEEP = 200
 let nextId = 0
-
-const still = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 export default function Terminal({ lines, user }: { lines: readonly string[]; user: string | undefined }) {
   const key = lines.join('\n')
@@ -46,7 +45,7 @@ export default function Terminal({ lines, user }: { lines: readonly string[]; us
       { id, kind: 'motd', path: pathOf(pathname), lines: key.split('\n') },
       { id: nextId++, kind: 'hint' },
     ])
-    if (!still()) setTyping({ id, count: 0, total: key.length })
+    if (!prefersReducedMotion()) setTyping({ id, count: 0, total: key.length })
     // Only new lines replay; navigating away unmounts the terminal anyway.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key])

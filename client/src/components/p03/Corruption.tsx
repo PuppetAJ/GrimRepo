@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { prefersReducedMotion } from '../../lib/motion.ts'
 
 type Corner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
 
@@ -127,7 +128,7 @@ export function Corruption({
     void document.fonts.load(`${CELL_H + 2}px VT323`).finally(() => {
       if (cancelled) return
       context.font = `${CELL_H + 2}px VT323, monospace`
-      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return draw(end)
+      if (prefersReducedMotion()) return draw(end)
       const start = performance.now()
       let last = -FRAME_MS
       const loop = (now: number) => {

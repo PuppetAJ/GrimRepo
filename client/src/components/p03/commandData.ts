@@ -1,8 +1,6 @@
 import type { ReactNode } from 'react'
 import { CARDS, TIP, type CardDef } from 'shared'
 
-// Y2K is kept secret.
-export const DECK = Object.values(CARDS).filter((card) => card.id !== 'Y2K')
 export const PAGES: Record<string, string> = {
   '~': '/',
   '/': '/',

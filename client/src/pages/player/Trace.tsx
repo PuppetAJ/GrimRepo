@@ -4,7 +4,7 @@ import { Corruption } from '../../components/p03/Corruption.tsx'
 import { FrameDamage } from '../../components/p03/FrameDamage.tsx'
 import { Glass } from '../../components/p03/Glass.tsx'
 import { number } from '../../lib/format.ts'
-import { FaultyScreen } from '../../components/p03/faultyScreen.ts'
+import { FaultyScreen } from '../../components/p03/FaultyScreen.ts'
 import { hashOf, type Game } from './games.ts'
 
 export function Trace({ game }: { game: Game }) {

@@ -2,7 +2,8 @@ import type { ReactNode } from 'react'
 import { SIGILS } from 'shared'
 import { api } from '../../lib/api.ts'
 import { number } from '../../lib/format.ts'
-import { DECK, find, HELP, PAGES, STEPS } from './commandData.ts'
+import { DECK } from '../../game/deck.ts'
+import { find, HELP, PAGES, STEPS } from './commandData.ts'
 import { CardUpClose, Cost, Dim, Lesson } from './CommandOutput.tsx'
 
 export type Context = {
