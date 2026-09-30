@@ -4,7 +4,7 @@ import { prefersReducedMotion } from '../../lib/motion.ts'
 import type { Commands } from './commands.tsx'
 import { Glass } from './Glass.tsx'
 import { pathOf, Prompt } from './Prompt.tsx'
-import { FaultyScreen } from './faultyScreen.ts'
+import { FaultyScreen } from './FaultyScreen.ts'
 
 // Loaded on demand so the terminal renders without waiting for the commands.
 const loadCommands = () => import('./commands.tsx')

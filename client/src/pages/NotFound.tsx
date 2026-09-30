@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
 import { Link } from 'react-router'
 import { Glass } from '../components/p03/Glass.tsx'
-import { FaultyScreen } from '../components/p03/faultyScreen.ts'
+import { FaultyScreen } from '../components/p03/FaultyScreen.ts'
 
 export function NotFound() {
   return (

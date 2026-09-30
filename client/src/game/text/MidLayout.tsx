@@ -1,4 +1,4 @@
-import FaultyScreen from '../../components/p03/FaultyScreen.tsx'
+import FaultyScreenShader from '../../components/p03/FaultyScreenShader.tsx'
 import { ScaleBar, SeatNote } from '../controls.tsx'
 import { Board } from './Board.tsx'
 import { CancelButton, Controls, ExecuteButton, SaveStatus } from './Buttons.tsx'
@@ -14,7 +14,7 @@ export function MidLayout() {
       {...frameProps}
       className={`p03-screen crt mx-auto flex w-full max-w-[1792px] flex-col gap-2 overflow-hidden border border-[#2f6b3d] p-2 font-terminal text-xl sm:gap-3 sm:p-3 ${fullScreen.on ? 'fixed inset-0 z-50 overflow-y-auto' : 'relative rounded-lg'}`}
     >
-      <FaultyScreen />
+      <FaultyScreenShader />
       <span aria-hidden className="crt-glass pointer-events-none absolute inset-0 z-30" />
       <div className="relative z-10 flex items-stretch gap-2">
         <div className="flex min-w-0 flex-1 flex-col justify-center gap-1 rounded-md border-2 border-[#2f6b3d] bg-[#07130b] px-2 py-1">
