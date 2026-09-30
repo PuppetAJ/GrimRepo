@@ -1,6 +1,6 @@
 import { Box, Flag, LogOut, Maximize, Minimize, ScrollText, SquareTerminal } from 'lucide-react'
 import { Link } from 'react-router'
-import FaultyScreen from '../../components/p03/FaultyScreen.tsx'
+import FaultyScreenShader from '../../components/p03/FaultyScreenShader.tsx'
 import { Forfeit, ScaleBar, SeatNote } from '../controls.tsx'
 import { Balance } from './Balance.tsx'
 import { Board } from './Board.tsx'
@@ -96,7 +96,7 @@ export function PhoneLayout() {
       className={`p03-screen crt overflow-hidden font-terminal text-xl ${covering ? 'fixed inset-0 z-50' : `relative border-y border-[#2f6b3d] ${flowing ? '' : 'h-svh'}`}`}
     >
       {/* Outside the pieces, so the screen and glass stay put while the pieces scroll. */}
-      <FaultyScreen />
+      <FaultyScreenShader />
       <span aria-hidden className="crt-glass pointer-events-none absolute inset-0 z-30" />
       {sideways ? (
         <div

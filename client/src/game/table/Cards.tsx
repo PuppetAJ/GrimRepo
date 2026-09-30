@@ -2,15 +2,16 @@ import { useFrame, type ThreeEvent } from '@react-three/fiber'
 import { Select } from '@react-three/postprocessing'
 import { easing } from 'maath'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { card, type Unit } from 'shared'
+import type { Unit } from 'shared'
 import * as THREE from 'three'
 import { useBatch } from './Batch.tsx'
 import { claimCursor, releaseCursor, type CursorKind } from './cursor.ts'
+import { kindOf } from './kind.ts'
 import { MOOD } from './mood.ts'
 import { Disk, facePlanes, type DiskHandle } from './Disk.tsx'
 import { backTexture, faceContent, faceLights, faceTexture, type loadCardAssets } from './faces.ts'
 import { DECK, handPlace, slot, type Row, type Vec3 } from './layout.ts'
-import { LEAVE_MS, type Lunge } from './playback.ts'
+import { LEAVE_MS, LUNGE_MS, type Lunge } from './playback.ts'
 import { holding, startHold } from './reading.ts'
 
 export { Popup } from './Popup.tsx'
@@ -29,8 +30,6 @@ const rotation = new THREE.Quaternion()
 const roll = new THREE.Quaternion()
 const scale = new THREE.Vector3()
 const Z = new THREE.Vector3(0, 0, 1)
-
-const LUNGE_MS = 240
 
 export function Card({
   unit,
@@ -115,7 +114,7 @@ export function Card({
   const open = useRef(fromDeck ? 0 : 1)
   // Once open and at rest, the body joins the shared batch and only the face stays the card's own.
   const batch = useBatch()
-  const kind = card(unit.card).tier === 'S' ? 'rare' : 'common'
+  const kind = kindOf(unit)
   const [settled, setSettled] = useState(!fromDeck)
   const batched = Boolean(batch) && settled && leavingAt === undefined
   const seat = useRef(-1)

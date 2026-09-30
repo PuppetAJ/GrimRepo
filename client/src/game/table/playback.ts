@@ -1,6 +1,6 @@
 import type { GameEvent, GameState, Unit } from 'shared'
 import { locate, project, step, type View } from '../view.ts'
-import { DECK, P03_HAND, PILE, slot, TABLE_Y, type Row, type Vec3 } from './layout.ts'
+import { CENTER_X, DECK, P03_HAND, PILE, slot, TABLE_Y, type Row, type Vec3 } from './layout.ts'
 
 /** Where a popup lands on the text table, which has no 3D positions. */
 export type Spot = { row: Row; lane: number } | { face: 'player' | 'opponent' }
@@ -56,10 +56,11 @@ export const holdsTheTable = (events: GameEvent[]): boolean =>
 
 // Where popups rise from when a hit lands on a player rather than a card.
 const FACE: Record<'player' | 'opponent', Vec3> = {
-  player: [-1.975, TABLE_Y + 0.35, -8.0],
-  opponent: [-1.975, TABLE_Y + 0.9, -12.3],
+  player: [CENTER_X, TABLE_Y + 0.35, -8.0],
+  opponent: [CENTER_X, TABLE_Y + 0.9, -12.3],
 }
 
+export const LUNGE_MS = 240
 export const LEAVE_MS = 550
 export const POPUP_MS = 1000
 

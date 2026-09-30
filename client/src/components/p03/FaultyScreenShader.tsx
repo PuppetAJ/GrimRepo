@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { prefersReducedMotion } from '../../lib/motion.ts'
 
 const VERTEX = `attribute vec2 corner;
 void main() { gl_Position = vec4(corner, 0.0, 1.0); }`
@@ -79,7 +80,7 @@ export default function FaultyScreen({ bright = 0.2, className = '' }: { bright?
       gl.uniform1f(time, seconds)
       gl.drawArrays(gl.TRIANGLES, 0, 3)
     }
-    const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const still = prefersReducedMotion()
     const start = performance.now() - 12_000
     const resized = new ResizeObserver(() => {
       fit()

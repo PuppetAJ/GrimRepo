@@ -6,6 +6,7 @@ import * as THREE from 'three'
 import { Disk, type DiskHandle } from './Disk.tsx'
 import { backTexture, faceContent, faceLights, faceTexture, loadCardAssets } from './faces.ts'
 import { FactoryEffects } from './Factory.tsx'
+import { kindOf } from './kind.ts'
 
 function Lights() {
   return (
@@ -64,7 +65,7 @@ function Card({ unit, open, turn }: { unit: Unit; open: boolean; turn: boolean }
       <Disk
         ref={disk}
         open={open ? 1 : 0}
-        kind={card(unit.card).tier === 'S' ? 'rare' : 'common'}
+        kind={kindOf(unit)}
         front={materials.front}
         content={materials.content}
         back={materials.back}

@@ -12,7 +12,7 @@ import { api, type Finished, type LeaderboardRow } from '../lib/api.ts'
 import { authClient } from '../lib/auth.ts'
 import { initials, number } from '../lib/format.ts'
 import { useAsync } from '../lib/useAsync.ts'
-import { FaultyScreen } from '../components/p03/faultyScreen.ts'
+import { FaultyScreen } from '../components/p03/FaultyScreen.ts'
 
 export function Leaderboard() {
   const [search, setSearch] = useSearchParams()

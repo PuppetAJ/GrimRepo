@@ -2,13 +2,12 @@ import type { CSSProperties, ReactNode } from 'react'
 import type { Slot } from 'shared'
 import { describe, GameOver, laneAction } from '../controls.tsx'
 import { PixelCard } from '../CardReader.tsx'
-import type { Playback } from '../table/playback.ts'
+import { LUNGE_MS, type Playback } from '../table/playback.ts'
 import { useTable } from './context.ts'
 import { Panel } from './Panel.tsx'
 import type { BoardRow } from './useTextTable.ts'
 
 // Matches the 3D table's lunge.
-const LUNGE_MS = 240
 
 function Occupant({
   row,

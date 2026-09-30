@@ -24,7 +24,7 @@ export const RECESS = {
 // Fractions of the face's height.
 export const SCREEN_DIVIDER = 0.65
 export const SIGIL_BAND = [0.67, 0.84] as const
-const CENTER_X = -1.975
+export const CENTER_X = -1.975
 export const LANE_GAP = 0.86
 const LANE_X = [...Array(LANES).keys()].map((lane) => CENTER_X + (lane - (LANES - 1) / 2) * LANE_GAP)
 export const ROW_Z = { board: -8.72, front: -10.3, back: -11.74 }
@@ -75,8 +75,8 @@ export type CameraView = 'table' | 'board'
 
 export const CAMERA: Record<CameraView, { position: Vec3; target: Vec3 }> = {
   // Solved so the player's row clears the hand and P03's screen stays in frame at 16:9 and a 60° fov.
-  table: { position: [-1.975, 8.7, -4.4], target: [-1.975, 7.4, -10.6] },
-  board: { position: [-1.975, 11.4, -6.9], target: [-1.975, TABLE_Y, -9.05] },
+  table: { position: [CENTER_X, 8.7, -4.4], target: [CENTER_X, 7.4, -10.6] },
+  board: { position: [CENTER_X, 11.4, -6.9], target: [CENTER_X, TABLE_Y, -9.05] },
 }
 
 export const BATTERY_CELLS = 6

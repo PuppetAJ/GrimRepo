@@ -1,31 +1,19 @@
 import { Pause, Play, X } from 'lucide-react'
-import { Component, lazy, Suspense, useState, type ReactNode } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import type { CardDef } from 'shared'
 import { Button } from '@/components/ui/button.tsx'
+import { LoadFailed } from '../../components/LoadFailed.tsx'
 import { Cost, Facts, Screen } from './CardFacts.tsx'
 import { unitOf } from './deck.ts'
 
 // three.js loads only when someone opens a card in 3D.
 const CardViewer = lazy(() => import('../../game/table/CardViewer.tsx'))
 
-/** Catches browsers that can't draw WebGL. */
-class DiskFailed extends Component<{ children: ReactNode }, { failed: boolean }> {
-  state = { failed: false }
-  static getDerivedStateFromError() {
-    return { failed: true }
-  }
-  render() {
-    if (!this.state.failed) return this.props.children
-    return (
-      <p
-        role="alert"
-        className="absolute inset-0 grid place-items-center p-6 text-center font-terminal text-xl text-p03"
-      >
-        P03&gt; this browser can't draw the disk. The cards view shows every card.
-      </p>
-    )
-  }
-}
+const diskFailed = (
+  <p role="alert" className="absolute inset-0 grid place-items-center p-6 text-center font-terminal text-xl text-p03">
+    P03&gt; this browser can't draw the disk. The cards view shows every card.
+  </p>
+)
 
 export function Viewer({
   cards,
@@ -75,9 +63,9 @@ export function Viewer({
               </p>
             }
           >
-            <DiskFailed>
+            <LoadFailed fallback={diskFailed}>
               <CardViewer unit={unitOf(chosen)} open={open} turn={turn} />
-            </DiskFailed>
+            </LoadFailed>
           </Suspense>
           {flat ? (
             <div className="absolute top-3 right-3 w-20 sm:w-32">

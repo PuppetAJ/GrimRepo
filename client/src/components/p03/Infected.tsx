@@ -1,4 +1,14 @@
-import { lazy, Suspense, useCallback, useEffect, useState, useSyncExternalStore, type ComponentType } from 'react'
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useState,
+  useSyncExternalStore,
+  type ComponentProps,
+  type ComponentType,
+} from 'react'
+import { prefersReducedMotion } from '../../lib/motion.ts'
 import { Corruption } from './Corruption.tsx'
 import { FrameDamage } from './FrameDamage.tsx'
 
@@ -22,7 +32,7 @@ const AFTER = '![P03 was here](/dev/null)'.padEnd(BEFORE.length)
 const NOISE = '#$%&*+=/<>?{}[]█▓▒'
 
 function firstPhase(): Phase {
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return 'broken'
+  if (prefersReducedMotion()) return 'broken'
   try {
     // Plays once per session.
     return sessionStorage.getItem(SEEN_KEY) ? 'broken' : 'clean'
@@ -48,6 +58,16 @@ const taken = () => true
 const notYet = () => false
 
 /** The README screenshot that P03 corrupts into a terminal. */
+const SPILLS: Omit<ComponentProps<typeof Corruption>, 'dense'>[] = [
+  { cols: 26, rows: 3, corner: 'top-right', seed: 53, className: 'top-px right-px z-30 max-sm:hidden' },
+  { cols: 12, rows: 3, corner: 'top-right', seed: 53, className: 'top-px right-px z-30 sm:hidden' },
+  { fast: true, cols: 18, rows: 4, corner: 'bottom-right', seed: 29, className: 'right-0 bottom-full max-sm:hidden' },
+  { fast: true, cols: 16, rows: 3, corner: 'top-left', seed: 71, className: 'top-full left-0 max-sm:hidden' },
+  { fast: true, cols: 12, rows: 3, corner: 'top-right', seed: 89, className: 'top-full right-0 max-sm:hidden' },
+  { fast: true, cols: 4, rows: 12, corner: 'bottom-right', seed: 97, className: 'right-full bottom-0 max-sm:hidden' },
+  { fast: true, cols: 4, rows: 10, corner: 'top-left', seed: 61, className: 'top-0 left-full max-sm:hidden' },
+]
+
 export function Infected({ lines, user }: { lines: readonly string[] | null; user: string | undefined }) {
   // Stays clean until hydrated, so it matches the prerendered HTML before reading matchMedia or sessionStorage.
   const hydrated = useSyncExternalStore(unchanging, taken, notYet)
@@ -114,67 +134,9 @@ export function Infected({ lines, user }: { lines: readonly string[] | null; use
             </div>
             <FrameDamage frame="terminal" />
             {/* Phones get only the title bar's corner, where the corruption covers no text. */}
-            <Corruption
-              dense
-              cols={26}
-              rows={3}
-              corner="top-right"
-              seed={53}
-              className="top-px right-px z-30 max-sm:hidden"
-            />
-            <Corruption
-              dense
-              cols={12}
-              rows={3}
-              corner="top-right"
-              seed={53}
-              className="top-px right-px z-30 sm:hidden"
-            />
-            <Corruption
-              dense
-              fast
-              cols={18}
-              rows={4}
-              corner="bottom-right"
-              seed={29}
-              className="right-0 bottom-full max-sm:hidden"
-            />
-            <Corruption
-              dense
-              fast
-              cols={16}
-              rows={3}
-              corner="top-left"
-              seed={71}
-              className="top-full left-0 max-sm:hidden"
-            />
-            <Corruption
-              dense
-              fast
-              cols={12}
-              rows={3}
-              corner="top-right"
-              seed={89}
-              className="top-full right-0 max-sm:hidden"
-            />
-            <Corruption
-              dense
-              fast
-              cols={4}
-              rows={12}
-              corner="bottom-right"
-              seed={97}
-              className="right-full bottom-0 max-sm:hidden"
-            />
-            <Corruption
-              fast
-              dense
-              cols={4}
-              rows={10}
-              corner="top-left"
-              seed={61}
-              className="top-0 left-full max-sm:hidden"
-            />
+            {SPILLS.map((spill, i) => (
+              <Corruption key={i} dense {...spill} />
+            ))}
           </>
         ) : (
           <div className="relative h-full overflow-hidden rounded-md border">

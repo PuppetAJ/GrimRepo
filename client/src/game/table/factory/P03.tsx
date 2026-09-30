@@ -6,7 +6,8 @@ import * as THREE from 'three'
 import type { View } from '../../view.ts'
 import { MOOD } from '../mood.ts'
 import { TINT } from '../palette.ts'
-import { LIT, X } from './constants.ts'
+import { CENTER_X } from '../layout.ts'
+import { LIT } from './constants.ts'
 
 // Smug reuses the happy face texture.
 type Mood = 'smug' | 'happy' | 'impatient' | 'choking' | 'dying' | 'whiteflag'
@@ -111,7 +112,7 @@ function P03({ mood }: { mood: Mood }) {
     clawLeft.rotation.x = rest(clawLeft).rotation.x + snap
     clawRight.rotation.x = rest(clawRight).rotation.x - snap
   })
-  return <primitive object={scene} position={[X, 9.06, -16]} rotation={[0, -Math.PI / 2, 0]} />
+  return <primitive object={scene} position={[CENTER_X, 9.06, -16]} rotation={[0, -Math.PI / 2, 0]} />
 }
 
 export function FactoryP03({ view, busy, outcome }: { view: View; busy: boolean; outcome?: 'win' | 'loss' }) {
@@ -119,7 +120,13 @@ export function FactoryP03({ view, busy, outcome }: { view: View; busy: boolean;
   return (
     <>
       <P03 mood={mood} />
-      <pointLight color={TINT.light} position={[X, 10.4, -13.4]} intensity={MOOD.p03Light} distance={10} decay={1.6} />
+      <pointLight
+        color={TINT.light}
+        position={[CENTER_X, 10.4, -13.4]}
+        intensity={MOOD.p03Light}
+        distance={10}
+        decay={1.6}
+      />
     </>
   )
 }
