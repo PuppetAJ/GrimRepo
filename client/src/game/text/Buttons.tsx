@@ -19,7 +19,7 @@ export function ExecuteButton() {
       disabled={!canPress}
       onClick={() => act({ type: 'ringBell' })}
       aria-keyshortcuts="E"
-      aria-label="Press the button"
+      aria-label="Execute"
       className={`flex items-center justify-center gap-1 rounded-md border-2 border-[#2f6b3d] bg-[#07130b] text-p03 enabled:hover:bg-[#13261a] disabled:[&>*]:opacity-40 ${phone ? 'flex-1 flex-col gap-1 p-2' : layout === 'mid' ? 'shrink-0 flex-row gap-2 px-2 py-1' : 'flex-col p-3'}`}
     >
       <span
