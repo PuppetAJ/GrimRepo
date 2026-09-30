@@ -1,8 +1,9 @@
 import { Gamepad2, Heart, Medal, Percent, Timer, Trophy } from 'lucide-react'
+import { lazy, Suspense } from 'react'
 import { useParams } from 'react-router'
 import { card } from 'shared'
 import { Avatar } from '../components/Avatar.tsx'
-import { Outcomes, ScoreChart, TurnsChart } from '../components/Charts.tsx'
+import { Outcomes } from '../components/charts/Outcomes.tsx'
 import { Pinned } from '../components/Pinned.tsx'
 import { Failure, Loading } from '../components/States.tsx'
 import { api, ApiError } from '../lib/api.ts'
@@ -10,6 +11,11 @@ import { number } from '../lib/format.ts'
 import { useAsync } from '../lib/useAsync.ts'
 import { Activity } from './player/Activity.tsx'
 import { History } from './player/History.tsx'
+
+// The charts bring Recharts, so they load after the rest of the profile, in a box their size.
+const ScoreChart = lazy(() => import('../components/Charts.tsx').then((charts) => ({ default: charts.ScoreChart })))
+const TurnsChart = lazy(() => import('../components/Charts.tsx').then((charts) => ({ default: charts.TurnsChart })))
+const chartBox = <div className="h-full min-h-72 rounded-lg border bg-card" />
 
 export function Player() {
   const { username = '' } = useParams()
@@ -129,9 +135,13 @@ export function Player() {
             </h2>
             <div className="grid gap-5 md:grid-cols-2">
               <div className="md:col-span-2">
-                <ScoreChart games={[...player.recent].reverse()} />
+                <Suspense fallback={chartBox}>
+                  <ScoreChart games={[...player.recent].reverse()} />
+                </Suspense>
               </div>
-              <TurnsChart games={[...player.recent].reverse()} />
+              <Suspense fallback={chartBox}>
+                <TurnsChart games={[...player.recent].reverse()} />
+              </Suspense>
               <Outcomes
                 wins={player.wins}
                 losses={player.losses - player.forfeits}

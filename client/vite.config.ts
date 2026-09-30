@@ -18,8 +18,8 @@ const mockupsSlash: Plugin = {
   },
 }
 
-// Gzipped kilobytes each chunk may reach before the build fails: every page's code, the 3D code, and any other.
-const BUDGET = { entry: 150, three: 400, other: 40 }
+// Gzipped kilobytes each chunk may reach before the build fails: every page's code, the 3D code, the charts, and any other.
+const BUDGET = { entry: 150, three: 400, charts: 120, other: 40 }
 
 const budget: Plugin = {
   name: 'bundle-budget',
@@ -30,7 +30,9 @@ const budget: Plugin = {
       if (chunk.type !== 'chunk') return []
       // three.js and the factory share one chunk between the table and the compendium; it is the 3D budget.
       const three = chunk.moduleIds.some((id) => id.includes('/node_modules/three/'))
-      const limit = chunk.isEntry ? BUDGET.entry : three ? BUDGET.three : BUDGET.other
+      // Recharts is only on a player's page, below the fold, loaded after the rest of it.
+      const charts = chunk.moduleIds.some((id) => id.includes('/node_modules/recharts/'))
+      const limit = chunk.isEntry ? BUDGET.entry : three ? BUDGET.three : charts ? BUDGET.charts : BUDGET.other
       const size = gzipSync(chunk.code).length / 1024
       return size > limit ? [`${chunk.fileName}: ${size.toFixed(1)} KB gzipped, over its ${limit} KB budget`] : []
     })
