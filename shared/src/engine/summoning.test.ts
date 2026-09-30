@@ -58,18 +58,21 @@ describe('drawing', () => {
     const fromDeck = play(state, { type: 'draw', from: 'deck' }).state
     assert.equal(fromDeck.player.hand.length, 5)
     assert.equal(fromDeck.player.deck.length, state.player.deck.length - 1)
-    assert.equal(refused(fromDeck, { type: 'draw', from: 'deck' }), 'Already drew this turn')
+    assert.equal(refused(fromDeck, { type: 'draw', from: 'deck' }), 'No more draws this turn')
 
     const fuel = play(state, { type: 'draw', from: 'boilerplate' }).state
     assert.equal(fuel.player.hand.at(-1)?.card, BOILERPLATE)
     assert.equal(fuel.player.deck.length, state.player.deck.length, 'the deck is untouched')
   })
 
-  it('is skipped with a full hand', () => {
-    const state = table({ hand: Array(HAND_LIMIT).fill('InfiniteLoop') })
-    state.drawn = false
-    assert.equal(refused(state, { type: 'draw', from: 'deck' }), 'The hand is full')
-    assert.ok(apply(state, { type: 'ringBell' }).ok)
+  it('is skipped for the whole turn when it begins with a full hand', () => {
+    const next = play(table({ hand: Array(HAND_LIMIT).fill('InfiniteLoop') }), { type: 'ringBell' }).state
+    assert.equal(next.status, 'playing')
+    assert.equal(refused(next, { type: 'draw', from: 'deck' }), 'The hand is full')
+    const played = play(next, { type: 'select', uid: uidOf(next, 'InfiniteLoop') }, { type: 'place', lane: 0 }).state
+    assert.equal(played.player.hand.length, HAND_LIMIT - 1)
+    assert.equal(refused(played, { type: 'draw', from: 'deck' }), 'No more draws this turn')
+    assert.ok(apply(played, { type: 'ringBell' }).ok, 'the bell rings without a draw')
   })
 
   it('rebuilds an empty deck from the cards not in hand or on the table', () => {
