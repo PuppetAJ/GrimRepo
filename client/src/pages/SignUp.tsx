@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { toast } from '../lib/toast.tsx'
+import { toast } from 'sonner'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button.tsx'
 import { Input } from '@/components/ui/input.tsx'

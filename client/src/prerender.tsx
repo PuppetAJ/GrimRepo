@@ -2,7 +2,7 @@ import { createMemoryHistory } from '@tanstack/react-router'
 import { attachRouterServerSsrUtils, RouterServer } from '@tanstack/react-router/ssr/server'
 import { StrictMode } from 'react'
 import { prerender } from 'react-dom/static'
-import { Toasts } from './lib/toast.tsx'
+import { Toaster } from '@/components/ui/sonner.tsx'
 import { makeRouter } from './router.tsx'
 
 /** The home page's HTML, and the router state main.tsx hydrates it with; the tree must match main.tsx's. */
@@ -15,7 +15,7 @@ export async function renderHome(): Promise<{ html: string; state: string }> {
   const { prelude } = await prerender(
     <StrictMode>
       <RouterServer router={router} />
-      <Toasts />
+      <Toaster />
     </StrictMode>,
   )
   const html = await new Response(prelude).text()

@@ -2,7 +2,7 @@ import { ChevronDown, LogIn, LogOut, Menu, Settings, UserPlus, UserRound } from 
 import { Suspense } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from '@tanstack/react-router'
 import { LoadFailed, ReloadPage } from './LoadFailed.tsx'
-import { toast } from '../lib/toast.tsx'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button.tsx'
 import {
   DropdownMenu,

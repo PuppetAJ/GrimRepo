@@ -2,7 +2,7 @@ import { RouterProvider } from '@tanstack/react-router'
 import { RouterClient } from '@tanstack/react-router/ssr/client'
 import { StrictMode } from 'react'
 import { createRoot, hydrateRoot } from 'react-dom/client'
-import { Toasts } from './lib/toast.tsx'
+import { Toaster } from '@/components/ui/sonner.tsx'
 import { makeRouter } from './router.tsx'
 import './index.css'
 
@@ -17,13 +17,13 @@ if (container.hasChildNodes())
     container,
     <StrictMode>
       <RouterClient router={router} />
-      <Toasts />
+      <Toaster />
     </StrictMode>,
   )
 else
   createRoot(container).render(
     <StrictMode>
       <RouterProvider router={router} />
-      <Toasts />
+      <Toaster />
     </StrictMode>,
   )
