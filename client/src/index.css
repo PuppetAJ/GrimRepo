@@ -121,6 +121,13 @@
 }
 
 @layer utilities {
+  /* Pixel art as a mask, so it takes the element's background colour and stays sharp at any size. */
+  .pixel-art {
+    mask-size: contain;
+    mask-repeat: no-repeat;
+    mask-position: center;
+    image-rendering: pixelated;
+  }
   /* The halo round a P03 screen, as if it lit the page around it. */
   /* Layered as light falls off, bright and tight close in and fading far out, rather than one even haze. */
   .p03-glow {

@@ -1,52 +1,35 @@
-import { card, SIGILS, type SigilId, type Unit } from 'shared'
-import { SPRITE_SIZE, spriteOf } from './sprites.ts'
-import { ICONS, STAT_ICONS } from './table/icons.ts'
+import { card, SIGILS, type Unit } from 'shared'
+import { cardArt, iconArt, type IconId } from './art.ts'
 
 // A card drawn for reading, in the text table's reader, its magnifier, and the 3D table's.
 const INK = '#0b1f12'
 
-/** A card's 2022 art in ink: the drawing is ink on a clear ground, so it serves as a mask, sharp at any size. */
-/** A card's sprite as crisp pixels in the text's colour, at any size. */
-export function Sprite({ grid, className = '' }: { grid: readonly string[]; className?: string }) {
-  return (
-    <svg
-      viewBox={`0 0 ${SPRITE_SIZE} ${SPRITE_SIZE}`}
-      shapeRendering="crispEdges"
-      aria-hidden
-      className={className}
-      fill="currentColor"
-    >
-      {grid.flatMap((row, y) =>
-        [...row].map((bit, x) => (bit === '#' ? <rect key={`${x},${y}`} x={x} y={y} width={1} height={1} /> : null)),
-      )}
-    </svg>
-  )
+/** A PNG of pixel art, drawn in the text's colour. */
+export function PixelArt({ src, className = '' }: { src: string; className?: string }) {
+  return <span aria-hidden className={`pixel-art block bg-current ${className}`} style={{ maskImage: `url(${src})` }} />
 }
 
 export function Art({ id }: { id: string }) {
-  return <Sprite grid={spriteOf(id)} className="h-[92%] w-[92%] text-[#0b1f12]" />
+  return <PixelArt src={cardArt(id)} className="h-[92%] w-[92%] text-[#0b1f12]" />
 }
 
-/** One of the sigils' pixel icons, or the sword or the shield. */
+/** A sigil's icon, or the sword or the shield. */
 export function Sigil({
   id,
   size = 18,
-  colour = INK,
+  color = INK,
 }: {
-  id: SigilId | keyof typeof STAT_ICONS
+  id: IconId
   /** Pixels, or any CSS length, such as em to follow the text beside it. */
   size?: number | string
-  colour?: string
+  color?: string
 }) {
-  const grid = id === 'attack' || id === 'health' ? STAT_ICONS[id] : ICONS[id]
   return (
-    <svg width={size} height={size} viewBox="0 0 8 8" shapeRendering="crispEdges" aria-hidden>
-      {grid.flatMap((row, y) =>
-        [...row].map((bit, x) =>
-          bit === '1' ? <rect key={`${x},${y}`} x={x} y={y} width={1} height={1} fill={colour} /> : null,
-        ),
-      )}
-    </svg>
+    <span
+      aria-hidden
+      className="pixel-art inline-block shrink-0"
+      style={{ width: size, height: size, backgroundColor: color, maskImage: `url(${iconArt(id)})` }}
+    />
   )
 }
 

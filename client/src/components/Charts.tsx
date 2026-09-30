@@ -1,60 +1,79 @@
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
 import { number } from '../lib/format.ts'
-import { colorOf, PAD, useHover, useSize, type Game } from './charts/chart.ts'
-import { AsTable, Frame, Grid, Legend, Tip } from './charts/parts.tsx'
+import { colorOf, type Game } from './charts/chart.ts'
+import { AsTable, Frame, Legend, Tip } from './charts/parts.tsx'
 
-export { Outcomes } from './charts/Outcomes.tsx'
+const MARGIN = { top: 12, right: 8, bottom: 8, left: 0 }
+const TICK = { fill: 'var(--muted-foreground)', fontSize: 11, fontFamily: 'var(--font-mono)' }
+
+/** The axis on the left: nothing, half and the most. */
+function Scale({ top, format }: { top: number; format: (value: number) => string }) {
+  return (
+    <YAxis
+      domain={[0, top]}
+      ticks={[0, Math.round(top / 2), top]}
+      tickFormatter={format}
+      interval={0}
+      width={44}
+      axisLine={false}
+      tickLine={false}
+      tick={TICK}
+    />
+  )
+}
 
 /** Each game's score, oldest on the left, dotted in the colour of how it ended. */
 export function ScoreChart({ games }: { games: Game[] }) {
-  const [box, width, height] = useSize()
   const top = Math.max(1, ...games.map((game) => game.score))
-  const span = height - PAD.top - PAD.bottom
-  const reach = width - PAD.left - PAD.right
-  const x = (index: number) => PAD.left + (games.length === 1 ? 0.5 : index / (games.length - 1)) * reach
-  const y = (score: number) => PAD.top + span * (1 - score / top)
-  const step = games.length > 1 ? reach / (games.length - 1) : reach
-  const { hover, handlers } = useHover((at) =>
-    Math.max(0, Math.min(games.length - 1, Math.round((at - PAD.left) / step))),
-  )
-  const held = hover === null ? undefined : games[hover]
-  const line = games
-    .map((game, index) => `${index ? 'L' : 'M'}${x(index).toFixed(1)},${y(game.score).toFixed(1)}`)
-    .join('')
-  const area = `${line}L${x(games.length - 1).toFixed(1)},${PAD.top + span}L${x(0).toFixed(1)},${PAD.top + span}Z`
   return (
     <Frame title="Score per game" note="shorter games score more, oldest first">
-      <div ref={box} aria-hidden className="relative min-h-40 flex-1">
-        {width ? (
-          <svg width={width} height={height} className="absolute inset-0 touch-pan-y" {...handlers}>
-            <Grid width={width} height={height} top={top} format={number} />
-            <path d={area} fill="var(--primary)" opacity={0.08} />
-            <path d={line} fill="none" stroke="var(--primary)" strokeWidth={1.5} opacity={0.6} />
-            {hover !== null ? (
-              <line
-                x1={x(hover)}
-                x2={x(hover)}
-                y1={PAD.top}
-                y2={height - PAD.bottom}
-                stroke="var(--muted-foreground)"
-                strokeDasharray="3 3"
-              />
-            ) : null}
-            {games.map((game, index) => (
-              <circle
-                key={game.playedAt}
-                cx={x(index)}
-                cy={y(game.score)}
-                r={index === hover ? 6 : 3.5}
-                fill={colorOf(game)}
-                stroke={index === hover ? 'var(--card)' : 'none'}
-                strokeWidth={2}
-              />
-            ))}
-          </svg>
-        ) : null}
-        {held && hover !== null ? (
-          <Tip game={held} index={hover} count={games.length} x={x(hover)} width={width} />
-        ) : null}
+      <div aria-hidden className="min-h-40 flex-1 touch-pan-y">
+        <ResponsiveContainer>
+          <AreaChart data={games} margin={MARGIN} accessibilityLayer={false}>
+            <CartesianGrid vertical={false} stroke="var(--border)" />
+            <XAxis hide />
+            <Scale top={top} format={number} />
+            <Tooltip
+              content={(props) => <Tip {...props} count={games.length} />}
+              cursor={{ stroke: 'var(--muted-foreground)', strokeDasharray: '3 3' }}
+              isAnimationActive={false}
+            />
+            <Area
+              dataKey="score"
+              type="linear"
+              stroke="var(--primary)"
+              strokeOpacity={0.6}
+              strokeWidth={1.5}
+              fill="var(--primary)"
+              fillOpacity={0.08}
+              dot={({ cx, cy, index }) => (
+                <circle key={index} cx={cx} cy={cy} r={3.5} fill={colorOf(games[index] as Game)} />
+              )}
+              activeDot={({ cx, cy, index }) => (
+                <circle
+                  cx={cx}
+                  cy={cy}
+                  r={6}
+                  fill={colorOf(games[index] as Game)}
+                  stroke="var(--card)"
+                  strokeWidth={2}
+                />
+              )}
+              isAnimationActive={false}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
       </div>
       <AsTable games={games} caption="Score per game, oldest first" />
       <Legend />
@@ -64,40 +83,27 @@ export function ScoreChart({ games }: { games: Game[] }) {
 
 /** How many turns each game lasted, as bars in the colour of how it ended. */
 export function TurnsChart({ games }: { games: Game[] }) {
-  const [box, width, height] = useSize()
   const top = Math.max(1, ...games.map((game) => game.turns))
-  const span = height - PAD.top - PAD.bottom
-  const slot = games.length ? (width - PAD.left - PAD.right) / games.length : 1
-  const { hover, handlers } = useHover((at) =>
-    Math.max(0, Math.min(games.length - 1, Math.floor((at - PAD.left) / slot))),
-  )
-  const held = hover === null ? undefined : games[hover]
   return (
     <Frame title={`Turns per last ${games.length} ${games.length === 1 ? 'game' : 'games'}`} note="oldest first">
-      <div ref={box} aria-hidden className="relative min-h-40 flex-1">
-        {width ? (
-          <svg width={width} height={height} className="absolute inset-0 touch-pan-y" {...handlers}>
-            <Grid width={width} height={height} top={top} format={String} />
-            {games.map((game, index) => {
-              const height = Math.max(2, (game.turns / top) * span)
-              return (
-                <rect
-                  key={game.playedAt}
-                  x={PAD.left + index * slot + slot * 0.18}
-                  y={PAD.top + span - height}
-                  width={Math.max(1, slot * 0.64)}
-                  height={height}
-                  rx={1.5}
-                  fill={colorOf(game)}
-                  opacity={hover === null || hover === index ? 1 : 0.45}
-                />
-              )
-            })}
-          </svg>
-        ) : null}
-        {held && hover !== null ? (
-          <Tip game={held} index={hover} count={games.length} x={PAD.left + (hover + 0.5) * slot} width={width} />
-        ) : null}
+      <div aria-hidden className="min-h-40 flex-1 touch-pan-y">
+        <ResponsiveContainer>
+          <BarChart data={games} margin={MARGIN} barCategoryGap="18%" accessibilityLayer={false}>
+            <CartesianGrid vertical={false} stroke="var(--border)" />
+            <XAxis hide />
+            <Scale top={top} format={String} />
+            <Tooltip
+              content={(props) => <Tip {...props} count={games.length} />}
+              cursor={{ fill: 'var(--muted-foreground)', fillOpacity: 0.12 }}
+              isAnimationActive={false}
+            />
+            <Bar dataKey="turns" radius={1.5} minPointSize={2} isAnimationActive={false}>
+              {games.map((game) => (
+                <Cell key={game.playedAt} fill={colorOf(game)} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
       </div>
       <AsTable games={games} caption="Turns per game, oldest first" />
       <Legend />
