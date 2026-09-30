@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react'
 import { CARDS, TIP, type CardDef } from 'shared'
 
-export const PAGES: Record<string, string> = {
+export type Page = '/' | '/leaderboard' | '/cards' | '/game' | '/account' | '/stats'
+
+export const PAGES: Record<string, Page> = {
   '~': '/',
   '/': '/',
   '..': '/',

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { apply, type Action, type GameEvent, type GameState } from 'shared'
-import { toast } from 'sonner'
+import { toast } from '../lib/toast.tsx'
 import { api, ApiError, type Finished, type OpenGame } from '../lib/api.ts'
 import { history, narrate } from '../lib/narrate.ts'
 import { fixture } from './fixtures.ts'

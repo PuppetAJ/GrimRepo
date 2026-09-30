@@ -1,23 +1,29 @@
+import { RouterProvider } from '@tanstack/react-router'
+import { RouterClient } from '@tanstack/react-router/ssr/client'
 import { StrictMode } from 'react'
 import { createRoot, hydrateRoot } from 'react-dom/client'
-import { BrowserRouter } from 'react-router'
-import { Toaster } from '@/components/ui/sonner.tsx'
-import App from './App.tsx'
+import { Toasts } from './lib/toast.tsx'
+import { makeRouter } from './router.tsx'
 import './index.css'
 
 const container = document.getElementById('root')
 if (!container) throw new Error('index.html is missing its #root element')
 
-// Must match the tree prerender.tsx renders, so the prerendered home page hydrates cleanly.
-const app = (
-  <StrictMode>
-    <BrowserRouter>
-      <App />
-      <Toaster />
-    </BrowserRouter>
-  </StrictMode>
-)
+const router = makeRouter()
 
-// Only the home page is prerendered; every other route starts empty.
-if (container.hasChildNodes()) hydrateRoot(container, app)
-else createRoot(container).render(app)
+// Only the home page is prerendered; it hydrates from the router state prerender.tsx saved, and must match its tree.
+if (container.hasChildNodes())
+  hydrateRoot(
+    container,
+    <StrictMode>
+      <RouterClient router={router} />
+      <Toasts />
+    </StrictMode>,
+  )
+else
+  createRoot(container).render(
+    <StrictMode>
+      <RouterProvider router={router} />
+      <Toasts />
+    </StrictMode>,
+  )

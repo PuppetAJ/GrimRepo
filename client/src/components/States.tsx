@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Link } from 'react-router'
+import { Link } from '@tanstack/react-router'
 import { Skeleton } from '@/components/ui/skeleton.tsx'
 
 export function Loading({ label }: { label: string }) {

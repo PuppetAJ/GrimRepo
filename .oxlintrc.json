@@ -35,7 +35,8 @@
           {
             "patterns": [
               {
-                "group": ["server", "server/*"],
+                // The router's prerender entry is a package path, not the server workspace.
+                "group": ["server", "server/*", "!@tanstack/react-router/ssr/server"],
                 "message": "The client talks to the server over HTTP, never by import."
               }
             ]

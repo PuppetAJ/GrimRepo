@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { Link, useLocation, useSearchParams } from 'react-router'
+import { Link, useLocation, useNavigate, useSearch } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button.tsx'
 import { Avatar } from '../components/Avatar.tsx'
 import { Corruption } from '../components/p03/Corruption.tsx'
@@ -8,31 +8,22 @@ import { FrameDamage } from '../components/p03/FrameDamage.tsx'
 import { Glass } from '../components/p03/Glass.tsx'
 import { Failure } from '../components/States.tsx'
 import { Skeleton } from '@/components/ui/skeleton.tsx'
-import { api, type Finished, type LeaderboardRow } from '../lib/api.ts'
+import { api, type LeaderboardRow } from '../lib/api.ts'
 import { authClient } from '../lib/auth.ts'
 import { initials, number } from '../lib/format.ts'
 import { useAsync } from '../lib/useAsync.ts'
 import { FaultyScreen } from '../components/p03/FaultyScreen.ts'
 
 export function Leaderboard() {
-  const [search, setSearch] = useSearchParams()
-  const page = Math.max(1, Number(search.get('page')) || 1)
+  const page = useSearch({ from: '/leaderboard', select: (search) => search.page ?? 1 })
+  const navigate = useNavigate({ from: '/leaderboard' })
   const board = useAsync(() => api.leaderboard(page), `leaderboard:${page}`)
   const turn = (to: number) =>
-    setSearch(
-      (now) => {
-        const next = new URLSearchParams(now)
-        if (to > 1) next.set('page', String(to))
-        else next.delete('page')
-        return next
-      },
-      { preventScrollReset: true },
-    )
+    void navigate({ search: (now) => ({ ...now, page: to > 1 ? to : undefined }), resetScroll: false })
   const session = authClient.useSession()
   const me = (session.data?.user as { username?: string } | undefined)?.username
   const guest = Boolean((session.data?.user as { isAnonymous?: boolean } | undefined)?.isAnonymous)
-  // Set by the game page when a game ends.
-  const result = (useLocation().state as { result?: Finished } | null)?.result
+  const result = useLocation({ select: (location) => location.state.result })
 
   return (
     <div className="flex flex-col gap-6">
@@ -227,7 +218,11 @@ function FirstPlace({ row, mine }: { row: LeaderboardRow; mine: boolean }) {
           </span>
           <div className="flex min-w-0 flex-col">
             <div className="flex flex-wrap items-center gap-x-2.5">
-              <Link to={`/players/${row.username}`} className="truncate text-3xl leading-none text-p03 hover:underline">
+              <Link
+                to="/players/$username"
+                params={{ username: row.username }}
+                className="truncate text-3xl leading-none text-p03 hover:underline"
+              >
                 {row.username}
                 {mine ? <span className="sr-only"> (you)</span> : null}
               </Link>
@@ -257,7 +252,11 @@ function Row({ row, top, mine }: { row: LeaderboardRow; top: number; mine: boole
         <div className="flex items-center gap-3 sm:gap-4">
           <Avatar name={row.username} />
           <div className="flex min-w-0 flex-col">
-            <Link to={`/players/${row.username}`} className="truncate font-semibold hover:text-primary">
+            <Link
+              to="/players/$username"
+              params={{ username: row.username }}
+              className="truncate font-semibold hover:text-primary"
+            >
               {row.username}
               {mine ? <span className="sr-only"> (you)</span> : null}
             </Link>

@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router'
-import { toast } from 'sonner'
+import { Link, useNavigate } from '@tanstack/react-router'
+import { toast } from '../lib/toast.tsx'
 import { Button } from '@/components/ui/button.tsx'
 import { Input } from '@/components/ui/input.tsx'
 import { Label } from '@/components/ui/label.tsx'
@@ -30,7 +30,7 @@ export function SignIn() {
           : authError(failed, 'That did not work'),
       )
     toast.success('Signed in')
-    navigate('/', { replace: true })
+    navigate({ to: '/', replace: true })
   }
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
