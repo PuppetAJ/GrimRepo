@@ -1,9 +1,5 @@
-import { CARDS, SIGILS, type CardDef, type Unit } from 'shared'
-import { WORST_CARD, withWorstCard } from '../../game/fixtures.ts'
-
-// Y2K is left out; dev and test builds add a worst-case card for layout checks.
-const worst = withWorstCard()
-export const DECK = Object.values(CARDS).filter((def) => def.id !== 'Y2K' && (worst || def.id !== WORST_CARD))
+import { SIGILS, type CardDef, type Unit } from 'shared'
+import { DECK } from '../../game/deck.ts'
 
 export const unitOf = (def: CardDef): Unit => ({
   uid: 0,
