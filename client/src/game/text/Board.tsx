@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react'
+import type { CSSProperties, KeyboardEvent, ReactNode } from 'react'
 import type { Slot } from 'shared'
 import { describe, GameOver, laneAction } from '../controls.tsx'
 import { PixelCard } from '../CardReader.tsx'
@@ -104,7 +104,7 @@ export function Rising({
 }
 
 const CELL =
-  'flex shrink-0 select-none items-center justify-center rounded-md border-2 p-1 [-webkit-touch-callout:none]'
+  'flex shrink-0 select-none items-center justify-center rounded-md border-2 p-1 [-webkit-touch-callout:none] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03'
 
 export function Board() {
   const {
@@ -125,6 +125,22 @@ export function Board() {
   } = useTable()
   const { laneSize, setReading } = useTable()
   const faces = playback.popups.filter((popup) => 'face' in popup.spot)
+  // A lane is a picture of its card, focusable so a keyboard can read it; on a phone, where a tap opens the card, a button.
+  const lane = (label: string, unit: Slot, open: () => void) => {
+    const opens = tapToRead && Boolean(unit)
+    return {
+      role: opens ? 'button' : 'img',
+      'aria-label': label,
+      tabIndex: unit ? 0 : undefined,
+      onKeyDown: opens
+        ? (event: KeyboardEvent) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return
+            event.preventDefault()
+            open()
+          }
+        : undefined,
+    }
+  }
   return (
     <Panel className="relative flex flex-col gap-2">
       {faces.map((popup) => (
@@ -135,12 +151,14 @@ export function Board() {
           className={'face' in popup.spot && popup.spot.face === 'opponent' ? 'top-0 left-1/2' : 'top-full left-1/2'}
         />
       ))}
-      <div className={`flex justify-center ${compact ? 'gap-1' : 'gap-2'}`} aria-label="P03's queue">
+      <div role="group" className={`flex justify-center ${compact ? 'gap-1' : 'gap-2'}`} aria-label="P03's queue">
         {view.back.map((unit, i) => (
           <div
             key={i}
             {...inspectProps({ row: 'back', lane: i }, unit)}
-            aria-label={unit ? `Queued in lane ${i + 1}: ${describe(unit)}` : `Lane ${i + 1}: nothing queued`}
+            {...lane(unit ? `Queued in lane ${i + 1}: ${describe(unit)}` : `Lane ${i + 1}: nothing queued`, unit, () =>
+              setReading({ row: 'back', lane: i }),
+            )}
             onClick={tapToRead && unit ? () => setReading({ row: 'back', lane: i }) : undefined}
             className={`${CELL} border-[#1f3a26] brightness-75`}
             style={laneSize}
@@ -156,12 +174,14 @@ export function Board() {
           </div>
         ))}
       </div>
-      <div className={`flex justify-center ${compact ? 'gap-1' : 'gap-2'}`} aria-label="P03's row">
+      <div role="group" className={`flex justify-center ${compact ? 'gap-1' : 'gap-2'}`} aria-label="P03's row">
         {view.front.map((unit, i) => (
           <div
             key={i}
             {...inspectProps({ row: 'front', lane: i }, unit)}
-            aria-label={unit ? `P03's lane ${i + 1}: ${describe(unit)}` : `P03's lane ${i + 1}: empty`}
+            {...lane(unit ? `P03's lane ${i + 1}: ${describe(unit)}` : `P03's lane ${i + 1}: empty`, unit, () =>
+              setReading({ row: 'front', lane: i }),
+            )}
             onClick={tapToRead && unit ? () => setReading({ row: 'front', lane: i }) : undefined}
             className={`${CELL} border-[#1f3a26]`}
             style={laneSize}
@@ -171,7 +191,7 @@ export function Board() {
         ))}
       </div>
       <div className="border-t-2 border-death/50" />
-      <div className={`flex justify-center ${compact ? 'gap-1' : 'gap-2'}`} aria-label="Your row">
+      <div role="group" className={`flex justify-center ${compact ? 'gap-1' : 'gap-2'}`} aria-label="Your row">
         {view.board.map((unit, i) => {
           const action = laneAction(legal, i)
           const marked = state.summon?.marked.includes(i) ?? false
@@ -200,7 +220,7 @@ export function Board() {
           return (
             <div
               key={i}
-              aria-label={action ? undefined : label}
+              {...(action ? {} : lane(label, unit, () => setReading({ row: 'board', lane: i })))}
               {...inspectProps({ row: 'board', lane: i }, unit)}
               onClick={
                 action
