@@ -1,6 +1,7 @@
 /** Shared setup for the browser suites. Mirrors the ones in Chunkd and Wicken. */
 import pg from 'pg'
 import { chromium, firefox } from 'playwright'
+import { isOffensive } from '../server/src/auth/names.ts'
 import { apply, createGame, nextBotAction } from '../shared/src/index.ts'
 
 export const BASE = process.env.E2E_BASE_URL ?? 'http://localhost:3000'
@@ -97,7 +98,9 @@ export function stamp() {
 }
 
 export function newPlayer(prefix = 'e2e') {
-  const username = `${prefix}_${stamp()}`.slice(0, 20)
+  let username = `${prefix}_${stamp()}`.slice(0, 20)
+  // Consonants can still spell a blocked word ('fck'), and sign-up would refuse it; so ask the site's own filter.
+  while (isOffensive(username)) username = `${prefix}_${stamp()}`.slice(0, 20)
   return { username, email: `${username}@grimrepo.test`, password: 'a-long-enough-password' }
 }
 
@@ -117,6 +120,15 @@ export async function signInAsDemo(page) {
   await page.getByRole('button', { name: 'Account menu' }).waitFor()
 }
 
+/** A new guest, as Quick battle makes: its own game, and its own count against the game API's limits. */
+export async function signInAsGuest(page) {
+  // Guests may sign in 10 times a minute; locally, the counter is cleared so a script can make as many as it needs.
+  await resetRateLimits()
+  await page.context().clearCookies()
+  const response = await page.request.post(`${BASE}/api/auth/sign-in/anonymous`, { headers: { origin: BASE } })
+  if (!response.ok()) throw new Error(`a guest could not sign in: ${response.status()}`)
+}
+
 /** Visible text, for asserting on what a person would actually read. */
 export const visibleText = (page) => page.locator('body').innerText()
 
@@ -134,13 +146,24 @@ export async function playWithBot(page, { stopAfterTurn = Infinity } = {}) {
   await root.waitFor()
   let state = createGame({ seed: Number(await root.getAttribute('data-seed')) })
   const actions = []
+  const start = Number(await root.getAttribute('data-moves'))
+  const moves = async () => Number(await root.getAttribute('data-moves')) - start
   while (state.status === 'playing' && state.turn <= stopAfterTurn) {
     const action = nextBotAction(state)
     try {
-      await page.locator(selectorFor(action)).first().click()
+      await page
+        .locator(selectorFor(action))
+        .first()
+        .click()
+        // Playwright can miss a click that landed when its button goes as it is pressed; the page's count says so.
+        .catch(async (error) => {
+          if ((await moves()) !== actions.length + 1) throw error
+        })
+      await page.locator(`[data-seed][data-moves="${start + actions.length + 1}"]`).waitFor()
     } catch (error) {
       // What was wanted, and what the table showed instead, for a failure on CI that can't be watched.
-      console.log(`  The bot wanted ${JSON.stringify(action)} on turn ${state.turn}; the table said:`)
+      console.log(`  The bot wanted ${JSON.stringify(action)} on turn ${state.turn}, as move ${actions.length + 1};`)
+      console.log(`  the page had made ${await moves()}, and the table said:`)
       console.log(`  ${(await page.locator('[data-table]').innerText()).replace(/\s+/g, ' ').slice(0, 600)}`)
       await page.screenshot({ path: 'e2e-failure.png' }).catch(() => {})
       throw error

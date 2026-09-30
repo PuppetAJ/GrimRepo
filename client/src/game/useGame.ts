@@ -13,6 +13,8 @@ export type Game =
       id: number
       /** Counts every deal and reload, so a table can tell a fresh start from a move. */
       generation: number
+      /** Every move made in this game, saved or not, for the browser suites to keep in step with. */
+      moves: number
       state: GameState
       log: string[]
       unsaved: number
@@ -28,7 +30,7 @@ export type Ready = Extract<Game, { status: 'ready' }>
 
 type Listener = (events: GameEvent[]) => void
 
-type Table = { id: number; generation: number; state: GameState; log: string[] }
+type Table = { id: number; generation: number; moves: number; state: GameState; log: string[] }
 
 // Enough for any real game, so the console always holds the whole story.
 const LOG_LINES = 2_000
@@ -44,7 +46,13 @@ function open(game: OpenGame): Table {
   if (game.rulesChanged)
     lines.unshift('P03> I patched the rules since your last game. Your old save is incompatible. New deal.')
   generations += 1
-  return { id: game.id, generation: generations, state: rebuilt.state, log: lines.slice(-LOG_LINES) }
+  return {
+    id: game.id,
+    generation: generations,
+    moves: game.actions.length,
+    state: rebuilt.state,
+    log: lines.slice(-LOG_LINES),
+  }
 }
 
 /** The open game: played here, saved at every draw and bell, and scored on the server. */
@@ -72,7 +80,7 @@ export function useGame(): Game {
     if (fixed)
       return void Promise.resolve().then(() => {
         generations += 1
-        setTable({ id: -1, generation: generations, state: fixed.state, log: fixed.log })
+        setTable({ id: -1, generation: generations, moves: 0, state: fixed.state, log: fixed.log })
         setResult(null)
       })
     let current = true
@@ -143,7 +151,12 @@ export function useGame(): Game {
       setUnsaved(pending.current.length)
       for (const listener of listeners.current) listener(outcome.events)
       const lines = narrate(table.state, outcome.events).map((line) => `P03> ${line}`)
-      setTable({ ...table, state: outcome.state, log: [...table.log, ...lines].slice(-LOG_LINES) })
+      setTable({
+        ...table,
+        moves: table.moves + 1,
+        state: outcome.state,
+        log: [...table.log, ...lines].slice(-LOG_LINES),
+      })
       // A draw shows the next card, so it is saved at once; otherwise a reload could peek and draw again.
       if (action.type === 'ringBell' || action.type === 'draw') void save()
     },
