@@ -39,7 +39,8 @@ export function owed(summoning: Unit, board: Slot[], marked: number[]): number {
 }
 
 /** The line under the table saying what the player can do next. */
-export function prompt(mustDraw: boolean, summoning: Unit | undefined, left = 0): string {
+export function prompt(mustDraw: boolean, summoning: Unit | undefined, left = 0, over = false): string {
+  if (over) return 'Saving the result…'
   if (mustDraw) return 'Draw a card to start your turn.'
   if (!summoning) return 'Play a card, or press the button.'
   const name = card(summoning.card).name
@@ -69,17 +70,19 @@ export function GameOver({ result, className = '' }: { result: Finished; classNa
 
 export function Forfeit({
   forfeit,
+  disabled = false,
   className = '',
   children = 'Forfeit',
 }: {
   forfeit: () => Promise<void>
+  disabled?: boolean
   className?: string
   children?: ReactNode
 }) {
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button variant="ghost" className={`text-muted-foreground ${className}`}>
+        <Button variant="ghost" disabled={disabled} className={`text-muted-foreground ${className}`}>
           {children}
         </Button>
       </AlertDialogTrigger>

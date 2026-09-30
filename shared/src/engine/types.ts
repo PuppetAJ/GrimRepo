@@ -1,7 +1,7 @@
 import type { SigilId } from '../cards.ts'
 
 /** Bumped whenever a change would make an old game replay differently; games record the version they began under. */
-export const RULES_VERSION = 3
+export const RULES_VERSION = 4
 
 export const LANES = 4
 /** The scale tips this far to win: each point of damage to a player moves it one step against them, as in Inscryption. */
@@ -27,6 +27,7 @@ export type GameState = {
   rng: number
   turn: number
   /** Whether this turn's draw has happened; nothing else can be done before it. */
+  /** The turn's draw is settled: taken, or skipped because the turn began with a full hand. */
   drawn: boolean
   status: 'playing' | 'won' | 'lost'
   nextUid: number

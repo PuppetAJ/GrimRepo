@@ -12,6 +12,10 @@ export const ENGINE = process.env.E2E_BROWSER === 'firefox' ? 'firefox' : 'chrom
 // Printed because the default is the dev server, and a suite run against the wrong one fails oddly.
 console.log(`against ${BASE} in ${ENGINE}`)
 
+// Uncaught errors from every page a suite opens, launched or fresh, so any of them fails the run.
+const pageErrors = []
+const listen = (page) => page.on('pageerror', (error) => pageErrors.push(error.message))
+
 export async function launch({ width = 1280, height = 800 } = {}) {
   // Headless browsers on a machine with no GPU only draw WebGL in software when asked to, which the 3D table needs.
   const browser =
@@ -24,8 +28,7 @@ export async function launch({ width = 1280, height = 800 } = {}) {
   page.setDefaultTimeout(20_000)
   page.setDefaultNavigationTimeout(30_000)
 
-  const pageErrors = []
-  page.on('pageerror', (error) => pageErrors.push(error.message))
+  listen(page)
 
   return { browser, context, page, pageErrors, close: () => browser.close() }
 }
@@ -74,12 +77,21 @@ export async function resetRateLimits() {
   await client.end()
 }
 
+/** A second tab in the same context: same cookies, same player. */
+export async function newTab(context) {
+  const page = await context.newPage()
+  page.setDefaultTimeout(20_000)
+  listen(page)
+  return page
+}
+
 /** A fresh context, so one check's cookies never leak into the next; `table` picks the text or 3D table up front. */
 export async function freshPage(browser, { width = 1280, height = 900, table } = {}) {
   const context = await browser.newContext({ viewport: { width, height } })
   if (table) await context.addInitScript((mode) => localStorage.setItem('grimrepo:table', mode), table)
   const page = await context.newPage()
   page.setDefaultTimeout(20_000)
+  listen(page)
   return { context, page }
 }
 
@@ -140,8 +152,11 @@ const selectorFor = (action) => {
   return `[data-action="${action.type}"]`
 }
 
-/** Plays a fresh game through its buttons, with a copy of the engine in step to choose each click. */
-export async function playWithBot(page, { stopAfterTurn = Infinity } = {}) {
+/**
+ * Plays a fresh game through its buttons, with a copy of the engine in step to choose each click. `beforeMove` hears
+ * each move and the state it will lead to, before it is clicked.
+ */
+export async function playWithBot(page, { stopAfterTurn = Infinity, beforeMove } = {}) {
   const root = page.locator('[data-seed]')
   await root.waitFor()
   let state = createGame({ seed: Number(await root.getAttribute('data-seed')) })
@@ -150,6 +165,9 @@ export async function playWithBot(page, { stopAfterTurn = Infinity } = {}) {
   const moves = async () => Number(await root.getAttribute('data-moves')) - start
   while (state.status === 'playing' && state.turn <= stopAfterTurn) {
     const action = nextBotAction(state)
+    const result = apply(state, action)
+    if (!result.ok) throw new Error(`the mirror refused ${JSON.stringify(action)}: ${result.reason}`)
+    await beforeMove?.(action, result.state)
     try {
       await page
         .locator(selectorFor(action))
@@ -168,8 +186,6 @@ export async function playWithBot(page, { stopAfterTurn = Infinity } = {}) {
       await page.screenshot({ path: 'e2e-failure.png' }).catch(() => {})
       throw error
     }
-    const result = apply(state, action)
-    if (!result.ok) throw new Error(`the mirror refused ${JSON.stringify(action)}: ${result.reason}`)
     state = result.state
     actions.push(action)
     // The page must agree on the turn before the next click, or the mirror has drifted.

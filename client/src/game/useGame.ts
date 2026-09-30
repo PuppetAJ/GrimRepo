@@ -106,10 +106,16 @@ export function useGame(): Game {
   }, [reloads])
 
   const id = table?.id
+  // A save that fails is tried again, a little later each time, until it lands: a finished game has no move left
+  // that would send it.
+  const retry = useRef<{ timer?: ReturnType<typeof setTimeout>; wait: number }>({ wait: 0 })
+  const again = useRef<() => Promise<void>>(() => Promise.resolve())
+  useEffect(() => () => clearTimeout(retry.current.timer), [])
 
   // Saves run one after another, each reading the refs when its turn comes, so none can overlap.
   const save = useCallback((): Promise<void> => {
     chain.current = chain.current.then(async () => {
+      clearTimeout(retry.current.timer)
       if (id === undefined || pending.current.length === 0) return
       const batch = [...pending.current]
       setSaving(true)
@@ -117,6 +123,7 @@ export function useGame(): Game {
         const reply = await api.saveMoves(id, saved.current, batch)
         saved.current += batch.length
         pending.current = pending.current.slice(batch.length)
+        retry.current.wait = 0
         if (reply.status === 'finished') setResult(reply)
       } catch (failure) {
         // Out of step with the server, most likely from another tab: its copy is the truth.
@@ -128,7 +135,12 @@ export function useGame(): Game {
           )
           setReloads((n) => n + 1)
         } else {
-          toast.error(`Could not save: ${failure instanceof Error ? failure.message : String(failure)}`)
+          if (!retry.current.wait)
+            toast.error(
+              `Could not save: ${failure instanceof Error ? failure.message : String(failure)}. Trying again.`,
+            )
+          retry.current.wait = Math.min(30_000, (retry.current.wait || 1_000) * 2)
+          retry.current.timer = setTimeout(() => void again.current(), retry.current.wait)
         }
       } finally {
         setSaving(false)
@@ -137,6 +149,9 @@ export function useGame(): Game {
     })
     return chain.current
   }, [id])
+  useEffect(() => {
+    again.current = save
+  }, [save])
 
   const act = useCallback(
     (action: Action) => {
@@ -163,9 +178,12 @@ export function useGame(): Game {
     [table, result, save],
   )
 
+  const over = table ? table.state.status !== 'playing' : false
   const forfeit = useCallback(async () => {
     if (id === undefined) return
     if (id === -1) return setReloads((n) => n + 1)
+    // Played to the end here, the game's result is still on its way; walking away now would record it as a loss.
+    if (over) return
     try {
       // Anything unsaved is dropped: walking away ends the game where the server last saw it.
       await chain.current
@@ -173,7 +191,7 @@ export function useGame(): Game {
     } catch (failure) {
       toast.error(failure instanceof Error ? failure.message : String(failure))
     }
-  }, [id])
+  }, [id, over])
 
   if (error) return { status: 'error', message: error }
   if (!table) return { status: 'loading' }

@@ -1,4 +1,4 @@
-import { type GameEvent, type GameState, type Slot, type Unit } from 'shared'
+import { HAND_LIMIT, type GameEvent, type GameState, type Slot, type Unit } from 'shared'
 
 /** What the 3D table shows: the game as far as its playback has reached, which can trail the real state. */
 export type View = {
@@ -94,7 +94,7 @@ export function step(view: View, event: GameEvent): View {
     case 'queued':
       return { ...view, back: setAt(view.back, event.lane, event.unit) }
     case 'turnStarted':
-      return { ...view, turn: event.turn, drawn: false }
+      return { ...view, turn: event.turn, drawn: view.hand.length >= HAND_LIMIT }
     case 'gameOver':
       return { ...view, status: event.outcome === 'win' ? 'won' : 'lost' }
     case 'attacked':

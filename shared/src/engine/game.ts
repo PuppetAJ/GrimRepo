@@ -48,7 +48,8 @@ export function createGame({ seed, debug = false }: GameOptions): GameState {
 
 const fail = (reason: string): Result => ({ ok: false, reason })
 
-const mustDraw = (state: GameState): boolean => !state.drawn && state.player.hand.length < HAND_LIMIT
+// Settled when the turn starts: a full hand skips the draw for the whole turn, even once a card is played.
+const mustDraw = (state: GameState): boolean => !state.drawn
 
 const paid = (state: GameState): number =>
   (state.summon?.marked ?? []).reduce((sum, lane) => sum + worthOf(state.player.board[lane] as Unit), 0)
@@ -65,7 +66,8 @@ export function apply(current: GameState, action: Action): Result {
   const events: GameEvent[] = []
 
   if (action.type === 'draw') {
-    if (!mustDraw(state)) return fail(state.drawn ? 'Already drew this turn' : 'The hand is full')
+    if (!mustDraw(state))
+      return fail(state.player.hand.length >= HAND_LIMIT ? 'The hand is full' : 'No more draws this turn')
     let id = BOILERPLATE
     if (action.from === 'deck') {
       if (state.player.deck.length === 0) {
@@ -178,7 +180,7 @@ function playTurn(state: GameState, rng: Rng, events: GameEvent[]): void {
 
   if (state.turn >= TURN_LIMIT) return finish(state, 'loss', events)
   state.turn += 1
-  state.drawn = false
+  state.drawn = state.player.hand.length >= HAND_LIMIT
   events.push({ type: 'turnStarted', turn: state.turn })
 }
 
