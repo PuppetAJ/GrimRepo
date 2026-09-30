@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
 import { ago, number } from '../../lib/format.ts'
-import { colorOf, ending, PAD, resultOf, type Game } from './chart.ts'
+import type { TooltipContentProps } from 'recharts'
+import type { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent'
+import { colorOf, ending, resultOf, type Game } from './chart.ts'
 
 export function Frame({ title, note, children }: { title: string; note?: string; children: ReactNode }) {
   return (
@@ -46,25 +48,17 @@ export function AsTable({ games, caption }: { games: Game[]; caption: string }) 
 
 /** The game under the pointer: which one, how it ended, what it scored and when. */
 export function Tip({
-  game,
-  index,
   count,
-  x,
-  width,
-}: {
-  game: Game
-  index: number
-  count: number
-  x: number
-  width: number
-}) {
-  // Beside the pointer, and to its left near the right edge, so it stays inside the chart.
-  const flip = x > width - 230
+  active,
+  payload,
+  activeIndex,
+}: Pick<TooltipContentProps<ValueType, NameType>, 'active' | 'payload' | 'activeIndex'> & { count: number }) {
+  const point = payload?.[0]
+  if (!active || !point) return null
+  const game = point.payload as Game
+  const index = Number(activeIndex)
   return (
-    <div
-      className="pointer-events-none absolute top-0 z-10 w-max rounded-md border bg-popover px-3 py-2 text-sm whitespace-nowrap shadow-lg"
-      style={flip ? { right: width - x + 12 } : { left: x + 12 }}
-    >
+    <div className="w-max rounded-md border bg-popover px-3 py-2 text-sm whitespace-nowrap shadow-lg">
       <p className="text-muted-foreground">
         Game {index + 1} of {count} · {ago(game.playedAt)}
       </p>
@@ -74,36 +68,6 @@ export function Tip({
       </p>
       <p className="font-mono text-base">{number(game.score)} points</p>
     </div>
-  )
-}
-
-/** Gridlines at nothing, half and the most, labelled on the left. */
-export function Grid({
-  width,
-  height,
-  top,
-  format,
-}: {
-  width: number
-  height: number
-  top: number
-  format: (value: number) => string
-}) {
-  const span = height - PAD.top - PAD.bottom
-  return (
-    <g>
-      {[0, 0.5, 1].map((share) => {
-        const y = PAD.top + span * (1 - share)
-        return (
-          <g key={share}>
-            <line x1={PAD.left} x2={width - PAD.right} y1={y} y2={y} stroke="var(--border)" />
-            <text x={PAD.left - 8} y={y + 4} textAnchor="end" className="fill-muted-foreground font-mono text-[11px]">
-              {format(Math.round(top * share))}
-            </text>
-          </g>
-        )
-      })}
-    </g>
   )
 }
 

@@ -30,6 +30,7 @@
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-router": "^8.4.0",
+    "recharts": "^3.10.1",
     "shared": "workspace:*",
     "sonner": "^2.0.8",
     "three": "^0.186.0",

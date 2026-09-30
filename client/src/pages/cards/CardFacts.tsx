@@ -30,7 +30,7 @@ export function Facts({ def, sigils = 'max-h-28' }: { def: CardDef; sigils?: str
           {def.sigils.map((sigil) => (
             <li key={sigil} className="flex gap-2 text-sm text-muted-foreground">
               <span className="shrink-0 pt-0.5 text-foreground">
-                <Sigil id={sigil} size={14} colour="currentColor" />
+                <Sigil id={sigil} size={14} color="currentColor" />
               </span>
               <span>
                 <span className="text-foreground">{SIGILS[sigil].name}.</span> {SIGILS[sigil].text}

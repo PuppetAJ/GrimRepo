@@ -9,7 +9,8 @@ import { Monitor } from './factory/Monitor.tsx'
 import { logLines, statusLines } from './factory/monitorLines.ts'
 import { DrumRack, GemModule, Lamp, Props } from './factory/Props.tsx'
 import { Room } from './factory/Room.tsx'
-import { surfaces } from './factory/surfaces.ts'
+import { GRIMY_TABLE, surfaces } from './factory/surfaces.ts'
+import { BOARD } from './factory/TechBoard.tsx'
 import { TABLE_Y, type Vec3 } from './layout.ts'
 import { MOOD } from './mood.ts'
 import { TINT } from './palette.ts'
@@ -130,3 +131,4 @@ for (const url of [
 ])
   useGLTF.preload(url, false, false)
 for (const name of ['table', 'floor', 'wall']) useTexture.preload(Object.values(surfaces(name)))
+useTexture.preload([BOARD, GRIMY_TABLE])
