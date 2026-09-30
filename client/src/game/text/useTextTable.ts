@@ -1,6 +1,6 @@
 import { useState, type CSSProperties } from 'react'
-import { HAND_LIMIT, legalActions, type Slot, type Unit } from 'shared'
-import { has, owed, prompt, type Seat } from '../controls.tsx'
+import { legalActions, type Slot, type Unit } from 'shared'
+import { has, owed, prompt, skippedDraw, type Seat } from '../controls.tsx'
 import { usePlayback } from '../table/usePlayback.ts'
 import type { Ready } from '../useGame.ts'
 import { authClient } from '../../lib/auth.ts'
@@ -38,7 +38,7 @@ export function useTextTable({
   const summoning = state.summon ? state.player.hand.find((unit) => unit.uid === state.summon?.uid) : undefined
   const mustDraw = has(legal, { type: 'draw' })
   // A turn that starts with a full hand skips its draw, so the piles need to say why.
-  const handFull = !busy && !result && state.drawn && state.player.hand.length >= HAND_LIMIT
+  const handFull = !busy && !result && skippedDraw(state)
   // Stores the place, not the card, so a card played into that lane shows at once.
   const [looking, setLooking] = useState<Place | null>(null)
   const unitAt = (place: Place | null) =>
@@ -103,6 +103,7 @@ export function useTextTable({
         summoning,
         summoning ? owed(summoning, state.player.board, state.summon?.marked ?? []) : 0,
         state.status !== 'playing',
+        handFull,
       )
 
   const frameProps = {

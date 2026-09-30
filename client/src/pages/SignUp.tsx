@@ -33,6 +33,8 @@ export function SignUp() {
     })
     if (!parsed.success) {
       setErrors(Object.fromEntries(parsed.error.issues.map((issue) => [issue.path[0], issue.message])))
+      // Focus reads the field's error aloud with its label.
+      document.getElementById(String(parsed.error.issues[0]?.path[0]))?.focus()
       return
     }
     setBusy(true)
@@ -86,6 +88,7 @@ export function SignUp() {
             id="username"
             name="username"
             autoComplete="username"
+            required
             aria-invalid={Boolean(errors.username)}
             aria-describedby={describedBy('username')}
           />,
@@ -99,6 +102,7 @@ export function SignUp() {
             name="email"
             type="email"
             autoComplete="email"
+            required
             aria-invalid={Boolean(errors.email)}
             aria-describedby={describedBy('email')}
           />,
@@ -111,6 +115,7 @@ export function SignUp() {
             id="password"
             name="password"
             autoComplete="new-password"
+            required
             aria-invalid={Boolean(errors.password)}
             aria-describedby={describedBy('password')}
           />,

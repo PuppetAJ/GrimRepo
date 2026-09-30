@@ -48,7 +48,7 @@ section('A whole game')
   )
   check('P03 narrated it', /P03> /.test(await visibleText(page)))
 
-  await page.getByRole('button', { name: 'See the leaderboard' }).click()
+  await page.getByRole('link', { name: 'See the leaderboard' }).click()
   await page.getByRole('heading', { name: 'Contributors' }).waitFor()
   check(
     'the result greets the player on the leaderboard',

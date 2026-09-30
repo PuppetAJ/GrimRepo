@@ -4,7 +4,7 @@ import { Link } from 'react-router'
 import { legalActions, type Unit } from 'shared'
 import { Button } from '@/components/ui/button.tsx'
 import { FlatReaderBody } from '../../CardReader.tsx'
-import { Forfeit, GameOver, has, owed, prompt, ScaleBar, SeatNote, type Seat } from '../../controls.tsx'
+import { Forfeit, GameOver, has, owed, prompt, ScaleBar, SeatNote, skippedDraw, type Seat } from '../../controls.tsx'
 import type { useFullScreen } from '../../fullScreen.ts'
 import type { Ready } from '../../useGame.ts'
 import type { View } from '../../view.ts'
@@ -153,6 +153,7 @@ export function Hud({
                     summoning,
                     summoning ? owed(summoning, view.board, view.summon?.marked ?? []) : 0,
                     game.state.status !== 'playing',
+                    !busy && !game.result && skippedDraw(state),
                   )}
             </p>
           </div>

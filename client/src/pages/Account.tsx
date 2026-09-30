@@ -24,15 +24,24 @@ export function Account() {
   const navigate = useNavigate()
   const user = session.data?.user as { displayUsername?: string; username?: string; email?: string } | undefined
   const [renameError, setRenameError] = useState<string | null>(null)
+  const [renaming, setRenaming] = useState(false)
   const [password, setPassword] = useState('')
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
   async function rename(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const username = String(new FormData(event.currentTarget).get('username') ?? '').trim()
-    if (!/^[A-Za-z0-9_]{3,20}$/.test(username)) return setRenameError('3 to 20 letters, digits or underscores')
+    const field = event.currentTarget.elements.namedItem('username') as HTMLInputElement
+    // Focus reads the field's error aloud with its label.
+    const refuse = (message: string) => {
+      setRenameError(message)
+      field.focus()
+    }
+    const username = field.value.trim()
+    if (!/^[A-Za-z0-9_]{3,20}$/.test(username)) return refuse('3 to 20 letters, digits or underscores')
+    setRenaming(true)
     const { error } = await authClient.updateUser({ username } as Parameters<typeof authClient.updateUser>[0])
-    if (error) return setRenameError(authError(error, 'That name did not work'))
+    setRenaming(false)
+    if (error) return refuse(authError(error, 'That name did not work'))
     setRenameError(null)
     await session.refetch()
     toast.success(`You are now ${username}`)
@@ -64,12 +73,14 @@ export function Account() {
           name="username"
           defaultValue={user?.displayUsername ?? user?.username}
           autoComplete="username"
+          required
+          aria-invalid={Boolean(renameError)}
           aria-describedby="username-note"
         />
         <p id="username-note" className={`text-sm ${renameError ? 'text-death' : 'text-muted-foreground'}`}>
           {renameError ?? 'Your games and scores come with you.'}
         </p>
-        <Button type="submit" className="self-start">
+        <Button type="submit" className="self-start" disabled={renaming}>
           Rename
         </Button>
       </form>

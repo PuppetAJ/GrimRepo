@@ -1,7 +1,18 @@
 import { X } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
-import { Link, useNavigate } from 'react-router'
-import { card, costOf, SIGILS, TIP, worthOf, type Action, type Slot, type Unit } from 'shared'
+import { Link } from 'react-router'
+import {
+  type Action,
+  card,
+  costOf,
+  type GameState,
+  HAND_LIMIT,
+  SIGILS,
+  type Slot,
+  TIP,
+  type Unit,
+  worthOf,
+} from 'shared'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,17 +49,22 @@ export function owed(summoning: Unit, board: Slot[], marked: number[]): number {
 }
 
 /** What the player can do next, for the prompt line. */
-export function prompt(mustDraw: boolean, summoning: Unit | undefined, left = 0, over = false): string {
+/** The turn began with a full hand, so its draw was skipped. */
+export const skippedDraw = (state: GameState) => state.drawn && state.player.hand.length >= HAND_LIMIT
+
+export function prompt(mustDraw: boolean, summoning: Unit | undefined, left = 0, over = false, full = false): string {
   if (over) return 'Saving the result…'
   if (mustDraw) return 'Draw a card to start your turn.'
-  if (!summoning) return 'Play a card, or press the button.'
+  if (!summoning)
+    return full
+      ? 'Your hand is full, so no draw. Play a card, or press the button.'
+      : 'Play a card, or press the button.'
   const name = card(summoning.card).name
   if (left > 0) return `Summoning ${name}: sacrifice ${'◆'.repeat(left)} from the table.`
   return `Summoning ${name}: pick a lane.`
 }
 
 export function GameOver({ result, className = '' }: { result: Finished; className?: string }) {
-  const navigate = useNavigate()
   return (
     <section role="status" className={`flex flex-col gap-3 rounded border border-p03 p-4 ${className}`}>
       <p className="text-3xl text-p03">
@@ -58,7 +74,11 @@ export function GameOver({ result, className = '' }: { result: Finished; classNa
         {number(result.score)} points{result.isBest ? '. A new best.' : `. Your best is ${number(result.best)}.`}
       </p>
       <div className="flex flex-wrap gap-3 font-sans text-base">
-        <Button onClick={() => navigate('/leaderboard', { state: { result } })}>See the leaderboard</Button>
+        <Button asChild>
+          <Link to="/leaderboard" state={{ result }}>
+            See the leaderboard
+          </Link>
+        </Button>
         <Button variant="outline" onClick={() => window.location.reload()}>
           Play again
         </Button>
@@ -147,7 +167,7 @@ export function SeatNote({ seat }: { seat: Exclude<Seat, null> }) {
         type="button"
         onClick={close}
         aria-label="Close the note"
-        className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+        className="grid size-6 shrink-0 place-items-center rounded text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
       >
         <X className="size-4" />
       </button>
