@@ -3,9 +3,9 @@ import { CARDS, type Unit } from 'shared'
 import * as THREE from 'three'
 import { bakedDisk, diskMaterials, facePlanes } from './Disk.tsx'
 import { backTexture, faceTexture, type loadCardAssets } from './faces.ts'
+import type { Kind } from './kind.ts'
 
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
-export type Kind = 'common' | 'rare'
 
 // Exceeds what a hand, the board and P03's rows can hold.
 const MOST = 32
