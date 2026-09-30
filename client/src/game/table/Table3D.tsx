@@ -124,6 +124,7 @@ export default function Table3D({ game, seat, onText }: { game: Ready; seat: Sea
     <div
       data-game-id={game.id}
       data-seed={game.state.seed}
+      data-moves={game.moves}
       data-table="3d"
       className={fullScreen.on ? 'fixed inset-0 z-40 bg-[#050403]' : 'relative h-full w-full'}
     >

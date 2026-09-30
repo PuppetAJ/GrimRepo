@@ -203,6 +203,7 @@ export function useTextTable({
   const frameProps = {
     'data-game-id': game.id,
     'data-seed': state.seed,
+    'data-moves': game.moves,
     'data-table': 'text',
     onContextMenu: (event: MouseEvent) => (hold.current || held.current) && event.preventDefault(),
     onClickCapture: (event: MouseEvent) => {
