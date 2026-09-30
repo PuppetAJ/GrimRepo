@@ -21,14 +21,16 @@ export function PromptLine() {
   )
 }
 
-/** Reads the prompt out as it changes, and again after a refused move; the visible prompt line stays silent. */
+/** Reads the prompt out as it changes, and why a move was refused; the visible prompt line stays silent. */
 export function Announcer() {
   const { promptText, refusal } = useTable()
   const [heard, setHeard] = useState({ prompt: promptText, count: refusal.count, refused: false })
   if (heard.prompt !== promptText) setHeard({ prompt: promptText, count: refusal.count, refused: false })
   else if (heard.count !== refusal.count) setHeard({ prompt: promptText, count: refusal.count, refused: true })
   // A no-break space on every other refusal changes the text, so a repeated refusal is announced again.
-  const text = heard.refused ? `Not yet. ${promptText}${refusal.count % 2 ? '\u00a0' : ''}` : promptText
+  const text = heard.refused
+    ? `Can't do that because ${refusal.reason}.${refusal.count % 2 ? '\u00a0' : ''}`
+    : promptText
   return (
     <p role="status" className="sr-only">
       {text}

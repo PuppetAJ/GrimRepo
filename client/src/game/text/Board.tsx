@@ -1,6 +1,6 @@
 import type { CSSProperties, KeyboardEvent, ReactNode } from 'react'
 import type { Slot } from 'shared'
-import { describe, GameOver, laneAction } from '../controls.tsx'
+import { describe, GameOver, laneAction, whyNot } from '../controls.tsx'
 import { PixelCard } from '../CardReader.tsx'
 import { LUNGE_MS, type Playback } from '../table/playback.ts'
 import { useTable } from './context.ts'
@@ -227,7 +227,7 @@ export function Board() {
                   ? undefined
                   : tapToRead && unit
                     ? () => setReading({ row: 'board', lane: i })
-                    : () => !busy && showRefusal(`lane-${i}`)
+                    : () => !busy && showRefusal(`lane-${i}`, whyNot(state, { lane: i }))
               }
               // A container, so the lane's badge sizes to it.
               className={`${CELL} @container relative ${frame}`}

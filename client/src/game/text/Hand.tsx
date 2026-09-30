@@ -1,5 +1,5 @@
 import { card, HAND_LIMIT, type Action } from 'shared'
-import { describe, has } from '../controls.tsx'
+import { describe, has, whyNot } from '../controls.tsx'
 import { PixelCard } from '../CardReader.tsx'
 import { useTable } from './context.ts'
 
@@ -35,7 +35,7 @@ export function Hand() {
                   ? setReading({ uid: unit.uid })
                   : allowed
                     ? act({ type: 'select', uid: unit.uid })
-                    : !selected && !busy && showRefusal(`card-${unit.uid}`)
+                    : !selected && !busy && showRefusal(`card-${unit.uid}`, whyNot(state, { card: unit }))
               }
               className={`w-full rounded-md p-1 transition-transform motion-reduce:transition-none ${selected ? '-translate-y-3 outline-2 outline-p03 outline-dashed' : allowed ? 'hover:-translate-y-1' : 'brightness-50 saturate-50'}`}
             >

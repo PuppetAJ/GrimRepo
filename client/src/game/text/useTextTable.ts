@@ -87,8 +87,8 @@ export function useTextTable({
       ),
   )
   const isNew = (uid: number) => !present.has(uid)
-  const [refusal, setRefused] = useState({ what: '', count: 0 })
-  const showRefusal = (what: string) => setRefused((last) => ({ what, count: last.count + 1 }))
+  const [refusal, setRefused] = useState({ what: '', count: 0, reason: '' })
+  const showRefusal = (what: string, reason: string) => setRefused((last) => ({ what, count: last.count + 1, reason }))
   const refusalShake = (what: string): CSSProperties | undefined =>
     refusal.count && (refusal.what === what || (what === 'piles' && mustDraw))
       ? { animation: 'shake 0.45s' }

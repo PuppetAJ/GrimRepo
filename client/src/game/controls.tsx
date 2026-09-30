@@ -48,10 +48,25 @@ export function owed(summoning: Unit, board: Slot[], marked: number[]): number {
   return Math.max(0, costOf(summoning) - paid)
 }
 
-/** What the player can do next, for the prompt line. */
 /** The turn began with a full hand, so its draw was skipped. */
 export const skippedDraw = (state: GameState) => state.drawn && state.player.hand.length >= HAND_LIMIT
 
+/** Why a click on a card or a lane did nothing, to finish "Can't do that because …". */
+export function whyNot(state: GameState, target: { card: Unit } | { lane: number }): string {
+  if (!state.drawn) return 'you need to draw a card first'
+  if ('card' in target) {
+    const onTable = state.player.board.reduce((sum, unit) => sum + (unit ? worthOf(unit) : 0), 0)
+    const spare = onTable ? `only ${onTable}` : 'nothing'
+    return `${card(target.card.card).name} costs ${costOf(target.card)} and there's ${spare} on the table to sacrifice`
+  }
+  const summoning = state.summon ? state.player.hand.find((unit) => unit.uid === state.summon?.uid) : undefined
+  if (!summoning) return "you haven't picked a card from your hand to play"
+  const left = owed(summoning, state.player.board, state.summon?.marked ?? [])
+  if (left > 0) return `${card(summoning.card).name} still needs ${left} more sacrificed`
+  return 'that lane is taken'
+}
+
+/** What the player can do next, for the prompt line. */
 export function prompt(mustDraw: boolean, summoning: Unit | undefined, left = 0, over = false, full = false): string {
   if (over) return 'Saving the result…'
   if (mustDraw) return 'Draw a card to start your turn.'
