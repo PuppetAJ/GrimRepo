@@ -1,7 +1,7 @@
 import { BOILERPLATE, card, DEBUG_CARD, PLAYER_DECK } from '../cards.ts'
+import { encounter } from '../encounters.ts'
 import { Rng } from '../rng.ts'
 import { attack } from './combat.ts'
-import { encounter } from '../encounters.ts'
 import { queue, queueCountFor, queuePlan, retireDeadCode } from './opponent.ts'
 import {
   HAND_LIMIT,
