@@ -15,50 +15,22 @@ type Face = (typeof MOODS)[number]
 
 let faces: Promise<Record<Face, THREE.Texture>> | null = null
 
-/** P03's faces, each drawn onto black at the size of its screen. */
+/** P03's faces, white on black, so the screen's glow gives them the palette's colour. */
 function loadFaces(): Promise<Record<Face, THREE.Texture>> {
+  const loader = new THREE.TextureLoader()
   faces ??= Promise.all(
-    MOODS.map(
-      (mood) =>
-        new Promise<[Face, THREE.Texture]>((resolve, reject) => {
-          const image = new Image()
-          image.onload = () => {
-            const canvas = document.createElement('canvas')
-            canvas.width = 90
-            canvas.height = 65
-            const context = canvas.getContext('2d') as CanvasRenderingContext2D
-            context.fillRect(0, 0, 90, 65)
-            const scale = Math.min(90 / image.width, 65 / image.height)
-            context.imageSmoothingEnabled = false
-            const w = image.width * scale
-            const h = image.height * scale
-            // The pack draws its faces in its own cyan; each is made white here, so the screen's glow gives it the palette's colour.
-            const shape = document.createElement('canvas')
-            shape.width = 90
-            shape.height = 65
-            const ink = shape.getContext('2d') as CanvasRenderingContext2D
-            ink.imageSmoothingEnabled = false
-            ink.drawImage(image, (90 - w) / 2, (65 - h) / 2, w, h)
-            ink.globalCompositeOperation = 'source-in'
-            ink.fillStyle = '#ffffff'
-            ink.fillRect(0, 0, 90, 65)
-            context.drawImage(shape, 0, 0)
-            const texture = new THREE.CanvasTexture(canvas)
-            // The pack's faces are stored upside down, as the game's textures were.
-            texture.flipY = true
-            texture.colorSpace = THREE.SRGBColorSpace
-            texture.magFilter = THREE.NearestFilter
-            resolve([mood, texture])
-          }
-          image.onerror = () => reject(new Error(`Could not load P03's ${mood} face`))
-          image.src = `/p03/${mood}.png`
-        }),
-    ),
+    MOODS.map(async (mood): Promise<[Face, THREE.Texture]> => {
+      const texture = await loader.loadAsync(`/p03/screen/${mood}.png`)
+      // The pack's faces are stored upside down, as the game's textures were.
+      texture.flipY = true
+      texture.colorSpace = THREE.SRGBColorSpace
+      texture.magFilter = THREE.NearestFilter
+      return [mood, texture]
+    }),
   ).then((entries) => Object.fromEntries(entries) as Record<Face, THREE.Texture>)
   return faces
 }
 
-/** How P03 looks at the game: smug, impatient if kept waiting, choking on a big hit, dying when low, then beaten or gleeful. */
 function useMood(view: View, busy: boolean, outcome: 'win' | 'loss' | undefined): Mood {
   const [choking, setChoking] = useState(false)
   const [impatient, setImpatient] = useState(false)
