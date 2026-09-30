@@ -4,8 +4,8 @@ import { pool } from '../config/db.ts'
 export async function resetDatabase(): Promise<void> {
   const { rows } = await pool.query<{ name: string }>('SELECT current_database() AS name')
   if (!rows[0]?.name.endsWith('_test')) throw new Error(`Refusing to wipe ${rows[0]?.name}`)
-  // users cascades to sessions, accounts and games.
-  await pool.query('TRUNCATE games, rate_limits, verifications, users RESTART IDENTITY CASCADE')
+  // users cascades to sessions, accounts, games and runs.
+  await pool.query('TRUNCATE games, runs, rate_limits, verifications, users RESTART IDENTITY CASCADE')
 }
 
 /** Skips sign-up and its rate limit, for tests that need many players. */

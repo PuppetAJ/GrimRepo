@@ -10,6 +10,9 @@ export const HAND_LIMIT = 7
 /** A game still going at this turn is lost, which also bounds what the server stores. */
 export const TURN_LIMIT = 200
 
+/** A card as a deck holds it; a run can change its stats and sigils. */
+export type DeckCard = { card: string; attack: number; health: number; sigils: SigilId[] }
+
 /** Carries its own stats, since they change in play. */
 export type Unit = {
   uid: number
@@ -18,6 +21,8 @@ export type Unit = {
   health: number
   maxHealth: number
   sigils: SigilId[]
+  /** Its index in the library, for a card drawn from the deck. */
+  source?: number
 }
 
 export type Slot = Unit | null
@@ -33,8 +38,10 @@ export type GameState = {
   debug: boolean
   /** Damage dealt minus damage taken; the game ends at TIP either way. */
   scale: number
-  player: { deck: string[]; hand: Unit[]; board: Slot[] }
-  opponent: { front: Slot[]; back: Slot[] }
+  /** The deck is indices into the library, which holds every card the player brought. */
+  player: { library: DeckCard[]; deck: number[]; hand: Unit[]; board: Slot[] }
+  /** Without an encounter, P03 queues from its whole pool; `step` is the next turn of the plan. */
+  opponent: { front: Slot[]; back: Slot[]; encounter: string | null; phase: number; step: number }
   /** The card being summoned and the lanes marked to pay for it. */
   summon: { uid: number; marked: number[] } | null
 }
@@ -71,6 +78,7 @@ export type GameEvent =
   | { type: 'advanced'; lane: number; uid: number }
   | { type: 'queued'; lane: number; unit: Unit }
   | { type: 'healed'; uid: number; amount: number; health: number }
+  | { type: 'phaseChanged'; phase: number; uids: number[] }
   | { type: 'turnStarted'; turn: number }
   | { type: 'gameOver'; outcome: 'win' | 'loss'; turns: number }
 

@@ -1,4 +1,4 @@
-import { card, CARDS, PLAYER_DECK, SIGILS, TIP, type GameState, type SigilId, type Unit } from 'shared'
+import { card, CARDS, deckCard, PLAYER_DECK, SIGILS, TIP, type GameState, type SigilId, type Unit } from 'shared'
 
 // Fixed states for checking layouts, loaded with ?fixture=<name> in dev and test builds.
 export const FIXTURES_ON = import.meta.env.DEV || import.meta.env.VITE_TEST_HANDLE === '1'
@@ -42,7 +42,8 @@ function worst(): GameState {
     debug: false,
     scale: -(TIP - 1),
     player: {
-      deck: [...PLAYER_DECK, ...PLAYER_DECK].slice(0, 42),
+      library: [...PLAYER_DECK, ...PLAYER_DECK].slice(0, 42).map(deckCard),
+      deck: [...Array(42).keys()],
       hand,
       board: [
         unit('Mainframe', { sigils: MOST_SIGILS, hurt: 10 }),
@@ -59,6 +60,9 @@ function worst(): GameState {
         unit('RubberDuck', { sigils: ['hotfix', 'rate_limiter'] }),
       ],
       back: [unit('ForkBomb'), unit('Mainframe', { sigils: MOST_SIGILS }), unit('Sandbox'), unit('Bug')],
+      encounter: null,
+      phase: 0,
+      step: 0,
     },
     // Mid-summon, so the prompt, the marks and a lifted card all show.
     summon: { uid: hand[0]!.uid, marked: [1] },
