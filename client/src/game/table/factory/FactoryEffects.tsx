@@ -1,10 +1,8 @@
 import { useThree } from '@react-three/fiber'
 import {
   Bloom,
-  BrightnessContrast,
   ChromaticAberration,
   EffectComposer,
-  HueSaturation,
   Noise,
   Scanline,
   SelectiveBloom,
@@ -44,8 +42,6 @@ export function FactoryEffects({ quality = 0 }: { quality?: number }) {
         />
       ) : null}
       <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
-      <HueSaturation hue={MOOD.hue * Math.PI} saturation={MOOD.saturation} />
-      <BrightnessContrast brightness={MOOD.brightness} contrast={MOOD.contrast} />
       {/* A cheap stand-in for MSAA below 1.5 dpr. */}
       {sharp ? null : <SMAA />}
     </EffectComposer>

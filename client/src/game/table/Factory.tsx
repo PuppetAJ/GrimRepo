@@ -20,7 +20,6 @@ export { EndTurnButton } from './factory/EndTurnButton.tsx'
 export { FactoryEffects } from './factory/FactoryEffects.tsx'
 export { logLines, statusLines } from './factory/monitorLines.ts'
 export { FactoryP03 } from './factory/P03.tsx'
-export { Scale } from './factory/Scale.tsx'
 export { TechBoard } from './factory/TechBoard.tsx'
 
 export function Factory({
