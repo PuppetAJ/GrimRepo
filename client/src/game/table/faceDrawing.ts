@@ -1,6 +1,5 @@
 import { card, type Unit } from 'shared'
-import { SPRITE_SIZE, spriteOf } from '../sprites.ts'
-import { ICONS, STAT_ICONS } from './icons.ts'
+import { cardImage, iconImage } from '../art.ts'
 import { CORNER_HOLES, DISK, RECESS, SCREEN_DIVIDER, SECTIONS, SIGIL_BAND } from './layout.ts'
 import { TINT } from './palette.ts'
 
@@ -54,11 +53,38 @@ const RARE: Palette = {
   hurt: '#ffd3d0',
 }
 
-function pixels(context: CanvasRenderingContext2D, grid: string[], x: number, y: number, size: number, colour: string) {
-  context.fillStyle = colour
-  grid.forEach((row, j) =>
-    [...row].forEach((bit, i) => bit === '1' && context.fillRect(x + i * size, y + j * size, size, size)),
-  )
+const tints = new Map<string, HTMLCanvasElement>()
+
+/** An image recoloured at its own size, made once per image and colour. */
+function tinted(image: HTMLImageElement, colour: string): HTMLCanvasElement {
+  const key = `${image.src}:${colour}`
+  let layer = tints.get(key)
+  if (layer) return layer
+  layer = document.createElement('canvas')
+  layer.width = image.naturalWidth
+  layer.height = image.naturalHeight
+  const paint = layer.getContext('2d') as CanvasRenderingContext2D
+  paint.drawImage(image, 0, 0)
+  paint.globalCompositeOperation = 'source-in'
+  paint.fillStyle = colour
+  paint.fillRect(0, 0, layer.width, layer.height)
+  tints.set(key, layer)
+  return layer
+}
+
+/** Pixel art scaled up by a whole number, without blurring. */
+function pixels(
+  context: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  x: number,
+  y: number,
+  scale: number,
+  colour: string,
+) {
+  context.save()
+  context.imageSmoothingEnabled = false
+  context.drawImage(tinted(image, colour), x, y, image.naturalWidth * scale, image.naturalHeight * scale)
+  context.restore()
 }
 
 /** The disk's outline on the canvas, with the clipped corner; outside it the canvas stays clear. The back is seen mirrored, so its clip is on the left. */
@@ -112,22 +138,16 @@ function screen(context: CanvasRenderingContext2D, area: readonly [number, numbe
 
 const sprites = new Map<string, HTMLCanvasElement>()
 
-/** A sprite at a whole-pixel scale, scanlined like projected light, made once per sprite, colour and size. */
-function spriteLayer(grid: readonly string[], scale: number, colour: string): HTMLCanvasElement {
-  const key = `${grid.join('')}:${colour}:${scale}`
+/** A card's art at a whole-pixel scale, scanlined like projected light, made once per card, colour and size. */
+function spriteLayer(image: HTMLImageElement, scale: number, colour: string): HTMLCanvasElement {
+  const key = `${image.src}:${colour}:${scale}`
   let layer = sprites.get(key)
   if (layer) return layer
   layer = document.createElement('canvas')
-  layer.width = layer.height = SPRITE_SIZE * scale
+  layer.width = image.naturalWidth * scale
+  layer.height = image.naturalHeight * scale
   const paint = layer.getContext('2d') as CanvasRenderingContext2D
-  pixels(
-    paint,
-    grid.map((row) => row.replaceAll('#', '1')),
-    0,
-    0,
-    scale,
-    colour,
-  )
+  pixels(paint, image, 0, 0, scale, colour)
   paint.globalCompositeOperation = 'destination-out'
   paint.fillStyle = 'rgb(0 0 0 / 0.35)'
   for (let line = 1; line < layer.height; line += 3) paint.fillRect(0, line, layer.width, 1)
@@ -138,20 +158,20 @@ function spriteLayer(grid: readonly string[], scale: number, colour: string): HT
 /** A sprite centred in its area, as large as whole pixels allow, glowing like the rest of the screen. */
 function sprite(
   context: CanvasRenderingContext2D,
-  grid: readonly string[],
+  image: HTMLImageElement,
   x: number,
   y: number,
   w: number,
   h: number,
   palette: Palette,
 ) {
-  const scale = Math.max(1, Math.floor(Math.min(w, h) / SPRITE_SIZE))
-  const size = SPRITE_SIZE * scale
+  const scale = Math.max(1, Math.floor(Math.min(w, h) / image.naturalWidth))
+  const size = image.naturalWidth * scale
   context.save()
   context.shadowColor = palette.line
   context.shadowBlur = 5
   context.drawImage(
-    spriteLayer(grid, scale, palette.line),
+    spriteLayer(image, scale, palette.line),
     Math.round(x + (w - size) / 2),
     Math.round(y + (h - size) / 2),
   )
@@ -210,7 +230,7 @@ export function drawFace(context: CanvasRenderingContext2D, unit: Unit, layer: L
 
   // The art above the divider, the sigils below it, the cost in the top-right corner.
   const divider = SCREEN_DIVIDER * H
-  sprite(context, spriteOf(unit.card), sx + sw * 0.03, sy + sh * 0.08, sw * 0.94, divider - sy - sh * 0.1, palette)
+  sprite(context, cardImage(unit.card), sx + sw * 0.03, sy + sh * 0.08, sw * 0.94, divider - sy - sh * 0.1, palette)
   const cells = 4
   const cell = 13
   context.fillStyle = palette.cost
@@ -225,14 +245,14 @@ export function drawFace(context: CanvasRenderingContext2D, unit: Unit, layer: L
     const start = sx + sw / 2 - (unit.sigils.length * step - 30) / 2
     const middle = ((top + bottom) / 2) * H
     unit.sigils.forEach((sigil, i) =>
-      pixels(context, ICONS[sigil], start + i * step, middle - 4 * size, size, palette.line),
+      pixels(context, iconImage(sigil), start + i * step, middle - 4 * size, size, palette.line),
     )
   }
 
   // Attack and health, each in its own box beside its icon: the sword on the outer side of the one, the shield of the other.
   const icon = 3
-  pixels(context, STAT_ICONS.attack, ax + 6, ay + ah / 2 - 4 * icon, icon, palette.line)
-  pixels(context, STAT_ICONS.health, hx + hw - 6 - 8 * icon, hy + hh / 2 - 4 * icon, icon, palette.line)
+  pixels(context, iconImage('attack'), ax + 6, ay + ah / 2 - 4 * icon, icon, palette.line)
+  pixels(context, iconImage('health'), hx + hw - 6 - 8 * icon, hy + hh / 2 - 4 * icon, icon, palette.line)
   context.font = Math.max(unit.attack, unit.health) > 99 ? '40px VT323' : '64px VT323'
   context.fillStyle = palette.line
   centred(context, String(unit.attack), ax + aw / 2 + 12, ay + ah / 2)

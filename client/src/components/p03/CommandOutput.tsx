@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { SIGILS, type CardDef } from 'shared'
-import { Sprite } from '../../game/CardReader.tsx'
-import { spriteOf } from '../../game/sprites.ts'
+import { cardArt } from '../../game/art.ts'
+import { PixelArt } from '../../game/CardReader.tsx'
 import { STEPS, type Step } from './commandData.ts'
 
 export const Dim = ({ children }: { children: ReactNode }) => <span className="text-p03-dim">{children}</span>
@@ -19,7 +19,7 @@ export function Cost({ cost }: { cost: number }) {
 export function Art({ id, size = 'size-24' }: { id: string; size?: string }) {
   return (
     <span className={`${size} flex shrink-0 items-center justify-center border border-[#2f6b3d] p-2 text-p03`}>
-      <Sprite grid={spriteOf(id)} className="size-full" />
+      <PixelArt src={cardArt(id)} className="size-full" />
     </span>
   )
 }

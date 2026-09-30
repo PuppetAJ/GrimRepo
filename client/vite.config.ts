@@ -1,6 +1,5 @@
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
-import { readFileSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { gzipSync } from 'node:zlib'
 import { defineConfig, type Plugin } from 'vite'
@@ -15,63 +14,6 @@ const mockupsSlash: Plugin = {
     server.middlewares.use((req, _res, next) => {
       if (req.url === '/mockups') req.url = '/mockups/'
       next()
-    })
-  },
-}
-
-// The mockup page's editor saves one card's sprite into sprites.ts, or one icon into icons.ts; development only.
-const SPRITES_FILE = fileURLToPath(new URL('./src/game/sprites.ts', import.meta.url))
-const ICONS_FILE = fileURLToPath(new URL('./src/game/table/icons.ts', import.meta.url))
-const ART = {
-  // A sprite is 24 rows of 24 # or ., one row a line; an icon 8 rows of 8 1 or 0, all on one line.
-  card: {
-    file: SPRITES_FILE,
-    row: /^[#.]{24}$/,
-    rows: 24,
-    block: (id: string) => new RegExp(`(\\n  ${id}: \\[\\n)(?:    '[#.]{24}',\\n){24}(  \\],)`),
-    write: (rows: string[]) => rows.map((row) => `    '${row}',\n`).join(''),
-  },
-  icon: {
-    file: ICONS_FILE,
-    row: /^[01]{8}$/,
-    rows: 8,
-    block: (id: string) => new RegExp(`(\\n  ${id}: \\[)'[01]{8}'(?:, '[01]{8}'){7}(\\],)`),
-    write: (rows: string[]) => rows.map((row) => `'${row}'`).join(', '),
-  },
-}
-let saving = 0
-const spriteEditor: Plugin = {
-  name: 'sprite-editor',
-  apply: 'serve',
-  // The editor already shows what it saved, so its own save reloads nothing; the next page load reads the new file.
-  handleHotUpdate({ file }) {
-    if ((file === SPRITES_FILE || file === ICONS_FILE) && Date.now() - saving < 2000) return []
-  },
-  configureServer(server) {
-    server.middlewares.use('/__mockups/sprite', (req, res) => {
-      if (req.method !== 'POST') return void res.writeHead(405).end()
-      let body = ''
-      req.on('data', (chunk: Buffer) => (body += chunk))
-      req.on('end', () => {
-        const refuse = (why: string) => void res.writeHead(400, { 'content-type': 'text/plain' }).end(why)
-        let sent: { kind?: unknown; id?: unknown; rows?: unknown }
-        try {
-          sent = JSON.parse(body)
-        } catch {
-          return refuse('not JSON')
-        }
-        const art = ART[sent.kind === 'icon' ? 'icon' : 'card']
-        const { id, rows } = sent
-        if (typeof id !== 'string' || !/^[A-Za-z0-9_]+$/.test(id)) return refuse('no such art')
-        if (!Array.isArray(rows) || rows.length !== art.rows || !rows.every((row) => art.row.test(String(row))))
-          return refuse(`this art is ${art.rows} rows of ${art.rows}`)
-        const file = readFileSync(art.file, 'utf8')
-        const block = art.block(id)
-        if (!block.test(file)) return refuse('no such art')
-        saving = Date.now()
-        writeFileSync(art.file, file.replace(block, `$1${art.write(rows as string[])}$2`))
-        res.writeHead(204).end()
-      })
     })
   },
 }
@@ -97,7 +39,7 @@ const budget: Plugin = {
 }
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), mockupsSlash, spriteEditor, budget],
+  plugins: [react(), tailwindcss(), mockupsSlash, budget],
 
   // Mirrors the "@/*" alias in tsconfig.json for shadcn/ui's components.
   resolve: {
