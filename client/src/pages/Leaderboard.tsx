@@ -73,20 +73,22 @@ export function Leaderboard() {
       {/* Reserves height so the page doesn't jump when the rows arrive. */}
       <div className="min-h-[65dvh]">
         {board.status === 'loading' ? (
-          <ol role="status" aria-label="Loading the leaderboard" className="overflow-hidden rounded-lg border bg-card">
-            {[...Array(5).keys()].map((i) => (
-              <li key={i} className="flex items-center gap-4 border-t px-4 py-3.5 first:border-t-0 sm:gap-5 sm:px-6">
-                <Skeleton className="h-5 w-10" />
-                <Skeleton className="size-9 shrink-0 rounded-full" />
-                <div className="flex flex-1 flex-col gap-1 sm:w-72 sm:flex-none">
-                  <Skeleton className="h-5 w-32" />
-                  <Skeleton className="h-4 w-20" />
-                </div>
-                <Skeleton className="hidden h-2.5 flex-1 rounded-full sm:block" />
-                <Skeleton className="h-5 w-16" />
-              </li>
-            ))}
-          </ol>
+          <div role="status" aria-label="Loading the leaderboard">
+            <ol aria-hidden className="overflow-hidden rounded-lg border bg-card">
+              {[...Array(5).keys()].map((i) => (
+                <li key={i} className="flex items-center gap-4 border-t px-4 py-3.5 first:border-t-0 sm:gap-5 sm:px-6">
+                  <Skeleton className="h-5 w-10" />
+                  <Skeleton className="size-9 shrink-0 rounded-full" />
+                  <div className="flex flex-1 flex-col gap-1 sm:w-72 sm:flex-none">
+                    <Skeleton className="h-5 w-32" />
+                    <Skeleton className="h-4 w-20" />
+                  </div>
+                  <Skeleton className="hidden h-2.5 flex-1 rounded-full sm:block" />
+                  <Skeleton className="h-5 w-16" />
+                </li>
+              ))}
+            </ol>
+          </div>
         ) : null}
         {board.status === 'error' ? (
           <Failure title="The leaderboard would not load" detail={board.error.message} />

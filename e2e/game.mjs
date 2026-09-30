@@ -82,7 +82,7 @@ section('A whole game')
   await page.goto(`${BASE}/players/${player.username}`)
   await page.getByRole('heading', { name: player.username }).waitFor()
   // The history loads after the page, and its loading placeholders are a list too.
-  const rows = page.locator('section ol:not([role="status"]) > li')
+  const rows = page.locator('section ol:not([aria-hidden]) > li')
   await rows.first().waitFor()
   const history = await rows.first().innerText()
   check(

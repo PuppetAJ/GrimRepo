@@ -87,7 +87,7 @@ section('A player’s record')
   check('and the card they play most', /RubberDuck/.test(text), text.match(/Fav[^\n]*\n?[^\n]*/)?.[0])
   const grid = await page.getByRole('img', { name: /games over the last 26 weeks/ }).getAttribute('aria-label')
   check('the activity grid describes itself in words', /\d+ games over the last 26 weeks/.test(grid ?? ''), grid)
-  const rows = page.locator('section ol:not([role="status"]) > li')
+  const rows = page.locator('section ol:not([aria-hidden]) > li')
   await rows.first().waitFor()
   check('the history lists their games', (await rows.count()) >= 3)
 
