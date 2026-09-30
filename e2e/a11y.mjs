@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright'
-import { BASE, launch, reporter, resetRateLimits, signInAsDemo } from './lib.mjs'
+import { BASE, launch, reporter, resetRateLimits, signInAsDemo, tableReady } from './lib.mjs'
 
 await resetRateLimits()
 const { page, context, pageErrors, close } = await launch()
@@ -19,13 +19,16 @@ const PAGES = [
   ['a page that is not there', '/nowhere'],
 ]
 
-async function audit(name, path) {
+// WCAG 2.2 AA, which adds target size, and axe's best practices, which cover landmarks and headings.
+const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice']
+
+async function audit(name, path, ready = () => page.waitForLoadState('networkidle')) {
   await page.goto(`${BASE}${path}`)
-  await page.waitForLoadState('networkidle')
+  await ready()
   // Wait out the corruption's growth and the terminal's typing, so axe checks what stays.
   await page.waitForTimeout(3000)
   const { violations } = await new AxeBuilder({ page })
-    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+    .withTags(TAGS)
     // WebGL is drawn, not read; the canvases carry their own labels.
     .exclude('canvas')
     .analyze()
@@ -42,6 +45,24 @@ for (const [label, width, height] of [
   section(label)
   await page.setViewportSize({ width, height })
   for (const [name, path] of PAGES) await audit(name, path)
+}
+
+section('The game')
+{
+  // Signed out, the game deals a guest in; the text table in each layout, then the 3D table's controls.
+  const textTable = () => page.locator('[data-table="text"]').waitFor()
+  for (const [layout, width, height] of [
+    ['wide', 1440, 900],
+    ['mid', 800, 900],
+    ['phone', 390, 844],
+  ]) {
+    await page.setViewportSize({ width, height })
+    await page.evaluate(() => localStorage.setItem('grimrepo:table', 'text'))
+    await audit(`the text table, ${layout}`, `/game?layout=${layout}`, textTable)
+  }
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await page.evaluate(() => localStorage.setItem('grimrepo:table', '3d'))
+  await audit('the 3D table', '/game', () => tableReady(page))
 }
 
 section('Signed in')

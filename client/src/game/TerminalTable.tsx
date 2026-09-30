@@ -2,6 +2,7 @@ import type { Seat } from './controls.tsx'
 import { TableContext } from './text/context.ts'
 import { MidLayout } from './text/MidLayout.tsx'
 import { PhoneLayout } from './text/PhoneLayout.tsx'
+import { Announcer } from './text/Reading.tsx'
 import { useTextTable, type Layout } from './text/useTextTable.ts'
 import { WideLayout } from './text/WideLayout.tsx'
 import type { Ready } from './useGame.ts'
@@ -21,6 +22,7 @@ export function TerminalTable({
   return (
     <TableContext value={table}>
       {layout === 'phone' ? <PhoneLayout /> : layout === 'mid' ? <MidLayout /> : <WideLayout />}
+      <Announcer />
     </TableContext>
   )
 }

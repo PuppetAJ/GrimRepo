@@ -7,7 +7,7 @@ import type { View } from '../../view.ts'
 import { MOOD } from '../mood.ts'
 import { TINT } from '../palette.ts'
 import { CENTER_X } from '../layout.ts'
-import { LIT } from './constants.ts'
+import { LIT, STILL } from './constants.ts'
 
 // Smug reuses the happy face texture.
 type Mood = 'smug' | 'happy' | 'impatient' | 'choking' | 'dying' | 'whiteflag'
@@ -93,7 +93,8 @@ function P03({ mood }: { mood: Mood }) {
     screen.needsUpdate = true
   }, [scene, textures, mood])
   useFrame(({ clock }) => {
-    const t = clock.getElapsedTime()
+    // Frozen at the rest pose with reduced motion; the mood's droop still shows.
+    const t = STILL ? 0 : clock.getElapsedTime()
     const rest = (object: THREE.Object3D) =>
       object.userData['rest'] as { position: THREE.Vector3; rotation: THREE.Euler }
     const { head, arm, headCrank, armCrank, clawLeft, clawRight } = parts

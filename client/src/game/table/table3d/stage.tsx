@@ -2,8 +2,8 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { easing } from 'maath'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
-import { Button } from '@/components/ui/button.tsx'
 import { cursorCss, onCursor } from '../cursor.ts'
+import { STILL } from '../factory/constants.ts'
 import { BOARD_CENTER, CAMERA, type CameraView } from '../layout.ts'
 import { MOOD } from '../mood.ts'
 
@@ -13,9 +13,15 @@ export function CameraRig({ view }: { view: CameraView }) {
   const target = useRef(new THREE.Vector3(...CAMERA[view].target))
   useFrame(({ camera, pointer }, delta) => {
     const [x, y, z] = CAMERA[view].position
-    seat.set(x + pointer.x * 0.12, y + pointer.y * 0.06, z)
-    easing.damp3(camera.position, seat, 0.18, delta)
-    easing.damp3(target.current, CAMERA[view].target, 0.18, delta)
+    // With reduced motion the camera jumps between views and doesn't follow the pointer.
+    if (STILL) {
+      camera.position.set(x, y, z)
+      target.current.set(...CAMERA[view].target)
+    } else {
+      seat.set(x + pointer.x * 0.12, y + pointer.y * 0.06, z)
+      easing.damp3(camera.position, seat, 0.18, delta)
+      easing.damp3(target.current, CAMERA[view].target, 0.18, delta)
+    }
     camera.lookAt(target.current)
   })
   return null
@@ -86,15 +92,6 @@ export function Exposure() {
   const gl = useThree((three) => three.gl)
   useLayoutEffect(() => void (gl.toneMappingExposure = MOOD.exposure), [gl])
   return null
-}
-
-export function NoWebGL({ onText }: { onText: () => void }) {
-  return (
-    <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center">
-      <p className="font-terminal text-2xl text-p03">This browser cannot draw the 3D table.</p>
-      <Button onClick={onText}>Play the text version</Button>
-    </div>
-  )
 }
 
 /** Mounts once the table's suspended assets load; the room and P03 may still be arriving. */

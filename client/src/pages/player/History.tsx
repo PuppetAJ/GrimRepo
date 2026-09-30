@@ -51,18 +51,20 @@ export function History({ username, lastLoss }: { username: string; lastLoss: Ga
       {pinned ? <Trace game={lastLoss} /> : null}
       {/* Placeholder rows hold the list's height, so nothing below it jumps. */}
       {history.status === 'loading' ? (
-        <ol role="status" aria-label="Loading games" className={pinned ? '' : 'mt-3'}>
-          {[...Array(HISTORY).keys()].map((row) => (
-            <li key={row} className="flex items-center gap-4 border-t px-6 py-3.5">
-              <Skeleton className="size-2.5 rounded-full" />
-              <div className="flex flex-1 flex-col gap-1.5">
-                <Skeleton className="h-4 w-40" />
-                <Skeleton className="h-3.5 w-20" />
-              </div>
-              <Skeleton className="h-5 w-14" />
-            </li>
-          ))}
-        </ol>
+        <div role="status" aria-label="Loading games">
+          <ol aria-hidden className={pinned ? '' : 'mt-3'}>
+            {[...Array(HISTORY).keys()].map((row) => (
+              <li key={row} className="flex items-center gap-4 border-t px-6 py-3.5">
+                <Skeleton className="size-2.5 rounded-full" />
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-3.5 w-20" />
+                </div>
+                <Skeleton className="h-5 w-14" />
+              </li>
+            ))}
+          </ol>
+        </div>
       ) : null}
       {games.length ? (
         <ol className={pinned ? '' : 'mt-3'}>

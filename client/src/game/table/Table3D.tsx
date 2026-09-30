@@ -7,6 +7,7 @@ import { type Seat, has } from '../controls.tsx'
 import { useFullScreen } from '../fullScreen.ts'
 import type { Ready } from '../useGame.ts'
 import { FlatReaderBody } from '../CardReader.tsx'
+import { forTable } from '../shortcuts.ts'
 import { disposeFaces, loadCardAssets } from './faces.ts'
 import { CAMERA, type CameraView } from './layout.ts'
 import { logLines, statusLines } from './Factory.tsx'
@@ -18,7 +19,7 @@ import { Hud } from './table3d/Hud.tsx'
 import { COARSE, LOG_READ, type Reader, type Readout, unitOf } from './table3d/reader.ts'
 import { Scene } from './table3d/Scene.tsx'
 import { ScreenReadout } from './table3d/ScreenReadout.tsx'
-import { CursorSync, Exposure, Loaded, NoWebGL } from './table3d/stage.tsx'
+import { CursorSync, Exposure, Loaded } from './table3d/stage.tsx'
 
 export default function Table3D({ game, seat, onText }: { game: Ready; seat: Seat; onText: () => void }) {
   const assets = use(loadCardAssets())
@@ -60,7 +61,7 @@ export default function Table3D({ game, seat, onText }: { game: Ready; seat: Sea
   })
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.metaKey || event.ctrlKey || event.altKey || (event.target as HTMLElement).tagName === 'INPUT') return
+      if (!forTable(event)) return
       const key = event.key.toLowerCase()
       if (key === 'w') setCamera('board')
       else if (key === 'd' || key === 's') setCamera('table')
@@ -119,6 +120,8 @@ export default function Table3D({ game, seat, onText }: { game: Ready; seat: Sea
       data-seed={game.state.seed}
       data-moves={game.moves}
       data-table="3d"
+      // Focusable, so a click anywhere on the table puts focus here and its shortcuts work.
+      tabIndex={-1}
       className={fullScreen.on ? 'fixed inset-0 z-40 bg-[#050403]' : 'relative h-full w-full'}
     >
       <Canvas
@@ -127,7 +130,6 @@ export default function Table3D({ game, seat, onText }: { game: Ready; seat: Sea
         gl={{ antialias: false }}
         camera={{ fov: 60, near: 0.05, far: 200, position: CAMERA.table.position }}
         onCreated={({ gl }) => (gl.toneMapping = THREE.ACESFilmicToneMapping)}
-        fallback={<NoWebGL onText={onText} />}
         aria-hidden
         onPointerMissed={() => (peek !== null || pinned !== null) && reader.lift(null)}
         // The long-press menu would block holding a finger on a card to read it.
@@ -210,7 +212,7 @@ export default function Table3D({ game, seat, onText }: { game: Ready; seat: Sea
           }}
         >
           {'unit' in magnifiedRead ? (
-            <div className="relative flex min-h-40 gap-2 overflow-hidden rounded-md border-2 border-[#2f6b3d] bg-[#a9e7b8] p-2 font-terminal text-[#0b1f12]">
+            <div className="relative flex min-h-40 gap-2 overflow-hidden rounded-md border-2 border-p03-edge bg-[#a9e7b8] p-2 font-terminal text-[#0b1f12]">
               <FlatReaderBody unit={magnifiedRead.unit} />
               <span aria-hidden className="crt-glass pointer-events-none absolute inset-0" />
             </div>

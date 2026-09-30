@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button.tsx'
 import { Input } from '@/components/ui/input.tsx'
 import { Label } from '@/components/ui/label.tsx'
 import { PasswordInput } from '../components/PasswordInput.tsx'
-import { authClient, authError } from '../lib/auth.ts'
+import { authClient, authError, settled } from '../lib/auth.ts'
 import { P03Line } from '../components/p03/P03Line.tsx'
 
 // The server checks all of this too; this only saves a round trip and explains the rule.
@@ -33,11 +33,13 @@ export function SignUp() {
     })
     if (!parsed.success) {
       setErrors(Object.fromEntries(parsed.error.issues.map((issue) => [issue.path[0], issue.message])))
+      // Focus reads the field's error aloud with its label.
+      document.getElementById(String(parsed.error.issues[0]?.path[0]))?.focus()
       return
     }
     setBusy(true)
     setErrors({})
-    const { error } = await authClient.signUp.email({ ...parsed.data, name: parsed.data.username })
+    const { error } = await settled(authClient.signUp.email({ ...parsed.data, name: parsed.data.username }))
     setBusy(false)
     if (error)
       return setErrors({
@@ -86,6 +88,7 @@ export function SignUp() {
             id="username"
             name="username"
             autoComplete="username"
+            required
             aria-invalid={Boolean(errors.username)}
             aria-describedby={describedBy('username')}
           />,
@@ -99,6 +102,7 @@ export function SignUp() {
             name="email"
             type="email"
             autoComplete="email"
+            required
             aria-invalid={Boolean(errors.email)}
             aria-describedby={describedBy('email')}
           />,
@@ -111,6 +115,7 @@ export function SignUp() {
             id="password"
             name="password"
             autoComplete="new-password"
+            required
             aria-invalid={Boolean(errors.password)}
             aria-describedby={describedBy('password')}
           />,

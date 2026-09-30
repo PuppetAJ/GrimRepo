@@ -55,7 +55,7 @@ export function Balance({ scale }: { scale: number }) {
             <span key={t} className={`w-[2px] bg-p03-dim ${t === 0 ? 'h-4' : 'h-2'}`} />
           ))}
         <span
-          className="absolute -top-3 -translate-x-1/2 text-p03 transition-all duration-300"
+          className="absolute -top-3 -translate-x-1/2 text-p03 transition-all duration-300 motion-reduce:transition-none"
           // Slides toward the leader's pan, matching the 3D table's scale bar.
           style={{ left: `${50 - lean * 50}%` }}
         >

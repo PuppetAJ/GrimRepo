@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Navigate } from 'react-router'
-import { authClient } from '../lib/auth.ts'
+import { authClient, settled } from '../lib/auth.ts'
 import { Failure, Loading } from './States.tsx'
 
 /** Redirects signed-out visitors to sign in, or with `guest`, signs them in as a guest. */
@@ -12,7 +12,7 @@ export function RequireAuth({ children, guest = false }: { children: ReactNode; 
   useEffect(() => {
     if (!guest || !signedOut) return
     let current = true
-    void authClient.signIn.anonymous().then(({ error }) => {
+    void settled(authClient.signIn.anonymous()).then(({ error }) => {
       if (!current) return
       if (error)
         setRefused(error.status === 429 ? 'Too many guests from here at once. Wait a minute.' : (error.message ?? ''))

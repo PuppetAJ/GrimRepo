@@ -1,7 +1,7 @@
 import { Selection } from '@react-three/postprocessing'
 import { Suspense, useState } from 'react'
-import { HAND_LIMIT, legalActions, PLAYER_DECK, type Action } from 'shared'
-import { has, laneAction } from '../../controls.tsx'
+import { legalActions, PLAYER_DECK, type Action } from 'shared'
+import { has, laneAction, skippedDraw } from '../../controls.tsx'
 import type { Ready } from '../../useGame.ts'
 import type { View } from '../../view.ts'
 import { CardBatch } from '../Batch.tsx'
@@ -62,6 +62,7 @@ export function Scene({
   const handLook = (uid: number): Look =>
     view.summon?.uid === uid ? 'selected' : can({ type: 'select', uid } as Partial<Action>) ? 'plain' : 'dim'
 
+  const handFull = !busy && !game.result && skippedDraw(state)
   return (
     <CardBatch assets={assets}>
       <Selection>
@@ -85,14 +86,14 @@ export function Scene({
           active={can({ type: 'draw', from: 'deck' } as Partial<Action>)}
           onClick={() => act({ type: 'draw', from: 'deck' })}
           hint={hint}
-          full={!busy && !game.result && state.drawn && state.player.hand.length >= HAND_LIMIT}
+          full={handFull}
         />
         <Pile
           assets={assets}
           active={can({ type: 'draw', from: 'boilerplate' } as Partial<Action>)}
           onClick={() => act({ type: 'draw', from: 'boilerplate' })}
           hint={hint}
-          full={!busy && !game.result && state.drawn && state.player.hand.length >= HAND_LIMIT}
+          full={handFull}
         />
         <EndTurnButton active={can({ type: 'ringBell' })} rung={rung} onClick={() => act({ type: 'ringBell' })} />
         <Lanes view={view} legal={legal} act={act} play={TINT.play} aimed={aimed} onAim={setAimed} />

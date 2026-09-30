@@ -1,5 +1,5 @@
 import { card, HAND_LIMIT, type Action } from 'shared'
-import { describe, has } from '../controls.tsx'
+import { describe, has, whyNot } from '../controls.tsx'
 import { PixelCard } from '../CardReader.tsx'
 import { useTable } from './context.ts'
 
@@ -35,9 +35,9 @@ export function Hand() {
                   ? setReading({ uid: unit.uid })
                   : allowed
                     ? act({ type: 'select', uid: unit.uid })
-                    : !selected && !busy && showRefusal(`card-${unit.uid}`)
+                    : !selected && !busy && showRefusal(`card-${unit.uid}`, whyNot(state, { card: unit }))
               }
-              className={`w-full rounded-md p-1 transition-transform ${selected ? '-translate-y-3 outline-2 outline-p03 outline-dashed' : allowed ? 'hover:-translate-y-1' : 'brightness-50 saturate-50'}`}
+              className={`w-full rounded-md p-1 transition-transform motion-reduce:transition-none ${selected ? '-translate-y-3 outline-2 outline-p03 outline-dashed' : allowed ? 'hover:-translate-y-1' : 'brightness-50 saturate-50'}`}
             >
               <span
                 key={refusal.what === `card-${unit.uid}` ? refusal.count : 0}
@@ -74,7 +74,7 @@ export function Piles() {
         aria-label={`Draw from the deck, ${view.deck} left`}
         className={`flex flex-col items-center gap-1 text-p03 disabled:brightness-50 disabled:saturate-50 ${size}`}
       >
-        <span className="grid aspect-[5/7] w-full place-items-center rounded-md border-2 border-[#2f6b3d] bg-[#0b1f12] text-3xl shadow-[3px_3px_0_#1f3a26,6px_6px_0_#13261a]">
+        <span className="grid aspect-[5/7] w-full place-items-center rounded-md border-2 border-p03-edge bg-[#0b1f12] text-3xl shadow-[3px_3px_0_#1f3a26,6px_6px_0_#13261a]">
           ▦
         </span>
         <span className="text-lg">x{view.deck}</span>
