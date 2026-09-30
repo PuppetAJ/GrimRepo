@@ -23,7 +23,7 @@ export function ConsolePanel() {
   const { game } = useTable()
   const [box, onScroll] = useStuckToBottom(game.log.length)
   return (
-    <div className="flex min-h-16 flex-1 basis-0 flex-col rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-2 text-base">
+    <div className="flex min-h-16 flex-1 basis-0 flex-col rounded-md border-2 border-p03-edge bg-[#07130b] p-2 text-base">
       <div ref={box} onScroll={onScroll} {...LOG} className="flex min-h-0 flex-1 flex-col overflow-y-auto text-lg">
         <ol className="mt-auto">
           <LogItems />
@@ -59,7 +59,7 @@ export function LogDialog() {
     <Dialog open={logOpen} onOpenChange={setLogOpen}>
       <DialogContent
         aria-describedby={undefined}
-        className="flex max-h-[85dvh] flex-col border-2 border-[#2f6b3d] bg-[#07130b] font-terminal text-p03 ring-0"
+        className="flex max-h-[85dvh] flex-col border-2 border-p03-edge bg-[#07130b] font-terminal text-p03 ring-0"
       >
         <DialogHeader>
           <DialogTitle className="font-terminal text-2xl font-normal text-p03">Battle log</DialogTitle>
@@ -78,7 +78,7 @@ export function TerminalDialog() {
     <Dialog open={terminalOpen} onOpenChange={setTerminalOpen}>
       <DialogContent
         aria-describedby={undefined}
-        className="flex h-[min(32rem,85dvh)] flex-col overflow-hidden border-2 border-[#2f6b3d] bg-p03-ground p-0 ring-0 [&>[data-slot=dialog-close]]:z-10"
+        className="flex h-[min(32rem,85dvh)] flex-col overflow-hidden border-2 border-p03-edge bg-p03-ground p-0 ring-0 [&>[data-slot=dialog-close]]:z-10"
       >
         <DialogTitle className="sr-only">P03's terminal</DialogTitle>
         <Suspense fallback={<div className="h-full bg-p03-ground" />}>

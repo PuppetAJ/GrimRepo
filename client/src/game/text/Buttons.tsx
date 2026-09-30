@@ -20,10 +20,10 @@ export function ExecuteButton() {
       onClick={() => act({ type: 'ringBell' })}
       aria-keyshortcuts="E"
       aria-label="Execute"
-      className={`flex items-center justify-center gap-1 rounded-md border-2 border-[#2f6b3d] bg-[#07130b] text-p03 enabled:hover:bg-[#13261a] disabled:[&>*]:opacity-40 ${phone ? 'flex-1 flex-col gap-1 p-2' : layout === 'mid' ? 'shrink-0 flex-row gap-2 px-2 py-1' : 'flex-col p-3'}`}
+      className={`flex items-center justify-center gap-1 rounded-md border-2 border-p03-edge bg-[#07130b] text-p03 enabled:hover:bg-[#13261a] disabled:[&>*]:opacity-40 ${phone ? 'flex-1 flex-col gap-1 p-2' : layout === 'mid' ? 'shrink-0 flex-row gap-2 px-2 py-1' : 'flex-col p-3'}`}
     >
       <span
-        className={`grid place-items-center rounded-full border-[#2f6b3d] bg-[#a3172b] shadow-[0_0_14px_rgb(255_60_60/0.4)] ${phone ? 'size-10 border-4' : compact ? 'size-8 border-2' : 'size-[min(3.5rem,6dvh)] border-4'}`}
+        className={`grid place-items-center rounded-full border-p03-edge bg-[#a3172b] shadow-[0_0_14px_rgb(255_60_60/0.4)] ${phone ? 'size-10 border-4' : compact ? 'size-8 border-2' : 'size-[min(3.5rem,6dvh)] border-4'}`}
       />
       {/* The full name doesn't fit on an upright 320px phone. */}
       <span className={`tracking-widest ${compact ? 'text-base' : 'text-2xl'}`}>

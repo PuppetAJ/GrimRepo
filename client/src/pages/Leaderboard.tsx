@@ -39,7 +39,7 @@ export function Leaderboard() {
       {result ? (
         <div
           role="status"
-          className="p03-screen p03-glow relative overflow-hidden rounded-md border border-[#2f6b3d] px-5 py-4 font-terminal text-2xl"
+          className="p03-screen p03-glow relative overflow-hidden rounded-md border border-p03-edge px-5 py-4 font-terminal text-2xl"
         >
           <Glass />
           <p>
@@ -181,7 +181,7 @@ function Played({ row }: { row: LeaderboardRow }) {
 function FirstPlace({ row, mine }: { row: LeaderboardRow; mine: boolean }) {
   return (
     // Isolated so the negative-z layers sit behind the text but above the row's background.
-    <tr className="p03-screen relative isolate border-y border-[#2f6b3d] font-terminal">
+    <tr className="p03-screen relative isolate border-y border-p03-edge font-terminal">
       <td className="py-4 pr-4 pl-4 text-xl text-p03-dim sm:pr-5 sm:pl-6">
         <Suspense fallback={null}>
           <FaultyScreen className="-z-10" />

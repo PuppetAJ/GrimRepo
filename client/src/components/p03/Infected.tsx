@@ -127,7 +127,7 @@ export function Infected({ lines, user }: { lines: readonly string[] | null; use
       <div className="relative h-[26rem] sm:h-[22rem]">
         {broken ? (
           <>
-            <div className="p03-glow h-full overflow-hidden border border-[#2f6b3d]">
+            <div className="p03-glow h-full overflow-hidden border border-p03-edge">
               <Suspense fallback={<div className="h-full bg-p03-ground" />}>
                 <Terminal lines={lines ?? ['...']} user={user} />
               </Suspense>

@@ -50,6 +50,8 @@
   --color-p03: var(--p03);
   --color-p03-dim: var(--p03-dim);
   --color-p03-ground: var(--p03-ground);
+  --color-p03-edge: var(--p03-edge);
+  --color-p03-lane: var(--p03-lane);
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -71,7 +73,8 @@
   --accent: #221f27;
   --secondary: #1d1a22;
   --border: #2c2831;
-  --input: #3a3440;
+  /* 3:1 against the page, so a field's edge shows. */
+  --input: #665c71;
 
   --foreground: #ece6f0;
   --card-foreground: #ece6f0;
@@ -90,6 +93,9 @@
   --p03: #7dff9a;
   --p03-dim: #74b884;
   --p03-ground: #0a0e0a;
+  /* Edges of P03's panels and buttons, and of the table's lanes: 3:1 against the table, as controls need. */
+  --p03-edge: #2f6c3d;
+  --p03-lane: #386945;
 
   --radius: 0.5rem;
 }

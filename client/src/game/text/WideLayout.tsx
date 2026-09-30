@@ -20,7 +20,7 @@ export function WideLayout() {
         ref={frame}
         // useFit owns size and position; the classes must not set either.
         style={size}
-        className={`p03-screen crt grid grid-cols-[17rem_minmax(0,1fr)_22rem] grid-rows-[minmax(0,1fr)_auto] gap-4 overflow-hidden rounded-lg border border-[#2f6b3d] p-4 font-terminal text-2xl ${fullScreen.on ? 'fixed z-50' : 'relative mx-auto'}`}
+        className={`p03-screen crt grid grid-cols-[17rem_minmax(0,1fr)_22rem] grid-rows-[minmax(0,1fr)_auto] gap-4 overflow-hidden rounded-lg border border-p03-edge p-4 font-terminal text-2xl ${fullScreen.on ? 'fixed z-50' : 'relative mx-auto'}`}
       >
         <FaultyScreenShader />
         <span aria-hidden className="crt-glass pointer-events-none absolute inset-0 z-30" />
@@ -51,7 +51,7 @@ export function WideLayout() {
         </aside>
         <section
           aria-label="Your hand"
-          className="relative z-10 col-span-3 flex h-[clamp(8rem,19dvh,13rem)] items-end gap-4 border-t-2 border-[#2f6b3d] pt-3"
+          className="relative z-10 col-span-3 flex h-[clamp(8rem,19dvh,13rem)] items-end gap-4 border-t-2 border-p03-edge pt-3"
         >
           <Controls />
           <Hand />

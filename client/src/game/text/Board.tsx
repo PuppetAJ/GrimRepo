@@ -160,7 +160,7 @@ export function Board() {
               setReading({ row: 'back', lane: i }),
             )}
             onClick={tapToRead && unit ? () => setReading({ row: 'back', lane: i }) : undefined}
-            className={`${CELL} border-[#1f3a26] brightness-75`}
+            className={`${CELL} border-p03-lane [&>*]:brightness-75`}
             style={laneSize}
           >
             <Occupant
@@ -169,7 +169,7 @@ export function Board() {
               lane={i}
               unit={unit}
               playback={playback}
-              empty={<span className="grid size-full place-items-center text-5xl text-[#2f6b3d]">↓</span>}
+              empty={<span className="grid size-full place-items-center text-5xl text-p03-edge">↓</span>}
             />
           </div>
         ))}
@@ -183,7 +183,7 @@ export function Board() {
               setReading({ row: 'front', lane: i }),
             )}
             onClick={tapToRead && unit ? () => setReading({ row: 'front', lane: i }) : undefined}
-            className={`${CELL} border-[#1f3a26]`}
+            className={`${CELL} border-p03-lane`}
             style={laneSize}
           >
             <Occupant row="front" lane={i} unit={unit} playback={playback} isNew={isNew} />
@@ -215,7 +215,7 @@ export function Board() {
                 ? 'border-dashed border-death/70 hover:border-death'
                 : action
                   ? 'border-dashed border-p03/60 hover:border-p03'
-                  : 'border-[#1f3a26]'
+                  : 'border-p03-lane'
           // The button overlays the lane, so the card underneath never remounts and replays its entrance.
           return (
             <div
@@ -229,7 +229,8 @@ export function Board() {
                     ? () => setReading({ row: 'board', lane: i })
                     : () => !busy && showRefusal(`lane-${i}`)
               }
-              className={`${CELL} relative ${frame}`}
+              // A container, so the lane's badge sizes to it.
+              className={`${CELL} @container relative ${frame}`}
               style={{ ...laneSize, ...refusalShake(`lane-${i}`) }}
             >
               <Occupant
@@ -250,6 +251,14 @@ export function Board() {
               {paid ? (
                 <span className="absolute inset-x-1 bottom-1 z-10 rounded-sm bg-[#07130b]/90 py-0.5 text-center text-base text-p03">
                   ↓ play here
+                </span>
+              ) : marked || action?.type === 'mark' ? (
+                // Said in words too, so the state doesn't rest on red alone.
+                <span
+                  aria-hidden
+                  className="absolute inset-x-1 top-1 z-10 rounded-sm bg-[#07130b]/90 py-0.5 text-center text-[min(1rem,17cqw)] leading-none whitespace-nowrap text-death"
+                >
+                  {marked ? '✕ marked' : 'sacrifice?'}
                 </span>
               ) : null}
               {action ? (

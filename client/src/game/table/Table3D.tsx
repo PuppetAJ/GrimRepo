@@ -212,7 +212,7 @@ export default function Table3D({ game, seat, onText }: { game: Ready; seat: Sea
           }}
         >
           {'unit' in magnifiedRead ? (
-            <div className="relative flex min-h-40 gap-2 overflow-hidden rounded-md border-2 border-[#2f6b3d] bg-[#a9e7b8] p-2 font-terminal text-[#0b1f12]">
+            <div className="relative flex min-h-40 gap-2 overflow-hidden rounded-md border-2 border-p03-edge bg-[#a9e7b8] p-2 font-terminal text-[#0b1f12]">
               <FlatReaderBody unit={magnifiedRead.unit} />
               <span aria-hidden className="crt-glass pointer-events-none absolute inset-0" />
             </div>

@@ -40,7 +40,7 @@ function Menu() {
   }
   return (
     <div
-      className={`absolute top-12 z-40 flex w-72 max-w-[calc(100%-1rem)] flex-col gap-3 rounded-md border-2 border-[#2f6b3d] bg-[#07130b] p-2 ${sideways ? 'left-2' : 'right-2'}`}
+      className={`absolute top-12 z-40 flex w-72 max-w-[calc(100%-1rem)] flex-col gap-3 rounded-md border-2 border-p03-edge bg-[#07130b] p-2 ${sideways ? 'left-2' : 'right-2'}`}
     >
       <div className="grid grid-cols-2 gap-2 [&_svg]:size-4 [&_svg]:shrink-0">
         <button type="button" onClick={choose(() => setLogOpen(true))} className={MENU_BUTTON}>
@@ -93,7 +93,7 @@ export function PhoneLayout() {
     <div
       {...frameProps}
       ref={phoneFrame}
-      className={`p03-screen crt overflow-hidden font-terminal text-xl ${covering ? 'fixed inset-0 z-50' : `relative border-y border-[#2f6b3d] ${flowing ? '' : 'h-svh'}`}`}
+      className={`p03-screen crt overflow-hidden font-terminal text-xl ${covering ? 'fixed inset-0 z-50' : `relative border-y border-p03-edge ${flowing ? '' : 'h-svh'}`}`}
     >
       {/* Outside the pieces, so the screen and glass stay put while the pieces scroll. */}
       <FaultyScreenShader />
@@ -103,7 +103,7 @@ export function PhoneLayout() {
           className={`${pieces} grid grid-cols-[minmax(9.5rem,1fr)_auto_minmax(11.5rem,1fr)] grid-rows-[minmax(0,1fr)] overflow-hidden`}
         >
           <aside className="relative z-10 flex min-h-0 flex-col gap-2 overflow-hidden">
-            <div className="rounded-md border-2 border-[#2f6b3d] bg-[#07130b] py-1 pr-1 pl-2">
+            <div className="rounded-md border-2 border-p03-edge bg-[#07130b] py-1 pr-1 pl-2">
               <Status />
             </div>
             <Panel className="shrink-0 p-2">
@@ -127,7 +127,7 @@ export function PhoneLayout() {
         </div>
       ) : (
         <div className={`${pieces} flex flex-col ${flowing ? '' : scrolling ? 'overflow-y-auto' : 'overflow-hidden'}`}>
-          <div className="relative z-10 flex shrink-0 flex-col gap-1 rounded-md border-2 border-[#2f6b3d] bg-[#07130b] py-1 pr-1 pl-2">
+          <div className="relative z-10 flex shrink-0 flex-col gap-1 rounded-md border-2 border-p03-edge bg-[#07130b] py-1 pr-1 pl-2">
             <Status />
             <ScaleBar scale={view.scale} fluid className="gap-1 pr-1 text-base" />
           </div>

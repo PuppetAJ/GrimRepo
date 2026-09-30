@@ -71,7 +71,7 @@ export function Hud({
           <div
             role="region"
             aria-label="Card reader"
-            className="relative mt-2 flex h-40 max-h-full min-h-0 w-72 gap-2 overflow-hidden rounded-md border-2 border-[#2f6b3d] bg-[#a9e7b8] p-2 text-[#0b1f12]"
+            className="relative mt-2 flex h-40 max-h-full min-h-0 w-72 gap-2 overflow-hidden rounded-md border-2 border-p03-edge bg-[#a9e7b8] p-2 text-[#0b1f12]"
           >
             <FlatReaderBody unit={lifted} />
             <span aria-hidden className="crt-glass pointer-events-none absolute inset-0" />
