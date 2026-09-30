@@ -8,6 +8,10 @@ updates:
     groups:
       minor-and-patch:
         update-types: [minor, patch]
+    ignore:
+      # 9.8.1 leaves a held card's magnifier open on the 3D table; later releases are still offered.
+      - dependency-name: '@react-three/fiber'
+        versions: ['9.8.1']
 
   - package-ecosystem: github-actions
     directory: /
