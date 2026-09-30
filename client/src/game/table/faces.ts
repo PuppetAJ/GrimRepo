@@ -1,16 +1,19 @@
 import { card, type Unit } from 'shared'
 import { CanvasTexture, SRGBColorSpace, type Texture } from 'three'
 import { loadArt } from '../art.ts'
+import { loadPlastic } from './diskMaterials.ts'
 import { drawBack, drawFace, H, W, type Layer } from './faceDrawing.ts'
 
-// Proof that the font every face is lettered in, and the card art, have loaded.
+// Proof that the font every face is lettered in, the card art and the disks' plastic have loaded.
 type Assets = { font: 'VT323' }
 
 let assets: Promise<Assets> | null = null
 
-/** The font and art every face needs, loaded once for the page. */
+/** The font, art and plastic every card needs, loaded once for the page. */
 export function loadCardAssets(): Promise<Assets> {
-  assets ??= Promise.all([document.fonts.load('48px VT323'), loadArt()]).then(() => ({ font: 'VT323' as const }))
+  assets ??= Promise.all([document.fonts.load('48px VT323'), loadArt(), loadPlastic()]).then(() => ({
+    font: 'VT323' as const,
+  }))
   return assets
 }
 

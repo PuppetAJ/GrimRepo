@@ -199,13 +199,11 @@ export function drawFace(context: CanvasRenderingContext2D, unit: Unit, layer: L
   context.textAlign = 'center'
   context.textBaseline = 'middle'
 
-  // The label: a worn sticker across the top, and the name on it.
+  // The label across the top, and the name on it.
   const [lx, ly, lw, lh] = recess(RECESS.label)
   if (layer === 'base') {
     context.fillStyle = palette.plate
     context.fillRect(lx, ly, lw, lh)
-    context.fillStyle = 'rgb(0 0 0 / 0.08)'
-    for (let i = 0; i < 60; i++) context.fillRect(lx + ((i * 97) % lw), ly + ((i * 61) % lh), 3 + (i % 5), 2)
   }
   if (layer === 'content') {
     context.fillStyle = palette.plateInk
