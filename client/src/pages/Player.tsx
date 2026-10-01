@@ -1,6 +1,6 @@
 import { Gamepad2, Heart, Medal, Percent, Timer, Trophy } from 'lucide-react'
 import { lazy, Suspense } from 'react'
-import { useParams } from 'react-router'
+import { useParams } from '@tanstack/react-router'
 import { card } from 'shared'
 import { Avatar } from '../components/Avatar.tsx'
 import { LoadFailed } from '../components/LoadFailed.tsx'
@@ -27,7 +27,7 @@ const chartFailed = (
 )
 
 export function Player() {
-  const { username = '' } = useParams()
+  const { username } = useParams({ from: '/players/$username' })
   const stats = useAsync(() => api.stats(username), username)
 
   if (stats.status === 'loading') return <Loading label={`Loading ${username}`} />

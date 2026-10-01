@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { Navigate } from 'react-router'
+import { Navigate } from '@tanstack/react-router'
 import { authClient, settled } from '../lib/auth.ts'
 import { Failure, Loading } from './States.tsx'
 

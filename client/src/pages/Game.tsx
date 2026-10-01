@@ -1,3 +1,4 @@
+import { useSearch } from '@tanstack/react-router'
 import { RotateCw } from 'lucide-react'
 import { lazy, Suspense, useState } from 'react'
 import { Button } from '@/components/ui/button.tsx'
@@ -17,9 +18,9 @@ const Table3D = lazy(() => import('../game/table/Table3D.tsx'))
 type Mode = '3d' | 'text'
 const MODE_KEY = 'grimrepo:table'
 
-function savedMode(): Mode {
+function savedMode(text: boolean): Mode {
   try {
-    if (new URLSearchParams(window.location.search).has('text')) localStorage.setItem(MODE_KEY, 'text')
+    if (text) localStorage.setItem(MODE_KEY, 'text')
     return localStorage.getItem(MODE_KEY) === 'text' ? 'text' : '3d'
   } catch {
     return '3d'
@@ -32,12 +33,6 @@ const WIDE = '(min-width: 1100px)'
 const MID = '(min-width: 560px)'
 // Matches the `short` variant that puts the 3D table full screen.
 const SIDEWAYS_PHONE = '(orientation: landscape) and (max-height: 32rem)'
-
-// A URL override for comparing layouts.
-function askedLayout(): Layout | null {
-  const asked = new URLSearchParams(window.location.search).get('layout')
-  return asked === 'wide' || asked === 'mid' || asked === 'phone' ? asked : null
-}
 
 /** Shown when a model fails to load or the WebGL context is lost. */
 function TableFailed({ onText }: { onText: () => void }) {
@@ -65,7 +60,9 @@ export function Game() {
   const game = useGame()
   const user = authClient.useSession().data?.user as { username?: string; isAnonymous?: boolean } | undefined
   const seat: Seat = user?.username === DEMO.username ? 'demo' : user?.isAnonymous ? 'guest' : null
-  const [mode, setMode] = useState<Mode>(savedMode)
+  // ?text picks the text table; ?layout overrides the layout, for comparing them.
+  const search = useSearch({ from: '/game' })
+  const [mode, setMode] = useState<Mode>(() => savedMode(search.text !== undefined))
   const upright = useMedia(UPRIGHT_PHONE)
   const wide = useMedia(WIDE)
   const mid = useMedia(MID)
@@ -83,7 +80,7 @@ export function Game() {
   if (game.status === 'loading') return <Loading label="Dealing" />
   if (game.status === 'error') return <Failure title="The table is not ready" detail={game.message} />
 
-  const layout: Layout = askedLayout() ?? (sideways || upright || !mid ? 'phone' : wide ? 'wide' : 'mid')
+  const layout: Layout = search.layout ?? (sideways || upright || !mid ? 'phone' : wide ? 'wide' : 'mid')
   if (mode === 'text')
     return (
       // Negative margins give the table most of the gutter; on phones, all of it.

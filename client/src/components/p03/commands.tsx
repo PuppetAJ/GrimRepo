@@ -3,13 +3,13 @@ import { SIGILS } from 'shared'
 import { api } from '../../lib/api.ts'
 import { number } from '../../lib/format.ts'
 import { DECK } from '../../game/deck.ts'
-import { find, HELP, PAGES, STEPS } from './commandData.ts'
+import { find, HELP, PAGES, STEPS, type Page } from './commandData.ts'
 import { CardUpClose, Cost, Dim, Lesson } from './CommandOutput.tsx'
 
 export type Context = {
   user: string | undefined
   history: readonly string[]
-  navigate: (to: string) => void
+  navigate: (to: Page) => void
   clear: () => void
 }
 export type Commands = typeof import('./commands.tsx')

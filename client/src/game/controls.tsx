@@ -1,6 +1,6 @@
 import { X } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
-import { Link } from 'react-router'
+import { Link } from '@tanstack/react-router'
 import {
   type Action,
   card,

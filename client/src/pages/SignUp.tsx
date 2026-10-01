@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button.tsx'
@@ -49,7 +49,7 @@ export function SignUp() {
             : authError(error, 'That did not work'),
       })
     toast.success(`Welcome, ${parsed.data.username}`)
-    navigate('/', { replace: true })
+    navigate({ to: '/', replace: true })
   }
 
   const field = (name: Field, label: string, input: React.ReactNode, hint?: string) => (

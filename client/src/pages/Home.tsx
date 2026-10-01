@@ -1,4 +1,4 @@
-import { Link } from 'react-router'
+import { Link } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button.tsx'
 import { Avatar } from '../components/Avatar.tsx'
 import { Glass } from '../components/p03/Glass.tsx'
@@ -124,7 +124,8 @@ export function Home() {
             ? top.data.map((row) => (
                 <Link
                   key={row.username}
-                  to={`/players/${row.username}`}
+                  to="/players/$username"
+                  params={{ username: row.username }}
                   className="flex items-center gap-3 text-sm hover:text-primary"
                 >
                   <Avatar name={row.username} />

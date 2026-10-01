@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import {
   AlertDialog,
@@ -51,7 +51,7 @@ export function Account() {
     const { error } = await settled(authClient.deleteUser({ password }))
     if (error) return setDeleteError(authError(error, 'That did not work'))
     toast.success('Your account and its games are gone')
-    navigate('/', { replace: true })
+    navigate({ to: '/', replace: true })
   }
 
   if (user?.username === DEMO.username) return <DemoNotice />

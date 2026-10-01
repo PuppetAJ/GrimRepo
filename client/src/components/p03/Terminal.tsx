@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react'
-import { useLocation, useNavigate } from 'react-router'
+import { useLocation, useNavigate } from '@tanstack/react-router'
 import { prefersReducedMotion } from '../../lib/motion.ts'
 import type { Commands } from './commands.tsx'
 import { Glass } from './Glass.tsx'
@@ -80,7 +80,7 @@ export default function Terminal({ lines, user }: { lines: readonly string[]; us
       const node = await loaded.run(command, {
         user,
         history: history.current,
-        navigate: (to) => void navigate(to),
+        navigate: (to) => void navigate({ to }),
         clear: () => setEntries([]),
       })
       if (node !== null) add({ id: nextId++, kind: 'output', node })
