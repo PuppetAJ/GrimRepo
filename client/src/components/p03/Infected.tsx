@@ -13,11 +13,22 @@ import { prefersReducedMotion } from '../../lib/motion.ts'
 import { Corruption } from './Corruption.tsx'
 import { FrameDamage } from './FrameDamage.tsx'
 
-const loadTerminal = () => import('./Terminal.tsx')
+type TerminalProps = { lines: readonly string[]; user: string | undefined }
+
+// Once loaded, the terminal renders directly, so hydration never waits on it and no update can force it to remount.
+let loadedTerminal: ComponentType<TerminalProps> | null = null
+const loadTerminal = () =>
+  import('./Terminal.tsx').then((module) => {
+    loadedTerminal = module.default
+    return module
+  })
 // A chunk that fails to load, such as after a deploy renames it, leaves the frame empty instead of throwing.
-const Terminal = lazy<ComponentType<{ lines: readonly string[]; user: string | undefined }>>(() =>
-  loadTerminal().catch(() => ({ default: () => null })),
-)
+const LazyTerminal = lazy<ComponentType<TerminalProps>>(() => loadTerminal().catch(() => ({ default: () => null })))
+
+/** Loads the terminal before a page prerendered with it hydrates. */
+export const preloadTerminal = () => loadTerminal().catch(() => {})
+// Stable, so a re-render doesn't hand the terminal new props.
+const NO_LINES = ['...']
 
 type Phase = 'clean' | 'glitch' | 'broken'
 
@@ -68,6 +79,7 @@ const SPILLS: Omit<ComponentProps<typeof Corruption>, 'dense'>[] = [
 ]
 
 export function Infected({ lines, user }: { lines: readonly string[] | null; user: string | undefined }) {
+  const Terminal = loadedTerminal ?? LazyTerminal
   // Matches the prerendered HTML until hydrated, before reading matchMedia or the cookie.
   const hydrated = useSyncExternalStore(unchanging, taken, notYet)
   const [chosen, setPhase] = useState<Phase | null>(null)
@@ -125,7 +137,7 @@ export function Infected({ lines, user }: { lines: readonly string[] | null; use
           <>
             <div className="p03-glow h-full overflow-hidden border border-p03-edge">
               <Suspense fallback={<div className="h-full bg-p03-ground" />}>
-                <Terminal lines={lines ?? ['...']} user={user} />
+                <Terminal lines={lines ?? NO_LINES} user={user} />
               </Suspense>
             </div>
             <FrameDamage frame="terminal" />

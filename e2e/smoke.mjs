@@ -100,6 +100,21 @@ section("P03's terminal")
         !served.includes('table-720.webp') &&
         served.includes('>Sign in</a>'),
     )
+    // The first terminal on the page is the prerendered one; hydration should adopt it, not rebuild it.
+    await page.addInitScript(() => {
+      const find = () =>
+        (window.__terminal = document.querySelector('[aria-label="P03\'s terminal"]')) ?? requestAnimationFrame(find)
+      requestAnimationFrame(find)
+    })
+    await page.reload()
+    await page.waitForTimeout(2000)
+    check(
+      'and reloading keeps the prerendered terminal instead of rebuilding it',
+      await page.evaluate(
+        () =>
+          Boolean(window.__terminal) && document.querySelector('[aria-label="P03\'s terminal"]') === window.__terminal,
+      ),
+    )
   }
   await run('cd leaderboard')
   await page.waitForURL(/\/leaderboard$/)
