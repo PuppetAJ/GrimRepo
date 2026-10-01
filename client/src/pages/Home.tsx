@@ -1,12 +1,13 @@
 import { Link } from '@tanstack/react-router'
+import { useEffect, useSyncExternalStore } from 'react'
 import { Button } from '@/components/ui/button.tsx'
 import { Avatar } from '../components/Avatar.tsx'
 import { Glass } from '../components/p03/Glass.tsx'
 import { Infected, REPLAY_EVENT } from '../components/p03/Infected.tsx'
-import { api } from '../lib/api.ts'
+import { api, type LeaderboardRow } from '../lib/api.ts'
 import { authClient } from '../lib/auth.ts'
 import { number } from '../lib/format.ts'
-import { useAsync } from '../lib/useAsync.ts'
+import { useAsync, type Async } from '../lib/useAsync.ts'
 
 const badges = [
   { label: 'build', value: 'haunted', color: 'bg-primary' },
@@ -20,8 +21,42 @@ const turn = [
   { cmd: 'grimrepo execute', note: 'attack; overkill spills into the queue' },
 ]
 
+const TOP_KEY = 'grimrepo:top'
+let remembered: LeaderboardRow[] | null | undefined
+
+/** The list from the last visit, read once and checked, since storage can hold anything. */
+function rememberedTop(): LeaderboardRow[] | null {
+  if (remembered !== undefined) return remembered
+  try {
+    const rows: unknown = JSON.parse(localStorage.getItem(TOP_KEY) ?? 'null')
+    remembered =
+      Array.isArray(rows) &&
+      rows.every((row) => typeof row?.username === 'string' && typeof row?.bestScore === 'number')
+        ? (rows as LeaderboardRow[])
+        : null
+  } catch {
+    remembered = null
+  }
+  return remembered
+}
+
+// Storage is read only after hydration, so the prerendered page, which has no list, matches.
+const unchanging = () => () => {}
+const noList = () => null
+
 export function Home() {
-  const top = useAsync(() => api.leaderboard().then((board) => board.players.slice(0, 3)), 'top')
+  const fresh = useAsync(() => api.leaderboard().then((board) => board.players.slice(0, 3)), 'top')
+  // The last visit's list shows at once while the current one loads.
+  const stale = useSyncExternalStore(unchanging, rememberedTop, noList)
+  useEffect(() => {
+    if (fresh.status !== 'ready') return
+    try {
+      localStorage.setItem(TOP_KEY, JSON.stringify(fresh.data))
+    } catch {
+      // Storage can be refused in a private window; the list just loads each time.
+    }
+  }, [fresh])
+  const top: Async<LeaderboardRow[]> = fresh.status === 'loading' && stale ? { status: 'ready', data: stale } : fresh
   const first = top.status === 'ready' ? top.data[0] : undefined
   const user = (authClient.useSession().data?.user as { displayUsername?: string } | undefined)?.displayUsername
   const lines =

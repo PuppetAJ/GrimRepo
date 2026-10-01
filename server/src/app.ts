@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs'
-import { toNodeHandler } from 'better-auth/node'
+import { getSessionCookie } from 'better-auth/cookies'
+import { fromNodeHeaders, toNodeHandler } from 'better-auth/node'
 import compression from 'compression'
 import express from 'express'
 import helmet from 'helmet'
@@ -15,9 +16,12 @@ const clientBuildDir = path.resolve(path.dirname(fileURLToPath(import.meta.url))
 export function createApp({
   production,
   firstForwarded = false,
+  clientDir = clientBuildDir,
 }: {
   production: boolean
   firstForwarded?: boolean
+  /** The built client; tests pass their own. */
+  clientDir?: string
 }): express.Express {
   const app = express()
 
@@ -62,8 +66,17 @@ export function createApp({
   })
 
   if (production) {
+    // The home page is prerendered once per pair of cookies, so it arrives as this visitor will see it.
+    app.get('/', (req, res) => {
+      const signedIn = Boolean(getSessionCookie(fromNodeHeaders(req.headers)))
+      const seen = /(?:^|;\s*)grimrepo_seen=1(?:;|$)/.test(req.headers.cookie ?? '')
+      const file = path.join(clientDir, `home-${signedIn ? 'signed-in' : 'signed-out'}-${seen ? 'seen' : 'fresh'}.html`)
+      res.setHeader('Cache-Control', 'private, no-cache')
+      res.setHeader('Vary', 'Cookie')
+      res.sendFile(existsSync(file) ? file : path.join(clientDir, 'index.html'))
+    })
     app.use(
-      express.static(clientBuildDir, {
+      express.static(clientDir, {
         // Vite fingerprints asset filenames, so they can be cached forever.
         setHeaders: (res, filePath) => {
           if (filePath.includes(`${path.sep}assets${path.sep}`)) {
@@ -76,9 +89,9 @@ export function createApp({
       }),
     )
     // index.html holds the prerendered home page, so other client routes get the empty shell.
-    const shell = existsSync(path.join(clientBuildDir, 'shell.html')) ? 'shell.html' : 'index.html'
+    const shell = existsSync(path.join(clientDir, 'shell.html')) ? 'shell.html' : 'index.html'
     app.get(/(.*)/, (_req, res) => {
-      res.sendFile(path.join(clientBuildDir, shell))
+      res.sendFile(path.join(clientDir, shell))
     })
   }
 

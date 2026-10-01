@@ -8,6 +8,7 @@ import {
   type ComponentProps,
   type ComponentType,
 } from 'react'
+import { homeVariant, markTakeoverSeen, takeoverSeen } from '../../lib/homeVariant.ts'
 import { prefersReducedMotion } from '../../lib/motion.ts'
 import { Corruption } from './Corruption.tsx'
 import { FrameDamage } from './FrameDamage.tsx'
@@ -20,7 +21,6 @@ const Terminal = lazy<ComponentType<{ lines: readonly string[]; user: string | u
 
 type Phase = 'clean' | 'glitch' | 'broken'
 
-const SEEN_KEY = 'grimrepo:infected'
 // Dev only: the home page's replay button dispatches this.
 export const REPLAY_EVENT = 'grimrepo:replay'
 const CLEAN_MS = 1100
@@ -34,15 +34,11 @@ const SHOT_SIZES = '(max-width: 767px) 92vw, 960px'
 const AFTER = '![P03 was here](/dev/null)'.padEnd(BEFORE.length)
 const NOISE = '#$%&*+=/<>?{}[]█▓▒'
 
-function firstPhase(): Phase {
-  if (prefersReducedMotion()) return 'broken'
-  try {
-    // Plays once per session.
-    return sessionStorage.getItem(SEEN_KEY) ? 'broken' : 'clean'
-  } catch {
-    return 'clean'
-  }
-}
+// Plays once per browser session, or never with reduced motion.
+const firstPhase = (): Phase => (prefersReducedMotion() || takeoverSeen() ? 'broken' : 'clean')
+
+// What the prerendered page shows, which the server chose by the same cookie.
+const prerenderedPhase = (): Phase => (homeVariant()?.seen ? 'broken' : 'clean')
 
 function corrupt(progress: number): string {
   return [...BEFORE]
@@ -72,10 +68,10 @@ const SPILLS: Omit<ComponentProps<typeof Corruption>, 'dense'>[] = [
 ]
 
 export function Infected({ lines, user }: { lines: readonly string[] | null; user: string | undefined }) {
-  // Stays clean until hydrated, so it matches the prerendered HTML before reading matchMedia or sessionStorage.
+  // Matches the prerendered HTML until hydrated, before reading matchMedia or the cookie.
   const hydrated = useSyncExternalStore(unchanging, taken, notYet)
   const [chosen, setPhase] = useState<Phase | null>(null)
-  const phase = chosen ?? (hydrated ? firstPhase() : 'clean')
+  const phase = chosen ?? (hydrated ? firstPhase() : prerenderedPhase())
   const [loaded, setLoaded] = useState(false)
   const [tick, setTick] = useState(0)
   // The prerendered image can load before hydration, so onLoad alone may miss it.
@@ -105,18 +101,15 @@ export function Infected({ lines, user }: { lines: readonly string[] | null; use
   useEffect(() => {
     if (phase !== 'glitch') return
     const ticking = window.setInterval(() => setTick((count) => count + 1), TICK_MS)
-    const done = window.setTimeout(() => {
-      setPhase('broken')
-      try {
-        sessionStorage.setItem(SEEN_KEY, '1')
-      } catch {
-        // Without storage it just plays again next visit.
-      }
-    }, GLITCH_MS)
+    const done = window.setTimeout(() => setPhase('broken'), GLITCH_MS)
     return () => {
       window.clearInterval(ticking)
       window.clearTimeout(done)
     }
+  }, [phase])
+
+  useEffect(() => {
+    if (phase === 'broken') markTakeoverSeen()
   }, [phase])
 
   const broken = phase === 'broken'

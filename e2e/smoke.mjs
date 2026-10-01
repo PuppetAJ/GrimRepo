@@ -91,6 +91,16 @@ section("P03's terminal")
       () => false,
     ),
   )
+  // Only a build prerenders the README; the server picks the version by the visitor's cookies.
+  const served = await (await page.request.get(BASE)).text()
+  if (served.includes('data-home=')) {
+    check(
+      'and a build sends it that way, with the sign-in buttons, so nothing swaps on load',
+      served.includes('data-home="signed-out seen"') &&
+        !served.includes('table-720.webp') &&
+        served.includes('>Sign in</a>'),
+    )
+  }
   await run('cd leaderboard')
   await page.waitForURL(/\/leaderboard$/)
   check('cd moves to another page', true)
@@ -161,11 +171,15 @@ section('Accounts and scores')
   const made = newPlayer()
   const player = { name: made.username, ...made }
 
-  const signUp = await page.request.post(`${BASE}/api/auth/sign-up/email`, { data: player })
+  // As a browser would; Better Auth requires an Origin once cookies are present.
+  const signUp = await page.request.post(`${BASE}/api/auth/sign-up/email`, { data: player, headers: { origin: BASE } })
   check('a new player can sign up', signUp.ok(), `${signUp.status()} ${await signUp.text()}`)
 
   const me = await page.request.get(`${BASE}/api/me`)
   check('and is signed in straight away', me.ok() && (await me.json()).username === player.username)
+  const served = await (await page.request.get(BASE)).text()
+  if (served.includes('data-home='))
+    check('and a build sends them the signed-in README', served.includes('data-home="signed-in'))
 
   const cheat = await page.request.post(`${BASE}/api/games`, { data: { outcome: 'win', turns: 3, score: 9_999_999 } })
   const opened = await cheat.json().catch(() => ({}))
