@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button.tsx'
 import { LoadFailed } from '../components/LoadFailed.tsx'
 import { Failure, Loading } from '../components/States.tsx'
 import type { Seat } from '../game/controls.tsx'
+import { FIXTURES_ON } from '../game/fixtures.ts'
+import { useKeepTableFocus } from '../game/shortcuts.ts'
 import { Boot } from '../game/table/Boot.tsx'
 import { TerminalTable } from '../game/TerminalTable.tsx'
 import type { Layout } from '../game/text/useTextTable.ts'
@@ -57,10 +59,11 @@ function TurnSideways({ onText }: { onText: () => void }) {
 }
 
 export function Game() {
+  useKeepTableFocus()
   const game = useGame()
   const user = authClient.useSession().data?.user as { username?: string; isAnonymous?: boolean } | undefined
   const seat: Seat = user?.username === DEMO.username ? 'demo' : user?.isAnonymous ? 'guest' : null
-  // ?text picks the text table; ?layout overrides the layout, for comparing them.
+  // ?text picks the text table; ?layout forces a layout, for comparing them in development and tests.
   const search = useSearch({ from: '/game' })
   const [mode, setMode] = useState<Mode>(() => savedMode(search.text !== undefined))
   const upright = useMedia(UPRIGHT_PHONE)
@@ -80,7 +83,8 @@ export function Game() {
   if (game.status === 'loading') return <Loading label="Dealing" />
   if (game.status === 'error') return <Failure title="The table is not ready" detail={game.message} />
 
-  const layout: Layout = search.layout ?? (sideways || upright || !mid ? 'phone' : wide ? 'wide' : 'mid')
+  const layout: Layout =
+    (FIXTURES_ON ? search.layout : undefined) ?? (sideways || upright || !mid ? 'phone' : wide ? 'wide' : 'mid')
   if (mode === 'text')
     return (
       // Negative margins give the table most of the gutter; on phones, all of it.

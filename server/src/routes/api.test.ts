@@ -179,6 +179,30 @@ describe('a game', () => {
     assert.equal((await app.call('POST', `/api/games/${game.id}/forfeit`, { cookie: other.cookie })).status, 404)
   })
 
+  it('calls a game a new best only when it beats an earlier score', async () => {
+    // Plays a bot game to its end, after an earlier finished game scored `offset` from it.
+    const finishAfter = async (offset: number | null) => {
+      const player = await signedIn()
+      const game = await start(player.cookie)
+      const { state, turns } = botGame(game.seed)
+      const result = summary(state)
+      assert.ok(result)
+      if (offset !== null)
+        await pool.query(
+          `INSERT INTO games (user_id, outcome, turns, score, status)
+           SELECT id, 'loss', 1, $2, 'finished' FROM users WHERE username = lower($1)`,
+          [player.username, scoreBattle(result.outcome, result.turns) + offset],
+        )
+      return (await submit(player.cookie, game.id, turns))?.body
+    }
+    const first = await finishAfter(null)
+    assert.deepEqual([first.first, first.isBest], [true, false], 'a first game has nothing to beat')
+    const beaten = await finishAfter(-1)
+    assert.deepEqual([beaten.first, beaten.isBest], [false, true])
+    const tied = await finishAfter(0)
+    assert.deepEqual([tied.first, tied.isBest], [false, false], 'equalling a best is not a new one')
+  })
+
   it('can be forfeited, which is a loss on the turn it reached, and frees a new deal', async () => {
     const player = await signedIn()
     const game = await start(player.cookie)
