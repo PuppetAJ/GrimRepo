@@ -69,7 +69,14 @@ section('The 3D table')
     await click({ uid })
     await until(page, (id) => window.__game.state().summon?.uid === id, uid)
     check('clicking a card in the hand picks it up', true)
-    check('and the table says what to do next', (await page.getByText(/^Summoning /).count()) === 1)
+    const prompted = await page
+      .getByText(/^Summoning /)
+      .waitFor({ timeout: 5_000 })
+      .then(
+        () => true,
+        () => false,
+      )
+    check('and the table says what to do next', prompted)
 
     await page.waitForTimeout(900)
     await click({ lane: 2 })
