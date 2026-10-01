@@ -171,16 +171,21 @@ export async function playWithBot(page, { stopAfterTurn = Infinity, beforeMove }
     const result = apply(state, action)
     if (!result.ok) throw new Error(`the mirror refused ${JSON.stringify(action)}: ${result.reason}`)
     await beforeMove?.(action, result.state)
+    const landed = page.locator(`[data-seed][data-moves="${start + actions.length + 1}"]`)
     try {
-      await page
-        .locator(selectorFor(action))
-        .first()
-        .click()
-        // Playwright can miss a click whose button vanishes as it's pressed; the page's move count shows it landed.
-        .catch(async (error) => {
-          if ((await moves()) !== actions.length + 1) throw error
-        })
-      await page.locator(`[data-seed][data-moves="${start + actions.length + 1}"]`).waitFor()
+      // A click in the frame before playback starts is refused, so one that didn't land is tried again.
+      for (let attempt = 0; attempt < 5 && (await moves()) === actions.length; attempt++) {
+        await page
+          .locator(selectorFor(action))
+          .first()
+          .click()
+          // Playwright can miss a click whose button vanishes as it's pressed; the page's move count shows it landed.
+          .catch(async (error) => {
+            if ((await moves()) !== actions.length + 1) throw error
+          })
+        await landed.waitFor({ timeout: 3_000 }).catch(() => {})
+      }
+      await landed.waitFor()
     } catch (error) {
       // Logs what the bot wanted and what the table showed, for CI failures no one can watch.
       console.log(`  The bot wanted ${JSON.stringify(action)} on turn ${state.turn}, as move ${actions.length + 1};`)
