@@ -1,4 +1,4 @@
-import type { Action, Outcome } from 'shared'
+import type { Action, Outcome, RunAction } from 'shared'
 
 export type LeaderboardRow = { rank: number; username: string; bestScore: number; games: number; wins: number }
 /** `top` is first place's score, for scaling the bars. */
@@ -42,6 +42,10 @@ export type Finished = {
 }
 export type Saved = { status: 'playing'; saved: number } | Finished
 
+export type OpenRun = { id: number; seed: number; actions: RunAction[]; resumed: boolean; rulesChanged: boolean }
+export type RunOver = { status: 'won' | 'lost'; score: number; stage: number; bosses: number; forfeited: boolean }
+export type RunSaved = { status: 'playing'; saved: number } | RunOver
+
 export class ApiError extends Error {
   readonly status: number
   readonly body: Record<string, unknown>
@@ -72,4 +76,8 @@ export const api = {
   saveMoves: (id: number, from: number, actions: Action[]) =>
     request<Saved>(`/api/games/${id}/moves`, { method: 'POST', body: JSON.stringify({ from, actions }) }),
   forfeit: (id: number) => request<Finished>(`/api/games/${id}/forfeit`, { method: 'POST' }),
+  startRun: () => request<OpenRun>('/api/runs', { method: 'POST' }),
+  saveRunMoves: (id: number, from: number, actions: RunAction[]) =>
+    request<RunSaved>(`/api/runs/${id}/moves`, { method: 'POST', body: JSON.stringify({ from, actions }) }),
+  forfeitRun: (id: number) => request<RunOver>(`/api/runs/${id}/forfeit`, { method: 'POST' }),
 }

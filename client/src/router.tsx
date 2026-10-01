@@ -20,6 +20,7 @@ const Cards = lazyRouteComponent(() => import('./pages/Cards.tsx'), 'Cards')
 const Game = lazyRouteComponent(() => import('./pages/Game.tsx'), 'Game')
 const MyStats = lazyRouteComponent(() => import('./pages/MyStats.tsx'), 'MyStats')
 const Player = lazyRouteComponent(() => import('./pages/Player.tsx'), 'Player')
+const Run = lazyRouteComponent(() => import('./pages/Run.tsx'), 'Run')
 const SignIn = lazyRouteComponent(() => import('./pages/SignIn.tsx'), 'SignIn')
 const SignUp = lazyRouteComponent(() => import('./pages/SignUp.tsx'), 'SignUp')
 
@@ -39,6 +40,11 @@ const cardsSearch = z.object({
 
 const gameSearch = z.object({
   text: optional(z.string()),
+  layout: optional(z.enum(['wide', 'mid', 'phone'])),
+  fixture: optional(z.string()),
+})
+
+const runSearch = z.object({
   layout: optional(z.enum(['wide', 'mid', 'phone'])),
   fixture: optional(z.string()),
 })
@@ -96,7 +102,19 @@ const game = createRoute({
   ),
 })
 
-const tree = root.addChildren([home, signIn, signUp, leaderboard, cards, player, stats, account, game])
+// Not linked from the home page until the 3D table plays runs too.
+const run = createRoute({
+  getParentRoute: parent,
+  path: '/run',
+  validateSearch: runSearch,
+  component: () => (
+    <RequireAuth guest>
+      <Run />
+    </RequireAuth>
+  ),
+})
+
+const tree = root.addChildren([home, signIn, signUp, leaderboard, cards, player, stats, account, game, run])
 
 /** Plain `?key=value` addresses, as before, rather than the router's JSON values; a bare key is a flag. */
 function parseSearch(search: string): Record<string, string> {

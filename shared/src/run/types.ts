@@ -4,6 +4,9 @@ import type { Action, DeckCard, GameEvent, GameState } from '../engine/types.ts'
 /** Bumped whenever a change would make an old run replay differently. */
 export const RUN_RULES_VERSION = 1
 
+/** The most actions one save may send; 200 of the largest kind fit the server's 16 KB body limit. */
+export const RUN_SAVE_LIMIT = 200
+
 /** A card in the run's deck; `id` stays the same as the card is changed. */
 export type RunCard = DeckCard & {
   id: number

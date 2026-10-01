@@ -1,7 +1,7 @@
 // Usage: node e2e/run.mjs [suite ...] [--browser=chromium|firefox]; suites share a database, so never in parallel.
 import { spawn } from 'node:child_process'
 
-const suites = ['smoke', 'auth', 'leaderboard', 'game', 'table', 'a11y']
+const suites = ['smoke', 'auth', 'leaderboard', 'game', 'run-mode', 'table', 'a11y']
 const engines = ['chromium', 'firefox']
 const args = process.argv.slice(2)
 const only = args.find((arg) => arg.startsWith('--browser='))?.slice('--browser='.length)

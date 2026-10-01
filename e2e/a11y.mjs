@@ -65,6 +65,25 @@ section('The game')
   await audit('the 3D table', '/game', () => tableReady(page))
 }
 
+section('A run')
+{
+  // From fixtures, so every screen is checked whatever a real run's seed would deal.
+  const screen = (name) => () => page.locator(`[data-run-view="${name}"]`).waitFor({ timeout: 30_000 })
+  for (const [layout, width, height] of [
+    ['wide', 1440, 900],
+    ['phone', 390, 844],
+  ]) {
+    await page.setViewportSize({ width, height })
+    for (const name of ['map', 'card', 'campfire', 'stones', 'event', 'battle'])
+      await audit(`the run's ${name}, ${layout}`, `/run?fixture=run-${name}&layout=${layout}`, screen(name))
+    await audit(`the run's summary, ${layout}`, `/run?fixture=run-lost&layout=${layout}`, async () => {
+      await page.locator('[data-action="summary"]').click()
+      await screen('summary')()
+    })
+  }
+  await page.setViewportSize({ width: 1280, height: 800 })
+}
+
 section('The table keeps its shortcuts')
 {
   await page.evaluate(() => localStorage.setItem('grimrepo:table', 'text'))

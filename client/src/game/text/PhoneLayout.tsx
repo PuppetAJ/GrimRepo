@@ -57,14 +57,21 @@ function Menu() {
             {fullScreen.on ? 'Exit full screen' : 'Full screen'}
           </button>
         ) : null}
-        <Forfeit forfeit={game.forfeit} disabled={game.state.status !== 'playing'} className={`${MENU_BUTTON} h-auto`}>
+        <Forfeit
+          forfeit={game.forfeit}
+          run={Boolean(game.run)}
+          disabled={game.state.status !== 'playing'}
+          className={`${MENU_BUTTON} h-auto`}
+        >
           <Flag aria-hidden />
-          Forfeit
+          {game.run ? 'Abandon run' : 'Forfeit'}
         </Forfeit>
-        <button type="button" onClick={on3d} className={MENU_BUTTON}>
-          <Box aria-hidden />
-          3D Table
-        </button>
+        {on3d ? (
+          <button type="button" onClick={on3d} className={MENU_BUTTON}>
+            <Box aria-hidden />
+            3D Table
+          </button>
+        ) : null}
         <Link to="/" className={MENU_BUTTON}>
           <LogOut aria-hidden />
           Leave Game

@@ -1,7 +1,7 @@
 import { Selection } from '@react-three/postprocessing'
 import { Suspense, useState } from 'react'
 import { legalActions, PLAYER_DECK, type Action } from 'shared'
-import { has, laneAction, skippedDraw } from '../../controls.tsx'
+import { has, hasEnded, laneAction, outcomeOf, skippedDraw } from '../../controls.tsx'
 import type { Ready } from '../../useGame.ts'
 import type { View } from '../../view.ts'
 import { CardBatch } from '../Batch.tsx'
@@ -54,7 +54,7 @@ export function Scene({
 }) {
   const { state, act } = game
   // Legal moves come from the real state, not the view being played back.
-  const legal = busy || game.result ? [] : legalActions(state)
+  const legal = busy || hasEnded(game) ? [] : legalActions(state)
   const can = (match: Partial<Action>) => has(legal, match)
   const count = view.hand.length
 
@@ -62,7 +62,7 @@ export function Scene({
   const handLook = (uid: number): Look =>
     view.summon?.uid === uid ? 'selected' : can({ type: 'select', uid } as Partial<Action>) ? 'plain' : 'dim'
 
-  const handFull = !busy && !game.result && skippedDraw(state)
+  const handFull = !busy && !hasEnded(game) && skippedDraw(state)
   return (
     <CardBatch assets={assets}>
       <Selection>
@@ -75,7 +75,7 @@ export function Scene({
             onHold={(screen, x, y) => reader.hold({ screen }, x, y)}
             onPin={(screen) => reader.pin(screen)}
           />
-          <FactoryP03 view={view} busy={busy} outcome={busy ? undefined : game.result?.outcome} />
+          <FactoryP03 view={view} busy={busy} outcome={busy ? undefined : outcomeOf(game)} />
           <WarmUp onWarm={onWarm} />
         </Suspense>
         <FactoryEffects quality={quality} />

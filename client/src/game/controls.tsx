@@ -7,6 +7,7 @@ import {
   costOf,
   type GameState,
   HAND_LIMIT,
+  type Outcome,
   SIGILS,
   type Slot,
   TIP,
@@ -26,7 +27,9 @@ import {
 } from '@/components/ui/alert-dialog.tsx'
 import { Button } from '@/components/ui/button.tsx'
 import type { Finished } from '../lib/api.ts'
+import { authClient, DEMO } from '../lib/auth.ts'
 import { number } from '../lib/format.ts'
+import type { Ready } from './useGame.ts'
 
 export const has = (legal: Action[], match: Partial<Action>) =>
   legal.some((action) => Object.entries(match).every(([key, value]) => action[key as keyof Action] === value))
@@ -66,9 +69,15 @@ export function whyNot(state: GameState, target: { card: Unit } | { lane: number
   return 'that lane is taken'
 }
 
-/** What the player can do next, for the prompt line. */
-export function prompt(mustDraw: boolean, summoning: Unit | undefined, left = 0, over = false, full = false): string {
-  if (over) return 'Saving the result…'
+/** What the player can do next, for the prompt line; `over` can be a string to say instead of saving. */
+export function prompt(
+  mustDraw: boolean,
+  summoning: Unit | undefined,
+  left = 0,
+  over: boolean | string = false,
+  full = false,
+): string {
+  if (over) return typeof over === 'string' ? over : 'Saving the result…'
   if (mustDraw) return 'Draw a card to start your turn.'
   if (!summoning)
     return full
@@ -107,13 +116,33 @@ export function GameOver({ result, className = '' }: { result: Finished; classNa
   )
 }
 
+/** The panel over the board once a game ends: the run's own, or the quick battle's result. */
+export function Ending({ game }: { game: Ready }) {
+  if (game.run) return game.run.ending
+  return game.result ? (
+    <GameOver result={game.result} className="w-full max-w-md bg-p03-ground/95 font-terminal text-xl" />
+  ) : null
+}
+
+export const hasEnded = (game: Ready) => Boolean(game.run ? game.run.ending : game.result)
+
+/** How the game ended, for P03's face; a run's battle knows at once. */
+export const outcomeOf = (game: Ready): Outcome | undefined =>
+  game.result?.outcome ?? (game.run?.ending ? (game.state.status === 'won' ? 'win' : 'loss') : undefined)
+
+/** For the prompt: a run's battle is decided locally, while a quick battle waits for the server. */
+export const overText = (game: Ready) => game.state.status !== 'playing' && (game.run ? 'The battle is over.' : true)
+
 export function Forfeit({
   forfeit,
+  run = false,
   disabled = false,
   className = '',
-  children = 'Forfeit',
+  children = run ? 'Abandon run' : 'Forfeit',
 }: {
   forfeit: () => Promise<void>
+  /** Forfeiting a battle in a run abandons the whole run. */
+  run?: boolean
   disabled?: boolean
   className?: string
   children?: ReactNode
@@ -127,15 +156,17 @@ export function Forfeit({
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Forfeit this game?</AlertDialogTitle>
+          <AlertDialogTitle>{run ? 'Abandon this run?' : 'Forfeit this game?'}</AlertDialogTitle>
           <AlertDialogDescription>
-            It counts as a loss on the turn you have reached, and you get a fresh deal.
+            {run
+              ? 'It ends here, scored on how far you got, and the next run starts from the beginning.'
+              : 'It counts as a loss on the turn you have reached, and you get a fresh deal.'}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Keep playing</AlertDialogCancel>
           <AlertDialogAction variant="destructive" onClick={() => void forfeit()}>
-            Forfeit
+            {run ? 'Abandon' : 'Forfeit'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -145,6 +176,11 @@ export function Forfeit({
 
 /** Seats that get a note at the table; null gets none. */
 export type Seat = 'demo' | 'guest' | null
+
+export function useSeat(): Seat {
+  const user = authClient.useSession().data?.user as { username?: string; isAnonymous?: boolean } | undefined
+  return user?.username === DEMO.username ? 'demo' : user?.isAnonymous ? 'guest' : null
+}
 
 const NOTE_KEY = { demo: 'grimrepo:demo-note', guest: 'grimrepo:guest-note' }
 
