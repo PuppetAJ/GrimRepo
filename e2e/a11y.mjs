@@ -65,6 +65,45 @@ section('The game')
   await audit('the 3D table', '/game', () => tableReady(page))
 }
 
+section('The table keeps its shortcuts')
+{
+  await page.evaluate(() => localStorage.setItem('grimrepo:table', 'text'))
+  await page.goto(`${BASE}/game`)
+  const table = page.locator('[data-table="text"]')
+  await table.waitFor()
+  const at = async () => Number(await table.getAttribute('data-moves'))
+  const reaches = (moves) =>
+    page
+      .locator(`[data-table][data-moves="${moves}"]`)
+      .waitFor({ timeout: 5000 })
+      .then(() => true)
+      .catch(() => false)
+  const draw = async () => {
+    await page.locator('button[aria-label="Take a Boilerplate"]:not(:disabled)').click()
+    return at()
+  }
+
+  // Taking a card disables the button that had focus, and focus must not fall out of the table with it.
+  const drawn = await draw()
+  await page.keyboard.press('e')
+  check('E rings the bell after the draw button it was on is disabled', await reaches(drawn + 1))
+
+  const note = page.getByRole('button', { name: 'Close the note' })
+  if (await note.count()) {
+    await note.click()
+    check(
+      'closing the note leaves focus in the table',
+      await page.evaluate(() => Boolean(document.activeElement?.closest('[data-table]'))),
+    )
+  }
+
+  // WCAG 2.1.4: once the visitor clicks elsewhere, single-key shortcuts stop.
+  const before = await draw()
+  await page.locator('footer').click()
+  await page.keyboard.press('e')
+  check('but after a click outside the table, E does nothing', !(await reaches(before + 1)))
+}
+
 section('Signed in')
 await page.setViewportSize({ width: 1280, height: 800 })
 await signInAsDemo(page)

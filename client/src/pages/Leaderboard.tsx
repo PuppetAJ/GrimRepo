@@ -43,7 +43,11 @@ export function Leaderboard() {
             {result.outcome === 'win'
               ? `${result.turns} turns. ...The RNG was rigged. I'm filing a bug.`
               : `Turn ${result.turns} and you're done. Weak cards. Total lack of synergy.`}{' '}
-            {result.isBest ? "A new best. Don't let it go to your head." : 'Not even your best.'}
+            {result.first
+              ? "Everyone's first score is bad."
+              : result.isBest
+                ? "A new best. Don't let it go to your head."
+                : 'Not even your best.'}
           </p>
           {guest ? (
             <p className="relative z-30 mt-2 font-sans text-sm text-foreground">
