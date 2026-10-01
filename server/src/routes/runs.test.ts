@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { after, beforeEach, describe, it } from 'node:test'
 import { applyRun, createRun, playRun, scoreRun, type RunAction, type RunState } from 'shared'
 import { pool } from '../config/db.ts'
+import { RUN_SAVE_LIMIT } from './api.ts'
 import { newPlayer, startApp } from '../test/http.ts'
 import { resetDatabase } from '../test/support.ts'
 
@@ -33,13 +34,13 @@ async function start(cookie: string) {
   }
 }
 
-/** Sends a bot's whole run in saves of up to a thousand actions. */
+/** Sends a bot's whole run in saves as large as the server takes. */
 async function submit(cookie: string, id: number, actions: RunAction[]) {
   let last
-  for (let from = 0; from < actions.length; from += 1_000) {
+  for (let from = 0; from < actions.length; from += RUN_SAVE_LIMIT) {
     last = await app.call('POST', `/api/runs/${id}/moves`, {
       cookie,
-      body: { from, actions: actions.slice(from, from + 1_000) },
+      body: { from, actions: actions.slice(from, from + RUN_SAVE_LIMIT) },
     })
     assert.equal(last.status, 200, JSON.stringify(last.body))
   }
@@ -97,6 +98,20 @@ describe('a run', () => {
       })
       assert.equal(reply.status, 400, JSON.stringify(actions))
     }
+  })
+
+  it('takes a full save of the largest actions within the body limit, and no more', async () => {
+    const player = await signedIn()
+    const run = await start(player.cookie)
+    const largest = { type: 'transfer', from: 999_999, to: 999_999, sigil: 'technical_debt' }
+    const save = (count: number) =>
+      app.call('POST', `/api/runs/${run.id}/moves`, {
+        cookie: player.cookie,
+        body: { from: 0, actions: Array(count).fill(largest) },
+      })
+    // Reaching the replay, which refuses them, shows the body was read.
+    assert.equal((await save(RUN_SAVE_LIMIT)).body.error, 'Illegal move')
+    assert.equal((await save(RUN_SAVE_LIMIT + 1)).body.error, 'Invalid moves')
   })
 
   it('refuses actions that do not follow on from what was saved', async () => {
