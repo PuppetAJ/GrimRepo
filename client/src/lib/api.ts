@@ -37,6 +37,7 @@ export type Finished = {
   turns: number
   score: number
   best: number
+  first: boolean
   isBest: boolean
 }
 export type Saved = { status: 'playing'; saved: number } | Finished
