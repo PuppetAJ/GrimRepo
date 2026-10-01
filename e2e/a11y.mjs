@@ -6,7 +6,7 @@ const { page, context, pageErrors, close } = await launch()
 const { check, section, report } = reporter()
 
 // Start with the README taken over, so axe checks the terminal, not the screenshot before it.
-await context.addInitScript(() => sessionStorage.setItem('grimrepo:infected', '1'))
+await context.addCookies([{ name: 'grimrepo_seen', value: '1', url: BASE }])
 
 const PAGES = [
   ['the README', '/'],

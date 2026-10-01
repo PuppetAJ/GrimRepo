@@ -1,5 +1,5 @@
 import { ChevronDown, LogIn, LogOut, Menu, Settings, UserPlus, UserRound } from 'lucide-react'
-import { Suspense } from 'react'
+import { Suspense, useEffect } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from '@tanstack/react-router'
 import { LoadFailed, ReloadPage } from './LoadFailed.tsx'
 import { toast } from 'sonner'
@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu.tsx'
 import { authClient, settled } from '../lib/auth.ts'
+import { homeVariant } from '../lib/homeVariant.ts'
 import { Avatar } from './Avatar.tsx'
 import { Logo } from './Logo.tsx'
 import { Loading } from './States.tsx'
@@ -34,6 +35,10 @@ export function Layout() {
   const navigate = useNavigate()
   const user = session.data?.user as { displayUsername?: string; username?: string; isAnonymous?: boolean } | undefined
   const name = user?.displayUsername ?? user?.username
+  // The server's guess about the session stands only until the session is known.
+  useEffect(() => {
+    if (!session.isPending) delete document.documentElement.dataset['home']
+  }, [session.isPending])
 
   async function signOut() {
     const { error } = await settled(authClient.signOut())
@@ -52,8 +57,8 @@ export function Layout() {
               Public, unfortunately
             </span>
           </div>
-          {/* Holds the header's height while the session loads, so the page doesn't jump. */}
-          {session.isPending ? (
+          {/* Holds the header's height while the session loads, unless the server already knew there was none. */}
+          {session.isPending && homeVariant()?.signedIn !== false ? (
             <Button variant="outline" aria-hidden tabIndex={-1} className="invisible">
               Sign in
             </Button>

@@ -42,7 +42,9 @@ const runAction = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('leave') }),
 ])
 
-const runMoves = z.strictObject({ from: z.number().int().min(0), actions: z.array(runAction).max(1_000) })
+// The client saves a few actions at a time; 200 of the largest kind fit the 16 KB body limit.
+export const RUN_SAVE_LIMIT = 200
+const runMoves = z.strictObject({ from: z.number().int().min(0), actions: z.array(runAction).max(RUN_SAVE_LIMIT) })
 
 // Keyed per player, since only signed-in players reach these routes.
 const perPlayer = (limit: number) =>
