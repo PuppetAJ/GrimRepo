@@ -88,7 +88,7 @@ export function GameOver({ result, className = '' }: { result: Finished; classNa
       <p>
         {number(result.score)} points
         {result.first
-          ? '. Your first score.'
+          ? ". Everyone's first score is bad."
           : result.isBest
             ? '. A new best.'
             : `. Your best is ${number(result.best)}.`}

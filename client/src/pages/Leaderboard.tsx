@@ -44,7 +44,7 @@ export function Leaderboard() {
               ? `${result.turns} turns. ...The RNG was rigged. I'm filing a bug.`
               : `Turn ${result.turns} and you're done. Weak cards. Total lack of synergy.`}{' '}
             {result.first
-              ? "Your first score. Everyone's first score is bad."
+              ? "Everyone's first score is bad."
               : result.isBest
                 ? "A new best. Don't let it go to your head."
                 : 'Not even your best.'}
