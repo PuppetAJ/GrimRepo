@@ -1,5 +1,5 @@
 import { Box, Flag, LogOut, Maximize, Minimize, ScrollText, SquareTerminal } from 'lucide-react'
-import { Link } from 'react-router'
+import { Link } from '@tanstack/react-router'
 import FaultyScreenShader from '../../components/p03/FaultyScreenShader.tsx'
 import { Forfeit, ScaleBar, SeatNote } from '../controls.tsx'
 import { Balance } from './Balance.tsx'

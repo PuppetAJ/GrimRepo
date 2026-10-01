@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { Link, useSearchParams } from 'react-router'
+import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button.tsx'
 import { Skeleton } from '@/components/ui/skeleton.tsx'
 import { api } from '../../lib/api.ts'
@@ -13,19 +13,11 @@ const HISTORY = 10
 
 /** The page lives in the URL, so Back returns to it. */
 export function History({ username, lastLoss }: { username: string; lastLoss: Game | undefined }) {
-  const [search, setSearch] = useSearchParams()
-  const page = Math.max(1, Number(search.get('page')) || 1)
+  const page = useSearch({ from: '/players/$username', select: (search) => search.page ?? 1 })
+  const navigate = useNavigate({ from: '/players/$username' })
   const history = useAsync(() => api.games(username, page), `${username}:${page}`)
   const turn = (to: number) =>
-    setSearch(
-      (now) => {
-        const next = new URLSearchParams(now)
-        if (to > 1) next.set('page', String(to))
-        else next.delete('page')
-        return next
-      },
-      { preventScrollReset: true },
-    )
+    void navigate({ search: (now) => ({ ...now, page: to > 1 ? to : undefined }), resetScroll: false })
   const games = history.status === 'ready' ? history.data.games : []
   const pinned = lastLoss && page === 1
   return (

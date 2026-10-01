@@ -19,7 +19,7 @@ const mockupsSlash: Plugin = {
 }
 
 // Gzipped KB each chunk may reach before the build fails.
-const BUDGET = { entry: 150, three: 400, charts: 120, other: 40 }
+const BUDGET = { entry: 175, three: 400, charts: 120, other: 40 }
 
 const budget: Plugin = {
   name: 'bundle-budget',

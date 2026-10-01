@@ -1,5 +1,5 @@
 import { apply, createGame, nextBotAction, summary } from '../shared/src/index.ts'
-import { BASE, deletePlayer, freshPage, launch, reporter, resetRateLimits, stamp } from './lib.mjs'
+import { BASE, deletePlayer, freshPage, launch, newPlayer, reporter, resetRateLimits } from './lib.mjs'
 
 await resetRateLimits()
 
@@ -158,13 +158,8 @@ section('The compendium')
 section('Accounts and scores')
 {
   // The page's request context shares its cookies, so this signs in the way the client will.
-  const tag = stamp()
-  const player = {
-    name: `e2e_${tag}`,
-    username: `e2e_${tag}`,
-    email: `e2e_${tag}@grimrepo.test`,
-    password: 'a-long-enough-password',
-  }
+  const made = newPlayer()
+  const player = { name: made.username, ...made }
 
   const signUp = await page.request.post(`${BASE}/api/auth/sign-up/email`, { data: player })
   check('a new player can sign up', signUp.ok(), `${signUp.status()} ${await signUp.text()}`)
@@ -234,7 +229,14 @@ section('A page whose code is gone')
   await stale.route(/\/(pages\/Cards\.tsx|assets\/Cards-[^/]*\.js)/, (route) => route.abort())
   await stale.goto(BASE)
   await stale.getByRole('heading', { name: 'Grim Repo', level: 1 }).waitFor()
+  // The router reloads once to fetch the new deploy's code, then offers a reload if it's still missing.
+  await stale.evaluate(() => (window.__beforeReload = true))
   await stale.getByRole('link', { name: 'Cards' }).click()
+  const reloaded = await stale
+    .waitForFunction(() => !window.__beforeReload)
+    .then(() => true)
+    .catch(() => false)
+  check('reloads once to fetch the new version', reloaded)
   const failed = await stale
     .getByRole('alert')
     .filter({ hasText: "This page didn't load" })

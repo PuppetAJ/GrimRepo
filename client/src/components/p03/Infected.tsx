@@ -28,6 +28,9 @@ const GLITCH_MS = 900
 const TICK_MS = 140
 const SLICES = 7
 const BEFORE = '![gameplay demo](docs/table.webp)'
+// Phones take the smaller copy; it is the home page's LCP image, so its bytes compete with the scripts.
+const SHOT_SRCSET = '/readme/table-720.webp 720w, /readme/table.webp 960w'
+const SHOT_SIZES = '(max-width: 767px) 92vw, 960px'
 const AFTER = '![P03 was here](/dev/null)'.padEnd(BEFORE.length)
 const NOISE = '#$%&*+=/<>?{}[]█▓▒'
 
@@ -143,6 +146,8 @@ export function Infected({ lines, user }: { lines: readonly string[] | null; use
             <img
               ref={shot}
               src="/readme/table.webp"
+              srcSet={SHOT_SRCSET}
+              sizes={SHOT_SIZES}
               alt="The 3D table: P03 behind a board of floppy-disk cards"
               width={960}
               height={540}
@@ -169,6 +174,8 @@ function Tears({ tick }: { tick: number }) {
           <img
             key={slice}
             src="/readme/table.webp"
+            srcSet={SHOT_SRCSET}
+            sizes={SHOT_SIZES}
             alt=""
             className="absolute inset-0 size-full object-cover object-top"
             style={{

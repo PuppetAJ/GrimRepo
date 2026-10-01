@@ -1,6 +1,6 @@
 import { Flag, LayoutGrid, LogOut, Maximize, Minimize, MoveUp, Type } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { Link } from 'react-router'
+import { Link } from '@tanstack/react-router'
 import { legalActions, type Unit } from 'shared'
 import { Button } from '@/components/ui/button.tsx'
 import { FlatReaderBody } from '../../CardReader.tsx'

@@ -1,6 +1,6 @@
 import { ChevronDown, LogIn, LogOut, Menu, Settings, UserPlus, UserRound } from 'lucide-react'
 import { Suspense } from 'react'
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
+import { Link, Outlet, useLocation, useNavigate } from '@tanstack/react-router'
 import { LoadFailed, ReloadPage } from './LoadFailed.tsx'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button.tsx'
@@ -18,11 +18,11 @@ import { Logo } from './Logo.tsx'
 import { Loading } from './States.tsx'
 
 const tabs = [
-  { to: '/', label: 'README', end: true },
-  { to: '/leaderboard', label: 'Leaderboard' },
-  { to: '/cards', label: 'Cards' },
-  { to: '/game', label: 'Play' },
-]
+  { to: '/', label: 'README', exact: true },
+  { to: '/leaderboard', label: 'Leaderboard', exact: false },
+  { to: '/cards', label: 'Cards', exact: false },
+  { to: '/game', label: 'Play', exact: false },
+] as const
 
 // One max width so the header, nav, page and footer line up.
 const PAGE = 'mx-auto w-full max-w-[100rem]'
@@ -39,7 +39,7 @@ export function Layout() {
     const { error } = await settled(authClient.signOut())
     if (error) return void toast.error(`Could not sign out: ${error.message}`)
     toast.success('Signed out')
-    navigate('/')
+    navigate({ to: '/' })
   }
 
   return (
@@ -64,7 +64,7 @@ export function Layout() {
                   <>
                     {user?.isAnonymous ? (
                       <Button asChild>
-                        <NavLink to="/signup">Sign up</NavLink>
+                        <Link to="/signup">Sign up</Link>
                       </Button>
                     ) : null}
                     <DropdownMenu>
@@ -83,10 +83,10 @@ export function Layout() {
                 ) : (
                   <>
                     <Button asChild variant="outline">
-                      <NavLink to="/signup">Sign up</NavLink>
+                      <Link to="/signup">Sign up</Link>
                     </Button>
                     <Button asChild>
-                      <NavLink to="/login">Sign in</NavLink>
+                      <Link to="/login">Sign in</Link>
                     </Button>
                   </>
                 )}
@@ -104,7 +104,7 @@ export function Layout() {
                     <>
                       <DropdownMenuLabel>{name}</DropdownMenuLabel>
                       {user?.isAnonymous ? (
-                        <DropdownMenuItem onSelect={() => navigate('/signup')}>
+                        <DropdownMenuItem onSelect={() => navigate({ to: '/signup' })}>
                           <UserPlus aria-hidden /> Sign up
                         </DropdownMenuItem>
                       ) : null}
@@ -112,10 +112,10 @@ export function Layout() {
                     </>
                   ) : (
                     <>
-                      <DropdownMenuItem onSelect={() => navigate('/login')}>
+                      <DropdownMenuItem onSelect={() => navigate({ to: '/login' })}>
                         <LogIn aria-hidden /> Sign in
                       </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => navigate('/signup')}>
+                      <DropdownMenuItem onSelect={() => navigate({ to: '/signup' })}>
                         <UserPlus aria-hidden /> Sign up
                       </DropdownMenuItem>
                     </>
@@ -130,16 +130,16 @@ export function Layout() {
       <nav aria-label="Sections" className="overflow-x-auto border-b px-(--gutter) text-sm max-[350px]:px-2">
         <div className={`${PAGE} flex gap-2 max-[350px]:justify-between max-[350px]:gap-0`}>
           {tabs.map((tab) => (
-            <NavLink
+            <Link
               key={tab.to}
               to={tab.to}
-              end={tab.end}
-              className={({ isActive }) =>
-                `border-b-2 px-3 py-3.5 whitespace-nowrap max-[350px]:px-2 ${isActive ? 'border-death font-semibold text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`
-              }
+              activeOptions={{ exact: tab.exact, includeSearch: false }}
+              className="border-b-2 px-3 py-3.5 whitespace-nowrap max-[350px]:px-2"
+              activeProps={{ className: 'border-death font-semibold text-foreground' }}
+              inactiveProps={{ className: 'border-transparent text-muted-foreground hover:text-foreground' }}
             >
               {tab.label}
-            </NavLink>
+            </Link>
           ))}
         </div>
       </nav>
@@ -167,10 +167,10 @@ function AccountItems({ name, onSignOut }: { name: string; onSignOut: () => void
   const navigate = useNavigate()
   return (
     <>
-      <DropdownMenuItem onSelect={() => navigate(`/players/${name}`)}>
+      <DropdownMenuItem onSelect={() => navigate({ to: '/players/$username', params: { username: name } })}>
         <UserRound aria-hidden /> Your stats
       </DropdownMenuItem>
-      <DropdownMenuItem onSelect={() => navigate('/account')}>
+      <DropdownMenuItem onSelect={() => navigate({ to: '/account' })}>
         <Settings aria-hidden /> Account
       </DropdownMenuItem>
       <DropdownMenuSeparator />
