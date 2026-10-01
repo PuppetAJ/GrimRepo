@@ -44,7 +44,16 @@ export type OpenGame = { id: number; seed: number; actions: Action[]; resumed: b
 
 export type MovesResult =
   | { status: 'playing'; saved: number }
-  | { status: 'finished'; outcome: Outcome; turns: number; score: number; best: number; isBest: boolean }
+  | {
+      status: 'finished'
+      outcome: Outcome
+      turns: number
+      score: number
+      best: number
+      // A first game is neither a new best nor short of one.
+      first: boolean
+      isBest: boolean
+    }
 
 export class GameError extends Error {
   readonly status: number
@@ -179,8 +188,15 @@ async function finish(
      WHERE id = $7`,
     [JSON.stringify(actions), outcome, turns, score, forfeited, JSON.stringify(cardsPlayed(events)), gameId],
   )
-  const best = Math.max(score, previous.rows[0]?.best ?? 0)
-  return { outcome, turns, score, best, isBest: score >= best }
+  const before = previous.rows[0]?.best ?? null
+  return {
+    outcome,
+    turns,
+    score,
+    best: Math.max(score, before ?? 0),
+    first: before === null,
+    isBest: before !== null && score > before,
+  }
 }
 
 /** Backfills card counts at startup; a game that fails to replay counts no cards. */

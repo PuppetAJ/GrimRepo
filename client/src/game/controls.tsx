@@ -86,7 +86,12 @@ export function GameOver({ result, className = '' }: { result: Finished; classNa
         {result.outcome === 'win' ? `You win in ${result.turns} turns.` : `You lose on turn ${result.turns}.`}
       </p>
       <p>
-        {number(result.score)} points{result.isBest ? '. A new best.' : `. Your best is ${number(result.best)}.`}
+        {number(result.score)} points
+        {result.first
+          ? ". Everyone's first score is bad."
+          : result.isBest
+            ? '. A new best.'
+            : `. Your best is ${number(result.best)}.`}
       </p>
       <div className="flex flex-wrap gap-3 font-sans text-base">
         <Button asChild>
