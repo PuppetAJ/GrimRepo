@@ -46,6 +46,7 @@ export { applyRun, createRun, legalRunActions, reachable, replayRun, STARTER_DEC
 export { SCENES, scene, type Effect, type Scene } from './run/scenes.ts'
 export {
   RUN_RULES_VERSION,
+  RUN_SAVE_LIMIT,
   type MapNode,
   type NodeKind,
   type RunAction,

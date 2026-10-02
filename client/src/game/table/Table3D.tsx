@@ -3,7 +3,7 @@ import { Canvas } from '@react-three/fiber'
 import { Suspense, use, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { legalActions, type Action } from 'shared'
 import * as THREE from 'three'
-import { type Seat, has } from '../controls.tsx'
+import { type Seat, has, hasEnded } from '../controls.tsx'
 import { useFullScreen } from '../fullScreen.ts'
 import type { Ready } from '../useGame.ts'
 import { FlatReaderBody } from '../CardReader.tsx'
@@ -56,7 +56,7 @@ export default function Table3D({ game, seat, onText }: { game: Ready; seat: Sea
   const ringKey = useRef(() => {})
   useEffect(() => {
     ringKey.current = () => {
-      if (!busy && !game.result && has(legalActions(game.state), { type: 'ringBell' })) act({ type: 'ringBell' })
+      if (!busy && !hasEnded(game) && has(legalActions(game.state), { type: 'ringBell' })) act({ type: 'ringBell' })
     }
   })
   useEffect(() => {

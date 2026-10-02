@@ -4,7 +4,7 @@ import { card, CARDS, deckCard, PLAYER_DECK, SIGILS, TIP, type GameState, type S
 export const FIXTURES_ON = import.meta.env.DEV || import.meta.env.VITE_TEST_HANDLE === '1'
 
 // The three sigils with the longest text, since a card carries three at most.
-const MOST_SIGILS = (Object.keys(SIGILS) as SigilId[])
+export const MOST_SIGILS = (Object.keys(SIGILS) as SigilId[])
   .sort((a, b) => SIGILS[b].text.length - SIGILS[a].text.length)
   .slice(0, 3)
 
