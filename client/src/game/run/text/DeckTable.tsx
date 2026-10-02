@@ -11,10 +11,10 @@ export function DeckTable({ deck, caption }: { deck: RunCard[]; caption: string 
           <th scope="col" className="pb-1 font-normal">
             Card
           </th>
-          <th scope="col" className="pb-1 text-right font-normal">
+          <th scope="col" className="pb-1 pl-3 text-right font-normal">
             Attack
           </th>
-          <th scope="col" className="pb-1 text-right font-normal">
+          <th scope="col" className="pb-1 pl-3 text-right font-normal">
             Health
           </th>
         </tr>
@@ -30,8 +30,8 @@ export function DeckTable({ deck, caption }: { deck: RunCard[]; caption: string 
                 </span>
               ) : null}
             </th>
-            <td className="py-1 text-right tabular-nums">{entry.attack}</td>
-            <td className="py-1 text-right tabular-nums">{entry.health}</td>
+            <td className="py-1 pl-3 text-right tabular-nums">{entry.attack}</td>
+            <td className="py-1 pl-3 text-right tabular-nums">{entry.health}</td>
           </tr>
         ))}
       </tbody>

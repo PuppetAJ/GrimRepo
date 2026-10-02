@@ -21,6 +21,8 @@ const Game = lazyRouteComponent(() => import('./pages/Game.tsx'), 'Game')
 const MyStats = lazyRouteComponent(() => import('./pages/MyStats.tsx'), 'MyStats')
 const Player = lazyRouteComponent(() => import('./pages/Player.tsx'), 'Player')
 const Run = lazyRouteComponent(() => import('./pages/Run.tsx'), 'Run')
+const MockupIndex = lazyRouteComponent(() => import('./pages/Mockups.tsx'), 'MockupIndex')
+const MockupRun = lazyRouteComponent(() => import('./pages/Mockups.tsx'), 'MockupRun')
 const SignIn = lazyRouteComponent(() => import('./pages/SignIn.tsx'), 'SignIn')
 const SignUp = lazyRouteComponent(() => import('./pages/SignUp.tsx'), 'SignUp')
 
@@ -44,10 +46,7 @@ const gameSearch = z.object({
   fixture: optional(z.string()),
 })
 
-const runSearch = z.object({
-  layout: optional(z.enum(['wide', 'mid', 'phone'])),
-  fixture: optional(z.string()),
-})
+const runSearch = z.object({ layout: optional(z.enum(['wide', 'mid', 'phone'])) })
 
 export type CardsSearch = z.infer<typeof cardsSearch>
 export type GameSearch = z.infer<typeof gameSearch>
@@ -114,7 +113,29 @@ const run = createRoute({
   ),
 })
 
-const tree = root.addChildren([home, signIn, signUp, leaderboard, cards, player, stats, account, game, run])
+// Development and test builds only; production shows the not-found page.
+const mockups = createRoute({ getParentRoute: parent, path: '/mockups', component: MockupIndex })
+const mockup = createRoute({
+  getParentRoute: parent,
+  path: '/mockups/$name',
+  validateSearch: runSearch,
+  component: MockupRun,
+})
+
+const tree = root.addChildren([
+  home,
+  signIn,
+  signUp,
+  leaderboard,
+  cards,
+  player,
+  stats,
+  account,
+  game,
+  run,
+  mockups,
+  mockup,
+])
 
 /** Plain `?key=value` addresses, as before, rather than the router's JSON values; a bare key is a flag. */
 function parseSearch(search: string): Record<string, string> {

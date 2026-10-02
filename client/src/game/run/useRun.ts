@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { applyRun, createRun, RUN_SAVE_LIMIT, type RunAction, type RunEvent, type RunState } from 'shared'
+import { applyRun, createRun, encounter, RUN_SAVE_LIMIT, type RunAction, type RunEvent, type RunState } from 'shared'
 import { toast } from 'sonner'
 import { api, ApiError, type OpenRun, type RunOver } from '../../lib/api.ts'
 import { narrate, opening } from '../../lib/narrate.ts'
-import { runFixture } from './fixtures.ts'
+import type { Mockup } from './mockups.ts'
 import { narrateRun } from './narrate.ts'
 
 type Listener = (events: RunEvent[]) => void
@@ -58,7 +58,10 @@ function logAfter(log: string[], before: RunState, after: RunState, events: RunE
   const entered = events.find((event) => event.type === 'entered')
   if (entered && after.visit?.kind === 'battle') {
     const [, ...queued] = opening(after.visit.game)
-    const first = entered.kind === 'boss' ? 'A boss. Two phases. Try to keep up. Draw.' : 'Another battle. Draw.'
+    const phases = after.visit.game.opponent.encounter
+      ? encounter(after.visit.game.opponent.encounter).phases.length
+      : 1
+    const first = entered.kind === 'boss' ? `A boss. ${phases} phases. Try to keep up. Draw.` : 'Another battle. Draw.'
     return p03([first, ...queued])
   }
   const game = before.visit?.kind === 'battle' ? before.visit.game : null
@@ -90,8 +93,8 @@ function open(run: OpenRun): Table {
   return { id: run.id, generation: generations, moves: run.actions.length, ...story }
 }
 
-/** Plays the open run locally and saves it at every step off the board, and at every draw and bell on it. */
-export function useRun(): Run {
+/** Plays the open run locally and saves it at every step off the board, and at every draw and bell on it; a mockup is never saved. */
+export function useRun(mockup: Mockup | null = null): Run {
   const [table, setTable] = useState<Table | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [reloads, setReloads] = useState(0)
@@ -109,22 +112,20 @@ export function useRun(): Run {
   }, [])
 
   useEffect(() => {
-    const fixed = runFixture()
-    // Deferred like a server reply, so a fixture loads the same way a run does.
-    if (fixed)
+    // Deferred like a server reply, so a mockup loads the same way a run does.
+    if (mockup)
       return void Promise.resolve().then(() => {
         generations += 1
-        const note = `Fixture "${fixed.name}": played here and never saved.`
         setTable({
           id: -1,
           generation: generations,
           moves: 0,
-          state: fixed.state,
-          log: [`P03> ${note}`],
-          news: [],
-          path: fixed.path,
+          state: mockup.state,
+          log: ['P03> A mockup: played here and never saved.'],
+          news: mockup.news ?? [],
+          path: mockup.path,
         })
-        setOver(null)
+        setOver(mockup.over ?? null)
       })
     let current = true
     api.startRun().then(
@@ -147,7 +148,7 @@ export function useRun(): Run {
     return () => {
       current = false
     }
-  }, [reloads])
+  }, [reloads, mockup])
 
   const id = table?.id
   // Failed saves retry with backoff until they land, since the last action of a run has none after it.

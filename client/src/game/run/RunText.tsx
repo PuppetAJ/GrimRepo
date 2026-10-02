@@ -37,39 +37,39 @@ export function RunText({ run, layout, seat }: { run: RunReady; layout: Layout; 
 
   return (
     <div data-run-seed={run.state.seed} data-run-moves={run.moves} data-run-view={view}>
-      {battle && view === 'battle' ? (
-        // Negative margins give the table most of the gutter, as on the quick battle's page.
-        <div className={layout === 'phone' ? '-mx-(--gutter)' : '-mx-[calc(var(--gutter)-0.75rem)]'}>
-          {/* Remounted for each battle, so its playback never starts from the last one. */}
+      {/* Negative margins give the table most of the gutter, as on the quick battle's page. */}
+      <div className={layout === 'phone' ? '-mx-(--gutter)' : '-mx-[calc(var(--gutter)-0.75rem)]'}>
+        {battle && view === 'battle' ? (
+          // Remounted for each battle, so its playback never starts from the last one.
           <TerminalTable
             key={`${run.generation}:${run.state.stage}:${run.state.at}`}
             game={battle}
             seat={seat}
             layout={layout}
           />
-        </div>
-      ) : view !== 'battle' ? (
-        <Screen
-          run={run}
-          layout={layout}
-          title={view === 'summary' && run.state.status === 'won' ? 'Run cleared' : TITLES[view]}
-          deck={view !== 'summary'}
-        >
-          {view === 'summary' ? (
-            <Summary run={run} />
-          ) : view === 'card' || view === 'reward' ? (
-            <Offer run={run} />
-          ) : view === 'campfire' ? (
-            <Campfire run={run} />
-          ) : view === 'stones' ? (
-            <Stones run={run} />
-          ) : view === 'event' ? (
-            <EventScene run={run} />
-          ) : (
-            <RunMap run={run} />
-          )}
-        </Screen>
-      ) : null}
+        ) : view !== 'battle' ? (
+          <Screen
+            run={run}
+            layout={layout}
+            title={view === 'summary' && run.state.status === 'won' ? 'Run cleared' : TITLES[view]}
+            deck={view !== 'summary'}
+          >
+            {view === 'summary' ? (
+              <Summary run={run} />
+            ) : view === 'card' || view === 'reward' ? (
+              <Offer run={run} />
+            ) : view === 'campfire' ? (
+              <Campfire run={run} />
+            ) : view === 'stones' ? (
+              <Stones run={run} />
+            ) : view === 'event' ? (
+              <EventScene run={run} />
+            ) : (
+              <RunMap run={run} />
+            )}
+          </Screen>
+        ) : null}
+      </div>
     </div>
   )
 }

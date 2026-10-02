@@ -67,16 +67,30 @@ section('The game')
 
 section('A run')
 {
-  // From fixtures, so every screen is checked whatever a real run's seed would deal.
+  // From mockups, so every screen is checked whatever a real run's seed would deal, and at its worst.
   const screen = (name) => () => page.locator(`[data-run-view="${name}"]`).waitFor({ timeout: 30_000 })
+  const MOCKED = [
+    ['map', 'map'],
+    ['card', 'card'],
+    ['campfire', 'campfire'],
+    ['stones', 'stones'],
+    ['event', 'event'],
+    ['boss-phase', 'battle'],
+    ['worst-map', 'map'],
+    ['worst-reward', 'reward'],
+    ['worst-campfire-again', 'campfire'],
+    ['worst-stones', 'stones'],
+    ['worst-event', 'event'],
+    ['worst-summary', 'summary'],
+  ]
   for (const [layout, width, height] of [
     ['wide', 1440, 900],
     ['phone', 390, 844],
   ]) {
     await page.setViewportSize({ width, height })
-    for (const name of ['map', 'card', 'campfire', 'stones', 'event', 'battle'])
-      await audit(`the run's ${name}, ${layout}`, `/run?fixture=run-${name}&layout=${layout}`, screen(name))
-    await audit(`the run's summary, ${layout}`, `/run?fixture=run-lost&layout=${layout}`, async () => {
+    for (const [name, view] of MOCKED)
+      await audit(`the run's ${name}, ${layout}`, `/mockups/${name}?layout=${layout}`, screen(view))
+    await audit(`the run's summary after a loss, ${layout}`, `/mockups/lost?layout=${layout}`, async () => {
       await page.locator('[data-action="summary"]').click()
       await screen('summary')()
     })

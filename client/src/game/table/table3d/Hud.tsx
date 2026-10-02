@@ -11,6 +11,7 @@ import {
   hasEnded,
   overText,
   owed,
+  phaseText,
   prompt,
   ScaleBar,
   SeatNote,
@@ -71,6 +72,7 @@ export function Hud({
         <ScaleBar scale={view.scale} className="text-xl sm:text-2xl" />
         <span className="text-lg text-p03-dim sm:text-xl">
           Turn {view.turn} · Deck {view.deck}
+          {phaseText(state, view.phase) ? ` · ${phaseText(state, view.phase)}` : null}
         </span>
         {pinned ? (
           // Takes the pointer so it can be scrolled.

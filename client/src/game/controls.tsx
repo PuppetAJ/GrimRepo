@@ -5,6 +5,7 @@ import {
   type Action,
   card,
   costOf,
+  encounter,
   type GameState,
   HAND_LIMIT,
   type Outcome,
@@ -114,6 +115,13 @@ export function GameOver({ result, className = '' }: { result: Finished; classNa
       </div>
     </section>
   )
+}
+
+/** "Phase 1 of 2" while fighting a boss, which starts its next phase when the scale tips; null otherwise. */
+export function phaseText(state: GameState, phase: number): string | null {
+  const id = state.opponent.encounter
+  const phases = id ? encounter(id).phases.length : 1
+  return phases > 1 ? `Phase ${phase + 1} of ${phases}` : null
 }
 
 /** The panel over the board once a game ends: the run's own, or the quick battle's result. */
