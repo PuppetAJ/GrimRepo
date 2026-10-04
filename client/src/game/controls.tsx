@@ -162,23 +162,30 @@ export function Forfeit({
           {children}
         </Button>
       </AlertDialogTrigger>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{run ? 'Abandon this run?' : 'Forfeit this game?'}</AlertDialogTitle>
-          <AlertDialogDescription>
-            {run
-              ? 'It ends here, scored on how far you got, and the next run starts from the beginning.'
-              : 'It counts as a loss on the turn you have reached, and you get a fresh deal.'}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Keep playing</AlertDialogCancel>
-          <AlertDialogAction variant="destructive" onClick={() => void forfeit()}>
-            {run ? 'Abandon' : 'Forfeit'}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
+      <ForfeitConfirm forfeit={forfeit} run={run} />
     </AlertDialog>
+  )
+}
+
+/** The question a forfeit asks first; inside an AlertDialog, opened by its trigger or by a menu. */
+export function ForfeitConfirm({ forfeit, run = false }: { forfeit: () => Promise<void>; run?: boolean }) {
+  return (
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>{run ? 'Abandon this run?' : 'Forfeit this game?'}</AlertDialogTitle>
+        <AlertDialogDescription>
+          {run
+            ? 'It ends here, scored on how far you got, and the next run starts from the beginning.'
+            : 'It counts as a loss on the turn you have reached, and you get a fresh deal.'}
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel>Keep playing</AlertDialogCancel>
+        <AlertDialogAction variant="destructive" onClick={() => void forfeit()}>
+          {run ? 'Abandon' : 'Forfeit'}
+        </AlertDialogAction>
+      </AlertDialogFooter>
+    </AlertDialogContent>
   )
 }
 

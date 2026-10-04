@@ -1,6 +1,6 @@
 import { Eraser, PenLine, Undo2 } from 'lucide-react'
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
-import { findNode, MAP_COLUMNS, reachable, type MapNode, type StageMap } from 'shared'
+import { findNode, MAP_COLUMNS, reachable, type MapNode, type NodeKind, type StageMap } from 'shared'
 import { SIDE_BUTTON } from '../../text/Panel.tsx'
 import { sideOf, spots, type Spot } from '../layout.ts'
 import { NODE_ICONS, nodeName } from '../nodes.ts'
@@ -43,15 +43,35 @@ const describeNext = (map: StageMap, node: MapNode) =>
         .join('; ')}`
     : ''
 
-function Legend() {
+const KINDS = ['battle', 'card', 'campfire', 'stones', 'event', 'boss'] as const
+
+/** What each icon means; pointing at one lights every node of its kind, and choosing one keeps them lit. */
+function Legend({
+  shown,
+  onHover,
+  onPick,
+}: {
+  shown: NodeKind | null
+  onHover: (kind: NodeKind | null) => void
+  onPick: (kind: NodeKind) => void
+}) {
   return (
-    <ul aria-label="What the icons mean" className="flex flex-wrap gap-x-4 gap-y-1 text-base text-p03-dim">
-      {(['battle', 'card', 'campfire', 'stones', 'event', 'boss'] as const).map((kind) => {
+    <ul aria-label="What the icons mean" className="flex flex-wrap gap-1 text-base text-p03-dim">
+      {KINDS.map((kind) => {
         const Icon = NODE_ICONS[kind]
         return (
-          <li key={kind} className="flex items-center gap-1">
-            <Icon aria-hidden className="size-4" />
-            {nodeName({ kind })}
+          <li key={kind}>
+            <button
+              type="button"
+              aria-pressed={shown === kind}
+              onClick={() => onPick(kind)}
+              onPointerEnter={() => onHover(kind)}
+              onPointerLeave={() => onHover(null)}
+              className="flex items-center gap-1 rounded-sm px-1.5 py-0.5 hover:bg-[#13261a] hover:text-p03 focus-visible:outline-2 focus-visible:outline-p03 aria-pressed:bg-[#13261a] aria-pressed:text-p03"
+            >
+              <Icon aria-hidden className="size-4" />
+              {nodeName({ kind })}
+            </button>
           </li>
         )
       })}
@@ -64,6 +84,9 @@ export function RunMap({ run }: { run: RunReady }) {
   const { state, path } = run
   const [peek, setPeek] = useState<string | null>(null)
   const [pen, setPen] = useState(false)
+  const [hovered, setHovered] = useState<NodeKind | null>(null)
+  const [picked, setPicked] = useState<NodeKind | null>(null)
+  const shown = hovered ?? picked
   const { plan, addStroke, undo, toggleMark, clear } = usePlan(state.seed, state.stage)
   const box = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ width: 0, height: 0 })
@@ -115,15 +138,34 @@ export function RunMap({ run }: { run: RunReady }) {
     return 'quiet'
   }
   const at = (spot: Spot) => ({ x: spot.x * size.width, y: spot.y * size.height })
+  // A stroke that passes through a node marks it as planned.
+  const inked = new Set<string>()
+  for (const node of state.map.rows.flat()) {
+    const center = at(placed.get(node.id) as Spot)
+    const reach = (node.kind === 'boss' ? NODE * 0.75 : NODE / 2) + 4
+    const hit = plan.strokes.some((stroke) => {
+      for (let index = 0; index < stroke.length; index += 2) {
+        const dx = (stroke[index] as number) * size.width - center.x
+        const dy = (stroke[index + 1] as number) * size.height - center.y
+        if (dx * dx + dy * dy <= reach * reach) return true
+      }
+      return false
+    })
+    if (hit) inked.add(node.id)
+  }
   const choices = open.map((id) => findNode(state.map, id)).filter((node): node is MapNode => Boolean(node))
   const last = state.map.rows.length - 1
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Pinned while the map scrolls under it, like the line naming the choices at the bottom. */}
-      <div className="sticky top-0 z-30 flex flex-col gap-2 bg-p03-ground/95 pb-2">
+      {/* Pinned while the map scrolls under it. */}
+      <div className="sticky top-0 z-50 flex flex-col gap-2 bg-p03-ground/95 pb-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <Legend />
+          <Legend
+            shown={shown}
+            onHover={setHovered}
+            onPick={(kind) => setPicked((now) => (now === kind ? null : kind))}
+          />
           <div className="flex items-center gap-2 text-lg">
             <button
               type="button"
@@ -156,7 +198,7 @@ export function RunMap({ run }: { run: RunReady }) {
         </div>
         {pen ? (
           <p className="text-lg text-p03">
-            Draw on the map to sketch a route, or pick nodes to mark them. Turn the pen off to move.
+            Draw a route on the map; nodes it passes through are marked. Turn the pen off to move.
           </p>
         ) : null}
       </div>
@@ -198,14 +240,14 @@ export function RunMap({ run }: { run: RunReady }) {
               <ul>
                 {nodes.map((node) => {
                   const mark = markOf(node)
-                  const planned = plan.marks.includes(node.id)
+                  const planned = inked.has(node.id) || plan.marks.includes(node.id)
                   const spot = placed.get(node.id) as Spot
                   const Icon = NODE_ICONS[node.kind]
                   const name = `${nodeName(node)}${node.kind === 'boss' ? '' : `, ${sideOf(node)}`}`
                   const words = [WORDS[mark], planned ? 'planned' : '', describeNext(state.map, node)].filter(Boolean)
                   const label = `${name}${words.length ? `, ${words.join(', ')}` : ''}`
                   const boss = node.kind === 'boss'
-                  const box = `absolute z-20 grid -translate-x-1/2 -translate-y-1/2 place-items-center rounded-md border-2 ${STYLE[mark]} ${planned ? 'ring-2 ring-p03 ring-offset-2 ring-offset-p03-ground' : ''}`
+                  const box = `absolute z-20 grid -translate-x-1/2 -translate-y-1/2 place-items-center rounded-md border-2 ${STYLE[mark]} ${planned ? 'ring-2 ring-[#ffb347] ring-offset-2 ring-offset-p03-ground' : ''} ${shown === node.kind ? 'shadow-[0_0_14px_rgb(125_255_154/0.75)] outline-2 outline-offset-4 outline-p03' : ''}`
                   const style = {
                     left: `${spot.x * 100}%`,
                     top: `${spot.y * 100}%`,
@@ -250,7 +292,7 @@ export function RunMap({ run }: { run: RunReady }) {
           ))}
         </ol>
       </div>
-      <p className="sticky bottom-0 z-30 bg-p03-ground/95 pt-1 text-p03">
+      <p className="sr-only">
         {choices.length
           ? `From here: ${choices.map((node) => `${nodeName(node)} (${sideOf(node)})`).join(' or ')}.`
           : 'Nowhere to go from here.'}

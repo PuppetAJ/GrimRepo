@@ -11,7 +11,10 @@ export function DeckTable({ deck, caption }: { deck: RunCard[]; caption: string 
   return (
     <div className="flex min-w-0 flex-col gap-2">
       {deck.length >= SEARCH_FROM ? (
-        <CardSearch query={query} onChange={setQuery} label={`Search ${caption.toLowerCase()}`} />
+        // Pinned while the deck scrolls under it.
+        <div className="sticky top-0 z-10 bg-p03-ground pb-1">
+          <CardSearch query={query} onChange={setQuery} label={`Search ${caption.toLowerCase()}`} />
+        </div>
       ) : null}
       <table className="w-full table-fixed text-left text-lg leading-tight">
         <caption className="sr-only">{caption}</caption>
@@ -45,11 +48,10 @@ export function DeckTable({ deck, caption }: { deck: RunCard[]; caption: string 
                 >
                   {card(entry.card).name}
                 </button>
-                {entry.sigils.length ? (
-                  <span className="mt-1 block">
-                    <SigilIcons sigils={entry.sigils} size={14} />
-                  </span>
-                ) : null}
+                {/* Every row keeps a line for sigils, so rows with and without them are the same height. */}
+                <span className="mt-1 flex h-7 items-center">
+                  <SigilIcons sigils={entry.sigils} size={14} />
+                </span>
               </th>
               <td className="truncate py-1 text-right tabular-nums">{entry.attack}</td>
               <td className="truncate py-1 text-right tabular-nums">{entry.health}</td>

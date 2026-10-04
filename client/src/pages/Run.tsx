@@ -2,6 +2,7 @@ import { useSearch } from '@tanstack/react-router'
 import { Failure, Loading } from '../components/States.tsx'
 import { useSeat } from '../game/controls.tsx'
 import { FIXTURES_ON } from '../game/fixtures.ts'
+import { useLeaveFullScreen } from '../game/fullScreen.ts'
 import { useLayoutChoice } from '../game/layoutChoice.ts'
 import type { Mockup } from '../game/run/mockups.ts'
 import { RunText } from '../game/run/RunText.tsx'
@@ -12,6 +13,7 @@ import type { Layout } from '../game/text/useTextTable.ts'
 /** The run, or a mockup of one, at the text table. */
 export function RunTable({ mockup = null, forced }: { mockup?: Mockup | null; forced?: Layout }) {
   useKeepTableFocus()
+  useLeaveFullScreen()
   const run = useRun(mockup)
   const seat = useSeat()
   const { layout } = useLayoutChoice(forced)

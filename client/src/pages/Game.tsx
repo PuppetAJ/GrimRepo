@@ -6,6 +6,7 @@ import { LoadFailed } from '../components/LoadFailed.tsx'
 import { Failure, Loading } from '../components/States.tsx'
 import { useSeat } from '../game/controls.tsx'
 import { FIXTURES_ON } from '../game/fixtures.ts'
+import { useLeaveFullScreen } from '../game/fullScreen.ts'
 import { useKeepTableFocus } from '../game/shortcuts.ts'
 import { Boot } from '../game/table/Boot.tsx'
 import { TerminalTable } from '../game/TerminalTable.tsx'
@@ -51,6 +52,7 @@ function TurnSideways({ onText }: { onText: () => void }) {
 
 export function Game() {
   useKeepTableFocus()
+  useLeaveFullScreen()
   const game = useGame()
   const seat = useSeat()
   // ?text picks the text table; ?layout forces a layout, for comparing them in development and tests.

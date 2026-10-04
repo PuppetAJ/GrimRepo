@@ -1,39 +1,102 @@
-import { Layers } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { useNavigate } from '@tanstack/react-router'
+import { Flag, Layers, LogOut, Maximize, Menu, Minimize, X } from 'lucide-react'
+import { Dialog as DialogPrimitive } from 'radix-ui'
+import { useState, type ReactNode } from 'react'
 import { STAGES } from 'shared'
+import { AlertDialog } from '@/components/ui/alert-dialog.tsx'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog.tsx'
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu.tsx'
 import FaultyScreenShader from '../../../components/p03/FaultyScreenShader.tsx'
-import { Forfeit } from '../../controls.tsx'
+import { ForfeitConfirm } from '../../controls.tsx'
+import { useFullScreen } from '../../fullScreen.ts'
 import { useFit } from '../../text/sizing.ts'
-import { Panel, SIDE_BUTTON } from '../../text/Panel.tsx'
 import type { Layout } from '../../text/useTextTable.ts'
 import type { RunReady } from '../useRun.ts'
 import { DeckTable } from './DeckTable.tsx'
 
-function DeckButton({ run }: { run: RunReady }) {
+export const ICON_BUTTON =
+  'relative grid size-10 place-items-center rounded-md border-2 border-p03-edge bg-[#07130b] text-p03 hover:bg-[#13261a] focus-visible:outline-2 focus-visible:outline-p03 aria-expanded:bg-[#13261a]'
+
+/** Fades a scrolling area's last lines, so it ends softly instead of looking cut off. */
+export const FADE = '[mask-image:linear-gradient(to_bottom,black_calc(100%-2.5rem),transparent)] pb-10'
+
+/** The deck in a drawer that slides out inside the game's frame, out of the way until asked for. */
+function DeckDrawer({ run, host }: { run: RunReady; host: HTMLElement | null }) {
+  const count = run.state.deck.length
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <button type="button" className={`${SIDE_BUTTON} flex items-center gap-2`}>
+    <DialogPrimitive.Root>
+      <DialogPrimitive.Trigger asChild>
+        <button type="button" aria-label={`Your deck, ${count} cards`} title="Your deck" className={ICON_BUTTON}>
           <Layers aria-hidden className="size-5" />
-          Deck ({run.state.deck.length})
+          <span
+            aria-hidden
+            className="absolute -top-2 -right-2 min-w-5 rounded-full bg-p03 px-1 text-center text-sm leading-5 text-p03-ground"
+          >
+            {count}
+          </span>
         </button>
-      </DialogTrigger>
-      <DialogContent className="max-h-[85dvh] overflow-y-auto border-p03-edge bg-p03-ground font-terminal text-xl sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="font-terminal text-3xl font-normal text-p03">Your deck</DialogTitle>
-          <DialogDescription>{run.state.deck.length} cards, as they stand after this run's changes.</DialogDescription>
-        </DialogHeader>
-        <DeckTable deck={run.state.deck} caption="Your deck" />
-      </DialogContent>
-    </Dialog>
+      </DialogPrimitive.Trigger>
+      {/* Mounted in the frame, so the shade and the drawer cover the game, not the whole window. */}
+      <DialogPrimitive.Portal container={host}>
+        <DialogPrimitive.Overlay className="absolute inset-0 z-40 bg-black/50 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0" />
+        <DialogPrimitive.Content className="absolute top-0 right-0 z-50 flex h-full w-full max-w-sm flex-col gap-3 border-l-2 border-p03-edge bg-p03-ground p-4 font-terminal text-xl text-[#b8f5c4] outline-none motion-reduce:animate-none data-open:animate-in data-open:slide-in-from-right data-closed:animate-out data-closed:slide-out-to-right">
+          <div className="flex items-center justify-between gap-2">
+            <DialogPrimitive.Title className="text-3xl text-p03">Your deck ({count})</DialogPrimitive.Title>
+            <DialogPrimitive.Close aria-label="Close the deck" className={ICON_BUTTON}>
+              <X aria-hidden className="size-5" />
+            </DialogPrimitive.Close>
+          </div>
+          <DialogPrimitive.Description className="sr-only">
+            Every card as it stands after this run's changes.
+          </DialogPrimitive.Description>
+          <div className={`min-h-0 flex-1 overflow-y-auto px-1 ${FADE}`}>
+            <DeckTable deck={run.state.deck} caption="Your deck" />
+          </div>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
+  )
+}
+
+/** The battle table's menu, for the screens off the board: full screen, abandon, leave. */
+function RunMenu({ run, fullScreen }: { run: RunReady; fullScreen: ReturnType<typeof useFullScreen> }) {
+  const [abandoning, setAbandoning] = useState(false)
+  const navigate = useNavigate()
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button type="button" aria-label="Run menu" title="Menu" className={ICON_BUTTON}>
+            <Menu aria-hidden className="size-5" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-60 border-p03-edge bg-p03-ground font-terminal text-lg">
+          {fullScreen.supported ? (
+            <DropdownMenuItem onSelect={fullScreen.toggle} className="text-lg">
+              {fullScreen.on ? <Minimize aria-hidden /> : <Maximize aria-hidden />}
+              {fullScreen.on ? 'Leave full screen' : 'Full screen'}
+            </DropdownMenuItem>
+          ) : null}
+          {run.state.status === 'playing' ? (
+            <DropdownMenuItem onSelect={() => setAbandoning(true)} className="text-lg">
+              <Flag aria-hidden />
+              Abandon run
+            </DropdownMenuItem>
+          ) : null}
+          <DropdownMenuItem onSelect={() => void navigate({ to: '/' })} className="text-lg">
+            <LogOut aria-hidden />
+            Leave, saving the run
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <AlertDialog open={abandoning} onOpenChange={setAbandoning}>
+        <ForfeitConfirm forfeit={run.abandon} run />
+      </AlertDialog>
+    </>
   )
 }
 
@@ -42,7 +105,7 @@ function SaveStatus({ run }: { run: RunReady }) {
   return <span>{run.saving ? 'saving…' : run.unsaved ? `${run.unsaved} unsaved` : 'saved'}</span>
 }
 
-/** The frame every screen off the board shares: where the run stands, P03's last word, and the deck. */
+/** The frame every screen off the board shares: where the run stands, a few icons, P03's last word, and the screen. */
 export function Screen({
   run,
   layout,
@@ -59,60 +122,70 @@ export function Screen({
 }) {
   const { state } = run
   const phone = layout === 'phone'
-  const wide = layout === 'wide' && deck
+  const fullScreen = useFullScreen({ fallback: phone })
   // The battle table's own size, so moving between the board and these screens never changes the frame.
-  const { frame, size } = useFit(false)
+  const { frame, size } = useFit(fullScreen.on)
+  // A layer over the frame, for the deck drawer to open inside.
+  const [host, setHost] = useState<HTMLDivElement | null>(null)
+  const place = phone
+    ? fullScreen.on
+      ? 'fixed inset-0 z-50 p-3'
+      : 'relative h-[calc(100dvh-7rem)] min-h-[30rem] p-3'
+    : `rounded-lg border p-4 ${fullScreen.on ? 'fixed z-50' : 'relative mx-auto'}`
   return (
-    <div
-      ref={phone ? undefined : frame}
-      style={phone ? undefined : size}
-      className={`p03-screen crt relative mx-auto flex flex-col gap-3 overflow-hidden border-p03-edge font-terminal text-xl sm:text-2xl ${phone ? 'h-[calc(100dvh-7rem)] min-h-[30rem] p-3' : 'rounded-lg border p-4'}`}
-    >
-      <FaultyScreenShader />
-      <span aria-hidden className="crt-glass pointer-events-none absolute inset-0 z-30" />
-      <header className="relative z-10 flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <div className="flex flex-col">
-          <p className="text-p03">
-            Stage {state.stage + 1} of {STAGES.length}: {STAGES[state.stage]}
-          </p>
-          <p className="text-lg text-p03-dim">
-            {state.record.battles} {state.record.battles === 1 ? 'battle' : 'battles'} won · {state.record.bosses}{' '}
-            {state.record.bosses === 1 ? 'boss' : 'bosses'} beaten · <SaveStatus run={run} />
-          </p>
-        </div>
-        <div className="flex items-center gap-2 text-lg">
-          {wide || !deck ? null : <DeckButton run={run} />}
-          {state.status === 'playing' ? (
-            <Forfeit forfeit={run.abandon} run className={`${SIDE_BUTTON} h-auto`} />
-          ) : null}
-        </div>
-      </header>
-      {/* Only the content scrolls, inside a frame that stays the same size. */}
-      <div className={`relative z-10 grid min-h-0 flex-1 gap-4 ${wide ? 'grid-cols-[minmax(0,1fr)_20rem]' : ''}`}>
-        <div className="flex min-h-0 min-w-0 flex-col gap-3">
-          {/* In this column only, so it never runs under the header's buttons or over the deck; polite, so it's read after the screen. */}
+    <>
+      {fullScreen.on ? <div aria-hidden className="fixed inset-0 z-40 bg-[#030604]" /> : null}
+      <div
+        ref={phone ? undefined : frame}
+        style={phone ? undefined : size}
+        className={`p03-screen crt flex flex-col gap-3 overflow-hidden border-p03-edge font-terminal text-xl sm:text-2xl ${place}`}
+      >
+        <FaultyScreenShader />
+        <span aria-hidden className="crt-glass pointer-events-none absolute inset-0 z-30" />
+        {/* Where the deck drawer opens, covering the frame but taking no clicks until it does. */}
+        <div ref={setHost} className="pointer-events-none absolute inset-0 z-40 *:pointer-events-auto" />
+        <header className="relative z-10 flex shrink-0 items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="truncate text-p03">
+              Stage {state.stage + 1} of {STAGES.length}: {STAGES[state.stage]}
+            </p>
+            <p className="truncate text-lg text-p03-dim">
+              {state.record.battles} {state.record.battles === 1 ? 'battle' : 'battles'} won · {state.record.bosses}{' '}
+              {state.record.bosses === 1 ? 'boss' : 'bosses'} beaten · <SaveStatus run={run} />
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            {deck ? <DeckDrawer run={run} host={host} /> : null}
+            {fullScreen.supported ? (
+              <button
+                type="button"
+                onClick={fullScreen.toggle}
+                aria-label={fullScreen.on ? 'Leave full screen' : 'Full screen'}
+                title={fullScreen.on ? 'Leave full screen' : 'Full screen'}
+                className={`${ICON_BUTTON} max-sm:hidden`}
+              >
+                {fullScreen.on ? (
+                  <Minimize aria-hidden className="size-5" />
+                ) : (
+                  <Maximize aria-hidden className="size-5" />
+                )}
+              </button>
+            ) : null}
+            <RunMenu run={run} fullScreen={fullScreen} />
+          </div>
+        </header>
+        <div className="relative z-10 flex min-h-0 flex-1 flex-col gap-2">
+          {/* Polite, so P03's word on a burned or changed card is read after the screen that follows. */}
           <p role="status" className="shrink-0 text-lg text-p03-dim">
             {run.news.length ? `P03> ${run.news.join(' ')}` : null}
           </p>
           <h2 className="shrink-0 text-3xl text-p03">{title}</h2>
-          <div data-scroller className="min-h-0 flex-1 overflow-y-auto pr-1">
+          {/* Only the content scrolls, inside a frame that stays the same size; padded so focus rings aren't cut. */}
+          <div data-scroller className={`min-h-0 flex-1 overflow-y-auto px-1 ${FADE}`}>
             {children}
           </div>
         </div>
-        {wide ? (
-          // Focusable, so a long deck can be scrolled from the keyboard.
-          <aside
-            aria-label="Your deck"
-            tabIndex={0}
-            className="min-h-0 overflow-y-auto rounded-md focus-visible:outline-2 focus-visible:outline-p03"
-          >
-            <Panel className="flex min-h-full flex-col gap-3">
-              <h2 className="text-p03">Your deck ({state.deck.length})</h2>
-              <DeckTable deck={state.deck} caption="Your deck" />
-            </Panel>
-          </aside>
-        ) : null}
       </div>
-    </div>
+    </>
   )
 }

@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react'
 import type { Stroke } from '../plan.ts'
 
-const INK = 'rgb(125 255 154 / 0.85)'
+// Amber, so a plan stands out from P03's green.
+export const INK = 'rgb(255 179 71 / 0.9)'
 // Points closer than this many pixels to the last are skipped, which keeps strokes small.
 const STEP = 3
 
@@ -55,7 +56,8 @@ export function PenLayer({
       width={Math.round(width * scale)}
       height={Math.round(height * scale)}
       style={{ width, height }}
-      className={`absolute inset-0 z-10 ${active ? 'cursor-crosshair touch-none' : 'pointer-events-none'}`}
+      // Above the nodes, so strokes are drawn over them.
+      className={`absolute inset-0 z-40 ${active ? 'cursor-crosshair touch-none' : 'pointer-events-none'}`}
       onPointerDown={(event) => {
         if (!active || event.button !== 0) return
         event.currentTarget.setPointerCapture(event.pointerId)

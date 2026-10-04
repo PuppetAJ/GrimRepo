@@ -1,5 +1,5 @@
 import { ZoomIn } from 'lucide-react'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { card, SIGILS, type Unit } from 'shared'
 import { PixelCard } from '../../CardReader.tsx'
 import { describe } from '../../controls.tsx'
@@ -18,6 +18,10 @@ type Props = {
   size?: string
   /** Names the search box offered once there are enough cards to need one. */
   search?: string
+  /** The screen's own words and buttons, pinned above the cards with the search. */
+  head?: ReactNode
+  /** Off where the screen pins its own bar, so two never stack. */
+  pinned?: boolean
 }
 
 function Caption({ unit, detail, onRead }: { unit: Unit; detail: boolean; onRead: () => void }) {
@@ -62,6 +66,8 @@ export function CardList({
   detail = false,
   size = 'w-28',
   search,
+  head,
+  pinned = true,
 }: Props) {
   const [reading, setReading] = useState<Unit | null>(null)
   const { query, setQuery, matches } = useCardSearch()
@@ -69,7 +75,13 @@ export function CardList({
   const shown = searching ? units.filter(matches) : units
   return (
     <div className="flex flex-col gap-3">
-      {searching ? <CardSearch query={query} onChange={setQuery} label={search} /> : null}
+      {head || searching ? (
+        // Pinned while the cards scroll under it, so the way out and the search are always in reach.
+        <div className={`flex flex-col gap-2 ${pinned ? 'sticky top-0 z-10 bg-p03-ground/95 pb-2' : ''}`}>
+          {head}
+          {searching ? <CardSearch query={query} onChange={setQuery} label={search} /> : null}
+        </div>
+      ) : null}
       <ul className="flex flex-wrap justify-center gap-4">
         {shown.map((unit) => {
           const allowed = can(unit)

@@ -26,13 +26,6 @@ export function Campfire({ run }: { run: RunReady }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <p>
-        {visit.buffs === 0
-          ? `Pick a card to warm by the fire for ${boost}.`
-          : allowed.size
-            ? `It took ${boost}. Push it in again for another ${boost}, but half the time it burns.`
-            : 'The fire has done all it will.'}
-      </p>
       <CardList
         units={run.state.deck.map((entry) => asUnit(entry))}
         onPick={(unit) => (visit.buffs > 0 ? setRisking(unit) : buff(unit))}
@@ -41,15 +34,26 @@ export function Campfire({ run }: { run: RunReady }) {
         data={(unit) => ({ 'data-action': 'buff', 'data-card': unit.uid })}
         size="w-24 sm:w-28"
         search="Search the deck for a card to warm"
+        head={
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="min-w-0 flex-1">
+              {visit.buffs === 0
+                ? `Pick a card to warm by the fire for ${boost}.`
+                : allowed.size
+                  ? `It took ${boost}. Push it in again for another ${boost}, but half the time it burns.`
+                  : 'The fire has done all it will.'}
+            </p>
+            <button
+              type="button"
+              data-action="leave"
+              onClick={() => run.act({ type: 'leave' })}
+              className={`${SIDE_BUTTON} shrink-0 px-4`}
+            >
+              Leave the campfire
+            </button>
+          </div>
+        }
       />
-      <button
-        type="button"
-        data-action="leave"
-        onClick={() => run.act({ type: 'leave' })}
-        className={`${SIDE_BUTTON} self-start px-4`}
-      >
-        Leave the campfire
-      </button>
       <AlertDialog open={risking !== null} onOpenChange={(open) => !open && setRisking(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>

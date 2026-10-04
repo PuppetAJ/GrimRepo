@@ -92,7 +92,7 @@ section('A card choice')
 mirror = await playRun(page, mirror, { done: (state) => state.visit?.kind === 'card' })
 check('a card node offers three cards', (await page.locator('[data-action="take"]').count()) === 3)
 mirror = await playRun(page, mirror, { done: (state) => state.deck.length === 5 })
-check('taking one adds it to the deck', (await visibleText(page)).includes('Your deck (5)'))
+check('taking one adds it to the deck', (await page.getByRole('button', { name: 'Your deck, 5 cards' }).count()) === 1)
 check('and P03 says so', (await page.getByRole('status').filter({ hasText: 'joins your deck' }).count()) === 1)
 
 section('Resuming')
@@ -159,7 +159,8 @@ await page.waitForFunction(() => document.querySelector('[data-run-moves]')?.get
 check('starting another run opens a fresh map', (await view(page)) === 'map')
 
 section('Abandoning')
-await page.getByRole('button', { name: 'Abandon run' }).click()
+await page.getByRole('button', { name: 'Run menu' }).click()
+await page.getByRole('menuitem', { name: 'Abandon run' }).click()
 await page.getByRole('alertdialog').getByRole('button', { name: 'Abandon' }).click()
 check('abandoning asks first, then ends the run', await shows(page, 'summary'))
 check('and the summary says so', (await visibleText(page)).includes('You abandoned the run'))
@@ -244,21 +245,31 @@ section('Planning a route, from a mockup')
     'and then every node can be marked, not only the ones in reach',
     (await page.locator('[data-run-view] ol button[aria-pressed]').count()) > 3,
   )
-  // Drawn inside the part of the map the frame shows, since the map scrolls within it.
+  // A stroke through a node marks it; the node is found inside the part of the map the frame shows.
   const scroller = await page.locator('[data-scroller]').boundingBox()
-  const canvas = await page.locator('canvas.cursor-crosshair').boundingBox()
-  const top = Math.max(scroller.y, canvas.y) + 120
-  await page.mouse.move(canvas.x + 60, top + 120)
+  const nodes = page.locator('[data-run-view] ol button[aria-pressed]')
+  let target = null
+  for (let index = 0; index < (await nodes.count()) && !target; index++) {
+    const box = await nodes.nth(index).boundingBox()
+    if (box && box.y > scroller.y + 120 && box.y + box.height < scroller.y + scroller.height - 60)
+      target = nodes.nth(index)
+  }
+  const box = await target.boundingBox()
+  const [x, y] = [box.x + box.width / 2, box.y + box.height / 2]
+  await page.mouse.move(x - 60, y + 20)
   await page.mouse.down()
-  for (let step = 1; step <= 8; step++) await page.mouse.move(canvas.x + 60 + step * 40, top + 120 - step * 12)
+  for (let step = 1; step <= 12; step++) await page.mouse.move(x - 60 + step * 10, y + 20 - step * (40 / 12))
   await page.mouse.up()
   check(
     'a stroke can be drawn and undone',
     await page.getByRole('button', { name: 'Undo the last stroke' }).isEnabled(),
   )
-  const node = page.locator('[data-run-view] ol button[aria-pressed]').first()
-  await node.click()
-  check('a node can be marked as planned', (await node.getAttribute('aria-pressed')) === 'true')
+  check('and a node it passes through is marked as planned', (await target.getAttribute('aria-pressed')) === 'true')
+  await page.getByRole('button', { name: 'Undo the last stroke' }).click()
+  check('undoing the stroke unmarks it', (await target.getAttribute('aria-pressed')) === 'false')
+  await target.focus()
+  await page.keyboard.press('Enter')
+  check('a node can be marked from the keyboard too', (await target.getAttribute('aria-pressed')) === 'true')
   await page.reload()
   await shows(page, 'map', 30_000)
   check('and the plan is still there after a reload', (await page.locator('[data-planned]').count()) === 1)
@@ -279,8 +290,10 @@ section('A big deck, from a mockup')
   await page.getByRole('button', { name: 'Read destroyEverything(everyone)' }).first().click()
   check('a name cut short opens the whole card', (await page.getByRole('dialog').count()) === 1)
   await page.keyboard.press('Escape')
-  await page
-    .getByRole('complementary', { name: 'Your deck' })
+  await page.getByRole('button', { name: /^Your deck, 40 cards/ }).click()
+  const drawer = page.getByRole('dialog', { name: /Your deck/ })
+  check('the deck opens in a drawer, with its own search', (await drawer.getByRole('searchbox').count()) === 1)
+  await drawer
     .getByRole('button', { name: /what it does/ })
     .first()
     .click()

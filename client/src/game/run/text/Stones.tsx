@@ -29,11 +29,34 @@ export function Stones({ run }: { run: RunReady }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <p>
-        {!moves.length
-          ? 'None of your cards has a sigil to give. Leave the stones be.'
-          : 'Sacrifice one card to the stones, and one of its sigils moves to another card. A card that already gained a sigil can neither give nor take another.'}
-      </p>
+      {/* Pinned, so the way out and the final choice are always in reach. */}
+      <div className="sticky top-0 z-10 flex flex-col gap-2 bg-p03-ground/95 pb-2">
+        <p>
+          {!moves.length
+            ? 'None of your cards has a sigil to give. Leave the stones be.'
+            : 'Sacrifice one card to the stones, and one of its sigils moves to another card. A card that already gained a sigil can neither give nor take another.'}
+        </p>
+        <div className="flex flex-wrap gap-3">
+          {giver && chosen && receiver ? (
+            <button
+              type="button"
+              data-action="transfer"
+              onClick={() => run.act({ type: 'transfer', from: giver.uid, to: receiver.uid, sigil: chosen })}
+              className={`${SIDE_BUTTON} border-p03 px-4`}
+            >
+              Sacrifice {card(giver.card).name} to give {card(receiver.card).name} {SIGILS[chosen].name}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            data-action="leave"
+            onClick={() => run.act({ type: 'leave' })}
+            className={`${SIDE_BUTTON} px-4`}
+          >
+            Leave the stones
+          </button>
+        </div>
+      </div>
       {moves.length ? (
         <>
           <section aria-labelledby="stones-give" className="flex flex-col gap-2">
@@ -48,6 +71,7 @@ export function Stones({ run }: { run: RunReady }) {
               data={(unit) => ({ 'data-action': 'give', 'data-card': unit.uid })}
               size="w-24 sm:w-28"
               search="Search the deck for a card to sacrifice"
+              pinned={false}
             />
           </section>
           {giver && sigils.length > 1 ? (
@@ -85,31 +109,12 @@ export function Stones({ run }: { run: RunReady }) {
                 data={(unit) => ({ 'data-action': 'take-sigil', 'data-card': unit.uid })}
                 size="w-24 sm:w-28"
                 search="Search the deck for a card to gain the sigil"
+                pinned={false}
               />
             </section>
           ) : null}
         </>
       ) : null}
-      <div className="flex flex-wrap gap-3">
-        {giver && chosen && receiver ? (
-          <button
-            type="button"
-            data-action="transfer"
-            onClick={() => run.act({ type: 'transfer', from: giver.uid, to: receiver.uid, sigil: chosen })}
-            className={`${SIDE_BUTTON} border-p03 px-4`}
-          >
-            Sacrifice {card(giver.card).name} to give {card(receiver.card).name} {SIGILS[chosen].name}
-          </button>
-        ) : null}
-        <button
-          type="button"
-          data-action="leave"
-          onClick={() => run.act({ type: 'leave' })}
-          className={`${SIDE_BUTTON} px-4`}
-        >
-          Leave the stones
-        </button>
-      </div>
     </div>
   )
 }
