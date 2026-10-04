@@ -14,14 +14,14 @@ function List({ group }: { group: 'worst' | 'reached' }) {
         .filter(([, entry]) => entry.group === group)
         .map(([name, entry]) => (
           <li key={name} className="flex flex-wrap items-baseline gap-x-3">
-            <Link to="/mockups/$name" params={{ name }} className="text-primary underline underline-offset-2">
+            <Link to="/run/mockups/$name" params={{ name }} className="text-primary underline underline-offset-2">
               {entry.title}
             </Link>
             <span className="text-sm text-muted-foreground">
               {LAYOUTS.map((layout) => (
                 <Link
                   key={layout}
-                  to="/mockups/$name"
+                  to="/run/mockups/$name"
                   params={{ name }}
                   search={{ layout }}
                   className="mr-2 underline-offset-2 hover:underline"
@@ -69,8 +69,8 @@ export function MockupIndex() {
 }
 
 export function MockupRun() {
-  const { name } = useParams({ from: '/mockups/$name' })
-  const { layout } = useSearch({ from: '/mockups/$name' })
+  const { name } = useParams({ from: '/run/mockups/$name' })
+  const { layout } = useSearch({ from: '/run/mockups/$name' })
   const mockup = useMemo(() => (FIXTURES_ON ? (MOCKUPS[name]?.make() ?? null) : null), [name])
   if (!mockup) return <NotFound />
   return <RunTable key={name} mockup={mockup} forced={layout} />

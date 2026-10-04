@@ -114,10 +114,10 @@ const run = createRoute({
 })
 
 // Development and test builds only; production shows the not-found page.
-const mockups = createRoute({ getParentRoute: parent, path: '/mockups', component: MockupIndex })
+const mockups = createRoute({ getParentRoute: parent, path: '/run/mockups', component: MockupIndex })
 const mockup = createRoute({
   getParentRoute: parent,
-  path: '/mockups/$name',
+  path: '/run/mockups/$name',
   validateSearch: runSearch,
   component: MockupRun,
 })

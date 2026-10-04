@@ -167,7 +167,7 @@ await context.close()
 section('The campfire, from a mockup')
 {
   const { context, page } = await freshPage(browser, { width: 1440, height: 900 })
-  await page.goto(`${BASE}/mockups/campfire`)
+  await page.goto(`${BASE}/run/mockups/campfire`)
   check('a campfire offers every card in the deck', await shows(page, 'campfire', 30_000))
   const first = page.locator('[data-action="buff"]').first()
   const id = await first.getAttribute('data-card')
@@ -196,7 +196,7 @@ section('The campfire, from a mockup')
 section('The sigil stones, from a mockup')
 {
   const { context, page } = await freshPage(browser, { width: 1440, height: 900 })
-  await page.goto(`${BASE}/mockups/stones`)
+  await page.goto(`${BASE}/run/mockups/stones`)
   check('the stones open', await shows(page, 'stones', 30_000))
   check(
     'nothing can be sacrificed until a giver is picked',
@@ -216,7 +216,7 @@ section('The sigil stones, from a mockup')
 section('An event, from a mockup')
 {
   const { context, page } = await freshPage(browser, { width: 1440, height: 900 })
-  await page.goto(`${BASE}/mockups/event`)
+  await page.goto(`${BASE}/run/mockups/event`)
   check(
     'an event shows its scene and two choices',
     (await shows(page, 'event', 30_000)) && (await page.locator('[data-action="choose"]').count()) === 2,
