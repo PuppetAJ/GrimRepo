@@ -96,6 +96,8 @@ check('taking one adds it to the deck', (await visibleText(page)).includes('Your
 check('and P03 says so', (await page.getByRole('status').filter({ hasText: 'joins your deck' }).count()) === 1)
 
 section('Resuming')
+// Only what the server has saved comes back.
+await page.getByText('saved', { exact: true }).waitFor()
 await page.reload()
 await root.waitFor()
 check(
@@ -223,6 +225,66 @@ section('An event, from a mockup')
   )
   await page.locator('[data-action="choose"]').first().click()
   check('choosing goes back to the map', await shows(page, 'map'))
+  await context.close()
+}
+
+section('Planning a route, from a mockup')
+{
+  const { context, page } = await freshPage(browser, { width: 1440, height: 900 })
+  await page.goto(`${BASE}/run/mockups/map`)
+  await shows(page, 'map', 30_000)
+  check(
+    'the map names what each icon means',
+    (await page.getByRole('list', { name: 'What the icons mean' }).count()) === 1,
+  )
+  const pen = page.getByRole('button', { name: 'Plan a route' })
+  await pen.click()
+  check('the pen turns on', (await pen.getAttribute('aria-pressed')) === 'true')
+  check(
+    'and then every node can be marked, not only the ones in reach',
+    (await page.locator('[data-run-view] ol button[aria-pressed]').count()) > 3,
+  )
+  // Drawn inside the part of the map the frame shows, since the map scrolls within it.
+  const scroller = await page.locator('[data-scroller]').boundingBox()
+  const canvas = await page.locator('canvas.cursor-crosshair').boundingBox()
+  const top = Math.max(scroller.y, canvas.y) + 120
+  await page.mouse.move(canvas.x + 60, top + 120)
+  await page.mouse.down()
+  for (let step = 1; step <= 8; step++) await page.mouse.move(canvas.x + 60 + step * 40, top + 120 - step * 12)
+  await page.mouse.up()
+  check(
+    'a stroke can be drawn and undone',
+    await page.getByRole('button', { name: 'Undo the last stroke' }).isEnabled(),
+  )
+  const node = page.locator('[data-run-view] ol button[aria-pressed]').first()
+  await node.click()
+  check('a node can be marked as planned', (await node.getAttribute('aria-pressed')) === 'true')
+  await page.reload()
+  await shows(page, 'map', 30_000)
+  check('and the plan is still there after a reload', (await page.locator('[data-planned]').count()) === 1)
+  await page.getByRole('button', { name: 'Clear the plan' }).click()
+  check('clearing it removes the marks', (await page.locator('[data-planned]').count()) === 0)
+  await context.close()
+}
+
+section('A big deck, from a mockup')
+{
+  const { context, page } = await freshPage(browser, { width: 1440, height: 900 })
+  await page.goto(`${BASE}/run/mockups/worst-campfire`)
+  await shows(page, 'campfire', 30_000)
+  const search = page.getByRole('searchbox', { name: 'Search the deck for a card to warm' })
+  await search.fill('everything')
+  const shown = await page.locator('[data-action="buff"]').count()
+  check('a search narrows the cards to choose from', shown > 0 && shown < 40)
+  await page.getByRole('button', { name: 'Read destroyEverything(everyone)' }).first().click()
+  check('a name cut short opens the whole card', (await page.getByRole('dialog').count()) === 1)
+  await page.keyboard.press('Escape')
+  await page
+    .getByRole('complementary', { name: 'Your deck' })
+    .getByRole('button', { name: /what it does/ })
+    .first()
+    .click()
+  check('a sigil icon says what the sigil does', (await page.getByRole('dialog').filter({ hasText: '.' }).count()) >= 1)
   await context.close()
 }
 

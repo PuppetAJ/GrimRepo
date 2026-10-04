@@ -47,6 +47,7 @@ export function Stones({ run }: { run: RunReady }) {
               picked={from}
               data={(unit) => ({ 'data-action': 'give', 'data-card': unit.uid })}
               size="w-24 sm:w-28"
+              search="Search the deck for a card to sacrifice"
             />
           </section>
           {giver && sigils.length > 1 ? (
@@ -83,6 +84,7 @@ export function Stones({ run }: { run: RunReady }) {
                 picked={to}
                 data={(unit) => ({ 'data-action': 'take-sigil', 'data-card': unit.uid })}
                 size="w-24 sm:w-28"
+                search="Search the deck for a card to gain the sigil"
               />
             </section>
           ) : null}

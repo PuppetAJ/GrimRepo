@@ -41,7 +41,7 @@ export { Rng } from './rng.ts'
 export { SCORE_TURN_BASELINE, scoreBattle, scoreRun, type Outcome } from './scoring.ts'
 export { cardsIn, ENCOUNTERS, encounter, STAGES, type Encounter, type Plan, type Queued } from './encounters.ts'
 export { nextRunAction, playRun } from './run/bot.ts'
-export { findNode, generateStage } from './run/map.ts'
+export { findNode, generateStage, MAP_COLUMNS } from './run/map.ts'
 export { applyRun, createRun, legalRunActions, reachable, replayRun, STARTER_DECK, type RunReplay } from './run/run.ts'
 export { SCENES, scene, type Effect, type Scene } from './run/scenes.ts'
 export {

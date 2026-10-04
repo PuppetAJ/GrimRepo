@@ -3,6 +3,7 @@ import {
   createRun,
   deckCard,
   findNode,
+  MAP_COLUMNS,
   nextRunAction,
   SCENES,
   type MapNode,
@@ -41,12 +42,21 @@ function worstDeck(size = 40): RunCard[] {
 }
 
 function worstMap(stage: number): StageMap {
-  const kinds: NodeKind[] = ['campfire', 'stones', 'card']
+  const kinds: NodeKind[] = ['campfire', 'stones', 'card', 'event', 'battle']
+  // Every cell of the grid filled.
   const rows: MapNode[][] = Array.from({ length: 7 }, (_, row) =>
-    kinds.map((kind, col) => ({ id: `${row}-${col}`, kind, row, col, next: [], boost: 'health' as const })),
+    Array.from({ length: MAP_COLUMNS }, (_, col) => ({
+      id: `${row}-${col}`,
+      kind: kinds[(row + col) % kinds.length] as NodeKind,
+      row,
+      col,
+      next: [],
+      boost: 'health' as const,
+    })),
   )
   const boss = ['localhost-boss', 'staging-boss', 'production-boss'][stage] as string
-  rows.push([{ id: '7-0', kind: 'boss', row: 7, col: 0, next: [], encounter: boss }])
+  const top = Math.floor(MAP_COLUMNS / 2)
+  rows.push([{ id: `7-${top}`, kind: 'boss', row: 7, col: top, next: [], encounter: boss }])
   // Every node leads to each neighbor ahead, the most links a row can have.
   for (const [index, row] of rows.entries())
     for (const node of row)
@@ -62,7 +72,7 @@ function worstRun(patch: Partial<RunState>): RunState {
     ...base,
     stage: 2,
     map: worstMap(2),
-    at: '3-1',
+    at: '3-2',
     deck: worstDeck(),
     nextCard: 41,
     record: { battles: 9999, bosses: 3, overkill: 99999 },
@@ -70,7 +80,7 @@ function worstRun(patch: Partial<RunState>): RunState {
   }
 }
 
-const WORST_PATH = ['0-0', '1-1', '2-1', '3-1']
+const WORST_PATH = ['0-1', '1-2', '2-2', '3-2']
 
 function withWorstScene(): string {
   SCENES[WORST_SCENE] ??= {
@@ -109,7 +119,7 @@ const isBoss = (state: RunState) =>
 
 export const MOCKUPS: Record<string, Entry> = {
   'worst-map': {
-    title: 'The map, three nodes in every row and every link',
+    title: 'The map, every cell of the grid filled and every link',
     group: 'worst',
     make: () => ({ state: worstRun({}), path: WORST_PATH, news: LONG_NEWS }),
   },
@@ -117,7 +127,7 @@ export const MOCKUPS: Record<string, Entry> = {
     title: 'A card choice of the longest card',
     group: 'worst',
     make: () => ({
-      state: worstRun({ visit: { kind: 'card', node: '4-2', offer: [WORST_CARD, WORST_CARD, WORST_CARD] } }),
+      state: worstRun({ visit: { kind: 'card', node: '4-3', offer: [WORST_CARD, WORST_CARD, WORST_CARD] } }),
       path: WORST_PATH,
       news: LONG_NEWS,
     }),

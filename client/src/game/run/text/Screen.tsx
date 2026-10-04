@@ -86,16 +86,18 @@ export function Screen({
             <Forfeit forfeit={run.abandon} run className={`${SIDE_BUTTON} h-auto`} />
           ) : null}
         </div>
-        {/* Polite, so P03's word on a burned or changed card is read after the screen that follows. */}
-        <p role="status" className="basis-full text-p03-dim">
-          {run.news.length ? `P03> ${run.news.join(' ')}` : null}
-        </p>
       </header>
       {/* Only the content scrolls, inside a frame that stays the same size. */}
       <div className={`relative z-10 grid min-h-0 flex-1 gap-4 ${wide ? 'grid-cols-[minmax(0,1fr)_20rem]' : ''}`}>
         <div className="flex min-h-0 min-w-0 flex-col gap-3">
+          {/* In this column only, so it never runs under the header's buttons or over the deck; polite, so it's read after the screen. */}
+          <p role="status" className="shrink-0 text-lg text-p03-dim">
+            {run.news.length ? `P03> ${run.news.join(' ')}` : null}
+          </p>
           <h2 className="shrink-0 text-3xl text-p03">{title}</h2>
-          <div className="min-h-0 flex-1 overflow-y-auto pr-1">{children}</div>
+          <div data-scroller className="min-h-0 flex-1 overflow-y-auto pr-1">
+            {children}
+          </div>
         </div>
         {wide ? (
           // Focusable, so a long deck can be scrolled from the keyboard.

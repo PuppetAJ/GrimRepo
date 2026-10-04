@@ -40,6 +40,7 @@ export function Campfire({ run }: { run: RunReady }) {
         picked={visit.card}
         data={(unit) => ({ 'data-action': 'buff', 'data-card': unit.uid })}
         size="w-24 sm:w-28"
+        search="Search the deck for a card to warm"
       />
       <button
         type="button"

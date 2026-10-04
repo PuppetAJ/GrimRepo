@@ -22,7 +22,7 @@ const NAMES: Record<NodeKind, string> = {
 
 export const boostText = (boost: 'attack' | 'health' | undefined) => (boost === 'attack' ? '+1 attack' : '+2 health')
 
-export function nodeName(node: Pick<MapNode, 'kind' | 'boost' | 'encounter'>): string {
+export function nodeName(node: Pick<MapNode, 'kind'> & Partial<Pick<MapNode, 'boost' | 'encounter'>>): string {
   if (node.kind === 'campfire') return `${NAMES.campfire}: ${boostText(node.boost)}`
   if (node.kind === 'boss' && node.encounter) return `${NAMES.boss}: ${encounter(node.encounter).phases.length} phases`
   return NAMES[node.kind]
