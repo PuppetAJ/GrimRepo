@@ -291,26 +291,29 @@ export function Screen({
           <span aria-hidden className="crt-glass pointer-events-none absolute inset-0 z-30" />
           {/* Where the deck drawer opens, covering the frame but taking no clicks until it does. */}
           <div ref={setHost} className="pointer-events-none absolute inset-0 z-40 *:pointer-events-auto" />
-          <header className="relative z-10 flex shrink-0 items-center gap-2">
-            <div className="min-w-0 flex-1">
+          {/* The title wraps rather than being cut off; short of room, the buttons drop to their own line. */}
+          <header className="relative z-10 flex shrink-0 flex-wrap items-center gap-2">
+            <div className="min-w-0 flex-1 basis-48">
               {caption ? <p className="text-base text-p03-dim">{caption}</p> : null}
-              <h2 className="truncate text-3xl leading-tight text-p03">{title}</h2>
+              <h2 className="text-3xl leading-tight text-balance [overflow-wrap:anywhere] text-p03">{title}</h2>
             </div>
-            <div ref={setActions} className="flex shrink-0 items-center gap-2 empty:hidden" />
-            {deck && roomy ? (
-              <DeckButton
-                count={state.deck.length}
-                aria-expanded={docked}
-                aria-controls="run-deck"
-                onClick={() => dock(!docked)}
+            <div className="ml-auto flex shrink-0 items-center gap-2">
+              <div ref={setActions} className="flex shrink-0 items-center gap-2 empty:hidden" />
+              {deck && roomy ? (
+                <DeckButton
+                  count={state.deck.length}
+                  aria-expanded={docked}
+                  aria-controls="run-deck"
+                  onClick={() => dock(!docked)}
+                />
+              ) : null}
+              <RunMenu
+                run={run}
+                fullScreen={fullScreen}
+                onDeck={deck && !roomy ? () => setDrawer(true) : undefined}
+                button={menuButton}
               />
-            ) : null}
-            <RunMenu
-              run={run}
-              fullScreen={fullScreen}
-              onDeck={deck && !roomy ? () => setDrawer(true) : undefined}
-              button={menuButton}
-            />
+            </div>
           </header>
           {deck && !roomy ? (
             <DeckDrawer run={run} host={host} open={drawer} onOpenChange={setDrawer} returnTo={menuButton} />

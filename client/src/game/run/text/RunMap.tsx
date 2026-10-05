@@ -56,7 +56,7 @@ function Legend({
   onPick: (kind: NodeKind) => void
 }) {
   return (
-    <ul aria-label="What the icons mean" className="flex flex-wrap gap-1 text-base text-p03-dim">
+    <ul aria-label="What the icons mean" className="flex flex-wrap gap-1 text-base text-p03-dim max-md:justify-center">
       {KINDS.map((kind) => {
         const Icon = NODE_ICONS[kind]
         return (
