@@ -1,8 +1,7 @@
 import assert from 'node:assert/strict'
 import { after, beforeEach, describe, it } from 'node:test'
-import { applyRun, createRun, playRun, scoreRun, type RunAction, type RunState } from 'shared'
+import { applyRun, createRun, playRun, RUN_SAVE_LIMIT, scoreRun, type RunAction, type RunState } from 'shared'
 import { pool } from '../config/db.ts'
-import { RUN_SAVE_LIMIT } from './api.ts'
 import { newPlayer, startApp } from '../test/http.ts'
 import { resetDatabase } from '../test/support.ts'
 

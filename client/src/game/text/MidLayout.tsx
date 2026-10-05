@@ -3,6 +3,7 @@ import { ScaleBar, SeatNote } from '../controls.tsx'
 import { Board } from './Board.tsx'
 import { CancelButton, Controls, ExecuteButton, SaveStatus } from './Buttons.tsx'
 import { useTable } from './context.ts'
+import { TurnLabel } from './TurnLabel.tsx'
 import { Hand, Piles } from './Hand.tsx'
 import { ConsolePanel } from './Log.tsx'
 import { Magnifier, PromptLine, ReaderPanel } from './Reading.tsx'
@@ -19,7 +20,7 @@ export function MidLayout() {
       <div className="relative z-10 flex items-stretch gap-2">
         <div className="flex min-w-0 flex-1 flex-col justify-center gap-1 rounded-md border-2 border-p03-edge bg-[#07130b] px-2 py-1">
           <p className="flex items-baseline justify-between gap-2 text-lg">
-            <span className="text-p03">Turn {view.turn}</span>
+            <TurnLabel />
             <SaveStatus className="text-sm text-p03-dim" />
           </p>
           <ScaleBar scale={view.scale} fluid className="gap-1 text-base" />

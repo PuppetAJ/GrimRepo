@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [smoke, auth, leaderboard, game, table, a11y]
+        suite: [smoke, auth, leaderboard, game, run-mode, table, a11y]
         engine: [chromium, firefox]
 
     services:

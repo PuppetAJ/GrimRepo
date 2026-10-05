@@ -1,6 +1,6 @@
 import { useState, type CSSProperties } from 'react'
 import { legalActions, type Slot, type Unit } from 'shared'
-import { has, owed, prompt, skippedDraw, type Seat } from '../controls.tsx'
+import { has, hasEnded, overText, owed, prompt, skippedDraw, type Seat } from '../controls.tsx'
 import { usePlayback } from '../table/usePlayback.ts'
 import type { Ready } from '../useGame.ts'
 import { authClient } from '../../lib/auth.ts'
@@ -26,19 +26,20 @@ export function useTextTable({
 }: {
   game: Ready
   seat: Seat
-  on3d: () => void
+  on3d?: () => void
   layout: Layout
 }) {
   const shape = useTableLayout(layout)
-  const { state, act, result } = game
+  const { state, act } = game
+  const ended = hasEnded(game)
   // `view` lags `state` during playback; moves come from `state` and wait for playback to finish.
   const { playback, busy } = usePlayback(game)
   const view = playback.view
-  const legal = busy || result ? [] : legalActions(state)
+  const legal = busy || ended ? [] : legalActions(state)
   const summoning = state.summon ? state.player.hand.find((unit) => unit.uid === state.summon?.uid) : undefined
   const mustDraw = has(legal, { type: 'draw' })
   // A turn that starts with a full hand skips its draw, so the piles need to say why.
-  const handFull = !busy && !result && skippedDraw(state)
+  const handFull = !busy && !ended && skippedDraw(state)
   // Stores the place, not the card, so a card played into that lane shows at once.
   const [looking, setLooking] = useState<Place | null>(null)
   const unitAt = (place: Place | null) =>
@@ -102,7 +103,7 @@ export function useTextTable({
         mustDraw,
         summoning,
         summoning ? owed(summoning, state.player.board, state.summon?.marked ?? []) : 0,
-        state.status !== 'playing',
+        overText(game),
         handFull,
       )
 
@@ -124,7 +125,6 @@ export function useTextTable({
     ...shape,
     state,
     act,
-    result,
     playback,
     busy,
     view,
@@ -151,7 +151,7 @@ export function useTextTable({
     refusalShake,
     canPress,
     promptText,
-    gameOver: Boolean(result) && !busy,
+    gameOver: ended && !busy,
     frameProps,
   }
 }

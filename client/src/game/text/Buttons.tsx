@@ -70,14 +70,17 @@ export function Controls() {
         ) : null}
         <Forfeit
           forfeit={game.forfeit}
+          run={Boolean(game.run)}
           disabled={game.state.status !== 'playing'}
           className={`${SIDE_BUTTON} h-auto flex-1 justify-center`}
         />
       </div>
       <div className="flex justify-between font-sans text-sm text-p03-dim">
-        <button type="button" onClick={on3d} className="underline hover:text-p03">
-          Play on the 3D table
-        </button>
+        {on3d ? (
+          <button type="button" onClick={on3d} className="underline hover:text-p03">
+            Play on the 3D table
+          </button>
+        ) : null}
       </div>
     </div>
   )

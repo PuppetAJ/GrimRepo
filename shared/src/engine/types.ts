@@ -44,6 +44,8 @@ export type GameState = {
   opponent: { front: Slot[]; back: Slot[]; encounter: string | null; phase: number; step: number }
   /** The card being summoned and the lanes marked to pay for it. */
   summon: { uid: number; marked: number[] } | null
+  /** Times a run's battle has rebuilt its deck, each after the first costing an Out of Memory card; absent elsewhere. */
+  rebuilds?: number
 }
 
 export type Action =

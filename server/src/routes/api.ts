@@ -1,6 +1,6 @@
 import express from 'express'
 import { rateLimit } from 'express-rate-limit'
-import { SIGILS, type SigilId } from 'shared'
+import { RUN_SAVE_LIMIT, SIGILS, type SigilId } from 'shared'
 import { z } from 'zod'
 import { USERNAME_PATTERN } from '../auth/auth.ts'
 import { requireUser, type SignedIn } from '../auth/session.ts'
@@ -42,8 +42,6 @@ const runAction = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('leave') }),
 ])
 
-// The client saves a few actions at a time; 200 of the largest kind fit the 16 KB body limit.
-export const RUN_SAVE_LIMIT = 200
 const runMoves = z.strictObject({ from: z.number().int().min(0), actions: z.array(runAction).max(RUN_SAVE_LIMIT) })
 
 // Keyed per player, since only signed-in players reach these routes.

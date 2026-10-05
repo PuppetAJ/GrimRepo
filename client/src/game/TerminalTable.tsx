@@ -15,7 +15,8 @@ export function TerminalTable({
 }: {
   game: Ready
   seat: Seat
-  on3d: () => void
+  /** Absent where the 3D table can't play this yet. */
+  on3d?: () => void
   layout?: Layout
 }) {
   const table = useTextTable({ game, seat, on3d, layout })

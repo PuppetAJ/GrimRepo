@@ -4,7 +4,20 @@ import { Link } from '@tanstack/react-router'
 import { legalActions, type Unit } from 'shared'
 import { Button } from '@/components/ui/button.tsx'
 import { FlatReaderBody } from '../../CardReader.tsx'
-import { Forfeit, GameOver, has, owed, prompt, ScaleBar, SeatNote, skippedDraw, type Seat } from '../../controls.tsx'
+import {
+  Ending,
+  Forfeit,
+  has,
+  hasEnded,
+  overText,
+  owed,
+  phaseText,
+  prompt,
+  ScaleBar,
+  SeatNote,
+  skippedDraw,
+  type Seat,
+} from '../../controls.tsx'
 import type { useFullScreen } from '../../fullScreen.ts'
 import type { Ready } from '../../useGame.ts'
 import type { View } from '../../view.ts'
@@ -46,11 +59,12 @@ export function Hud({
   hint: number
 }) {
   const { state, act } = game
-  const legal = busy || game.result ? [] : legalActions(state)
+  const finished = hasEnded(game)
+  const legal = busy || finished ? [] : legalActions(state)
   const mustDraw = has(legal, { type: 'draw' })
   const summoning = view.summon ? view.hand.find((unit) => unit.uid === view.summon?.uid) : undefined
   const last = game.log.slice(-3)
-  const ended = game.result && !busy
+  const ended = finished && !busy
   return (
     <>
       {/* Stops above the prompt so the reader never runs over it. */}
@@ -58,6 +72,7 @@ export function Hud({
         <ScaleBar scale={view.scale} className="text-xl sm:text-2xl" />
         <span className="text-lg text-p03-dim sm:text-xl">
           Turn {view.turn} · Deck {view.deck}
+          {phaseText(state, view.phase) ? ` · ${phaseText(state, view.phase)}` : null}
         </span>
         {pinned ? (
           // Takes the pointer so it can be scrolled.
@@ -114,10 +129,15 @@ export function Hud({
               <Label>Exit</Label>
             </Link>
           </Button>
-          {game.result ? null : (
-            <Forfeit forfeit={game.forfeit} disabled={game.state.status !== 'playing'} className="h-8 px-3">
+          {finished ? null : (
+            <Forfeit
+              forfeit={game.forfeit}
+              run={Boolean(game.run)}
+              disabled={game.state.status !== 'playing'}
+              className="h-8 px-3"
+            >
               <Flag aria-hidden />
-              <Label>Forfeit</Label>
+              <Label>{game.run ? 'Abandon run' : 'Forfeit'}</Label>
             </Forfeit>
           )}
         </div>
@@ -128,9 +148,9 @@ export function Hud({
         ) : null}
       </div>
 
-      {ended && game.result ? (
+      {ended ? (
         <div className="absolute inset-0 grid place-items-center bg-black/40 p-4">
-          <GameOver result={game.result} className="w-full max-w-md bg-p03-ground/95 font-terminal text-xl" />
+          <Ending game={game} />
         </div>
       ) : (
         <>
@@ -152,8 +172,8 @@ export function Hud({
                     mustDraw,
                     summoning,
                     summoning ? owed(summoning, view.board, view.summon?.marked ?? []) : 0,
-                    game.state.status !== 'playing',
-                    !busy && !game.result && skippedDraw(state),
+                    overText(game),
+                    !busy && !finished && skippedDraw(state),
                   )}
             </p>
           </div>

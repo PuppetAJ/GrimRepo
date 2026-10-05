@@ -84,11 +84,11 @@ export function Magnifier() {
 
 /** The phone's card reader. */
 export function Inspector() {
-  const { reading, setReading, unitAt, result, state, busy, mustDraw, legal } = useTable()
+  const { reading, setReading, unitAt, gameOver, state, busy, mustDraw, legal } = useTable()
   const unit = unitAt(reading)
   // Why a hand card can't be picked, when that's why the reader opened.
   const note =
-    !reading || !('uid' in reading) || result
+    !reading || !('uid' in reading) || gameOver
       ? null
       : reading.uid === state.summon?.uid
         ? 'Being summoned'

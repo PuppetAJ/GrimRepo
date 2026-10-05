@@ -65,6 +65,39 @@ section('The game')
   await audit('the 3D table', '/game', () => tableReady(page))
 }
 
+section('A run')
+{
+  // From mockups, so every screen is checked whatever a real run's seed would deal, and at its worst.
+  const screen = (name) => () => page.locator(`[data-run-view="${name}"]`).waitFor({ timeout: 30_000 })
+  const MOCKED = [
+    ['map', 'map'],
+    ['card', 'card'],
+    ['campfire', 'campfire'],
+    ['stones', 'stones'],
+    ['event', 'event'],
+    ['boss-phase', 'battle'],
+    ['worst-map', 'map'],
+    ['worst-reward', 'reward'],
+    ['worst-campfire-again', 'campfire'],
+    ['worst-stones', 'stones'],
+    ['worst-event', 'event'],
+    ['worst-summary', 'summary'],
+  ]
+  for (const [layout, width, height] of [
+    ['wide', 1440, 900],
+    ['phone', 390, 844],
+  ]) {
+    await page.setViewportSize({ width, height })
+    for (const [name, view] of MOCKED)
+      await audit(`the run's ${name}, ${layout}`, `/run/mockups/${name}?layout=${layout}`, screen(view))
+    await audit(`the run's summary after a loss, ${layout}`, `/run/mockups/lost?layout=${layout}`, async () => {
+      await page.locator('[data-action="summary"]').click()
+      await screen('summary')()
+    })
+  }
+  await page.setViewportSize({ width: 1280, height: 800 })
+}
+
 section('The table keeps its shortcuts')
 {
   await page.evaluate(() => localStorage.setItem('grimrepo:table', 'text'))

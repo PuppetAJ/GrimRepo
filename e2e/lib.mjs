@@ -150,12 +150,30 @@ export async function signInAsGuest(page) {
 /** innerText, so only what a person would actually read. */
 export const visibleText = (page) => page.locator('body').innerText()
 
-const selectorFor = (action) => {
+export const selectorFor = (action) => {
   if (action.type === 'draw') return `[data-action="draw-${action.from}"]`
   // Hand cards are only marked disabled, and clicks during playback are refused, so wait for an enabled one.
   if (action.type === 'select') return `[data-action="select"][data-uid="${action.uid}"]:not([aria-disabled="true"])`
   if ('lane' in action) return `[data-action="${action.type}"][data-lane="${action.lane}"]`
   return `[data-action="${action.type}"]`
+}
+
+/** Clicks until the counter at `scope` reads `expected`; a click in the frame before playback starts is refused, so it tries again. */
+export async function clickMove(page, target, { scope, attribute, expected }) {
+  const count = async () => Number(await page.locator(scope).getAttribute(attribute))
+  const landed = page.locator(`${scope}[${attribute}="${expected}"]`)
+  for (let attempt = 0; attempt < 5 && (await count()) === expected - 1; attempt++) {
+    await page
+      .locator(target)
+      .first()
+      .click()
+      // Playwright can miss a click whose button vanishes as it's pressed; the page's move count shows it landed.
+      .catch(async (error) => {
+        if ((await count()) !== expected) throw error
+      })
+    await landed.waitFor({ timeout: 3_000 }).catch(() => {})
+  }
+  await landed.waitFor()
 }
 
 /** An engine copy picks each click; `beforeMove` sees each move and its resulting state first. */
@@ -171,21 +189,9 @@ export async function playWithBot(page, { stopAfterTurn = Infinity, beforeMove }
     const result = apply(state, action)
     if (!result.ok) throw new Error(`the mirror refused ${JSON.stringify(action)}: ${result.reason}`)
     await beforeMove?.(action, result.state)
-    const landed = page.locator(`[data-seed][data-moves="${start + actions.length + 1}"]`)
     try {
-      // A click in the frame before playback starts is refused, so one that didn't land is tried again.
-      for (let attempt = 0; attempt < 5 && (await moves()) === actions.length; attempt++) {
-        await page
-          .locator(selectorFor(action))
-          .first()
-          .click()
-          // Playwright can miss a click whose button vanishes as it's pressed; the page's move count shows it landed.
-          .catch(async (error) => {
-            if ((await moves()) !== actions.length + 1) throw error
-          })
-        await landed.waitFor({ timeout: 3_000 }).catch(() => {})
-      }
-      await landed.waitFor()
+      const expected = start + actions.length + 1
+      await clickMove(page, selectorFor(action), { scope: '[data-seed]', attribute: 'data-moves', expected })
     } catch (error) {
       // Logs what the bot wanted and what the table showed, for CI failures no one can watch.
       console.log(`  The bot wanted ${JSON.stringify(action)} on turn ${state.turn}, as move ${actions.length + 1};`)

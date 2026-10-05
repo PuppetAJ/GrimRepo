@@ -13,6 +13,8 @@ export type View = {
   front: Slot[]
   back: Slot[]
   summon: { uid: number; marked: number[] } | null
+  /** A boss's phase, counted from 0. */
+  phase: number
 }
 
 export function project(state: GameState): View {
@@ -27,6 +29,7 @@ export function project(state: GameState): View {
     front: state.opponent.front,
     back: state.opponent.back,
     summon: state.summon,
+    phase: state.opponent.phase,
   }
 }
 
@@ -75,7 +78,13 @@ export function step(view: View, event: GameEvent): View {
     case 'wiped':
       return { ...view, front: view.front.map(() => null), back: view.back.map(() => null) }
     case 'phaseChanged':
-      return { ...view, front: view.front.map(() => null), back: view.back.map(() => null), scale: 0 }
+      return {
+        ...view,
+        front: view.front.map(() => null),
+        back: view.back.map(() => null),
+        scale: 0,
+        phase: event.phase,
+      }
     case 'damaged':
       return withUnit(view, event.uid, (unit) => ({ ...unit, health: event.health }))
     case 'struckBack':

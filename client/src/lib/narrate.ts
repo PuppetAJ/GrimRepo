@@ -1,4 +1,4 @@
-import { apply, card, createGame, type Action, type GameEvent, type GameState, type Unit } from 'shared'
+import { apply, card, createGame, OUT_OF_MEMORY, type Action, type GameEvent, type GameState, type Unit } from 'shared'
 
 const lead = (scale: number) =>
   scale === 0 ? 'The scale is level.' : scale > 0 ? `You lead by ${scale}.` : `I lead by ${-scale}.`
@@ -76,7 +76,11 @@ export function narrate(before: GameState, events: GameEvent[]): string[] {
       case 'advanced':
         return [`My ${name(event.uid)} moved up to ${lane(event.lane)}.`]
       case 'queued':
-        return [`I queued ${card(event.unit.card).name} behind ${lane(event.lane)}.`]
+        return [
+          event.unit.card === OUT_OF_MEMORY
+            ? `Your deck ran out again. Out of Memory, ${event.unit.attack}/${event.unit.health}, behind ${lane(event.lane)}. It grows.`
+            : `I queued ${card(event.unit.card).name} behind ${lane(event.lane)}.`,
+        ]
       case 'healed':
         return [`${name(event.uid)} patched itself up to ${event.health}.`]
       case 'turnStarted':
