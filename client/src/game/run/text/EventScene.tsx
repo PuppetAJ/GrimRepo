@@ -1,11 +1,25 @@
+import { useEffect } from 'react'
 import { scene } from 'shared'
+import { forTable } from '../../shortcuts.ts'
 import type { RunReady } from '../useRun.ts'
 
 /** An event's scene and its choices; what each choice does is left for the player to find out. */
 export function EventScene({ run }: { run: RunReady }) {
   const visit = run.state.visit
-  if (visit?.kind !== 'event') return null
-  const found = scene(visit.event)
+  const found = visit?.kind === 'event' ? scene(visit.event) : null
+  const { act } = run
+  // Number keys pick a choice, while focus is in the game, as the table's own shortcuts work.
+  useEffect(() => {
+    if (!found) return
+    const onKey = (event: KeyboardEvent) => {
+      const index = Number(event.key) - 1
+      if (!forTable(event) || event.repeat || !Number.isInteger(index) || !found.options[index]) return
+      act({ type: 'choose', option: index })
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [found, act])
+  if (!found) return null
   return (
     <article className="flex max-w-3xl flex-col gap-4">
       <header className="flex flex-col gap-2 border-b-2 border-p03-edge pb-3">
@@ -21,6 +35,7 @@ export function EventScene({ run }: { run: RunReady }) {
               type="button"
               data-action="choose"
               data-option={index}
+              aria-keyshortcuts={String(index + 1)}
               onClick={() => run.act({ type: 'choose', option: index })}
               className="flex w-full items-baseline gap-3 rounded-md border-2 border-p03-edge bg-[#07130b] px-4 py-2 text-left text-xl text-p03 hover:border-p03 hover:bg-[#13261a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03"
             >

@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { card, type RunCard, type Unit } from 'shared'
+import { Sigil } from '../../CardReader.tsx'
 import { asUnit } from '../nodes.ts'
+
+const LIGHT = '#b8f5c4'
 import { CardReader, CardSearch, SEARCH_FROM, SigilIcons, useCardSearch } from './CardBits.tsx'
 
 /** The deck as rows of name, sigils and stats; a long name is cut short and opens the whole card. */
@@ -20,8 +23,8 @@ export function DeckTable({ deck, caption }: { deck: RunCard[]; caption: string 
         <caption className="sr-only">{caption}</caption>
         <colgroup>
           <col />
-          <col className="w-14" />
-          <col className="w-14" />
+          <col className="w-[4.5rem]" />
+          <col className="w-[4.5rem]" />
         </colgroup>
         <thead className="text-base text-p03-dim">
           <tr>
@@ -29,10 +32,16 @@ export function DeckTable({ deck, caption }: { deck: RunCard[]; caption: string 
               Card
             </th>
             <th scope="col" className="pb-1 text-right font-normal">
-              Attack
+              <span className="inline-flex">
+                <Sigil id="attack" size={14} color={LIGHT} />
+              </span>
+              <span className="sr-only">Attack</span>
             </th>
             <th scope="col" className="pb-1 text-right font-normal">
-              Health
+              <span className="inline-flex">
+                <Sigil id="health" size={14} color={LIGHT} />
+              </span>
+              <span className="sr-only">Health</span>
             </th>
           </tr>
         </thead>
@@ -53,8 +62,18 @@ export function DeckTable({ deck, caption }: { deck: RunCard[]; caption: string 
                   <SigilIcons sigils={entry.sigils} size={14} />
                 </span>
               </th>
-              <td className="truncate py-1 text-right tabular-nums">{entry.attack}</td>
-              <td className="truncate py-1 text-right tabular-nums">{entry.health}</td>
+              <td className="py-1 text-right tabular-nums">
+                <span className="inline-flex items-center justify-end gap-1">
+                  {entry.attack}
+                  <Sigil id="attack" size={12} color={LIGHT} />
+                </span>
+              </td>
+              <td className="py-1 text-right tabular-nums">
+                <span className="inline-flex items-center justify-end gap-1">
+                  {entry.health}
+                  <Sigil id="health" size={12} color={LIGHT} />
+                </span>
+              </td>
             </tr>
           ))}
         </tbody>

@@ -1,12 +1,12 @@
 import { Eraser, PenLine, Undo2 } from 'lucide-react'
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import { findNode, MAP_COLUMNS, reachable, type MapNode, type NodeKind, type StageMap } from 'shared'
-import { SIDE_BUTTON } from '../../text/Panel.tsx'
 import { sideOf, spots, type Spot } from '../layout.ts'
 import { NODE_ICONS, nodeName } from '../nodes.ts'
 import { usePlan } from '../plan.ts'
 import type { RunReady } from '../useRun.ts'
 import { PenLayer } from './PenLayer.tsx'
+import { ICON_BUTTON, ScreenBar } from './Screen.tsx'
 
 type Mark = 'here' | 'visited' | 'next' | 'lit' | 'ahead' | 'behind'
 type Link = 'taken' | 'open' | 'lit' | 'quiet'
@@ -158,50 +158,48 @@ export function RunMap({ run }: { run: RunReady }) {
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Pinned while the map scrolls under it. */}
-      <div className="sticky top-0 z-50 flex flex-col gap-2 bg-p03-ground/95 pb-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
+      {/* Above the map, so the legend and the pen stay in reach while it scrolls. */}
+      <ScreenBar>
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-1">
           <Legend
             shown={shown}
             onHover={setHovered}
             onPick={(kind) => setPicked((now) => (now === kind ? null : kind))}
           />
-          <div className="flex items-center gap-2 text-lg">
+          <div className="flex items-center gap-2">
             <button
               type="button"
               aria-pressed={pen}
               onClick={() => setPen((on) => !on)}
-              className={`${SIDE_BUTTON} flex items-center gap-2 py-1 ${pen ? 'border-p03 bg-[#13261a]' : ''}`}
+              aria-label="Plan a route"
+              title="Plan a route: draw on the map, and the nodes you pass through are marked"
+              className={ICON_BUTTON}
             >
-              <PenLine aria-hidden className="size-4" />
-              Plan a route
+              <PenLine aria-hidden className="size-5" />
             </button>
             <button
               type="button"
               onClick={undo}
               disabled={!plan.strokes.length}
               aria-label="Undo the last stroke"
-              className={`${SIDE_BUTTON} py-1 disabled:opacity-40`}
+              title="Undo the last stroke"
+              className={`${ICON_BUTTON} disabled:opacity-40`}
             >
-              <Undo2 aria-hidden className="size-4" />
+              <Undo2 aria-hidden className="size-5" />
             </button>
             <button
               type="button"
               onClick={clear}
               disabled={!plan.strokes.length && !plan.marks.length}
               aria-label="Clear the plan"
-              className={`${SIDE_BUTTON} py-1 disabled:opacity-40`}
+              title="Clear the plan"
+              className={`${ICON_BUTTON} disabled:opacity-40`}
             >
-              <Eraser aria-hidden className="size-4" />
+              <Eraser aria-hidden className="size-5" />
             </button>
           </div>
         </div>
-        {pen ? (
-          <p className="text-lg text-p03">
-            Draw a route on the map; nodes it passes through are marked. Turn the pen off to move.
-          </p>
-        ) : null}
-      </div>
+      </ScreenBar>
       <div ref={box} className="relative w-full" style={{ height: `calc(${ROW_HEIGHT} * ${state.map.rows.length})` }}>
         {/* The links: one image tiled along each, turned to point at the node ahead. */}
         <div aria-hidden className="absolute inset-0">

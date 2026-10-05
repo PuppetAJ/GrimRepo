@@ -17,7 +17,6 @@ export function Offer({ run }: { run: RunReady }) {
         units={visit.offer.map((id, index) => asUnit(id, index + 1))}
         onPick={(unit) => run.act({ type: 'take', index: unit.uid - 1 })}
         data={(unit) => ({ 'data-action': 'take', 'data-index': unit.uid - 1 })}
-        detail
         size="w-36 sm:w-44"
       />
     </div>

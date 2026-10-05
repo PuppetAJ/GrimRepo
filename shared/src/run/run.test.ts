@@ -268,7 +268,7 @@ describe('two hundred random runs', () => {
 })
 
 describe('the run’s balance', () => {
-  // Measured at about 77% past the first boss and 9% cleared, over 300 greedy runs.
+  // Measured at about 58% past the first boss and 3% cleared, over 300 greedy runs, with Out of Memory.
   it('lets a simple bot clear stage one more often than not, and rarely the whole run', () => {
     let firstBoss = 0
     let cleared = 0

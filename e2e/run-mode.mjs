@@ -175,7 +175,7 @@ section('The campfire, from a mockup')
   const first = page.locator('[data-action="buff"]').first()
   const id = await first.getAttribute('data-card')
   await first.click()
-  check('one boost takes', (await visibleText(page)).includes('It took'))
+  check('one boost takes', (await visibleText(page)).includes('Half the time it burns'))
   check(
     'then only that card can go back in',
     (await page.locator('[data-action="buff"]:not([disabled])').count()) === 1,
@@ -224,8 +224,10 @@ section('An event, from a mockup')
     'an event shows its scene and two choices',
     (await shows(page, 'event', 30_000)) && (await page.locator('[data-action="choose"]').count()) === 2,
   )
-  await page.locator('[data-action="choose"]').first().click()
-  check('choosing goes back to the map', await shows(page, 'map'))
+  // A number key picks a choice once focus is in the game, as the table's shortcuts work.
+  await page.locator('[data-table="run"]').click({ position: { x: 20, y: 20 } })
+  await page.keyboard.press('1')
+  check('a number key picks that choice, and the run goes back to the map', await shows(page, 'map'))
   await context.close()
 }
 
@@ -290,14 +292,31 @@ section('A big deck, from a mockup')
   await page.getByRole('button', { name: 'Read destroyEverything(everyone)' }).first().click()
   check('a name cut short opens the whole card', (await page.getByRole('dialog').count()) === 1)
   await page.keyboard.press('Escape')
-  await page.getByRole('button', { name: /^Your deck, 40 cards/ }).click()
-  const drawer = page.getByRole('dialog', { name: /Your deck/ })
-  check('the deck opens in a drawer, with its own search', (await drawer.getByRole('searchbox').count()) === 1)
-  await drawer
+  // The rest of the page is hidden from assistive tech until the reader has closed.
+  await page.getByRole('dialog').waitFor({ state: 'detached' })
+  const docked = page.getByRole('complementary', { name: 'Your deck' })
+  check(
+    'with room, the deck sits open beside the screen, with its own search',
+    (await docked.getByRole('searchbox').count()) === 1,
+  )
+  await docked
     .getByRole('button', { name: /what it does/ })
     .first()
     .click()
   check('a sigil icon says what the sigil does', (await page.getByRole('dialog').filter({ hasText: '.' }).count()) >= 1)
+  await page.keyboard.press('Escape')
+  await page.getByRole('dialog').waitFor({ state: 'detached' })
+  await page.getByRole('button', { name: /^Your deck, 40 cards/ }).click()
+  check('the deck button folds it away', (await docked.count()) === 0)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.getByRole('button', { name: /^Your deck, 40 cards/ }).click()
+  const drawer = page.getByRole('dialog', { name: /Your deck/ })
+  const frame = await page.locator('[data-table="run"]').boundingBox()
+  const inside = await drawer.boundingBox()
+  check(
+    'on a phone it opens as a drawer inside the game frame',
+    Boolean(inside) && inside.y >= frame.y - 1 && inside.y + inside.height <= frame.y + frame.height + 1,
+  )
   await context.close()
 }
 

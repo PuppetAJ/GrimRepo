@@ -53,6 +53,8 @@ const table: [string, string, Tier, number, number, number, SigilId[]?][] = [
   ['Y2K', 'Y2K', 'S', 2000, 2000, 0],
   // Free fuel for sacrifices, drawn from a pile that never runs out.
   ['Boilerplate', 'Boilerplate', 'E', 0, 1, 0],
+  // P03's answer to a run's empty deck; it grows each time, so it is in no deck.
+  ['OutOfMemory', 'Out of Memory', 'E', 1, 1, 0],
 ]
 
 export const CARDS: Record<string, CardDef> = Object.fromEntries(
@@ -64,8 +66,11 @@ export const CARDS: Record<string, CardDef> = Object.fromEntries(
 
 export const BOILERPLATE = 'Boilerplate'
 export const DEBUG_CARD = 'Y2K'
+export const OUT_OF_MEMORY = 'OutOfMemory'
 
-export const PLAYER_DECK: string[] = Object.keys(CARDS).filter((id) => id !== DEBUG_CARD && id !== BOILERPLATE)
+export const PLAYER_DECK: string[] = Object.keys(CARDS).filter(
+  (id) => id !== DEBUG_CARD && id !== BOILERPLATE && id !== OUT_OF_MEMORY,
+)
 
 /** No board wipe, or P03 could clear the player's side on a whim. */
 export const OPPONENT_POOL: string[] = PLAYER_DECK.filter((id) => !CARDS[id]?.sigils.includes('segfault'))

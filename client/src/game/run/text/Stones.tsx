@@ -4,6 +4,7 @@ import { SIDE_BUTTON } from '../../text/Panel.tsx'
 import { asUnit } from '../nodes.ts'
 import type { RunReady } from '../useRun.ts'
 import { CardList } from './CardList.tsx'
+import { ScreenBar } from './Screen.tsx'
 
 type Transfer = Extract<RunAction, { type: 'transfer' }>
 
@@ -29,34 +30,36 @@ export function Stones({ run }: { run: RunReady }) {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Pinned, so the way out and the final choice are always in reach. */}
-      <div className="sticky top-0 z-10 flex flex-col gap-2 bg-p03-ground/95 pb-2">
-        <p>
-          {!moves.length
-            ? 'None of your cards has a sigil to give. Leave the stones be.'
-            : 'Sacrifice one card to the stones, and one of its sigils moves to another card. A card that already gained a sigil can neither give nor take another.'}
-        </p>
-        <div className="flex flex-wrap gap-3">
-          {giver && chosen && receiver ? (
+      {/* Above the cards, so the way out and the final choice are always in reach. */}
+      <ScreenBar>
+        <div className="flex flex-col gap-2 pb-1">
+          <p className="text-lg">
+            {!moves.length
+              ? 'None of your cards has a sigil to give. Leave the stones be.'
+              : 'Sacrifice a card; one of its sigils moves to another.'}
+          </p>
+          <div className="flex flex-wrap gap-3">
+            {giver && chosen && receiver ? (
+              <button
+                type="button"
+                data-action="transfer"
+                onClick={() => run.act({ type: 'transfer', from: giver.uid, to: receiver.uid, sigil: chosen })}
+                className={`${SIDE_BUTTON} border-p03 px-4`}
+              >
+                Sacrifice {card(giver.card).name} to give {card(receiver.card).name} {SIGILS[chosen].name}
+              </button>
+            ) : null}
             <button
               type="button"
-              data-action="transfer"
-              onClick={() => run.act({ type: 'transfer', from: giver.uid, to: receiver.uid, sigil: chosen })}
-              className={`${SIDE_BUTTON} border-p03 px-4`}
+              data-action="leave"
+              onClick={() => run.act({ type: 'leave' })}
+              className={`${SIDE_BUTTON} px-4`}
             >
-              Sacrifice {card(giver.card).name} to give {card(receiver.card).name} {SIGILS[chosen].name}
+              Leave the stones
             </button>
-          ) : null}
-          <button
-            type="button"
-            data-action="leave"
-            onClick={() => run.act({ type: 'leave' })}
-            className={`${SIDE_BUTTON} px-4`}
-          >
-            Leave the stones
-          </button>
+          </div>
         </div>
-      </div>
+      </ScreenBar>
       {moves.length ? (
         <>
           <section aria-labelledby="stones-give" className="flex flex-col gap-2">

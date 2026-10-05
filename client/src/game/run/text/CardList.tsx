@@ -4,6 +4,7 @@ import { card, SIGILS, type Unit } from 'shared'
 import { PixelCard } from '../../CardReader.tsx'
 import { describe } from '../../controls.tsx'
 import { CardReader, CardSearch, SEARCH_FROM, SigilIcons, useCardSearch } from './CardBits.tsx'
+import { ScreenBar } from './Screen.tsx'
 
 type Props = {
   units: Unit[]
@@ -18,9 +19,9 @@ type Props = {
   size?: string
   /** Names the search box offered once there are enough cards to need one. */
   search?: string
-  /** The screen's own words and buttons, pinned above the cards with the search. */
+  /** The screen's own words and buttons, kept above the cards with the search. */
   head?: ReactNode
-  /** Off where the screen pins its own bar, so two never stack. */
+  /** Off where the screen has its own bar, so the search stays with its list. */
   pinned?: boolean
 }
 
@@ -76,11 +77,19 @@ export function CardList({
   return (
     <div className="flex flex-col gap-3">
       {head || searching ? (
-        // Pinned while the cards scroll under it, so the way out and the search are always in reach.
-        <div className={`flex flex-col gap-2 ${pinned ? 'sticky top-0 z-10 bg-p03-ground/95 pb-2' : ''}`}>
-          {head}
-          {searching ? <CardSearch query={query} onChange={setQuery} label={search} /> : null}
-        </div>
+        pinned ? (
+          <ScreenBar>
+            <div className="flex flex-col gap-2 pb-1">
+              {head}
+              {searching ? <CardSearch query={query} onChange={setQuery} label={search} /> : null}
+            </div>
+          </ScreenBar>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {head}
+            {searching ? <CardSearch query={query} onChange={setQuery} label={search} /> : null}
+          </div>
+        )
       ) : null}
       <ul className="flex flex-wrap justify-center gap-4">
         {shown.map((unit) => {

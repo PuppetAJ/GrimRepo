@@ -35,21 +35,21 @@ export function Campfire({ run }: { run: RunReady }) {
         size="w-24 sm:w-28"
         search="Search the deck for a card to warm"
         head={
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+            <p className="min-w-0 flex-1 basis-48 text-lg">
               {visit.buffs === 0
-                ? `Pick a card to warm by the fire for ${boost}.`
+                ? `Warm a card for ${boost}.`
                 : allowed.size
-                  ? `It took ${boost}. Push it in again for another ${boost}, but half the time it burns.`
+                  ? `Again for ${boost}? Half the time it burns.`
                   : 'The fire has done all it will.'}
             </p>
             <button
               type="button"
               data-action="leave"
               onClick={() => run.act({ type: 'leave' })}
-              className={`${SIDE_BUTTON} shrink-0 px-4`}
+              className={`${SIDE_BUTTON} shrink-0 px-3 py-1 text-lg`}
             >
-              Leave the campfire
+              Leave
             </button>
           </div>
         }
