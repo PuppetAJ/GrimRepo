@@ -1,5 +1,5 @@
 import { Selection } from '@react-three/postprocessing'
-import { Suspense, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { legalActions, PLAYER_DECK, type Action } from 'shared'
 import { has, hasEnded, laneAction, outcomeOf, skippedDraw } from '../../controls.tsx'
 import type { Ready } from '../../useGame.ts'
@@ -8,16 +8,35 @@ import { CardBatch } from '../Batch.tsx'
 import { Card, Popup, type Look, type Place } from '../Cards.tsx'
 import type { loadCardAssets } from '../faces.ts'
 import { EndTurnButton, Factory, FactoryEffects, FactoryP03, TechBoard } from '../Factory.tsx'
-import type { CameraView } from '../layout.ts'
+import { DECK, P03_HAND, type CameraView } from '../layout.ts'
 import { TINT } from '../palette.ts'
 import { Deck, Pile } from '../Piles.tsx'
 import type { usePlayback } from '../usePlayback.ts'
 import { Lanes } from './Lanes.tsx'
+import { STILL } from '../factory/constants.ts'
 import { COARSE, type Reader } from './reader.ts'
+import { Arrive } from './Arrive.tsx'
 import { CameraRig, WarmUp } from './stage.tsx'
 import { TestHandle } from './TestHandle.tsx'
 
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
+
+/** Seconds into a battle reached from another view when each piece is set on the table, then between dealt cards. */
+const SET = { board: 0.15, deck: 0.4, pile: 0.55, button: 0.7, cards: 0.95, deal: 0.18 }
+const MOST_DEALT = 8
+
+/** How many cards of the opening hand are dealt so far, one at a time once the table is set. */
+function useDeal(setting: boolean): number {
+  const [dealt, setDealt] = useState(setting ? 0 : Infinity)
+  useEffect(() => {
+    if (!setting) return
+    const timers = [...Array(MOST_DEALT + 1).keys()].map((index) =>
+      setTimeout(() => setDealt(index < MOST_DEALT ? index + 1 : Infinity), (SET.cards + index * SET.deal) * 1000),
+    )
+    return () => timers.forEach(clearTimeout)
+  }, [setting])
+  return dealt
+}
 
 export function Scene({
   game,
@@ -66,6 +85,11 @@ export function Scene({
     view.summon?.uid === uid ? 'selected' : can({ type: 'select', uid } as Partial<Action>) ? 'plain' : 'dim'
 
   const handFull = !busy && !hasEnded(game) && skippedDraw(state)
+  // Gliding in from another view, the table is set piece by piece; a quick battle's was set behind the loading screen.
+  const setting = Boolean(from) && !STILL
+  const at = (seconds: number) => (setting ? seconds : undefined)
+  const dealt = useDeal(setting)
+  const dealing = dealt !== Infinity
   return (
     <CardBatch assets={assets}>
       <Selection>
@@ -82,26 +106,35 @@ export function Scene({
           <WarmUp onWarm={onWarm} />
         </Suspense>
         <FactoryEffects quality={quality} />
-        <TechBoard />
-        <Deck
-          count={view.deck}
-          total={PLAYER_DECK.length}
-          active={can({ type: 'draw', from: 'deck' } as Partial<Action>)}
-          onClick={() => act({ type: 'draw', from: 'deck' })}
-          hint={hint}
-          full={handFull}
-        />
-        <Pile
-          assets={assets}
-          active={can({ type: 'draw', from: 'boilerplate' } as Partial<Action>)}
-          onClick={() => act({ type: 'draw', from: 'boilerplate' })}
-          hint={hint}
-          full={handFull}
-        />
-        <EndTurnButton active={can({ type: 'ringBell' })} rung={rung} onClick={() => act({ type: 'ringBell' })} />
-        <Lanes view={view} legal={legal} act={act} play={TINT.play} aimed={aimed} onAim={setAimed} />
+        <Arrive delay={at(SET.board)}>
+          <TechBoard />
+          <Lanes view={view} legal={legal} act={act} play={TINT.play} aimed={aimed} onAim={setAimed} />
+        </Arrive>
+        <Arrive delay={at(SET.deck)}>
+          <Deck
+            count={view.deck}
+            total={PLAYER_DECK.length}
+            active={can({ type: 'draw', from: 'deck' } as Partial<Action>)}
+            onClick={() => act({ type: 'draw', from: 'deck' })}
+            hint={hint}
+            full={handFull}
+          />
+        </Arrive>
+        <Arrive delay={at(SET.pile)}>
+          <Pile
+            assets={assets}
+            active={can({ type: 'draw', from: 'boilerplate' } as Partial<Action>)}
+            onClick={() => act({ type: 'draw', from: 'boilerplate' })}
+            hint={hint}
+            full={handFull}
+          />
+        </Arrive>
+        <Arrive delay={at(SET.button)}>
+          <EndTurnButton active={can({ type: 'ringBell' })} rung={rung} onClick={() => act({ type: 'ringBell' })} />
+        </Arrive>
 
         {view.hand.map((unit, index) => {
+          if (index >= dealt) return null
           const selected = view.summon?.uid === unit.uid
           const selectable = can({ type: 'select', uid: unit.uid } as Partial<Action>)
           return (
@@ -109,7 +142,7 @@ export function Scene({
               key={unit.uid}
               unit={unit}
               place={{ at: 'hand', index, count }}
-              spawn={playback.spawns.get(unit.uid)}
+              spawn={playback.spawns.get(unit.uid) ?? (dealing ? DECK : undefined)}
               look={handLook(unit.uid)}
               summoning={Boolean(view.summon)}
               assets={assets}
@@ -134,7 +167,8 @@ export function Scene({
         })}
         {(['board', 'front', 'back'] as const).flatMap((row) =>
           view[row].map((unit, lane) => {
-            if (!unit) return null
+            // P03's opening cards come down with the first card dealt.
+            if (!unit || dealt === 0) return null
             const action = row === 'board' ? laneAction(legal, lane) : null
             const marked = row === 'board' && (view.summon?.marked.includes(lane) ?? false)
             const place: Place = { at: row, lane }
@@ -143,7 +177,7 @@ export function Scene({
                 key={unit.uid}
                 unit={unit}
                 place={place}
-                spawn={playback.spawns.get(unit.uid)}
+                spawn={playback.spawns.get(unit.uid) ?? (dealing ? P03_HAND : undefined)}
                 lunge={playback.lunges.get(unit.uid)}
                 look={marked ? 'marked' : action?.type === 'mark' ? 'markable' : 'plain'}
                 assets={assets}

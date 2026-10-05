@@ -435,14 +435,16 @@
     inset 0 0 30px rgb(125 255 154 / 0.18);
   /* Black drops out against the room behind, so only the light is left. */
   mix-blend-mode: screen;
+  /* Hidden until the projector is on the table; fading it instead blacks out the canvas behind in Chromium. */
+  animation: hologram-window-wait 450ms;
 }
 .hologram {
   height: 100%;
   padding-inline: 0.5rem;
   transform-origin: 50% 100%;
   filter: drop-shadow(0 0 6px rgb(125 255 154 / 0.45));
-  /* Switches on like a projector: a line of light at the bottom opening up into the map. */
-  animation: hologram-on 700ms ease-out both;
+  /* Switches on like a projector, once it's on the table: a line of light at the bottom opening up into the map. */
+  animation: hologram-on 700ms ease-out 450ms both;
 }
 @keyframes hologram-on {
   from {
@@ -456,8 +458,15 @@
     transform: scaleY(1);
   }
 }
+@keyframes hologram-window-wait {
+  from,
+  to {
+    visibility: hidden;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
-  .hologram {
+  .hologram,
+  .hologram-window {
     animation: none;
   }
 }

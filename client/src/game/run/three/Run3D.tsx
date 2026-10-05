@@ -79,7 +79,7 @@ export default function Run3D({
             game={battle}
             seat={seat}
             onText={onText}
-            from="board"
+            from="map"
           />
         ) : view !== 'battle' ? (
           <Between run={run} view={view} layout={layout} onText={onText} />

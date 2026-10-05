@@ -1,3 +1,4 @@
+import { useGLTF } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Selection } from '@react-three/postprocessing'
 import { useMemo, useRef } from 'react'
@@ -7,6 +8,7 @@ import { Factory, FactoryEffects, FactoryP03 } from '../../table/Factory.tsx'
 import { STILL } from '../../table/factory/constants.ts'
 import { CAMERA, CENTER_X, TABLE_Y, type Vec3 } from '../../table/layout.ts'
 import { TINT } from '../../table/palette.ts'
+import { Arrive } from '../../table/table3d/Arrive.tsx'
 import { CameraRig, WarmUp } from '../../table/table3d/stage.tsx'
 import { useStage } from '../../table/TableStage.tsx'
 import type { View } from '../../view.ts'
@@ -29,21 +31,20 @@ function restView(state: RunState): View {
   }
 }
 
-// Seen from the board view, looking down at the table: the window floats on the camera's line of sight,
-// facing it, and the projector sits on the table beneath, where the board was.
-const EYE = new THREE.Vector3(...CAMERA.board.position)
-const SIGHT = new THREE.Vector3(...CAMERA.board.target).sub(EYE).normalize()
-const WINDOW_CENTER = EYE.clone().addScaledVector(SIGHT, 3.3)
-const PROJECTOR: Vec3 = [CENTER_X, TABLE_Y, -8.85]
-const LENS = new THREE.Vector3(CENTER_X, TABLE_Y + 0.3, -8.87)
+// The projector sits on the table where the board was, and throws the window up in front of P03, facing the map's camera.
+const PROJECTOR: Vec3 = [CENTER_X, TABLE_Y, -10.4]
+/** How wide the projector stands on the table, in world units. */
+const PROJECTOR_WIDTH = 1.4
+// Square to the camera's line of sight, so the window draws as a true rectangle rather than a keystone.
+const FACING = new THREE.Vector3(...CAMERA.map.position).sub(new THREE.Vector3(...CAMERA.map.target)).normalize()
+const WINDOW_CENTER = new THREE.Vector3(CENTER_X, 9.75, -11.1)
 /** The window's size in world units; the page element drawn into it keeps the same proportions. */
-export const WINDOW = { width: 3.9, height: 2.5 }
+export const WINDOW = { width: 5.2, height: 3.35 }
 
-/** The window's corners, top left first and clockwise, turned to face the board view's camera. */
+/** The window's corners, top left first and clockwise, turned to face the map's camera. */
 function windowCorners(): THREE.Vector3[] {
-  const facing = EYE.clone().sub(WINDOW_CENTER).normalize()
-  const right = new THREE.Vector3(0, 1, 0).cross(facing).normalize()
-  const up = facing.clone().cross(right).normalize()
+  const right = new THREE.Vector3(0, 1, 0).cross(FACING).normalize()
+  const up = FACING.clone().cross(right).normalize()
   const across = right.multiplyScalar(WINDOW.width / 2)
   const tall = up.multiplyScalar(WINDOW.height / 2)
   const at = (x: number, y: number) => WINDOW_CENTER.clone().addScaledVector(across, x).addScaledVector(tall, y)
@@ -111,7 +112,7 @@ varying float vGlow;
 void main() { gl_FragColor = vec4(color, pow(vGlow, 1.4) * strength); }`
 
 /** The light from the lens to the window's corners, flickering at random rather than in a rhythm. */
-function Throw({ corners }: { corners: THREE.Vector3[] }) {
+function Throw({ lens, corners, delay }: { lens: THREE.Vector3; corners: THREE.Vector3[]; delay: number }) {
   const material = useRef<THREE.ShaderMaterial>(null)
   const geometry = useMemo(() => {
     const points: number[] = []
@@ -119,14 +120,14 @@ function Throw({ corners }: { corners: THREE.Vector3[] }) {
     for (let side = 0; side < 4; side++) {
       const a = corners[side]!
       const b = corners[(side + 1) % 4]!
-      points.push(...LENS.toArray(), ...a.toArray(), ...b.toArray())
+      points.push(...lens.toArray(), ...a.toArray(), ...b.toArray())
       glow.push(1, 0.12, 0.12)
     }
     const shape = new THREE.BufferGeometry()
     shape.setAttribute('position', new THREE.Float32BufferAttribute(points, 3))
     shape.setAttribute('glow', new THREE.Float32BufferAttribute(glow, 1))
     return shape
-  }, [corners])
+  }, [lens, corners])
   const uniforms = useMemo(() => ({ color: { value: new THREE.Color(TINT.glow) }, strength: { value: 0.3 } }), [])
   const flicker = useRef({ until: 0, level: 1, born: -1 })
   useFrame(({ clock }) => {
@@ -134,9 +135,9 @@ function Throw({ corners }: { corners: THREE.Vector3[] }) {
     if (!shader) return
     const t = clock.elapsedTime
     const state = flicker.current
-    if (state.born < 0) state.born = t
-    // Switches on over half a second, unless motion is reduced.
-    const rise = STILL ? 1 : Math.min(1, (t - state.born) / 0.5)
+    if (state.born < 0) state.born = t + delay
+    // Switches on over half a second once the projector is down, unless motion is reduced.
+    const rise = STILL ? 1 : Math.min(1, Math.max(0, (t - state.born) / 0.5))
     if (!STILL && t > state.until) {
       const dip = Math.random() < 0.3
       state.level = dip ? 0.5 + Math.random() * 0.3 : 0.9 + Math.random() * 0.1
@@ -160,23 +161,39 @@ function Throw({ corners }: { corners: THREE.Vector3[] }) {
   )
 }
 
-/** A placeholder projector until one is modelled: a dark puck on the table with a lit lens. */
-function Projector() {
+const MODEL = '/models/projector.glb'
+/** Seconds from the projector arriving to its light coming on; the window's CSS waits as long. */
+const ON_AFTER = 0.45
+useGLTF.preload(MODEL, false, false)
+
+/** The projector model, scaled to stand on the table, with its lens where the light leaves it. */
+function useProjector() {
+  const { scene } = useGLTF(MODEL, false, false)
+  return useMemo(() => {
+    const model = scene.clone()
+    const box = new THREE.Box3().setFromObject(model)
+    const scale = PROJECTOR_WIDTH / (box.max.x - box.min.x)
+    const center = box.getCenter(new THREE.Vector3())
+    model.scale.setScalar(scale)
+    model.position.set(-center.x * scale, -box.min.y * scale, -center.z * scale)
+    const lens = new THREE.Vector3(...PROJECTOR).add(new THREE.Vector3(0, (box.max.y - box.min.y) * scale, 0))
+    return { model, lens }
+  }, [scene])
+}
+
+/** Set down on the table first, then switched on: the light rises to the window as the window lights up. */
+function Projector({ corners, onPin }: { corners: THREE.Vector3[]; onPin: (points: number[]) => void }) {
+  const { model, lens } = useProjector()
   return (
-    <group position={PROJECTOR}>
-      <mesh position={[0, 0.08, 0]}>
-        <cylinderGeometry args={[0.46, 0.5, 0.16, 40]} />
-        <meshStandardMaterial color="#1b211d" metalness={0.6} roughness={0.45} />
-      </mesh>
-      <mesh position={[0, 0.21, 0]}>
-        <cylinderGeometry args={[0.28, 0.34, 0.12, 40]} />
-        <meshStandardMaterial color="#232a25" metalness={0.7} roughness={0.35} />
-      </mesh>
-      <mesh position={[0, 0.275, -0.02]} rotation-x={-Math.PI / 2 + 0.35}>
-        <circleGeometry args={[0.16, 32]} />
-        <meshBasicMaterial color={TINT.glow} toneMapped={false} />
-      </mesh>
-    </group>
+    <>
+      <Arrive delay={0}>
+        <group position={PROJECTOR}>
+          <primitive object={model} />
+        </group>
+      </Arrive>
+      <Throw lens={lens} corners={corners} delay={ON_AFTER} />
+      <Pin corners={corners} onFrame={onPin} />
+    </>
   )
 }
 
@@ -199,19 +216,13 @@ export function BetweenBattles({
   const corners = useMemo(() => windowCorners(), [])
   return (
     <stage.Scene>
-      {/* Looking down at the table, gliding up from the seat after a battle. */}
-      <CameraRig view="board" from="table" />
+      {/* Across the table at the window, gliding back from the seat after a battle. */}
+      <CameraRig view="map" from="table" />
       <Selection>
         <Factory view={view} log={lines} />
         <FactoryP03 view={view} busy={false} />
         <FactoryEffects quality={stage.quality} />
-        {projecting ? (
-          <>
-            <Projector />
-            <Throw corners={corners} />
-            <Pin corners={corners} onFrame={onPin} />
-          </>
-        ) : null}
+        {projecting ? <Projector corners={corners} onPin={onPin} /> : null}
       </Selection>
       <WarmUp onWarm={stage.warm} />
     </stage.Scene>
