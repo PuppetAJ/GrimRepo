@@ -232,6 +232,7 @@ export function Screen({
   layout,
   title,
   caption,
+  stack = false,
   deck = true,
   children,
 }: {
@@ -240,12 +241,15 @@ export function Screen({
   title: string
   /** A word above the title, such as what kind of screen it is. */
   caption?: string
+  /** On a phone, stacks and centers the header: the title, the screen's line, then its buttons. The map's alone. */
+  stack?: boolean
   /** Off for a screen that shows the deck itself. */
   deck?: boolean
   children: ReactNode
 }) {
   const { state } = run
   const phone = layout === 'phone'
+  const stacked = phone && stack
   // Room enough for the deck beside the screen, so it docks open instead of covering it.
   const roomy = layout === 'wide'
   const [docked, setDocked] = useState(dockedAtFirst)
@@ -270,9 +274,9 @@ export function Screen({
   const [host, setHost] = useState<HTMLDivElement | null>(null)
   const [actions, setActions] = useState<HTMLDivElement | null>(null)
   const [bar, setBar] = useState<HTMLDivElement | null>(null)
-  // The screen's own buttons, the deck and the menu, beside the title or, on a phone, under the screen's line.
+  // The screen's own buttons, the deck and the menu, beside the title or, stacked, under the screen's line.
   const buttonRow = (
-    <div className={`flex shrink-0 items-center gap-2 ${phone ? 'justify-center' : 'ml-auto'}`}>
+    <div className={`flex shrink-0 items-center gap-2 ${stacked ? 'justify-center' : 'ml-auto'}`}>
       <div ref={setActions} className="flex shrink-0 items-center gap-2 empty:hidden" />
       {deck && roomy ? (
         <DeckButton
@@ -311,13 +315,13 @@ export function Screen({
           <span aria-hidden className="crt-glass pointer-events-none absolute inset-0 z-30" />
           {/* Where the deck drawer opens, covering the frame but taking no clicks until it does. */}
           <div ref={setHost} className="pointer-events-none absolute inset-0 z-40 *:pointer-events-auto" />
-          {/* On a phone everything is centered and stacked: the title, the screen's own line, then its buttons. */}
+          {/* The title wraps rather than being cut off; short of room, the buttons drop to their own line. */}
           <header className="relative z-10 flex shrink-0 flex-wrap items-center gap-2">
-            <div className={`min-w-0 flex-1 ${phone ? 'text-center' : 'basis-48'}`}>
+            <div className={`min-w-0 flex-1 ${stacked ? 'text-center' : 'basis-48'}`}>
               {caption ? <p className="text-base text-p03-dim">{caption}</p> : null}
               <h2 className="text-3xl leading-tight text-balance [overflow-wrap:anywhere] text-p03">{title}</h2>
             </div>
-            {phone ? null : buttonRow}
+            {stacked ? null : buttonRow}
           </header>
           {deck && !roomy ? (
             <DeckDrawer run={run} host={host} open={drawer} onOpenChange={setDrawer} returnTo={menuButton} />
@@ -326,8 +330,8 @@ export function Screen({
             className={`relative z-10 grid min-h-0 flex-1 gap-4 ${showDock ? 'grid-cols-[minmax(0,1fr)_20rem]' : ''}`}
           >
             <div className="flex min-h-0 min-w-0 flex-col gap-2">
-              <div ref={setBar} className={`shrink-0 empty:hidden ${phone ? 'text-center' : ''}`} />
-              {phone ? buttonRow : null}
+              <div ref={setBar} className={`shrink-0 empty:hidden ${stacked ? 'text-center' : ''}`} />
+              {stacked ? buttonRow : null}
               {/* Only the content scrolls, inside a frame that stays the same size; padded so focus rings aren't cut. */}
               <div data-scroller className={`min-h-0 flex-1 overflow-y-auto px-1 ${FADE}`}>
                 {children}
