@@ -1,6 +1,6 @@
 import type { CSSProperties, KeyboardEvent, ReactNode } from 'react'
 import type { Slot } from 'shared'
-import { describe, GameOver, laneAction, whyNot } from '../controls.tsx'
+import { describe, Ending, laneAction, whyNot } from '../controls.tsx'
 import { PixelCard } from '../CardReader.tsx'
 import { LUNGE_MS, type Playback } from '../table/playback.ts'
 import { useTable } from './context.ts'
@@ -114,7 +114,7 @@ export function Board() {
     legal,
     busy,
     act,
-    result,
+    game,
     gameOver,
     compact,
     tapToRead,
@@ -275,9 +275,9 @@ export function Board() {
           )
         })}
       </div>
-      {gameOver && result ? (
+      {gameOver ? (
         <div className="absolute inset-0 grid place-items-center bg-black/60 p-4">
-          <GameOver result={result} className="w-full max-w-md bg-p03-ground/95 font-terminal text-xl" />
+          <Ending game={game} />
         </div>
       ) : null}
     </Panel>

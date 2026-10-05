@@ -72,6 +72,7 @@ function enter(state: RunState, rng: Rng, node: MapNode): Visit {
           deck: state.deck.map(toDeckCard),
           encounter: node.encounter ?? null,
           fairHand: true,
+          outOfMemory: true,
         }),
       }
     case 'card':

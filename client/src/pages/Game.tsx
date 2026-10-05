@@ -4,15 +4,14 @@ import { lazy, Suspense, useState } from 'react'
 import { Button } from '@/components/ui/button.tsx'
 import { LoadFailed } from '../components/LoadFailed.tsx'
 import { Failure, Loading } from '../components/States.tsx'
-import type { Seat } from '../game/controls.tsx'
+import { useSeat } from '../game/controls.tsx'
 import { FIXTURES_ON } from '../game/fixtures.ts'
+import { useLeaveFullScreen } from '../game/fullScreen.ts'
 import { useKeepTableFocus } from '../game/shortcuts.ts'
 import { Boot } from '../game/table/Boot.tsx'
 import { TerminalTable } from '../game/TerminalTable.tsx'
-import type { Layout } from '../game/text/useTextTable.ts'
+import { useLayoutChoice } from '../game/layoutChoice.ts'
 import { useGame } from '../game/useGame.ts'
-import { authClient, DEMO } from '../lib/auth.ts'
-import { useMedia } from '../lib/useMedia.ts'
 
 // three.js is most of the table's weight, so it loads only when the 3D table is shown.
 const Table3D = lazy(() => import('../game/table/Table3D.tsx'))
@@ -28,13 +27,6 @@ function savedMode(text: boolean): Mode {
     return '3d'
   }
 }
-
-const UPRIGHT_PHONE = '(orientation: portrait) and (max-width: 767px)'
-// The wide layout's three columns need this much width.
-const WIDE = '(min-width: 1100px)'
-const MID = '(min-width: 560px)'
-// Matches the `short` variant that puts the 3D table full screen.
-const SIDEWAYS_PHONE = '(orientation: landscape) and (max-height: 32rem)'
 
 /** Shown when a model fails to load or the WebGL context is lost. */
 function TableFailed({ onText }: { onText: () => void }) {
@@ -60,16 +52,13 @@ function TurnSideways({ onText }: { onText: () => void }) {
 
 export function Game() {
   useKeepTableFocus()
+  useLeaveFullScreen()
   const game = useGame()
-  const user = authClient.useSession().data?.user as { username?: string; isAnonymous?: boolean } | undefined
-  const seat: Seat = user?.username === DEMO.username ? 'demo' : user?.isAnonymous ? 'guest' : null
+  const seat = useSeat()
   // ?text picks the text table; ?layout forces a layout, for comparing them in development and tests.
   const search = useSearch({ from: '/game' })
   const [mode, setMode] = useState<Mode>(() => savedMode(search.text !== undefined))
-  const upright = useMedia(UPRIGHT_PHONE)
-  const wide = useMedia(WIDE)
-  const mid = useMedia(MID)
-  const sideways = useMedia(SIDEWAYS_PHONE)
+  const { layout, upright } = useLayoutChoice(FIXTURES_ON ? search.layout : undefined)
 
   const choose = (next: Mode) => {
     setMode(next)
@@ -83,8 +72,6 @@ export function Game() {
   if (game.status === 'loading') return <Loading label="Dealing" />
   if (game.status === 'error') return <Failure title="The table is not ready" detail={game.message} />
 
-  const layout: Layout =
-    (FIXTURES_ON ? search.layout : undefined) ?? (sideways || upright || !mid ? 'phone' : wide ? 'wide' : 'mid')
   if (mode === 'text')
     return (
       // Negative margins give the table most of the gutter; on phones, all of it.

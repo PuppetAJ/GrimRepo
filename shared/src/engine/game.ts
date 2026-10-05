@@ -1,4 +1,4 @@
-import { BOILERPLATE, card, DEBUG_CARD, PLAYER_DECK } from '../cards.ts'
+import { BOILERPLATE, card, DEBUG_CARD, OUT_OF_MEMORY, PLAYER_DECK } from '../cards.ts'
 import { encounter } from '../encounters.ts'
 import { Rng } from '../rng.ts'
 import { attack } from './combat.ts'
@@ -27,9 +27,18 @@ export type GameOptions = {
   encounter?: string | null
   /** Deals a card costing 1 or less into the opening hand when the deck has one. */
   fairHand?: boolean
+  /** Each rebuild of an empty deck after the first gives P03 an Out of Memory card, one bigger every time. */
+  outOfMemory?: boolean
 }
 
-export function createGame({ seed, debug = false, deck, encounter = null, fairHand = false }: GameOptions): GameState {
+export function createGame({
+  seed,
+  debug = false,
+  deck,
+  encounter = null,
+  fairHand = false,
+  outOfMemory = false,
+}: GameOptions): GameState {
   const rng = new Rng(seed >>> 0)
   const library = deck ? structuredClone(deck) : PLAYER_DECK.map(deckCard)
   const state: GameState = {
@@ -45,6 +54,7 @@ export function createGame({ seed, debug = false, deck, encounter = null, fairHa
     opponent: { front: Array(LANES).fill(null), back: Array(LANES).fill(null), encounter, phase: 0, step: 0 },
     summon: null,
   }
+  if (outOfMemory) state.rebuilds = 0
   if (fairHand) dealFairly(state.player)
   const opening = state.player.deck.splice(0, 3)
   for (const source of opening) state.player.hand.push(drawUnit(state, source))
@@ -101,6 +111,11 @@ export function apply(current: GameState, action: Action): Result {
         state.player.deck = rng.shuffle(outOfPlay(state))
         if (state.player.deck.length === 0) return fail('The deck is empty')
         events.push({ type: 'reshuffled', cards: state.player.deck.length })
+        // In a run, every rebuild after the first costs a growing Out of Memory card on P03's side.
+        if (state.rebuilds !== undefined) {
+          state.rebuilds += 1
+          if (state.rebuilds >= 2) outOfMemory(state, state.rebuilds - 1, rng, events)
+        }
       }
     }
     const unit =
@@ -209,6 +224,27 @@ function playTurn(state: GameState, rng: Rng, events: GameEvent[]): void {
   state.turn += 1
   state.drawn = state.player.hand.length >= HAND_LIMIT
   events.push({ type: 'turnStarted', turn: state.turn })
+}
+
+// From this Out of Memory card on, each one attacks the player over any card in the way.
+const OOM_BYPASS_FROM = 5
+
+/** P03 queues an Out of Memory card of this size in a free lane, if it has one. */
+function outOfMemory(state: GameState, size: number, rng: Rng, events: GameEvent[]): void {
+  const aim = rng.int(0, LANES - 1)
+  const lane = [...Array(LANES).keys()]
+    .sort((a, b) => Math.abs(a - aim) - Math.abs(b - aim) || a - b)
+    .find((candidate) => !state.opponent.back[candidate])
+  if (lane === undefined) return
+  const unit = makeUnit(state, OUT_OF_MEMORY)
+  Object.assign(unit, {
+    attack: size,
+    health: size,
+    maxHealth: size,
+    sigils: size >= OOM_BYPASS_FROM ? ['bypass'] : [],
+  })
+  state.opponent.back[lane] = unit
+  events.push({ type: 'queued', lane, unit })
 }
 
 /** A boss with a phase left clears its side and levels the scale instead of losing. */

@@ -6,16 +6,17 @@ import { Balance } from './Balance.tsx'
 import { Board } from './Board.tsx'
 import { CancelButton, ExecuteButton, SaveStatus } from './Buttons.tsx'
 import { useTable } from './context.ts'
+import { TurnLabel } from './TurnLabel.tsx'
 import { Hand, Piles } from './Hand.tsx'
 import { LogBox, LogDialog, TerminalDialog } from './Log.tsx'
 import { MENU_BUTTON, Panel } from './Panel.tsx'
 import { Inspector, Magnifier } from './Reading.tsx'
 
 function Status() {
-  const { view, menu, setMenu } = useTable()
+  const { menu, setMenu } = useTable()
   return (
     <div className="flex items-center gap-2 text-lg">
-      <span className="text-p03">Turn {view.turn}</span>
+      <TurnLabel />
       <SaveStatus className="ml-auto truncate text-sm text-p03-dim" />
       <button
         type="button"
@@ -57,14 +58,21 @@ function Menu() {
             {fullScreen.on ? 'Exit full screen' : 'Full screen'}
           </button>
         ) : null}
-        <Forfeit forfeit={game.forfeit} disabled={game.state.status !== 'playing'} className={`${MENU_BUTTON} h-auto`}>
+        <Forfeit
+          forfeit={game.forfeit}
+          run={Boolean(game.run)}
+          disabled={game.state.status !== 'playing'}
+          className={`${MENU_BUTTON} h-auto`}
+        >
           <Flag aria-hidden />
-          Forfeit
+          {game.run ? 'Abandon run' : 'Forfeit'}
         </Forfeit>
-        <button type="button" onClick={on3d} className={MENU_BUTTON}>
-          <Box aria-hidden />
-          3D Table
-        </button>
+        {on3d ? (
+          <button type="button" onClick={on3d} className={MENU_BUTTON}>
+            <Box aria-hidden />
+            3D Table
+          </button>
+        ) : null}
         <Link to="/" className={MENU_BUTTON}>
           <LogOut aria-hidden />
           Leave Game

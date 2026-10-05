@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { apply, type Action, type GameEvent, type GameState } from 'shared'
 import { toast } from 'sonner'
 import { api, ApiError, type Finished, type OpenGame } from '../lib/api.ts'
@@ -23,6 +23,8 @@ export type Game =
       act: (action: Action) => void
       forfeit: () => Promise<void>
       subscribe: (listener: Listener) => () => void
+      /** Set for a battle in a run, whose panel replaces the result and whose forfeit abandons the run. */
+      run?: { ending: ReactNode | null }
     }
 
 export type Ready = Extract<Game, { status: 'ready' }>
