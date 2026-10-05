@@ -22,7 +22,7 @@ import { TestHandle } from './TestHandle.tsx'
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
 
 /** Seconds into a battle reached from another view when each piece is set on the table, then between dealt cards. */
-const SET = { board: 0.1, lanes: 0.7, deck: 0.55, pile: 0.7, cards: 1.0, deal: 0.18 }
+const SET = { board: 0.3, lanes: 0.9, deck: 0.75, pile: 0.9, cards: 1.3, deal: 0.18 }
 const MOST_DEALT = 8
 
 /** How many cards of the opening hand are dealt so far, one at a time once the table is set. */
@@ -129,7 +129,7 @@ export function Scene({
             full={handFull}
           />
         </Arrive>
-        {/* Bolted to the table, so it stays put and stays locked until the table is set. */}
+        {/* Bolted to the table, so it's there between battles too, and locked until the table is set. */}
         <EndTurnButton
           active={!dealing && can({ type: 'ringBell' })}
           rung={rung}

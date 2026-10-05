@@ -424,8 +424,10 @@
   /* Rows fill the window, so the whole stage fits without scrolling. */
   --map-row: calc((540px - 4rem) / 8);
   z-index: 5;
+  /* Dark until the 3D scene pins it, as the projector opens it. */
+  visibility: hidden;
 }
-/* The pane itself, so the whole window opens with the map rather than the map opening inside a frame. */
+/* The pane itself; the 3D scene warps the window to its part-open corners, so the pane and map open together. */
 .hologram {
   height: 100%;
   overflow: hidden;
@@ -437,29 +439,9 @@
   box-shadow:
     0 0 24px rgb(125 255 154 / 0.35),
     inset 0 0 30px rgb(125 255 154 / 0.18);
-  transform-origin: 50% 100%;
-  /* Opens from a line of light at the bottom once the projector is on; RunStage.tsx's PROJECT and OPEN match. */
-  animation: hologram-on 700ms ease-out 800ms both;
 }
 .hologram-glow {
   height: 100%;
   padding-inline: 0.5rem;
   filter: drop-shadow(0 0 6px rgb(125 255 154 / 0.45));
-}
-@keyframes hologram-on {
-  from {
-    transform: scaleY(0.02);
-    opacity: 0;
-  }
-  40% {
-    opacity: 1;
-  }
-  to {
-    transform: scaleY(1);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .hologram {
-    animation: none;
-  }
 }

@@ -5,7 +5,7 @@ import * as THREE from 'three'
 import { useFullScreen } from '../fullScreen.ts'
 import { Boot } from './Boot.tsx'
 import { disposeFaces } from './faces.ts'
-import { CAMERA } from './layout.ts'
+import { CAMERA, FOV } from './layout.ts'
 import { createTunnel, type Tunnel } from './stage/tunnel.tsx'
 import { COARSE } from './table3d/reader.ts'
 import { CursorSync, Exposure, Loaded } from './table3d/stage.tsx'
@@ -19,6 +19,8 @@ type Stage = {
   quality: number
   /** True once the first scene has loaded. */
   ready: boolean
+  /** True once the loading screen has started to fade. */
+  warmed: boolean
   /** Called once a scene's shaders are compiled, which ends the loading screen for good. */
   warm: () => void
   /** The scene's data attributes on the table's element, for the keyboard scope and tests. */
@@ -71,6 +73,7 @@ export function TableStage({ children }: { children: ReactNode }) {
     Scene: tunnel.In,
     quality,
     ready,
+    warmed,
     warm: () => setWarmed(true),
     label: (next) => setAttributes((now) => (same(now, next) ? now : next)),
     onMissed: (handler) => {
@@ -90,7 +93,7 @@ export function TableStage({ children }: { children: ReactNode }) {
           dpr={dpr}
           // Post-processing draws the frame, so the canvas buffer needs no antialiasing.
           gl={{ antialias: false }}
-          camera={{ fov: 60, near: 0.05, far: 200, position: CAMERA.table.position }}
+          camera={{ fov: FOV, near: 0.05, far: 200, position: CAMERA.table.position }}
           onCreated={({ gl }) => (gl.toneMapping = THREE.ACESFilmicToneMapping)}
           aria-hidden
           // Its own layer, so the monitors' text never rises above what's drawn over the room.

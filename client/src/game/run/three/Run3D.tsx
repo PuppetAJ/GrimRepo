@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Seat } from '../../controls.tsx'
 import { loadCardAssets } from '../../table/faces.ts'
 import { Battle3D } from '../../table/Table3D.tsx'
@@ -10,7 +10,20 @@ import type { RunReady } from '../useRun.ts'
 import { BetweenBattles, warp } from './RunStage.tsx'
 
 /** Everything off the board: the room in 3D, with the map in the projector's window and other screens over it. */
-function Between({ run, view, layout, onText }: { run: RunReady; view: RunView; layout: Layout; onText: () => void }) {
+function Between({
+  run,
+  view,
+  layout,
+  glide,
+  onText,
+}: {
+  run: RunReady
+  view: RunView
+  layout: Layout
+  /** Whether the camera glides back from a battle. */
+  glide: boolean
+  onText: () => void
+}) {
   const stage = useStage()
   const { title, caption } = useRunScreen(run)
   // Loaded while the map is up, so a battle starts with its cards ready instead of a blank table.
@@ -24,9 +37,12 @@ function Between({ run, view, layout, onText }: { run: RunReady; view: RunView; 
         state={run.state}
         lines={run.news.map((line) => `P03> ${line}`)}
         projecting={projecting}
+        from={glide ? 'table' : undefined}
         onPin={(points) => {
           const element = pin.current
-          if (element) element.style.transform = warp(element.offsetWidth, element.offsetHeight, points)
+          if (!element) return
+          element.style.visibility = points ? 'visible' : 'hidden'
+          if (points) element.style.transform = warp(element.offsetWidth, element.offsetHeight, points)
         }}
       />
       {stage.ready ? (
@@ -63,6 +79,10 @@ export default function Run3D({
   onText: () => void
 }) {
   const { view, battle } = useRunScreen(run)
+  // The camera glides between a battle and the room only after one has shown the other; a fresh load starts in place.
+  const scene = view === 'battle' ? 'battle' : 'between'
+  const [shown, setShown] = useState({ scene, after: false })
+  if (shown.scene !== scene) setShown({ scene, after: true })
   return (
     <div
       data-run-seed={run.state.seed}
@@ -79,10 +99,10 @@ export default function Run3D({
             game={battle}
             seat={seat}
             onText={onText}
-            from="map"
+            from={shown.after ? 'map' : undefined}
           />
         ) : view !== 'battle' ? (
-          <Between run={run} view={view} layout={layout} onText={onText} />
+          <Between run={run} view={view} layout={layout} glide={shown.after} onText={onText} />
         ) : null}
       </TableStage>
     </div>

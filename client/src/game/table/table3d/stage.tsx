@@ -4,24 +4,78 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { cursorCss, onCursor } from '../cursor.ts'
 import { STILL } from '../factory/constants.ts'
-import { BOARD_CENTER, CAMERA, type CameraView } from '../layout.ts'
+import { BOARD_CENTER, CAMERA, FOV, type CameraView } from '../layout.ts'
 import { MOOD } from '../mood.ts'
 
 const seat = new THREE.Vector3()
+const aim = new THREE.Vector3()
+const easeInOut = (t: number) => (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2)
 
-/** Eases the camera to a view; `from` is where it starts, so it glides in from another view. */
-export function CameraRig({ view, from }: { view: CameraView; from?: CameraView }) {
+type Glide = { position: THREE.Vector3; target: THREE.Vector3; fov: number; at: number; length: number }
+
+/**
+ * Glides the camera to a view, easing in and out; `from` is where it starts, so it glides in from another view.
+ * Arriving from another scene takes `arrive` seconds; switching views within one, `glide`.
+ */
+export function CameraRig({
+  view,
+  from,
+  glide = 0.7,
+  arrive = 1.6,
+}: {
+  view: CameraView
+  from?: CameraView
+  glide?: number
+  arrive?: number
+}) {
   const target = useRef(new THREE.Vector3(...CAMERA[from ?? view].target))
-  useFrame(({ camera, pointer }, delta) => {
-    const [x, y, z] = CAMERA[view].position
+  const gliding = useRef<Glide | null>(null)
+  const shown = useRef<CameraView | null>(null)
+  useFrame(({ camera, pointer, clock }, delta) => {
+    const lens = camera as THREE.PerspectiveCamera
+    const goal = CAMERA[view]
+    const fov = goal.fov ?? FOV
+    // With nowhere to glide from, a scene starts in its view.
+    if (shown.current === null && !from) {
+      camera.position.set(...goal.position)
+      target.current.set(...goal.target)
+      lens.fov = fov
+    }
+    if (shown.current !== view) {
+      const length = shown.current === null ? (from ? arrive : 0) : glide
+      gliding.current = {
+        position: camera.position.clone(),
+        target: target.current.clone(),
+        fov: lens.fov,
+        at: clock.elapsedTime,
+        length,
+      }
+      shown.current = view
+    }
+    const [x, y, z] = goal.position
+    const now = gliding.current
+    const t = now && now.length > 0 ? Math.min(1, (clock.elapsedTime - now.at) / now.length) : 1
     // With reduced motion the camera jumps between views and doesn't follow the pointer.
     if (STILL) {
       camera.position.set(x, y, z)
-      target.current.set(...CAMERA[view].target)
+      target.current.set(...goal.target)
+      lens.fov = fov
+    } else if (now && t < 1) {
+      const k = easeInOut(t)
+      seat.set(x + pointer.x * 0.12, y + pointer.y * 0.06, z)
+      camera.position.lerpVectors(now.position, seat, k)
+      target.current.lerpVectors(now.target, aim.set(...goal.target), k)
+      lens.fov = THREE.MathUtils.lerp(now.fov, fov, k)
     } else {
+      gliding.current = null
       seat.set(x + pointer.x * 0.12, y + pointer.y * 0.06, z)
       easing.damp3(camera.position, seat, 0.18, delta)
-      easing.damp3(target.current, CAMERA[view].target, 0.18, delta)
+      easing.damp3(target.current, goal.target, 0.18, delta)
+      lens.fov = fov
+    }
+    if (lens.fov !== lens.userData['fov']) {
+      lens.userData['fov'] = lens.fov
+      lens.updateProjectionMatrix()
     }
     camera.lookAt(target.current)
   })

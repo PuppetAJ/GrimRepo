@@ -1,14 +1,13 @@
 import { useGLTF } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Selection } from '@react-three/postprocessing'
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, type RefObject } from 'react'
 import { LANES, type RunState } from 'shared'
 import * as THREE from 'three'
-import { Factory, FactoryEffects, FactoryP03 } from '../../table/Factory.tsx'
+import { EndTurnButton, Factory, FactoryEffects, FactoryP03 } from '../../table/Factory.tsx'
 import { STILL } from '../../table/factory/constants.ts'
-import { CAMERA, CENTER_X, TABLE_Y, type Vec3 } from '../../table/layout.ts'
+import { CAMERA, CENTER_X, TABLE_Y, type CameraView, type Vec3 } from '../../table/layout.ts'
 import { TINT } from '../../table/palette.ts'
-import { Arrive } from '../../table/table3d/Arrive.tsx'
 import { CameraRig, WarmUp } from '../../table/table3d/stage.tsx'
 import { useStage } from '../../table/TableStage.tsx'
 import type { View } from '../../view.ts'
@@ -38,9 +37,9 @@ const PROJECTOR_WIDTH = 1.4
 // Square to the camera's line of sight, so the window draws as a true rectangle rather than a keystone.
 const FACING = new THREE.Vector3(...CAMERA.map.position).sub(new THREE.Vector3(...CAMERA.map.target)).normalize()
 /** Where the window's bottom edge floats, just above the lens. */
-const WINDOW_BOTTOM = new THREE.Vector3(CENTER_X, TABLE_Y + 0.8, PROJECTOR[2] - 0.15)
+const WINDOW_BOTTOM = new THREE.Vector3(CENTER_X, TABLE_Y + 0.6, PROJECTOR[2] - 0.15)
 /** The window's size in world units, in the proportions of the page element drawn into it. */
-export const WINDOW = { width: (2.6 * 840) / 540, height: 2.6 }
+export const WINDOW = { width: (3.8 * 840) / 540, height: 3.8 }
 
 /** The window's corners, top left first and clockwise, turned to face the map's camera. */
 function windowCorners(): THREE.Vector3[] {
@@ -88,21 +87,6 @@ export function warp(width: number, height: number, to: number[]): string {
   return `matrix3d(${n[0]},${n[3]},0,${n[6]},${n[1]},${n[4]},0,${n[7]},0,0,1,0,${n[2]},${n[5]},0,1)`
 }
 
-/** Reports where the window's corners are on screen every frame, so the map moves with the room as the camera does. */
-function Pin({ corners, onFrame }: { corners: THREE.Vector3[]; onFrame: (points: number[]) => void }) {
-  const { camera, size } = useThree()
-  const point = useMemo(() => new THREE.Vector3(), [])
-  useFrame(() =>
-    onFrame(
-      corners.flatMap((corner) => {
-        point.copy(corner).project(camera)
-        return [((point.x + 1) / 2) * size.width, ((1 - point.y) / 2) * size.height]
-      }),
-    ),
-  )
-  return null
-}
-
 // Bright at the lens, fading toward the window.
 const LIGHT_VERTEX = `attribute float glow;
 varying float vGlow;
@@ -112,78 +96,17 @@ uniform float strength;
 varying float vGlow;
 void main() { gl_FragColor = vec4(color, pow(vGlow, 1.4) * strength); }`
 
-// CSS ease-out, near enough, so the light keeps pace with the window opening.
 const easeOut = (t: number) => 1 - (1 - t) ** 2.2
-
-/** The light from the lens to the window's corners, rising with the window and flickering at random rather than in a rhythm. */
-function Throw({ lens, corners }: { lens: THREE.Vector3; corners: THREE.Vector3[] }) {
-  const material = useRef<THREE.ShaderMaterial>(null)
-  const mesh = useRef<THREE.Mesh>(null)
-  const geometry = useMemo(() => {
-    const shape = new THREE.BufferGeometry()
-    shape.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(4 * 9), 3))
-    shape.setAttribute(
-      'glow',
-      new THREE.Float32BufferAttribute(
-        [...Array(4)].flatMap(() => [1, 0.12, 0.12]),
-        1,
-      ),
-    )
-    return shape
-  }, [])
-  useEffect(() => () => geometry.dispose(), [geometry])
-  const uniforms = useMemo(() => ({ color: { value: new THREE.Color(TINT.glow) }, strength: { value: 0 } }), [])
-  const flicker = useRef({ until: 0, level: 1, born: -1 })
-  const top = useMemo(() => [new THREE.Vector3(), new THREE.Vector3()], [])
-  useFrame(({ clock }) => {
-    const shader = material.current
-    if (!shader || !mesh.current) return
-    const t = clock.elapsedTime
-    const state = flicker.current
-    if (state.born < 0) state.born = t + PROJECT
-    const open = STILL ? 1 : easeOut(Math.min(1, Math.max(0, (t - state.born) / OPEN)))
-    // The top edge rises from the bottom one, as the window's page element opens upward.
-    top[0]!.lerpVectors(corners[3]!, corners[0]!, open)
-    top[1]!.lerpVectors(corners[2]!, corners[1]!, open)
-    const now = [top[0]!, top[1]!, corners[2]!, corners[3]!]
-    const points = mesh.current.geometry.attributes['position'] as THREE.BufferAttribute
-    for (let side = 0; side < 4; side++) {
-      const a = now[side]!
-      const b = now[(side + 1) % 4]!
-      points.setXYZ(side * 3, lens.x, lens.y, lens.z)
-      points.setXYZ(side * 3 + 1, a.x, a.y, a.z)
-      points.setXYZ(side * 3 + 2, b.x, b.y, b.z)
-    }
-    points.needsUpdate = true
-    if (!STILL && t > state.until) {
-      const dip = Math.random() < 0.3
-      state.level = dip ? 0.5 + Math.random() * 0.3 : 0.9 + Math.random() * 0.1
-      state.until = t + (dip ? 0.04 + Math.random() * 0.1 : 0.3 + Math.random() * 2.6)
-    }
-    shader.uniforms['strength']!.value = 0.3 * (STILL ? 1 : state.level) * (t > state.born || STILL ? 1 : 0)
-  })
-  return (
-    <mesh ref={mesh} geometry={geometry} frustumCulled={false}>
-      <shaderMaterial
-        ref={material}
-        vertexShader={LIGHT_VERTEX}
-        fragmentShader={LIGHT_FRAGMENT}
-        uniforms={uniforms}
-        transparent
-        depthWrite={false}
-        blending={THREE.AdditiveBlending}
-        side={THREE.DoubleSide}
-      />
-    </mesh>
-  )
-}
+const phase = (t: number, from: number, to: number) => easeOut(Math.min(1, Math.max(0, (t - from) / (to - from))))
 
 const MODEL = '/models/projector.glb'
-// Seconds from the projector arriving: it lands, powers on with a stutter, then opens the window.
+// Seconds from the projector's turn: it lands, powers on with a stutter, then opens the window.
+const LAND = 0.42
 const POWER = 0.45
 const PROJECT = 0.8
-/** How long the window takes to open; .hologram's animation in index.css runs as long, after PROJECT. */
-const OPEN = 0.7
+const OPEN = 0.9
+/** The share of the opening spent drawing the line across, before it rises. */
+const ACROSS = 0.35
 useGLTF.preload(MODEL, false, false)
 
 /** The projector model, scaled to stand on the table, with its lens where the light leaves it. */
@@ -205,66 +128,172 @@ function useProjector() {
   }, [scene])
 }
 
-/** Set down on the table, then powered on, then switched on: the light rises with the window as it opens. */
-function Projector({ corners, onPin }: { corners: THREE.Vector3[]; onPin: (points: number[]) => void }) {
+const middle = new THREE.Vector3()
+const rise = new THREE.Vector3()
+const point = new THREE.Vector3()
+
+/** The window part-open: a line spreading `across` from the middle of its bottom edge, then rising `up`. */
+function opened(full: THREE.Vector3[], across: number, up: number, into: THREE.Vector3[]) {
+  middle.lerpVectors(full[3]!, full[2]!, 0.5)
+  rise.subVectors(full[0]!, full[3]!)
+  into[3]!.lerpVectors(middle, full[3]!, across)
+  into[2]!.lerpVectors(middle, full[2]!, across)
+  into[0]!.copy(into[3]!).addScaledVector(rise, up)
+  into[1]!.copy(into[2]!).addScaledVector(rise, up)
+}
+
+/**
+ * Set down on the table, powered on, then switched on: a line of light spreads across, then rises into the window.
+ * It waits until `ready`, a performance.now() time, so it plays in view once the camera has arrived.
+ */
+function Projector({
+  corners,
+  ready,
+  onPin,
+}: {
+  corners: THREE.Vector3[]
+  ready: RefObject<number>
+  onPin: (points: number[] | null) => void
+}) {
   const { model, lens } = useProjector()
+  const { camera, size } = useThree()
   const body = useRef<THREE.Group>(null)
-  const power = useRef({ born: -1, until: 0, level: 0 })
+  const beam = useRef<THREE.Mesh>(null)
+  const material = useRef<THREE.ShaderMaterial>(null)
+  const geometry = useMemo(() => {
+    const shape = new THREE.BufferGeometry()
+    shape.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(4 * 9), 3))
+    shape.setAttribute(
+      'glow',
+      new THREE.Float32BufferAttribute([1, 0.12, 0.12, 1, 0.12, 0.12, 1, 0.12, 0.12, 1, 0.12, 0.12], 1),
+    )
+    return shape
+  }, [])
+  useEffect(() => () => geometry.dispose(), [geometry])
+  const uniforms = useMemo(() => ({ color: { value: new THREE.Color(TINT.glow) }, strength: { value: 0 } }), [])
+  const timing = useRef({ born: -1, power: 0, until: 0, flicker: 1, next: 0 })
+  const now = useRef([new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()])
   useFrame(({ clock }) => {
     const t = clock.elapsedTime
-    const state = power.current
-    if (state.born < 0) state.born = t
-    const since = t - state.born
-    if (STILL || since > PROJECT) state.level = 1
-    else if (since < POWER) state.level = 0
+    const state = timing.current
+    if (state.born < 0 && Number.isFinite(ready.current))
+      state.born = t + Math.max(0, (ready.current - performance.now()) / 1000)
+    const since = STILL ? Infinity : state.born < 0 ? -1 : t - state.born
+
+    // Lands from just above, slowing as it nears the table.
+    if (body.current) {
+      const landed = Math.min(1, Math.max(0, since / LAND))
+      body.current.visible = landed > 0
+      body.current.position.y = PROJECTOR[1] + (1 - landed) ** 3 * 0.45
+    }
     // Stutters on, like a tube catching.
+    if (since > PROJECT) state.power = 1
+    else if (since < POWER) state.power = 0
     else if (t > state.until) {
-      state.level = Math.random() < 0.45 ? 0.15 : 1
+      state.power = Math.random() < 0.45 ? 0.15 : 1
       state.until = t + 0.03 + Math.random() * 0.06
     }
     body.current?.traverse((part) => {
-      if (part instanceof THREE.Mesh) (part.material as THREE.MeshStandardMaterial).emissiveIntensity = state.level
+      if (part instanceof THREE.Mesh) (part.material as THREE.MeshStandardMaterial).emissiveIntensity = state.power
     })
+
+    const opening = (since - PROJECT) / OPEN
+    const lit = opening > 0
+    // Never quite flat, so the page element's warp stays solvable.
+    opened(corners, Math.max(0.01, phase(opening, 0, ACROSS)), Math.max(0.01, phase(opening, ACROSS, 1)), now.current)
+    const window = now.current
+
+    // The light, flickering at random rather than in a rhythm.
+    if (beam.current && material.current) {
+      const points = beam.current.geometry.attributes['position'] as THREE.BufferAttribute
+      for (let side = 0; side < 4; side++) {
+        const a = window[side]!
+        const b = window[(side + 1) % 4]!
+        points.setXYZ(side * 3, lens.x, lens.y, lens.z)
+        points.setXYZ(side * 3 + 1, a.x, a.y, a.z)
+        points.setXYZ(side * 3 + 2, b.x, b.y, b.z)
+      }
+      points.needsUpdate = true
+      if (!STILL && t > state.next) {
+        const dip = Math.random() < 0.3
+        state.flicker = dip ? 0.5 + Math.random() * 0.3 : 0.9 + Math.random() * 0.1
+        state.next = t + (dip ? 0.04 + Math.random() * 0.1 : 0.3 + Math.random() * 2.6)
+      }
+      material.current.uniforms['strength']!.value = lit ? 0.3 * (STILL ? 1 : state.flicker) : 0
+    }
+
+    // Where the page element goes on screen, so the map moves with the room as the camera does.
+    onPin(
+      lit
+        ? window.flatMap((corner) => {
+            point.copy(corner).project(camera)
+            return [((point.x + 1) / 2) * size.width, ((1 - point.y) / 2) * size.height]
+          })
+        : null,
+    )
   })
   return (
     <>
-      <Arrive delay={0}>
-        <group ref={body} position={PROJECTOR}>
-          <primitive object={model} />
-        </group>
-      </Arrive>
-      <Throw lens={lens} corners={corners} />
-      <Pin corners={corners} onFrame={onPin} />
+      <group ref={body} position={PROJECTOR} visible={STILL}>
+        <primitive object={model} />
+      </group>
+      <mesh ref={beam} geometry={geometry} frustumCulled={false}>
+        <shaderMaterial
+          ref={material}
+          vertexShader={LIGHT_VERTEX}
+          fragmentShader={LIGHT_FRAGMENT}
+          uniforms={uniforms}
+          transparent
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
     </>
   )
 }
+
+/** Seconds into the camera's glide back from the seat when the projector starts: near its end, so the window opens still. */
+const AFTER_GLIDE = 1.1
+/** Seconds the loading screen takes to fade, in Boot.tsx. */
+const BOOT_FADE = 0.4
 
 /** The room between battles: the factory and P03 at rest, and on the map, the projector and its window. */
 export function BetweenBattles({
   state,
   lines,
   projecting,
+  from,
   onPin,
 }: {
   state: RunState
   /** P03's latest words, for the monitor beside it. */
   lines: string[]
   projecting: boolean
-  /** Given the window's corners on screen every frame, to lay the map's page element onto them. */
-  onPin: (points: number[]) => void
+  /** The view the camera glides back from, after a battle. */
+  from?: CameraView
+  /** Given where the window's page element goes on screen every frame, or null while it's dark. */
+  onPin: (points: number[] | null) => void
 }) {
   const stage = useStage()
   const view = useMemo(() => restView(state), [state])
   const corners = useMemo(() => windowCorners(), [])
+  // When the projector may start: once the loading screen has faded, or the camera has nearly glided back.
+  const ready = useRef(Infinity)
+  useEffect(() => {
+    ready.current = stage.warmed ? performance.now() + (from && !STILL ? AFTER_GLIDE : BOOT_FADE) * 1000 : Infinity
+  }, [from, stage.warmed])
   return (
     <stage.Scene>
       {/* Across the table at the window, gliding back from the seat after a battle. */}
-      <CameraRig view="map" from="table" />
+      <CameraRig view="map" from={from} />
       <Selection>
         <Factory view={view} log={lines} />
         <FactoryP03 view={view} busy={false} />
+        {/* Bolted to the table, so it stays between battles, locked. */}
+        <EndTurnButton active={false} rung={0} onClick={() => {}} />
         <FactoryEffects quality={stage.quality} />
-        {projecting ? <Projector corners={corners} onPin={onPin} /> : null}
+        {projecting ? <Projector corners={corners} ready={ready} onPin={onPin} /> : null}
       </Selection>
       <WarmUp onWarm={stage.warm} />
     </stage.Scene>
