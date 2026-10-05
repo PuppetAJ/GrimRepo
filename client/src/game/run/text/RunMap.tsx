@@ -32,7 +32,8 @@ const LINK: Record<Link, string> = {
 const WORDS: Partial<Record<Mark, string>> = { here: 'you are here', visited: 'visited', behind: 'passed by' }
 
 // Each row's share of the map's height, and the node's size: 44 pixels, the least a finger needs.
-const ROW_HEIGHT = 'clamp(3.75rem, 9dvh, 5rem)'
+// A hologram sets --map-row so the whole stage fits its height.
+const ROW_HEIGHT = 'var(--map-row, clamp(3.75rem, 9dvh, 5rem))'
 const NODE = 44
 
 const describeNext = (map: StageMap, node: MapNode) =>

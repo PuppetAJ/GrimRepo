@@ -43,9 +43,10 @@ export function PenLayer({
   }
   useEffect(paint)
 
-  const at = (event: React.PointerEvent) => {
-    const box = (event.currentTarget as HTMLElement).getBoundingClientRect()
-    return [(event.clientX - box.left) / box.width, (event.clientY - box.top) / box.height] as const
+  // Offsets are in the canvas's own space, so they stay right when the map is tilted into a hologram.
+  const at = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    const element = event.currentTarget
+    return [event.nativeEvent.offsetX / element.offsetWidth, event.nativeEvent.offsetY / element.offsetHeight] as const
   }
 
   const scale = typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1

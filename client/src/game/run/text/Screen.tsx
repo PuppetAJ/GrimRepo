@@ -1,5 +1,5 @@
 import { useNavigate } from '@tanstack/react-router'
-import { Flag, Layers, LogOut, Maximize, Menu, Minimize, X } from 'lucide-react'
+import { Flag, Layers, LogOut, Maximize, Menu, Minimize, Repeat, X } from 'lucide-react'
 import { Dialog as DialogPrimitive } from 'radix-ui'
 import { createContext, use, useRef, useState, type ComponentProps, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
@@ -138,6 +138,9 @@ function DeckDrawer({
   )
 }
 
+/** The menu's way to the other table. */
+export type Switch = { label: string; go: () => void }
+
 function saveWords(run: RunReady): string {
   if (run.id === -1) return 'mockup, never saved'
   return run.saving ? 'saving…' : run.unsaved ? `${run.unsaved} unsaved` : 'saved'
@@ -148,12 +151,14 @@ function RunMenu({
   run,
   fullScreen,
   onDeck,
+  onSwitch,
   button,
 }: {
   run: RunReady
   fullScreen: ReturnType<typeof useFullScreen>
   /** Set where the deck isn't beside the screen, so the menu opens it. */
   onDeck?: () => void
+  onSwitch?: Switch
   button: React.RefObject<HTMLButtonElement | null>
 }) {
   const { state } = run
@@ -207,6 +212,12 @@ function RunMenu({
               {fullScreen.on ? 'Leave full screen' : 'Full screen'}
             </DropdownMenuItem>
           ) : null}
+          {onSwitch ? (
+            <DropdownMenuItem onSelect={onSwitch.go} className="text-lg">
+              <Repeat aria-hidden />
+              {onSwitch.label}
+            </DropdownMenuItem>
+          ) : null}
           {state.status === 'playing' ? (
             <DropdownMenuItem onSelect={() => setAbandoning(true)} className="text-lg">
               <Flag aria-hidden />
@@ -234,6 +245,8 @@ export function Screen({
   caption,
   stack = false,
   deck = true,
+  mode = 'terminal',
+  onSwitch,
   children,
 }: {
   run: RunReady
@@ -245,13 +258,18 @@ export function Screen({
   stack?: boolean
   /** Off for a screen that shows the deck itself. */
   deck?: boolean
+  /** The text table's terminal; over the 3D table, a floating panel, or the map as a hologram above the board. */
+  mode?: 'terminal' | 'floating' | 'hologram'
+  onSwitch?: Switch
   children: ReactNode
 }) {
   const { state } = run
+  const terminal = mode === 'terminal'
   const phone = layout === 'phone'
   const stacked = phone && stack
   // Room enough for the deck beside the screen, so it docks open instead of covering it.
-  const roomy = layout === 'wide'
+  // Over the hologram the deck is a drawer, so the room stays in view.
+  const roomy = layout === 'wide' && mode !== 'hologram'
   const [docked, setDocked] = useState(dockedAtFirst)
   const dock = (open: boolean) => {
     setDocked(open)
@@ -290,29 +308,38 @@ export function Screen({
         run={run}
         fullScreen={fullScreen}
         onDeck={deck && !roomy ? () => setDrawer(true) : undefined}
+        onSwitch={onSwitch}
         button={menuButton}
       />
     </div>
   )
-  const place = phone
-    ? fullScreen.on
-      ? 'fixed inset-0 z-50 p-3'
-      : 'relative h-[calc(100dvh-7rem)] min-h-[30rem] p-3'
-    : `rounded-lg border p-4 ${fullScreen.on ? 'fixed z-50' : 'relative mx-auto'}`
+  // Over the 3D table, the scene behind is the frame, and its page decides full screen.
+  const place =
+    mode === 'hologram'
+      ? 'absolute inset-0 z-10 p-3 sm:p-4'
+      : mode === 'floating'
+        ? `absolute z-10 bg-p03-ground/85 backdrop-blur-sm ${phone ? 'inset-0 p-3' : 'inset-x-3 inset-y-3 mx-auto max-w-6xl rounded-lg border p-4'}`
+        : phone
+          ? fullScreen.on
+            ? 'fixed inset-0 z-50 p-3'
+            : 'relative h-[calc(100dvh-7rem)] min-h-[30rem] p-3'
+          : `rounded-lg border p-4 ${fullScreen.on ? 'fixed z-50' : 'relative mx-auto'}`
   return (
     <SlotContext value={{ actions, bar, deckShown: showDock }}>
       <SearchContext value={{ query, setQuery: (next) => setSearch({ title, query: next }) }}>
-        {fullScreen.on ? <div aria-hidden className="fixed inset-0 z-40 bg-[#030604]" /> : null}
+        {terminal && fullScreen.on ? <div aria-hidden className="fixed inset-0 z-40 bg-[#030604]" /> : null}
         <div
-          ref={phone ? undefined : frame}
-          style={phone ? undefined : size}
+          ref={phone || !terminal ? undefined : frame}
+          style={phone || !terminal ? undefined : size}
           // A table to the keyboard, so a screen's number keys work while focus is anywhere inside it.
           data-table="run"
           tabIndex={-1}
-          className={`p03-screen crt flex flex-col gap-3 overflow-hidden border-p03-edge font-terminal text-xl sm:text-2xl ${place}`}
+          className={`flex flex-col gap-3 overflow-hidden border-p03-edge font-terminal text-xl sm:text-2xl ${mode === 'hologram' ? 'text-[#b8f5c4]' : 'p03-screen crt'} ${place}`}
         >
-          <FaultyScreenShader />
-          <span aria-hidden className="crt-glass pointer-events-none absolute inset-0 z-30" />
+          {terminal ? <FaultyScreenShader /> : null}
+          {mode === 'hologram' ? null : (
+            <span aria-hidden className="crt-glass pointer-events-none absolute inset-0 z-30" />
+          )}
           {/* Where the deck drawer opens, covering the frame but taking no clicks until it does. */}
           <div ref={setHost} className="pointer-events-none absolute inset-0 z-40 *:pointer-events-auto" />
           {/* The title wraps rather than being cut off; short of room, the buttons drop to their own line. */}
@@ -333,9 +360,16 @@ export function Screen({
               <div ref={setBar} className={`shrink-0 empty:hidden ${stacked ? 'text-center' : ''}`} />
               {stacked ? buttonRow : null}
               {/* Only the content scrolls, inside a frame that stays the same size; padded so focus rings aren't cut. */}
-              <div data-scroller className={`min-h-0 flex-1 overflow-y-auto px-1 ${FADE}`}>
-                {children}
-              </div>
+              {mode === 'hologram' ? (
+                // Projected above the board: tilted away, and blended so its dark ground lets the room show through.
+                <div data-scroller className="hologram-stage min-h-0 flex-1 overflow-hidden px-1">
+                  <div className="hologram">{children}</div>
+                </div>
+              ) : (
+                <div data-scroller className={`min-h-0 flex-1 overflow-y-auto px-1 ${FADE}`}>
+                  {children}
+                </div>
+              )}
             </div>
             {showDock ? (
               <aside id="run-deck" aria-label="Your deck" className="min-h-0">
