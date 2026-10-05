@@ -29,16 +29,19 @@ function restView(state: RunState): View {
   }
 }
 
-// The projector sits where the board was; its window floats above and behind it, facing the map's camera.
-const PROJECTOR: Vec3 = [CENTER_X, TABLE_Y, -9.5]
-const LENS = new THREE.Vector3(CENTER_X, TABLE_Y + 0.3, -9.55)
-const WINDOW_CENTER = new THREE.Vector3(CENTER_X, 9.75, -11.4)
+// Seen from the board view, looking down at the table: the window floats on the camera's line of sight,
+// facing it, and the projector sits on the table beneath, where the board was.
+const EYE = new THREE.Vector3(...CAMERA.board.position)
+const SIGHT = new THREE.Vector3(...CAMERA.board.target).sub(EYE).normalize()
+const WINDOW_CENTER = EYE.clone().addScaledVector(SIGHT, 3.3)
+const PROJECTOR: Vec3 = [CENTER_X, TABLE_Y, -8.85]
+const LENS = new THREE.Vector3(CENTER_X, TABLE_Y + 0.3, -8.87)
 /** The window's size in world units; the page element drawn into it keeps the same proportions. */
-export const WINDOW = { width: 5.6, height: 3.6 }
+export const WINDOW = { width: 3.9, height: 2.5 }
 
-/** The window's corners, top left first and clockwise, turned to face the map's camera. */
+/** The window's corners, top left first and clockwise, turned to face the board view's camera. */
 function windowCorners(): THREE.Vector3[] {
-  const facing = new THREE.Vector3(...CAMERA.map.position).sub(WINDOW_CENTER).normalize()
+  const facing = EYE.clone().sub(WINDOW_CENTER).normalize()
   const right = new THREE.Vector3(0, 1, 0).cross(facing).normalize()
   const up = facing.clone().cross(right).normalize()
   const across = right.multiplyScalar(WINDOW.width / 2)
@@ -196,8 +199,8 @@ export function BetweenBattles({
   const corners = useMemo(() => windowCorners(), [])
   return (
     <stage.Scene>
-      {/* The camera glides here from wherever the last scene left it. */}
-      <CameraRig view="map" from="table" />
+      {/* Looking down at the table, gliding up from the seat after a battle. */}
+      <CameraRig view="board" from="table" />
       <Selection>
         <Factory view={view} log={lines} />
         <FactoryP03 view={view} busy={false} />
