@@ -12,8 +12,8 @@ export const BOARD = '/textures/board.webp'
 /** Seconds the board takes to roll out across the table. */
 const UNROLL = 0.6
 
-/** The board, which can roll out from P03's side toward the player, `appear` seconds after it mounts. */
-export function TechBoard({ appear }: { appear?: number }) {
+/** The board, which can roll out from P03's side toward the player `appear` seconds after it mounts, and back as it `leave`s. */
+export function TechBoard({ appear, leave = false }: { appear?: number; leave?: boolean }) {
   const width = (lanes.length - 1) * LANE_GAP + CARD.width + 0.5
   const depth = ROW_Z.board - ROW_Z.back + CARD.height + 0.5
   const left = slot('board', 0)[0] - CARD.width / 2 - 0.25
@@ -31,12 +31,16 @@ export function TechBoard({ appear }: { appear?: number }) {
   const board = useRef<THREE.Mesh>(null)
   const edge = useRef<THREE.Mesh>(null)
   const born = useRef(-1)
+  const gone = useRef(-1)
   useFrame(({ clock }) => {
     const mesh = board.current
-    if (!mesh || appear === undefined) return
-    if (born.current < 0) born.current = clock.elapsedTime
-    const t = STILL ? 1 : Math.min(1, Math.max(0, (clock.elapsedTime - born.current - appear) / UNROLL))
-    const shown = 1 - (1 - t) ** 3
+    if (!mesh || (appear === undefined && !leave)) return
+    const now = clock.elapsedTime
+    if (born.current < 0) born.current = now
+    if (leave && gone.current < 0) gone.current = now
+    const t = STILL || appear === undefined ? 1 : Math.min(1, Math.max(0, (now - born.current - appear) / UNROLL))
+    const back = gone.current < 0 ? 0 : STILL ? 1 : Math.min(1, (now - gone.current) / UNROLL)
+    const shown = (1 - (1 - t) ** 3) * (1 - back ** 3)
     mesh.visible = shown > 0
     // Shows only the far part of the board, uncropped, so it reveals rather than stretches.
     mesh.scale.y = Math.max(shown, 0.0001)
@@ -48,12 +52,12 @@ export function TechBoard({ appear }: { appear?: number }) {
       edge.current.position.z = far + depth * shown
     }
   })
-  const rolling = appear !== undefined && !STILL
+  const rolling = (appear !== undefined || leave) && !STILL
   return (
     <>
       <mesh
         ref={board}
-        visible={!rolling}
+        visible={appear === undefined || STILL}
         position={[left + width / 2, TABLE_Y + 0.004, far + depth / 2]}
         rotation={[-Math.PI / 2, 0, 0]}
       >

@@ -22,6 +22,10 @@ const TITLES: Record<Exclude<RunView, 'battle' | 'map'>, string> = {
   summary: 'The run is over',
 }
 
+/** The map's title: the stage itself. */
+export const mapTitle = (state: RunReady['state']) =>
+  `Stage ${state.stage + 1} of ${STAGES.length}: ${STAGES[state.stage]}`
+
 /** Which screen the run is on, its battle in the tables' shape, and the screen's title; both tables share it. */
 export function useRunScreen(run: RunReady) {
   // A run that ends on the board stays there until the player asks for the summary.
@@ -34,7 +38,7 @@ export function useRunScreen(run: RunReady) {
   // The map's title is the stage itself; an event's is its scene's, under a caption saying what it is.
   const title =
     view === 'map'
-      ? `Stage ${run.state.stage + 1} of ${STAGES.length}: ${STAGES[run.state.stage]}`
+      ? mapTitle(run.state)
       : view === 'event' && visit?.kind === 'event'
         ? scene(visit.event).title
         : view === 'summary' && run.state.status === 'won'

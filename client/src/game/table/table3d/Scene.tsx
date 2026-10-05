@@ -24,6 +24,8 @@ type Assets = Awaited<ReturnType<typeof loadCardAssets>>
 /** Seconds into a battle reached from another view when each piece is set on the table, then between dealt cards. */
 const SET = { board: 0.3, lanes: 0.9, deck: 0.75, pile: 0.9, cards: 1.3, deal: 0.18 }
 const MOST_DEALT = 8
+/** Seconds the table takes to pack away. */
+const PACK_AWAY = 0.8
 
 /** How many cards of the opening hand are dealt so far, one at a time once the table is set. */
 function useDeal(setting: boolean): number {
@@ -54,7 +56,12 @@ export function Scene({
   onWarm,
   quality,
   reader,
+  leaving = false,
+  onLeft,
 }: {
+  /** Packs the table away: cards slide off to their owners, the piles lift, the board rolls back; then `onLeft`. */
+  leaving?: boolean
+  onLeft?: () => void
   quality: number
   reader: Reader
   game: Ready
@@ -90,6 +97,16 @@ export function Scene({
   const at = (seconds: number) => (setting ? seconds : undefined)
   const dealt = useDeal(setting)
   const dealing = dealt !== Infinity
+  const [leftAt, setLeftAt] = useState<number | undefined>(undefined)
+  useEffect(() => {
+    if (!leaving) return
+    const mark = setTimeout(() => setLeftAt(performance.now()), 0)
+    const done = setTimeout(() => onLeft?.(), STILL ? 0 : PACK_AWAY * 1000)
+    return () => {
+      clearTimeout(mark)
+      clearTimeout(done)
+    }
+  }, [leaving, onLeft])
   return (
     <CardBatch assets={assets}>
       <Selection>
@@ -106,11 +123,11 @@ export function Scene({
           <WarmUp onWarm={onWarm} />
         </Suspense>
         <FactoryEffects quality={quality} />
-        <TechBoard appear={at(SET.board)} />
-        <Arrive delay={at(SET.lanes)}>
+        <TechBoard appear={at(SET.board)} leave={leaving} />
+        <Arrive delay={at(SET.lanes)} leave={leaving}>
           <Lanes view={view} legal={legal} act={act} play={TINT.play} aimed={aimed} onAim={setAimed} />
         </Arrive>
-        <Arrive delay={at(SET.deck)}>
+        <Arrive delay={at(SET.deck)} leave={leaving}>
           <Deck
             count={view.deck}
             total={PLAYER_DECK.length}
@@ -120,7 +137,7 @@ export function Scene({
             full={handFull}
           />
         </Arrive>
-        <Arrive delay={at(SET.pile)}>
+        <Arrive delay={at(SET.pile)} leave={leaving}>
           <Pile
             assets={assets}
             active={can({ type: 'draw', from: 'boilerplate' } as Partial<Action>)}
@@ -147,7 +164,8 @@ export function Scene({
               place={{ at: 'hand', index, count }}
               spawn={playback.spawns.get(unit.uid) ?? (dealing ? DECK : undefined)}
               look={handLook(unit.uid)}
-              summoning={Boolean(view.summon)}
+              // Stowed below the view as the table is packed away.
+              summoning={Boolean(view.summon) || leaving}
               assets={assets}
               shake={hinted === unit.uid ? hint : 0}
               raised={reader.peek === unit.uid}
@@ -186,6 +204,7 @@ export function Scene({
                 assets={assets}
                 onClick={action ? () => act(action) : undefined}
                 cursor={action?.type === 'mark' || action?.type === 'unmark' ? 'mark' : 'point'}
+                leavingAt={leftAt}
                 // A board card covers its lane, so it passes the hover on to it.
                 onHover={row === 'board' ? (on) => setAimed(on ? lane : null) : undefined}
                 onHold={(x, y) => reader.hold({ card: unit.uid }, x, y)}

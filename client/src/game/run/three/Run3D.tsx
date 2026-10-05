@@ -1,11 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
+import { Swords } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Button } from '@/components/ui/button.tsx'
 import type { Seat } from '../../controls.tsx'
 import { loadCardAssets } from '../../table/faces.ts'
 import { Battle3D } from '../../table/Table3D.tsx'
 import { TableStage, useStage } from '../../table/TableStage.tsx'
 import type { Layout } from '../../text/useTextTable.ts'
-import { ScreenBody, useRunScreen, type RunView } from '../screens.tsx'
-import { Screen } from '../text/Screen.tsx'
+import { mapTitle, ScreenBody, useRunScreen, type RunView } from '../screens.tsx'
+import { Screen, ScreenActions } from '../text/Screen.tsx'
 import type { RunReady } from '../useRun.ts'
 import { BetweenBattles, warp } from './RunStage.tsx'
 
@@ -15,6 +17,9 @@ function Between({
   view,
   layout,
   glide,
+  leaving,
+  onLeft,
+  onBack,
   onText,
 }: {
   run: RunReady
@@ -22,10 +27,15 @@ function Between({
   layout: Layout
   /** Whether the camera glides back from a battle. */
   glide: boolean
+  leaving: boolean
+  onLeft: () => void
+  /** Set while looking at the map from a battle, to go back to the table. */
+  onBack?: () => void
   onText: () => void
 }) {
   const stage = useStage()
-  const { title, caption } = useRunScreen(run)
+  const screen = useRunScreen(run)
+  const title = view === 'map' ? mapTitle(run.state) : screen.title
   // Loaded while the map is up, so a battle starts with its cards ready instead of a blank table.
   useEffect(() => void loadCardAssets(), [])
   const pin = useRef<HTMLDivElement>(null)
@@ -38,6 +48,8 @@ function Between({
         lines={run.news.map((line) => `P03> ${line}`)}
         projecting={projecting}
         from={glide ? 'table' : undefined}
+        leaving={leaving}
+        onLeft={onLeft}
         onPin={(points) => {
           const element = pin.current
           if (!element) return
@@ -52,13 +64,21 @@ function Between({
           run={run}
           layout={layout}
           title={title}
-          caption={caption}
+          caption={screen.caption}
           stack={view === 'map'}
           deck={view !== 'summary'}
           mode={projecting ? 'hologram' : 'floating'}
           pinTo={pin}
           onSwitch={{ label: 'Play on the text table', go: onText }}
         >
+          {onBack ? (
+            <ScreenActions>
+              <Button variant="outline" onClick={onBack} disabled={leaving}>
+                <Swords aria-hidden />
+                Back to the table
+              </Button>
+            </ScreenActions>
+          ) : null}
           <ScreenBody run={run} view={view} layout={layout} />
         </Screen>
       ) : null}
@@ -66,23 +86,73 @@ function Between({
   )
 }
 
+/** For mockups: replays the glides between a battle and the map, by looking at the map from the battle and back. */
+function Replay({
+  looking,
+  inBattle,
+  onLook,
+}: {
+  looking: boolean
+  inBattle: boolean
+  onLook: (look: boolean) => void
+}) {
+  return (
+    <div className="absolute bottom-3 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-md border border-p03-edge bg-p03-ground/90 p-2 font-terminal text-p03">
+      <span className="px-1">Replay</span>
+      <Button size="sm" variant="outline" disabled={!inBattle || !looking} onClick={() => onLook(false)}>
+        Map → battle
+      </Button>
+      <Button size="sm" variant="outline" disabled={!inBattle || looking} onClick={() => onLook(true)}>
+        Battle → map
+      </Button>
+      {inBattle ? null : <span className="px-1 text-sm text-p03-dim">in a battle mockup</span>}
+    </div>
+  )
+}
+
+type Scene = 'battle' | 'between'
+
 /** The run at the 3D table, on one stage loaded once: battles and the screens between them swap in and out. */
 export default function Run3D({
   run,
   layout,
   seat,
   onText,
+  replay = false,
 }: {
   run: RunReady
   layout: Layout
   seat: Seat
   onText: () => void
+  /** Offers buttons that replay the glides between a battle and the map, for mockups. */
+  replay?: boolean
 }) {
   const { view, battle } = useRunScreen(run)
-  // The camera glides between a battle and the room only after one has shown the other; a fresh load starts in place.
-  const scene = view === 'battle' ? 'battle' : 'between'
-  const [shown, setShown] = useState({ scene, after: false })
-  if (shown.scene !== scene) setShown({ scene, after: true })
+  // Looking back at the map from a battle shows the room's map, with the battle packed away until the player returns.
+  const [look, setLook] = useState(false)
+  if (look && view !== 'battle') setLook(false)
+  const looking = look && view === 'battle'
+  const wanted: Scene = view === 'battle' && !looking ? 'battle' : 'between'
+  const roomView: RunView = looking ? 'map' : view
+  // The last battle, so its table can be packed away after the run has moved on.
+  const key = `${run.generation}:${run.state.stage}:${run.state.at}`
+  const [kept, setKept] = useState(battle && { game: battle, key })
+  if (battle && (kept?.game.state !== battle.state || kept.key !== key)) setKept({ game: battle, key })
+  // A scene leaves before the next one comes in; the camera glides only after one has shown the other.
+  const [shown, setShown] = useState({ scene: wanted, view: roomView, after: false, leaving: false, count: 0 })
+  if (shown.scene !== wanted && !shown.leaving) setShown({ ...shown, leaving: true })
+  else if (!shown.leaving && shown.view !== roomView) setShown({ ...shown, view: roomView })
+  const left = useCallback(
+    () =>
+      setShown((now) => ({
+        ...now,
+        scene: now.scene === 'battle' ? 'between' : 'battle',
+        after: true,
+        leaving: false,
+        count: now.count + 1,
+      })),
+    [],
+  )
   return (
     <div
       data-run-seed={run.state.seed}
@@ -92,19 +162,35 @@ export default function Run3D({
       className="relative -mx-(--gutter) -my-8 h-[calc(100dvh-7rem)] min-h-[24rem] bg-[#050403] short:fixed short:inset-0 short:z-40 short:m-0 short:h-dvh short:min-h-0"
     >
       <TableStage>
-        {battle && view === 'battle' ? (
-          // Remounted for each battle, so its playback never starts from the last one; the stage stays.
-          <Battle3D
-            key={`${run.generation}:${run.state.stage}:${run.state.at}`}
-            game={battle}
-            seat={seat}
+        {shown.scene === 'battle' ? (
+          kept ? (
+            // Remounted for each battle, so its playback never starts from the last one; the stage stays.
+            <Battle3D
+              key={`${kept.key}:${shown.count}`}
+              game={battle ?? kept.game}
+              seat={seat}
+              onText={onText}
+              from={shown.after ? 'map' : undefined}
+              leaving={shown.leaving}
+              onLeft={left}
+              onMap={() => setLook(true)}
+            />
+          ) : null
+        ) : (
+          <Between
+            key={shown.count}
+            run={run}
+            view={shown.leaving ? shown.view : roomView}
+            layout={layout}
+            glide={shown.after}
+            leaving={shown.leaving}
+            onLeft={left}
+            onBack={looking ? () => setLook(false) : undefined}
             onText={onText}
-            from={shown.after ? 'map' : undefined}
           />
-        ) : view !== 'battle' ? (
-          <Between run={run} view={view} layout={layout} glide={shown.after} onText={onText} />
-        ) : null}
+        )}
       </TableStage>
+      {replay ? <Replay looking={looking} inBattle={view === 'battle'} onLook={setLook} /> : null}
     </div>
   )
 }

@@ -73,7 +73,14 @@ export function RunTable({
       ) : (
         <LoadFailed fallback={<TableFailed onText={() => choose('text')} />}>
           <Suspense fallback={<Boot stage="code" />}>
-            <Run3D key={run.generation} run={run} layout={layout} seat={seat} onText={() => choose('text')} />
+            <Run3D
+              key={run.generation}
+              run={run}
+              layout={layout}
+              seat={seat}
+              onText={() => choose('text')}
+              replay={Boolean(mockup)}
+            />
           </Suspense>
         </LoadFailed>
       )}

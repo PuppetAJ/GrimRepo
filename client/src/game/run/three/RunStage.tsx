@@ -107,6 +107,11 @@ const PROJECT = 0.8
 const OPEN = 0.9
 /** The share of the opening spent drawing the line across, before it rises. */
 const ACROSS = 0.35
+// Seconds into its closing: the window drops to a line, the line shrinks away, it powers off, then lifts off the table.
+const DROP = 0.4
+const SHRINK = 0.65
+const OFF = 0.8
+const CLOSED = 0.8 + LAND
 useGLTF.preload(MODEL, false, false)
 
 /** The projector model, scaled to stand on the table, with its lens where the light leaves it. */
@@ -149,10 +154,15 @@ function opened(full: THREE.Vector3[], across: number, up: number, into: THREE.V
 function Projector({
   corners,
   ready,
+  closing,
+  onClosed,
   onPin,
 }: {
   corners: THREE.Vector3[]
   ready: RefObject<number>
+  /** Shuts the window and lifts the projector away, then calls `onClosed`. */
+  closing: boolean
+  onClosed: () => void
   onPin: (points: number[] | null) => void
 }) {
   const { model, lens } = useProjector()
@@ -171,7 +181,7 @@ function Projector({
   }, [])
   useEffect(() => () => geometry.dispose(), [geometry])
   const uniforms = useMemo(() => ({ color: { value: new THREE.Color(TINT.glow) }, strength: { value: 0 } }), [])
-  const timing = useRef({ born: -1, power: 0, until: 0, flicker: 1, next: 0 })
+  const timing = useRef({ born: -1, power: 0, until: 0, flicker: 1, next: 0, shut: -1, across: 1, up: 1, done: false })
   const now = useRef([new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()])
   useFrame(({ clock }) => {
     const t = clock.elapsedTime
@@ -179,28 +189,44 @@ function Projector({
     if (state.born < 0 && Number.isFinite(ready.current))
       state.born = t + Math.max(0, (ready.current - performance.now()) / 1000)
     const since = STILL ? Infinity : state.born < 0 ? -1 : t - state.born
+    if (closing && state.shut < 0) state.shut = t
+    const shut = state.shut < 0 ? -1 : STILL ? Infinity : t - state.shut
+    if (shut >= CLOSED && !state.done) {
+      state.done = true
+      onClosed()
+    }
 
-    // Lands from just above, slowing as it nears the table.
+    // Lands from just above, slowing as it nears the table, and lifts away the same way.
     if (body.current) {
       const landed = Math.min(1, Math.max(0, since / LAND))
-      body.current.visible = landed > 0
-      body.current.position.y = PROJECTOR[1] + (1 - landed) ** 3 * 0.45
+      const lifted = Math.min(1, Math.max(0, (shut - OFF) / LAND))
+      body.current.visible = landed > 0 && lifted < 1
+      body.current.position.y = PROJECTOR[1] + ((1 - landed) ** 3 + lifted ** 3) * 0.45
     }
-    // Stutters on, like a tube catching.
-    if (since > PROJECT) state.power = 1
-    else if (since < POWER) state.power = 0
-    else if (t > state.until) {
-      state.power = Math.random() < 0.45 ? 0.15 : 1
-      state.until = t + 0.03 + Math.random() * 0.06
-    }
+    // Stutters on, like a tube catching, and off again.
+    const stutter = (since > POWER && since < PROJECT) || (shut > SHRINK && shut < OFF)
+    if (shut >= OFF) state.power = 0
+    else if (stutter) {
+      if (t > state.until) {
+        state.power = Math.random() < 0.45 ? 0.15 : 1
+        state.until = t + 0.03 + Math.random() * 0.06
+      }
+    } else state.power = since >= PROJECT ? 1 : 0
     body.current?.traverse((part) => {
       if (part instanceof THREE.Mesh) (part.material as THREE.MeshStandardMaterial).emissiveIntensity = state.power
     })
 
     const opening = (since - PROJECT) / OPEN
-    const lit = opening > 0
+    // Closing starts from however far it had opened.
+    if (shut < 0) {
+      state.across = phase(opening, 0, ACROSS)
+      state.up = phase(opening, ACROSS, 1)
+    }
+    const across = shut < 0 ? state.across : state.across * (1 - phase(shut, DROP, SHRINK))
+    const up = shut < 0 ? state.up : state.up * (1 - phase(shut, 0, DROP))
+    const lit = opening > 0 && (shut < 0 || shut < SHRINK)
     // Never quite flat, so the page element's warp stays solvable.
-    opened(corners, Math.max(0.01, phase(opening, 0, ACROSS)), Math.max(0.01, phase(opening, ACROSS, 1)), now.current)
+    opened(corners, Math.max(0.01, across), Math.max(0.01, up), now.current)
     const window = now.current
 
     // The light, flickering at random rather than in a rhythm.
@@ -264,8 +290,13 @@ export function BetweenBattles({
   lines,
   projecting,
   from,
+  leaving = false,
+  onLeft,
   onPin,
 }: {
+  /** Shuts the projector away, then calls `onLeft`, as the run moves to the board. */
+  leaving?: boolean
+  onLeft: () => void
   state: RunState
   /** P03's latest words, for the monitor beside it. */
   lines: string[]
@@ -283,6 +314,10 @@ export function BetweenBattles({
   useEffect(() => {
     ready.current = stage.warmed ? performance.now() + (from && !STILL ? AFTER_GLIDE : BOOT_FADE) * 1000 : Infinity
   }, [from, stage.warmed])
+  // With no projector to shut, it leaves at once.
+  useEffect(() => {
+    if (leaving && !projecting) onLeft()
+  }, [leaving, projecting, onLeft])
   return (
     <stage.Scene>
       {/* Across the table at the window, gliding back from the seat after a battle. */}
@@ -293,7 +328,9 @@ export function BetweenBattles({
         {/* Bolted to the table, so it stays between battles, locked. */}
         <EndTurnButton active={false} rung={0} onClick={() => {}} />
         <FactoryEffects quality={stage.quality} />
-        {projecting ? <Projector corners={corners} ready={ready} onPin={onPin} /> : null}
+        {projecting ? (
+          <Projector corners={corners} ready={ready} closing={leaving} onClosed={onLeft} onPin={onPin} />
+        ) : null}
       </Selection>
       <WarmUp onWarm={stage.warm} />
     </stage.Scene>

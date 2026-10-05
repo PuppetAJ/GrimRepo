@@ -23,6 +23,11 @@ type Props = {
   onText: () => void
   /** A run's battle starts from the view the run was in, and settles into the seat. */
   from?: CameraView
+  /** Packs the table away, then calls `onLeft`, as a run moves off the board. */
+  leaving?: boolean
+  onLeft?: () => void
+  /** In a run, looks back at the map. */
+  onMap?: () => void
 }
 
 /** A quick battle's own table: the stage and the battle on it, loaded with the page. */
@@ -35,7 +40,7 @@ export default function Table3D(props: Props) {
 }
 
 /** A battle on whichever stage it's put on: its cards and controls come and go, the stage stays. */
-export function Battle3D({ game, seat, onText, from }: Props) {
+export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, onMap }: Props) {
   const assets = use(loadCardAssets())
   const stage = useStage()
   const { playback, busy, skip } = usePlayback(game)
@@ -46,9 +51,11 @@ export function Battle3D({ game, seat, onText, from }: Props) {
   const [hint, setHint] = useState(0)
   const [hinted, setHinted] = useState<number | null>(null)
   const fullScreen = useFullScreen()
-  // A ref so the key listener below is added only once.
+  // Refs so the key listener below is added only once.
   const ringKey = useRef(() => {})
+  const mapKey = useRef(() => {})
   useEffect(() => {
+    mapKey.current = () => onMap?.()
     ringKey.current = () => {
       if (!busy && !hasEnded(game) && has(legalActions(game.state), { type: 'ringBell' })) act({ type: 'ringBell' })
     }
@@ -60,6 +67,7 @@ export function Battle3D({ game, seat, onText, from }: Props) {
       if (key === 'w') setCamera('board')
       else if (key === 'd' || key === 's') setCamera('table')
       else if (key === 'e' && !event.repeat) ringKey.current()
+      else if (key === 'm') mapKey.current()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -144,14 +152,17 @@ export function Battle3D({ game, seat, onText, from }: Props) {
           quality={stage.quality}
           reader={reader}
           onWarm={stage.warm}
+          leaving={leaving}
+          onLeft={onLeft}
           onHint={(uid) => {
             setHinted(uid)
             setHint((n) => n + 1)
           }}
         />
       </stage.Scene>
-      {stage.ready ? (
+      {stage.ready && !leaving ? (
         <Hud
+          onMap={onMap}
           game={playing}
           view={playback.view}
           busy={busy}
