@@ -62,6 +62,7 @@ export function RunText({ run, layout, seat }: { run: RunReady; layout: Layout; 
             layout={layout}
             title={title}
             caption={view === 'event' ? 'Event' : undefined}
+            stack={view === 'map'}
             deck={view !== 'summary'}
           >
             {view === 'summary' ? (
@@ -75,7 +76,7 @@ export function RunText({ run, layout, seat }: { run: RunReady; layout: Layout; 
             ) : view === 'event' ? (
               <EventScene run={run} />
             ) : (
-              <RunMap run={run} />
+              <RunMap run={run} layout={layout} />
             )}
           </Screen>
         ) : null}

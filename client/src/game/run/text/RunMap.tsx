@@ -4,6 +4,7 @@ import { findNode, MAP_COLUMNS, reachable, type MapNode, type NodeKind, type Sta
 import { sideOf, spots, type Spot } from '../layout.ts'
 import { NODE_ICONS, nodeName } from '../nodes.ts'
 import { usePlan } from '../plan.ts'
+import type { Layout } from '../../text/useTextTable.ts'
 import type { RunReady } from '../useRun.ts'
 import { PenLayer } from './PenLayer.tsx'
 import { ICON_BUTTON, ScreenActions, ScreenBar } from './Screen.tsx'
@@ -48,15 +49,20 @@ const KINDS = ['battle', 'card', 'campfire', 'stones', 'event', 'boss'] as const
 /** What each icon means; pointing at one lights every node of its kind, and choosing one keeps them lit. */
 function Legend({
   shown,
+  centered,
   onHover,
   onPick,
 }: {
   shown: NodeKind | null
+  centered: boolean
   onHover: (kind: NodeKind | null) => void
   onPick: (kind: NodeKind) => void
 }) {
   return (
-    <ul aria-label="What the icons mean" className="flex flex-wrap gap-1 text-base text-p03-dim max-md:justify-center">
+    <ul
+      aria-label="What the icons mean"
+      className={`flex flex-wrap gap-1 text-base text-p03-dim ${centered ? 'justify-center' : ''}`}
+    >
       {KINDS.map((kind) => {
         const Icon = NODE_ICONS[kind]
         return (
@@ -80,7 +86,7 @@ function Legend({
 }
 
 /** The stage's map: nodes nudged off a grid, the links between them, and a pen for planning a route. */
-export function RunMap({ run }: { run: RunReady }) {
+export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
   const { state, path } = run
   const [peek, setPeek] = useState<string | null>(null)
   const [pen, setPen] = useState(false)
@@ -197,6 +203,8 @@ export function RunMap({ run }: { run: RunReady }) {
         <div className="pb-1">
           <Legend
             shown={shown}
+            // Centered on a phone, upright or on its side.
+            centered={layout === 'phone'}
             onHover={setHovered}
             onPick={(kind) => setPicked((now) => (now === kind ? null : kind))}
           />
