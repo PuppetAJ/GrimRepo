@@ -15,7 +15,7 @@ type Attributes = Record<string, string | number>
 type Stage = {
   /** Where a scene puts its 3D content; the canvas drawing it stays mounted as scenes come and go. */
   Scene: Tunnel['In']
-  /** 1 drops card glow, 2 post-processing, 3 resolution. */
+  /** 1 drops card glow, 2 makes the other effects cheaper, 3 lowers the resolution. */
   quality: number
   /** True once the first scene has loaded. */
   ready: boolean
@@ -26,8 +26,6 @@ type Stage = {
   /** What a click on nothing does, such as putting a lifted card down. */
   onMissed: (handler: () => void) => void
 }
-
-const START_QUALITY = 2
 
 const StageContext = createContext<Stage | null>(null)
 
@@ -61,8 +59,8 @@ export function TableStage({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false)
   // Capped at 1.5 on touch screens, whose GPUs are weakest and pixels finest.
   const sharpest = Math.min(window.matchMedia('(pointer: coarse)').matches ? 1.5 : 2, window.devicePixelRatio || 1)
-  // Starts without post-processing and only ever drops, so the look never changes mid-game; sharpness goes last.
-  const [quality, setQuality] = useState(START_QUALITY)
+  // Effects get cheaper before sharpness goes, so cards stay readable.
+  const [quality, setQuality] = useState(0)
   const dpr = quality >= 3 ? Math.min(1.5, sharpest) : sharpest
   const [attributes, setAttributes] = useState<Attributes>({})
   const missed = useRef(() => {})
@@ -107,9 +105,9 @@ export function TableStage({ children }: { children: ReactNode }) {
           {/* Wait until settled: the slow first frames would lower the resolution for good. */}
           {settled ? (
             <PerformanceMonitor
-              factor={1 - START_QUALITY / 10}
+              factor={1}
               flipflops={3}
-              onChange={({ factor }) => setQuality((now) => Math.max(now, Math.min(3, Math.round((1 - factor) * 10))))}
+              onChange={({ factor }) => setQuality(Math.min(3, Math.round((1 - factor) * 10)))}
               onFallback={() => setQuality(3)}
             />
           ) : null}

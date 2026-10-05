@@ -419,32 +419,32 @@
     not-allowed;
 }
 
-/* The run's map in the projector's window: a pane of green light, see-through, with the room behind it. */
+/* The run's map in the projector's window: a pane of green light, mostly solid, with the room faintly behind it. */
 .hologram-window {
   /* Rows fill the window, so the whole stage fits without scrolling. */
   --map-row: calc((540px - 4rem) / 8);
   z-index: 5;
+}
+/* The pane itself, so the whole window opens with the map rather than the map opening inside a frame. */
+.hologram {
+  height: 100%;
   overflow: hidden;
-  border: 2px solid rgb(125 255 154 / 0.55);
+  border: 2px solid rgb(125 255 154 / 0.6);
   border-radius: 6px;
   background:
-    repeating-linear-gradient(0deg, rgb(125 255 154 / 0.07) 0 1px, transparent 1px 4px),
-    radial-gradient(ellipse at 50% 100%, rgb(125 255 154 / 0.22), rgb(125 255 154 / 0.06) 70%);
+    repeating-linear-gradient(0deg, rgb(125 255 154 / 0.06) 0 1px, transparent 1px 4px),
+    radial-gradient(ellipse at 50% 100%, rgb(125 255 154 / 0.2), rgb(125 255 154 / 0.05) 70%), rgb(4 18 9 / 0.86);
   box-shadow:
     0 0 24px rgb(125 255 154 / 0.35),
     inset 0 0 30px rgb(125 255 154 / 0.18);
-  /* Black drops out against the room behind, so only the light is left. */
-  mix-blend-mode: screen;
-  /* Hidden until the projector is on the table; fading it instead blacks out the canvas behind in Chromium. */
-  animation: hologram-window-wait 450ms;
+  transform-origin: 50% 100%;
+  /* Opens from a line of light at the bottom once the projector is on; RunStage.tsx's PROJECT and OPEN match. */
+  animation: hologram-on 700ms ease-out 800ms both;
 }
-.hologram {
+.hologram-glow {
   height: 100%;
   padding-inline: 0.5rem;
-  transform-origin: 50% 100%;
   filter: drop-shadow(0 0 6px rgb(125 255 154 / 0.45));
-  /* Switches on like a projector, once it's on the table: a line of light at the bottom opening up into the map. */
-  animation: hologram-on 700ms ease-out 450ms both;
 }
 @keyframes hologram-on {
   from {
@@ -458,15 +458,8 @@
     transform: scaleY(1);
   }
 }
-@keyframes hologram-window-wait {
-  from,
-  to {
-    visibility: hidden;
-  }
-}
 @media (prefers-reduced-motion: reduce) {
-  .hologram,
-  .hologram-window {
+  .hologram {
     animation: none;
   }
 }

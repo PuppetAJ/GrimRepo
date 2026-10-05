@@ -93,8 +93,8 @@ const turn = new THREE.Quaternion()
 const tilt = new THREE.Euler()
 const ONE = new THREE.Vector3(1, 1, 1)
 
-// Padded above the disks so hovering the top edge doesn't flicker.
-const stackHeight = (layers: number) => Math.max(1, layers) * pitch + 0.25
+// Padded just past the hover lift so the top edge doesn't flicker; any taller and, seen from above, the deck's box covers the pile's.
+const stackHeight = (layers: number) => Math.min(MOST, Math.max(1, layers)) * pitch + 0.08
 
 // Small per-disk offsets so the stack looks hand-piled.
 function place(i: number, faceUp: boolean, into: THREE.Matrix4): THREE.Matrix4 {

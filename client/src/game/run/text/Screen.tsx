@@ -59,7 +59,7 @@ function Hologram({ children }: { children: ReactNode }) {
   }, [])
   return (
     <div ref={light} className="hologram">
-      {children}
+      <div className="hologram-glow">{children}</div>
     </div>
   )
 }

@@ -22,7 +22,7 @@ import { TestHandle } from './TestHandle.tsx'
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
 
 /** Seconds into a battle reached from another view when each piece is set on the table, then between dealt cards. */
-const SET = { board: 0.15, deck: 0.4, pile: 0.55, button: 0.7, cards: 0.95, deal: 0.18 }
+const SET = { board: 0.1, lanes: 0.7, deck: 0.55, pile: 0.7, cards: 1.0, deal: 0.18 }
 const MOST_DEALT = 8
 
 /** How many cards of the opening hand are dealt so far, one at a time once the table is set. */
@@ -106,8 +106,8 @@ export function Scene({
           <WarmUp onWarm={onWarm} />
         </Suspense>
         <FactoryEffects quality={quality} />
-        <Arrive delay={at(SET.board)}>
-          <TechBoard />
+        <TechBoard appear={at(SET.board)} />
+        <Arrive delay={at(SET.lanes)}>
           <Lanes view={view} legal={legal} act={act} play={TINT.play} aimed={aimed} onAim={setAimed} />
         </Arrive>
         <Arrive delay={at(SET.deck)}>
@@ -129,9 +129,12 @@ export function Scene({
             full={handFull}
           />
         </Arrive>
-        <Arrive delay={at(SET.button)}>
-          <EndTurnButton active={can({ type: 'ringBell' })} rung={rung} onClick={() => act({ type: 'ringBell' })} />
-        </Arrive>
+        {/* Bolted to the table, so it stays put and stays locked until the table is set. */}
+        <EndTurnButton
+          active={!dealing && can({ type: 'ringBell' })}
+          rung={rung}
+          onClick={() => act({ type: 'ringBell' })}
+        />
 
         {view.hand.map((unit, index) => {
           if (index >= dealt) return null

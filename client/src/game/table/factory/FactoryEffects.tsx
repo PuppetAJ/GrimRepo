@@ -10,7 +10,8 @@ import {
   ToneMapping,
   Vignette,
 } from '@react-three/postprocessing'
-import { ToneMappingMode } from 'postprocessing'
+import { ToneMappingMode, type BloomEffect } from 'postprocessing'
+import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { MOOD } from '../mood.ts'
 
@@ -20,10 +21,21 @@ const SELECTED_LIGHT = new THREE.AmbientLight('#000000', 0)
 export function FactoryEffects({ quality = 0 }: { quality?: number }) {
   // Retina pixels need no smoothing, and MSAA there cost two thirds of the frame.
   const sharp = useThree((state) => state.viewport.dpr) >= 1.5
-  if (quality >= 2) return null
+  // Low settings keep every effect but draw the bloom smaller, so the look holds as quality drops.
+  const bloom = useRef<BloomEffect>(null)
+  // Set on the live effect, since a changed prop would rebuild the whole chain mid-game.
+  useEffect(() => {
+    if (bloom.current) bloom.current.resolution.scale = quality >= 2 ? 0.25 : 0.5
+  }, [quality])
   return (
     <EffectComposer multisampling={0}>
-      <Bloom mipmapBlur luminanceThreshold={MOOD.bloomThreshold} intensity={MOOD.bloom} radius={MOOD.bloomRadius} />
+      <Bloom
+        ref={bloom}
+        mipmapBlur
+        luminanceThreshold={MOOD.bloomThreshold}
+        intensity={MOOD.bloom}
+        radius={MOOD.bloomRadius}
+      />
       <ChromaticAberration offset={[0.0006, 0.0006]} />
       <Scanline density={1.4} opacity={MOOD.scanline} />
       <Noise opacity={MOOD.noise} />
