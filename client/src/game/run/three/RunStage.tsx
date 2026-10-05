@@ -43,29 +43,45 @@ void main() {
 /** The light the map is projected on, rising from the middle of the board. */
 function Beam() {
   const material = useRef<THREE.ShaderMaterial>(null)
+  const column = useRef<THREE.Group>(null)
   const uniforms = useMemo(() => ({ color: { value: new THREE.Color(TINT.glow) }, strength: { value: 0.22 } }), [])
+  // A steady glow for a random while, broken by short dips at random, so it never settles into a rhythm.
+  const flicker = useRef({ until: 0, level: 1, born: -1 })
   useFrame(({ clock }) => {
     const shader = material.current
-    if (STILL || !shader) return
+    const group = column.current
+    if (!shader || !group) return
     const t = clock.elapsedTime
-    shader.uniforms['strength']!.value = 0.22 + Math.sin(t * 2.1) * 0.02 + (Math.sin(t * 17) > 0.97 ? -0.06 : 0)
+    const state = flicker.current
+    if (state.born < 0) state.born = t
+    // Rises out of the board over half a second, unless motion is reduced.
+    const rise = STILL ? 1 : Math.min(1, (t - state.born) / 0.5)
+    group.scale.y = 1 - (1 - rise) ** 3
+    if (!STILL && t > state.until) {
+      const dip = Math.random() < 0.3
+      state.level = dip ? 0.5 + Math.random() * 0.3 : 0.9 + Math.random() * 0.1
+      state.until = t + (dip ? 0.04 + Math.random() * 0.1 : 0.3 + Math.random() * 2.6)
+    }
+    shader.uniforms['strength']!.value = 0.22 * (STILL ? 1 : state.level) * rise
   })
   const [x, , z] = BOARD_CENTER
   return (
     <group position={[x, TABLE_Y + 0.03, z]}>
-      <mesh position={[0, 1.4, 0]}>
-        <cylinderGeometry args={[2.8, 0.35, 2.8, 64, 1, true]} />
-        <shaderMaterial
-          ref={material}
-          vertexShader={BEAM_VERTEX}
-          fragmentShader={BEAM_FRAGMENT}
-          uniforms={uniforms}
-          transparent
-          depthWrite={false}
-          blending={THREE.AdditiveBlending}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
+      <group ref={column}>
+        <mesh position={[0, 1.4, 0]}>
+          <cylinderGeometry args={[2.8, 0.35, 2.8, 64, 1, true]} />
+          <shaderMaterial
+            ref={material}
+            vertexShader={BEAM_VERTEX}
+            fragmentShader={BEAM_FRAGMENT}
+            uniforms={uniforms}
+            transparent
+            depthWrite={false}
+            blending={THREE.AdditiveBlending}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      </group>
       <mesh rotation-x={-Math.PI / 2}>
         <circleGeometry args={[0.38, 40]} />
         <meshBasicMaterial color={TINT.glow} transparent opacity={0.55} toneMapped={false} />
@@ -100,7 +116,8 @@ export function RunStage({
       <color attach="background" args={['#020203']} />
       <Exposure />
       <CursorSync />
-      <CameraRig view="table" />
+      {/* Off the board the camera looks down at the table, gliding up from the seat after a battle. */}
+      <CameraRig view="board" from="table" />
       <Suspense fallback={null}>
         <Selection>
           <Factory view={view} log={lines} />

@@ -40,6 +40,7 @@ export default function Run3D({
             game={battle}
             seat={seat}
             onText={onText}
+            from="board"
           />
         </Suspense>
       ) : view !== 'battle' ? (
@@ -52,6 +53,8 @@ export default function Run3D({
           />
           {loaded ? (
             <Screen
+              // Keyed by screen, so each one plays its entrance.
+              key={view}
               run={run}
               layout={layout}
               title={title}

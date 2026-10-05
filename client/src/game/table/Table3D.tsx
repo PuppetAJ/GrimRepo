@@ -21,7 +21,18 @@ import { Scene } from './table3d/Scene.tsx'
 import { ScreenReadout } from './table3d/ScreenReadout.tsx'
 import { CursorSync, Exposure, Loaded } from './table3d/stage.tsx'
 
-export default function Table3D({ game, seat, onText }: { game: Ready; seat: Seat; onText: () => void }) {
+export default function Table3D({
+  game,
+  seat,
+  onText,
+  from,
+}: {
+  game: Ready
+  seat: Seat
+  onText: () => void
+  /** A run's battle starts looking down at the board, where the map was, and settles into the seat. */
+  from?: CameraView
+}) {
   const assets = use(loadCardAssets())
   const { active, progress, item } = useProgress()
   const [files, setFiles] = useState<string[]>([])
@@ -128,7 +139,7 @@ export default function Table3D({ game, seat, onText }: { game: Ready; seat: Sea
         dpr={dpr}
         // Post-processing draws the frame, so the canvas buffer needs no antialiasing.
         gl={{ antialias: false }}
-        camera={{ fov: 60, near: 0.05, far: 200, position: CAMERA.table.position }}
+        camera={{ fov: 60, near: 0.05, far: 200, position: CAMERA[from ?? 'table'].position }}
         onCreated={({ gl }) => (gl.toneMapping = THREE.ACESFilmicToneMapping)}
         aria-hidden
         onPointerMissed={() => (peek !== null || pinned !== null) && reader.lift(null)}
@@ -165,6 +176,7 @@ export default function Table3D({ game, seat, onText }: { game: Ready; seat: Sea
             skip={skip}
             rung={rung}
             camera={camera}
+            from={from}
             hint={hint}
             hinted={hinted}
             quality={quality}

@@ -1,7 +1,7 @@
 import { useNavigate } from '@tanstack/react-router'
 import { Flag, Layers, LogOut, Maximize, Menu, Minimize, Repeat, X } from 'lucide-react'
 import { Dialog as DialogPrimitive } from 'radix-ui'
-import { createContext, use, useRef, useState, type ComponentProps, type ReactNode } from 'react'
+import { createContext, use, useEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { STAGES } from 'shared'
 import { AlertDialog } from '@/components/ui/alert-dialog.tsx'
@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu.tsx'
 import FaultyScreenShader from '../../../components/p03/FaultyScreenShader.tsx'
+import { prefersReducedMotion } from '../../../lib/motion.ts'
 import { ForfeitConfirm } from '../../controls.tsx'
 import { useFullScreen } from '../../fullScreen.ts'
 import { Panel } from '../../text/Panel.tsx'
@@ -29,8 +30,36 @@ export const ICON_BUTTON =
 /** Fades a scrolling area's last lines, so it ends softly instead of looking cut off. */
 export const FADE = '[mask-image:linear-gradient(to_bottom,black_calc(100%-2.5rem),transparent)] pb-10'
 
-type Slots = { actions: HTMLElement | null; bar: HTMLElement | null; deckShown: boolean }
-const SlotContext = createContext<Slots>({ actions: null, bar: null, deckShown: false })
+type Mode = 'terminal' | 'floating' | 'hologram'
+type Slots = { actions: HTMLElement | null; bar: HTMLElement | null; deckShown: boolean; mode: Mode }
+const SlotContext = createContext<Slots>({ actions: null, bar: null, deckShown: false, mode: 'terminal' })
+
+/** Whether the screen is the text table's terminal or over the 3D table, where its parts are see-through. */
+export const useScreenMode = () => use(SlotContext).mode
+
+/** The map in the projector's light: it switches on from the beam and flickers at random, never in a rhythm. */
+function Hologram({ children }: { children: ReactNode }) {
+  const light = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (prefersReducedMotion()) return
+    let timer: ReturnType<typeof setTimeout>
+    const flicker = () => {
+      const element = light.current
+      if (!element) return
+      const dip = Math.random() < 0.3
+      element.style.opacity = String(dip ? 0.55 + Math.random() * 0.25 : 0.88 + Math.random() * 0.1)
+      // A dip lasts a few frames; the steady glow, a random while.
+      timer = setTimeout(flicker, dip ? 40 + Math.random() * 100 : 300 + Math.random() * 2600)
+    }
+    flicker()
+    return () => clearTimeout(timer)
+  }, [])
+  return (
+    <div ref={light} className="hologram">
+      {children}
+    </div>
+  )
+}
 
 /** A screen's own buttons, in the header beside the menu. */
 export function ScreenActions({ children }: { children: ReactNode }) {
@@ -259,7 +288,7 @@ export function Screen({
   /** Off for a screen that shows the deck itself. */
   deck?: boolean
   /** The text table's terminal; over the 3D table, a floating panel, or the map as a hologram above the board. */
-  mode?: 'terminal' | 'floating' | 'hologram'
+  mode?: Mode
   onSwitch?: Switch
   children: ReactNode
 }) {
@@ -318,14 +347,14 @@ export function Screen({
     mode === 'hologram'
       ? 'absolute inset-0 z-10 p-3 sm:p-4'
       : mode === 'floating'
-        ? `absolute z-10 bg-p03-ground/85 backdrop-blur-sm ${phone ? 'inset-0 p-3' : 'inset-x-3 inset-y-3 mx-auto max-w-6xl rounded-lg border p-4'}`
+        ? `absolute z-10 bg-p03-ground/60 backdrop-blur-[3px] animate-in fade-in-0 slide-in-from-bottom-3 duration-500 motion-reduce:animate-none ${phone ? 'inset-0 p-3' : 'inset-x-3 inset-y-3 mx-auto max-w-6xl rounded-lg border p-4'}`
         : phone
           ? fullScreen.on
             ? 'fixed inset-0 z-50 p-3'
             : 'relative h-[calc(100dvh-7rem)] min-h-[30rem] p-3'
           : `rounded-lg border p-4 ${fullScreen.on ? 'fixed z-50' : 'relative mx-auto'}`
   return (
-    <SlotContext value={{ actions, bar, deckShown: showDock }}>
+    <SlotContext value={{ actions, bar, deckShown: showDock, mode }}>
       <SearchContext value={{ query, setQuery: (next) => setSearch({ title, query: next }) }}>
         {terminal && fullScreen.on ? <div aria-hidden className="fixed inset-0 z-40 bg-[#030604]" /> : null}
         <div
@@ -363,7 +392,7 @@ export function Screen({
               {mode === 'hologram' ? (
                 // Projected above the board: tilted away, and blended so its dark ground lets the room show through.
                 <div data-scroller className="hologram-stage min-h-0 flex-1 overflow-hidden px-1">
-                  <div className="hologram">{children}</div>
+                  <Hologram>{children}</Hologram>
                 </div>
               ) : (
                 <div data-scroller className={`min-h-0 flex-1 overflow-y-auto px-1 ${FADE}`}>

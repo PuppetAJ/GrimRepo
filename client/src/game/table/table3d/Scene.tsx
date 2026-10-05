@@ -28,6 +28,7 @@ export function Scene({
   skip,
   rung,
   camera,
+  from,
   hint,
   hinted,
   onHint,
@@ -45,6 +46,8 @@ export function Scene({
   skip: () => void
   rung: number
   camera: CameraView
+  /** Where the camera starts, when it glides in from another view. */
+  from?: CameraView
   hint: number
   /** uid of the card last tried before drawing; it shakes. */
   hinted: number | null
@@ -66,7 +69,7 @@ export function Scene({
   return (
     <CardBatch assets={assets}>
       <Selection>
-        <CameraRig view={camera} />
+        <CameraRig view={camera} from={from} />
         {/* One boundary, so the stand-in popup draws only once every light and the fog are in place. */}
         <Suspense fallback={null}>
           <Factory

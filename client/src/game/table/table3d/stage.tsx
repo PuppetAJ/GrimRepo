@@ -9,8 +9,9 @@ import { MOOD } from '../mood.ts'
 
 const seat = new THREE.Vector3()
 
-export function CameraRig({ view }: { view: CameraView }) {
-  const target = useRef(new THREE.Vector3(...CAMERA[view].target))
+/** Eases the camera to a view; `from` is where it starts, so it glides in from another view. */
+export function CameraRig({ view, from }: { view: CameraView; from?: CameraView }) {
+  const target = useRef(new THREE.Vector3(...CAMERA[from ?? view].target))
   useFrame(({ camera, pointer }, delta) => {
     const [x, y, z] = CAMERA[view].position
     // With reduced motion the camera jumps between views and doesn't follow the pointer.

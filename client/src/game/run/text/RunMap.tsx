@@ -7,7 +7,7 @@ import { usePlan } from '../plan.ts'
 import type { Layout } from '../../text/useTextTable.ts'
 import type { RunReady } from '../useRun.ts'
 import { PenLayer } from './PenLayer.tsx'
-import { ICON_BUTTON, ScreenActions, ScreenBar } from './Screen.tsx'
+import { ICON_BUTTON, ScreenActions, ScreenBar, useScreenMode } from './Screen.tsx'
 
 type Mark = 'here' | 'visited' | 'next' | 'lit' | 'ahead' | 'behind'
 type Link = 'taken' | 'open' | 'lit' | 'quiet'
@@ -59,6 +59,7 @@ function Legend({
   onHover: (kind: NodeKind | null) => void
   onPick: (kind: NodeKind) => void
 }) {
+  const terminal = useScreenMode() === 'terminal'
   return (
     <ul
       aria-label="What the icons mean"
@@ -74,7 +75,12 @@ function Legend({
               onClick={() => onPick(kind)}
               onPointerEnter={() => onHover(kind)}
               onPointerLeave={() => onHover(null)}
-              className="flex items-center gap-1 rounded-sm px-1.5 py-0.5 hover:bg-[#13261a] hover:text-p03 focus-visible:outline-2 focus-visible:outline-p03 aria-pressed:bg-[#13261a] aria-pressed:text-p03"
+              className={`flex items-center gap-1 rounded-sm px-1.5 py-0.5 hover:text-p03 focus-visible:outline-2 focus-visible:outline-p03 aria-pressed:text-p03 ${
+                // Over the 3D table nothing gets a ground, so the room shows through; the light brightens instead.
+                terminal
+                  ? 'hover:bg-[#13261a] aria-pressed:bg-[#13261a]'
+                  : 'hover:[text-shadow:0_0_8px_rgb(125_255_154/0.9)] aria-pressed:underline aria-pressed:underline-offset-4 aria-pressed:[text-shadow:0_0_8px_rgb(125_255_154/0.9)]'
+              }`}
             >
               <Icon aria-hidden className="size-4" />
               {nodeName({ kind })}
