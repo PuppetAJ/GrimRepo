@@ -27,6 +27,9 @@ import { DeckTable } from './DeckTable.tsx'
 export const ICON_BUTTON =
   'relative grid size-10 shrink-0 place-items-center rounded-md border-2 border-p03-edge bg-[#07130b] text-p03 hover:bg-[#13261a] focus-visible:outline-2 focus-visible:outline-p03 aria-expanded:bg-[#13261a] aria-pressed:border-p03 aria-pressed:bg-[#13261a]'
 
+/** The map's page size in the projector's window, in the window's proportions. */
+const WINDOW_PX = { width: 840, height: 540 }
+
 /** Fades a scrolling area's last lines, so it ends softly instead of looking cut off. */
 export const FADE = '[mask-image:linear-gradient(to_bottom,black_calc(100%-2.5rem),transparent)] pb-10'
 
@@ -276,6 +279,7 @@ export function Screen({
   deck = true,
   mode = 'terminal',
   onSwitch,
+  pinTo,
   children,
 }: {
   run: RunReady
@@ -290,6 +294,8 @@ export function Screen({
   /** The text table's terminal; over the 3D table, a floating panel, or the map as a hologram above the board. */
   mode?: Mode
   onSwitch?: Switch
+  /** The hologram's page element, which the 3D scene pins onto the projector's window. */
+  pinTo?: React.RefObject<HTMLDivElement | null>
   children: ReactNode
 }) {
   const { state } = run
@@ -369,6 +375,17 @@ export function Screen({
           {mode === 'hologram' ? null : (
             <span aria-hidden className="crt-glass pointer-events-none absolute inset-0 z-30" />
           )}
+          {mode === 'hologram' ? (
+            // Pinned onto the projector's window by the 3D scene, which warps it to the window's corners every frame.
+            <div
+              ref={pinTo}
+              data-scroller
+              className="hologram-window absolute top-0 left-0 origin-top-left"
+              style={{ width: WINDOW_PX.width, height: WINDOW_PX.height }}
+            >
+              <Hologram>{children}</Hologram>
+            </div>
+          ) : null}
           {/* Where the deck drawer opens, covering the frame but taking no clicks until it does. */}
           <div ref={setHost} className="pointer-events-none absolute inset-0 z-40 *:pointer-events-auto" />
           {/* The title wraps rather than being cut off; short of room, the buttons drop to their own line. */}
@@ -383,18 +400,17 @@ export function Screen({
             <DeckDrawer run={run} host={host} open={drawer} onOpenChange={setDrawer} returnTo={menuButton} />
           ) : null}
           <div
-            className={`relative z-10 grid min-h-0 flex-1 gap-4 ${showDock ? 'grid-cols-[minmax(0,1fr)_20rem]' : ''}`}
+            // Over the hologram this layer lets clicks through to the window, except on its own bar.
+            className={`relative z-10 grid min-h-0 flex-1 gap-4 ${showDock ? 'grid-cols-[minmax(0,1fr)_20rem]' : ''} ${mode === 'hologram' ? 'pointer-events-none' : ''}`}
           >
             <div className="flex min-h-0 min-w-0 flex-col gap-2">
-              <div ref={setBar} className={`shrink-0 empty:hidden ${stacked ? 'text-center' : ''}`} />
-              {stacked ? buttonRow : null}
+              <div
+                ref={setBar}
+                className={`pointer-events-auto shrink-0 empty:hidden ${stacked ? 'text-center' : ''}`}
+              />
+              {stacked ? <div className="pointer-events-auto">{buttonRow}</div> : null}
               {/* Only the content scrolls, inside a frame that stays the same size; padded so focus rings aren't cut. */}
-              {mode === 'hologram' ? (
-                // Projected above the board: tilted away, and blended so its dark ground lets the room show through.
-                <div data-scroller className="hologram-stage min-h-0 flex-1 overflow-hidden px-1">
-                  <Hologram>{children}</Hologram>
-                </div>
-              ) : (
+              {mode === 'hologram' ? null : (
                 <div data-scroller className={`min-h-0 flex-1 overflow-y-auto px-1 ${FADE}`}>
                   {children}
                 </div>

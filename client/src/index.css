@@ -419,38 +419,41 @@
     not-allowed;
 }
 
-/* The run's map, projected above the 3D table: tilted away from the player, glowing, and see-through. */
-.hologram-stage {
-  container-type: size;
-  perspective: 1100px;
-  perspective-origin: 50% 100%;
-  /* Above the board rather than on it, so it reads as thrown up by the beam. */
-  --map-row: calc((82cqh - 4rem) / 8);
-}
-.hologram {
-  height: 82%;
-  max-width: 52rem;
-  margin-inline: auto;
-  transform: rotateX(16deg);
-  transform-origin: 50% 100%;
+/* The run's map in the projector's window: a pane of green light, see-through, with the room behind it. */
+.hologram-window {
+  /* Rows fill the window, so the whole stage fits without scrolling. */
+  --map-row: calc((540px - 4rem) / 8);
+  z-index: 5;
+  overflow: hidden;
+  border: 2px solid rgb(125 255 154 / 0.55);
+  border-radius: 6px;
+  background:
+    repeating-linear-gradient(0deg, rgb(125 255 154 / 0.07) 0 1px, transparent 1px 4px),
+    radial-gradient(ellipse at 50% 100%, rgb(125 255 154 / 0.22), rgb(125 255 154 / 0.06) 70%);
+  box-shadow:
+    0 0 24px rgb(125 255 154 / 0.35),
+    inset 0 0 30px rgb(125 255 154 / 0.18);
   /* Black drops out against the room behind, so only the light is left. */
   mix-blend-mode: screen;
-  background: repeating-linear-gradient(0deg, rgb(125 255 154 / 0.06) 0 1px, transparent 1px 4px);
-  mask-image: radial-gradient(ellipse 75% 80% at 50% 55%, black 70%, transparent 100%);
+}
+.hologram {
+  height: 100%;
+  padding-inline: 0.5rem;
+  transform-origin: 50% 100%;
   filter: drop-shadow(0 0 6px rgb(125 255 154 / 0.45));
-  /* Switches on like a projector: a line of light at the beam opening up into the map. */
+  /* Switches on like a projector: a line of light at the bottom opening up into the map. */
   animation: hologram-on 700ms ease-out both;
 }
 @keyframes hologram-on {
   from {
-    transform: rotateX(16deg) scaleY(0.02);
+    transform: scaleY(0.02);
     opacity: 0;
   }
   40% {
     opacity: 1;
   }
   to {
-    transform: rotateX(16deg) scaleY(1);
+    transform: scaleY(1);
   }
 }
 @media (prefers-reduced-motion: reduce) {

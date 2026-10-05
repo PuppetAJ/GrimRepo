@@ -71,12 +71,14 @@ export function handPlace(
   }
 }
 
-export type CameraView = 'table' | 'board'
+export type CameraView = 'table' | 'board' | 'map'
 
 export const CAMERA: Record<CameraView, { position: Vec3; target: Vec3 }> = {
   // Solved so the player's row clears the hand and P03's screen stays in frame at 16:9 and a 60° fov.
   table: { position: [CENTER_X, 8.7, -4.4], target: [CENTER_X, 7.4, -10.6] },
   board: { position: [CENTER_X, 11.4, -6.9], target: [CENTER_X, TABLE_Y, -9.05] },
+  // Between a run's battles: across the table at the window the projector throws up.
+  map: { position: [CENTER_X, 11.2, -4.6], target: [CENTER_X, 8.9, -10.6] },
 }
 
 export const BATTERY_CELLS = 6
