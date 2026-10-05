@@ -17,7 +17,7 @@ import type { Layout } from '../game/text/useTextTable.ts'
 // three.js is most of the 3D table's weight, so it loads only when that table is shown.
 const Run3D = lazy(() => import('../game/run/three/Run3D.tsx'))
 
-type Mode = '3d' | 'text'
+export type Mode = '3d' | 'text'
 // The same choice as the quick battle's, so a player picks a table once.
 const MODE_KEY = 'grimrepo:table'
 
@@ -30,14 +30,26 @@ function savedMode(): Mode {
 }
 
 /** The run, or a mockup of one, at the table the player chose. */
-export function RunTable({ mockup = null, forced }: { mockup?: Mockup | null; forced?: Layout }) {
+export function RunTable({
+  mockup = null,
+  forced,
+  table,
+}: {
+  mockup?: Mockup | null
+  forced?: Layout
+  /** Shows this table without changing the player's choice, for mockups. */
+  table?: Mode
+}) {
   useKeepTableFocus()
   useLeaveFullScreen()
   const run = useRun(mockup)
   const seat = useSeat()
   const { layout, upright } = useLayoutChoice(forced)
-  const [mode, setMode] = useState<Mode>(savedMode)
+  const [chosen, setMode] = useState<Mode>(savedMode)
+  const [override, setOverride] = useState(table)
+  const mode = override ?? chosen
   const choose = (next: Mode) => {
+    setOverride(undefined)
     setMode(next)
     try {
       localStorage.setItem(MODE_KEY, next)
