@@ -1,10 +1,10 @@
 import { useGLTF } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Selection } from '@react-three/postprocessing'
-import { useEffect, useMemo, useRef, type RefObject } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, type RefObject } from 'react'
 import { LANES, type RunState } from 'shared'
 import * as THREE from 'three'
-import { EndTurnButton, Factory, FactoryEffects, FactoryP03 } from '../../table/Factory.tsx'
+import { EndTurnButton, FactoryEffects } from '../../table/Factory.tsx'
 import { STILL } from '../../table/factory/constants.ts'
 import { CAMERA, CENTER_X, TABLE_Y, type CameraView, type Vec3 } from '../../table/layout.ts'
 import { TINT } from '../../table/palette.ts'
@@ -101,17 +101,21 @@ const phase = (t: number, from: number, to: number) => easeOut(Math.min(1, Math.
 
 const MODEL = '/models/projector.glb'
 // Seconds from the projector's turn: it lands, powers on with a stutter, then opens the window.
-const LAND = 0.42
-const POWER = 0.45
-const PROJECT = 0.8
-const OPEN = 0.9
+const LAND = 0.32
+/** Seconds it takes to lift away, tipping up and off to the right. */
+const LIFT = 0.55
+const POWER = 0.32
+const PROJECT = 0.55
+const OPEN = 0.6
 /** The share of the opening spent drawing the line across, before it rises. */
 const ACROSS = 0.35
 // Seconds into its closing: the window drops to a line, the line shrinks away, it powers off, then lifts off the table.
-const DROP = 0.4
-const SHRINK = 0.65
-const OFF = 0.8
-const CLOSED = 0.8 + LAND
+const DROP = 0.25
+const SHRINK = 0.42
+const OFF = 0.52
+const CLOSED = OFF + LIFT
+/** Seconds the window takes to rise again with new content. */
+const RESCAN = 0.4
 useGLTF.preload(MODEL, false, false)
 
 /** The projector model, scaled to stand on the table, with its lens where the light leaves it. */
@@ -154,16 +158,19 @@ function opened(full: THREE.Vector3[], across: number, up: number, into: THREE.V
 function Projector({
   corners,
   ready,
+  content,
   closing,
   onClosed,
   onPin,
 }: {
   corners: THREE.Vector3[]
   ready: RefObject<number>
+  /** What the window shows; a change re-scans it, rising again from a line. */
+  content: string
   /** Shuts the window and lifts the projector away, then calls `onClosed`. */
   closing: boolean
   onClosed: () => void
-  onPin: (points: number[] | null) => void
+  onPin: (points: number[] | null, left: number) => void
 }) {
   const { model, lens } = useProjector()
   const { camera, size } = useThree()
@@ -181,7 +188,19 @@ function Projector({
   }, [])
   useEffect(() => () => geometry.dispose(), [geometry])
   const uniforms = useMemo(() => ({ color: { value: new THREE.Color(TINT.glow) }, strength: { value: 0 } }), [])
-  const timing = useRef({ born: -1, power: 0, until: 0, flicker: 1, next: 0, shut: -1, across: 1, up: 1, done: false })
+  const timing = useRef({
+    born: -1,
+    power: 0,
+    until: 0,
+    flicker: 1,
+    next: 0,
+    shut: -1,
+    across: 1,
+    up: 1,
+    done: false,
+    content,
+    rescan: -Infinity,
+  })
   const now = useRef([new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()])
   useFrame(({ clock }) => {
     const t = clock.elapsedTime
@@ -190,18 +209,29 @@ function Projector({
       state.born = t + Math.max(0, (ready.current - performance.now()) / 1000)
     const since = STILL ? Infinity : state.born < 0 ? -1 : t - state.born
     if (closing && state.shut < 0) state.shut = t
+    if (state.content !== content) {
+      state.content = content
+      state.rescan = t
+    }
     const shut = state.shut < 0 ? -1 : STILL ? Infinity : t - state.shut
     if (shut >= CLOSED && !state.done) {
       state.done = true
       onClosed()
     }
 
-    // Lands from just above, slowing as it nears the table, and lifts away the same way.
+    // Lands from just above, slowing as it nears the table; leaves rising, tipping up and away to the right.
     if (body.current) {
       const landed = Math.min(1, Math.max(0, since / LAND))
-      const lifted = Math.min(1, Math.max(0, (shut - OFF) / LAND))
+      const lifted = Math.min(1, Math.max(0, (shut - OFF) / LIFT))
+      const away = lifted ** 2
       body.current.visible = landed > 0 && lifted < 1
-      body.current.position.y = PROJECTOR[1] + ((1 - landed) ** 3 + lifted ** 3) * 0.45
+      body.current.position.set(
+        PROJECTOR[0] + away * 1.4,
+        PROJECTOR[1] + (1 - landed) ** 3 * 0.45 + away * 1.1,
+        PROJECTOR[2] - away * 0.4,
+      )
+      body.current.rotation.set(-away * 0.5, 0, -away * 0.6)
+      body.current.scale.setScalar(1 - THREE.MathUtils.smoothstep(lifted, 0.55, 1))
     }
     // Stutters on, like a tube catching, and off again.
     const stutter = (since > POWER && since < PROJECT) || (shut > SHRINK && shut < OFF)
@@ -220,7 +250,7 @@ function Projector({
     // Closing starts from however far it had opened.
     if (shut < 0) {
       state.across = phase(opening, 0, ACROSS)
-      state.up = phase(opening, ACROSS, 1)
+      state.up = STILL ? 1 : Math.min(phase(opening, ACROSS, 1), phase(t - state.rescan, 0, RESCAN))
     }
     const across = shut < 0 ? state.across : state.across * (1 - phase(shut, DROP, SHRINK))
     const up = shut < 0 ? state.up : state.up * (1 - phase(shut, 0, DROP))
@@ -249,6 +279,7 @@ function Projector({
     }
 
     // Where the page element goes on screen, so the map moves with the room as the camera does.
+    const screenX = (corner: THREE.Vector3) => ((point.copy(corner).project(camera).x + 1) / 2) * size.width
     onPin(
       lit
         ? window.flatMap((corner) => {
@@ -256,6 +287,8 @@ function Projector({
             return [((point.x + 1) / 2) * size.width, ((1 - point.y) / 2) * size.height]
           })
         : null,
+      // The open window's left edge, so the screen's words can keep beside it.
+      Math.min(screenX(corners[0]!), screenX(corners[3]!)),
     )
   })
   return (
@@ -280,7 +313,7 @@ function Projector({
 }
 
 /** Seconds into the camera's glide back from the seat when the projector starts: near its end, so the window opens still. */
-const AFTER_GLIDE = 1.1
+const AFTER_GLIDE = 0.8
 /** Seconds the loading screen takes to fade, in Boot.tsx. */
 const BOOT_FADE = 0.4
 
@@ -289,47 +322,52 @@ export function BetweenBattles({
   state,
   lines,
   projecting,
+  content,
   from,
-  leaving = false,
-  onLeft,
+  closing = false,
+  onClosed,
   onPin,
 }: {
-  /** Shuts the projector away, then calls `onLeft`, as the run moves to the board. */
-  leaving?: boolean
-  onLeft: () => void
+  /** What the window shows; a change re-scans it. */
+  content: string
+  /** Shuts the projector and lifts it away, then calls `onClosed`. */
+  closing?: boolean
+  onClosed: () => void
   state: RunState
   /** P03's latest words, for the monitor beside it. */
   lines: string[]
   projecting: boolean
   /** The view the camera glides back from, after a battle. */
   from?: CameraView
-  /** Given where the window's page element goes on screen every frame, or null while it's dark. */
-  onPin: (points: number[] | null) => void
+  /** Given where the window's page element goes on screen every frame, or null while it's dark, and its open left edge. */
+  onPin: (points: number[] | null, left: number) => void
 }) {
   const stage = useStage()
   const view = useMemo(() => restView(state), [state])
   const corners = useMemo(() => windowCorners(), [])
+  useLayoutEffect(() => stage.room({ view, log: lines, busy: false }))
   // When the projector may start: once the loading screen has faded, or the camera has nearly glided back.
   const ready = useRef(Infinity)
   useEffect(() => {
     ready.current = stage.warmed ? performance.now() + (from && !STILL ? AFTER_GLIDE : BOOT_FADE) * 1000 : Infinity
   }, [from, stage.warmed])
-  // With no projector to shut, it leaves at once.
-  useEffect(() => {
-    if (leaving && !projecting) onLeft()
-  }, [leaving, projecting, onLeft])
   return (
     <stage.Scene>
       {/* Across the table at the window, gliding back from the seat after a battle. */}
       <CameraRig view="map" from={from} />
       <Selection>
-        <Factory view={view} log={lines} />
-        <FactoryP03 view={view} busy={false} />
         {/* Bolted to the table, so it stays between battles, locked. */}
         <EndTurnButton active={false} rung={0} onClick={() => {}} />
         <FactoryEffects quality={stage.quality} />
         {projecting ? (
-          <Projector corners={corners} ready={ready} closing={leaving} onClosed={onLeft} onPin={onPin} />
+          <Projector
+            corners={corners}
+            ready={ready}
+            content={content}
+            closing={closing}
+            onClosed={onClosed}
+            onPin={onPin}
+          />
         ) : null}
       </Selection>
       <WarmUp onWarm={stage.warm} />

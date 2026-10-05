@@ -1,16 +1,26 @@
 import { PerformanceMonitor, useProgress } from '@react-three/drei'
 import { Canvas } from '@react-three/fiber'
-import { createContext, Suspense, use, useEffect, useRef, useState, type ReactNode } from 'react'
+import { createContext, Suspense, use, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import * as THREE from 'three'
 import { useFullScreen } from '../fullScreen.ts'
 import { Boot } from './Boot.tsx'
 import { disposeFaces } from './faces.ts'
+import type { View } from '../view.ts'
+import { Factory, FactoryP03 } from './Factory.tsx'
 import { CAMERA, FOV } from './layout.ts'
+import type { Screen } from './reading.ts'
 import { createTunnel, type Tunnel } from './stage/tunnel.tsx'
 import { COARSE } from './table3d/reader.ts'
 import { CursorSync, Exposure, Loaded } from './table3d/stage.tsx'
 
 type Attributes = Record<string, string | number>
+
+/** What the room shows: the factory's battery and monitors, and P03's mood. */
+type RoomState = { view: View; log: string[]; busy: boolean; outcome?: 'win' | 'loss' }
+type RoomHandlers = {
+  onHold?: (screen: Screen, x: number, y: number) => void
+  onPin?: (screen: Screen) => void
+}
 
 type Stage = {
   /** Where a scene puts its 3D content; the canvas drawing it stays mounted as scenes come and go. */
@@ -27,6 +37,8 @@ type Stage = {
   label: (attributes: Attributes) => void
   /** What a click on nothing does, such as putting a lifted card down. */
   onMissed: (handler: () => void) => void
+  /** Sets what the room shows; the room itself stays, so its dust, P03 and monitors carry on between scenes. */
+  room: (room: RoomState & RoomHandlers) => void
 }
 
 const StageContext = createContext<Stage | null>(null)
@@ -39,6 +51,12 @@ export function useStage(): Stage {
 
 const same = (a: Attributes, b: Attributes) =>
   Object.keys(a).length === Object.keys(b).length && Object.entries(a).every(([key, value]) => b[key] === value)
+const sameRoom = (a: RoomState, b: RoomState) =>
+  a.view === b.view &&
+  a.busy === b.busy &&
+  a.outcome === b.outcome &&
+  a.log.length === b.log.length &&
+  a.log.every((line, index) => b.log[index] === line)
 
 /** The 3D table's canvas, loaded once: battles and the run's screens between them swap in and out of it. */
 export function TableStage({ children }: { children: ReactNode }) {
@@ -66,6 +84,11 @@ export function TableStage({ children }: { children: ReactNode }) {
   const dpr = quality >= 3 ? Math.min(1.5, sharpest) : sharpest
   const [attributes, setAttributes] = useState<Attributes>({})
   const missed = useRef(() => {})
+  const [room, setRoom] = useState<RoomState | null>(null)
+  const handlers = useRef<RoomHandlers>({})
+  // Stable, so the monitors never re-render for a new handler.
+  const onHold = useCallback((screen: Screen, x: number, y: number) => handlers.current.onHold?.(screen, x, y), [])
+  const onPin = useCallback((screen: Screen) => handlers.current.onPin?.(screen), [])
   const fullScreen = useFullScreen()
   useEffect(() => () => disposeFaces(), [])
 
@@ -78,6 +101,10 @@ export function TableStage({ children }: { children: ReactNode }) {
     label: (next) => setAttributes((now) => (same(now, next) ? now : next)),
     onMissed: (handler) => {
       missed.current = handler
+    },
+    room: ({ onHold, onPin, ...next }) => {
+      handlers.current = { onHold, onPin }
+      setRoom((now) => (now && sameRoom(now, next) ? now : next))
     },
   }
 
@@ -115,6 +142,12 @@ export function TableStage({ children }: { children: ReactNode }) {
             />
           ) : null}
           <Suspense fallback={null}>
+            {room ? (
+              <>
+                <Factory view={room.view} log={room.log} onHold={onHold} onPin={onPin} />
+                <FactoryP03 view={room.view} busy={room.busy} outcome={room.outcome} />
+              </>
+            ) : null}
             <tunnel.Out />
             <Loaded onLoad={setReady} />
           </Suspense>

@@ -59,11 +59,13 @@ function Legend({
   onHover: (kind: NodeKind | null) => void
   onPick: (kind: NodeKind) => void
 }) {
-  const terminal = useScreenMode() === 'terminal'
+  const mode = useScreenMode()
+  const terminal = mode === 'terminal'
   return (
     <ul
       aria-label="What the icons mean"
-      className={`flex flex-wrap gap-1 text-base text-p03-dim ${centered ? 'justify-center' : ''}`}
+      // On a short screen the projector's window rises into a row under the title, so the legend stands down the left.
+      className={`flex flex-wrap gap-1 text-base text-p03-dim ${centered ? 'justify-center' : ''} ${mode === 'hologram' ? '[@media(max-height:920px)]:flex-col [@media(max-height:920px)]:items-start' : ''}`}
     >
       {KINDS.map((kind) => {
         const Icon = NODE_ICONS[kind]

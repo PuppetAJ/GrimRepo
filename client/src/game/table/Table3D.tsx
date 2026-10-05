@@ -1,6 +1,6 @@
 import { use, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { legalActions, type Action } from 'shared'
-import { type Seat, has, hasEnded } from '../controls.tsx'
+import { type Seat, has, hasEnded, outcomeOf } from '../controls.tsx'
 import { useFullScreen } from '../fullScreen.ts'
 import type { Ready } from '../useGame.ts'
 import { FlatReaderBody } from '../CardReader.tsx'
@@ -125,6 +125,16 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
     }),
   )
   useEffect(() => stage.onMissed(() => (peek !== null || pinned !== null) && reader.lift(null)))
+  useLayoutEffect(() =>
+    stage.room({
+      view: playback.view,
+      log: game.log,
+      busy,
+      outcome: busy ? undefined : outcomeOf(game),
+      onHold: (screen, x, y) => reader.hold({ screen }, x, y),
+      onPin: (screen) => reader.pin(screen),
+    }),
+  )
 
   return (
     <>

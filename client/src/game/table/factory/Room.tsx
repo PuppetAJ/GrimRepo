@@ -3,7 +3,6 @@ import * as THREE from 'three'
 import { CENTER_X, TABLE_Y } from '../layout.ts'
 import { MOOD } from '../mood.ts'
 import { TINT } from '../palette.ts'
-import { GLOW } from './constants.ts'
 import { GRIMY_TABLE, metal, surfaces } from './surfaces.ts'
 
 // Each bar is [x, z, width, depth], around the 10.4 by 7.4 console top centered at z -9.9.
@@ -43,10 +42,6 @@ export function Room() {
           />
         </mesh>
       ))}
-      <mesh position={[CENTER_X, TABLE_Y - 0.05, -6.18]}>
-        <boxGeometry args={[10.4, 0.03, 0.03]} />
-        <meshBasicMaterial color={GLOW} />
-      </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[CENTER_X, 0, -10]}>
         <planeGeometry args={[60, 60]} />
         <meshStandardMaterial {...floor} color="#3c444c" metalness={0.7} />

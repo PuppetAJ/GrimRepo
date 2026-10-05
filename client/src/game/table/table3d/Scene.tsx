@@ -1,13 +1,13 @@
 import { Selection } from '@react-three/postprocessing'
-import { Suspense, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { legalActions, PLAYER_DECK, type Action } from 'shared'
-import { has, hasEnded, laneAction, outcomeOf, skippedDraw } from '../../controls.tsx'
+import { has, hasEnded, laneAction, skippedDraw } from '../../controls.tsx'
 import type { Ready } from '../../useGame.ts'
 import type { View } from '../../view.ts'
 import { CardBatch } from '../Batch.tsx'
 import { Card, Popup, type Look, type Place } from '../Cards.tsx'
 import type { loadCardAssets } from '../faces.ts'
-import { EndTurnButton, Factory, FactoryEffects, FactoryP03, TechBoard } from '../Factory.tsx'
+import { EndTurnButton, FactoryEffects, TechBoard } from '../Factory.tsx'
 import { DECK, P03_HAND, type CameraView } from '../layout.ts'
 import { TINT } from '../palette.ts'
 import { Deck, Pile } from '../Piles.tsx'
@@ -22,10 +22,10 @@ import { TestHandle } from './TestHandle.tsx'
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
 
 /** Seconds into a battle reached from another view when each piece is set on the table, then between dealt cards. */
-const SET = { board: 0.3, lanes: 0.9, deck: 0.75, pile: 0.9, cards: 1.3, deal: 0.18 }
+const SET = { board: 0.2, lanes: 0.65, deck: 0.5, pile: 0.6, cards: 0.9, deal: 0.13 }
 const MOST_DEALT = 8
 /** Seconds the table takes to pack away. */
-const PACK_AWAY = 0.8
+const PACK_AWAY = 0.6
 
 /** How many cards of the opening hand are dealt so far, one at a time once the table is set. */
 function useDeal(setting: boolean): number {
@@ -111,17 +111,8 @@ export function Scene({
     <CardBatch assets={assets}>
       <Selection>
         <CameraRig view={camera} from={from} />
-        {/* One boundary, so the stand-in popup draws only once every light and the fog are in place. */}
-        <Suspense fallback={null}>
-          <Factory
-            view={view}
-            log={game.log}
-            onHold={(screen, x, y) => reader.hold({ screen }, x, y)}
-            onPin={(screen) => reader.pin(screen)}
-          />
-          <FactoryP03 view={view} busy={busy} outcome={busy ? undefined : outcomeOf(game)} />
-          <WarmUp onWarm={onWarm} />
-        </Suspense>
+        {/* The room and P03 are the stage's; it draws them once every light and the fog are in place. */}
+        <WarmUp onWarm={onWarm} />
         <FactoryEffects quality={quality} />
         <TechBoard appear={at(SET.board)} leave={leaving} />
         <Arrive delay={at(SET.lanes)} leave={leaving}>

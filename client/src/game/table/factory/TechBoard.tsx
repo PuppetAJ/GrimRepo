@@ -10,7 +10,7 @@ import { LIT, STILL } from './constants.ts'
 export const BOARD = '/textures/board.webp'
 
 /** Seconds the board takes to roll out across the table. */
-const UNROLL = 0.6
+const UNROLL = 0.45
 
 /** The board, which can roll out from P03's side toward the player `appear` seconds after it mounts, and back as it `leave`s. */
 export function TechBoard({ appear, leave = false }: { appear?: number; leave?: boolean }) {

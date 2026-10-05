@@ -20,8 +20,8 @@ type Glide = { position: THREE.Vector3; target: THREE.Vector3; fov: number; at: 
 export function CameraRig({
   view,
   from,
-  glide = 0.7,
-  arrive = 1.6,
+  glide = 0.55,
+  arrive = 1.15,
 }: {
   view: CameraView
   from?: CameraView

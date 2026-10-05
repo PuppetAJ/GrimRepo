@@ -14,6 +14,11 @@ type Mood = 'smug' | 'happy' | 'impatient' | 'choking' | 'dying' | 'whiteflag'
 const MOODS = ['happy', 'impatient', 'choking', 'dying', 'whiteflag'] as const
 type Face = (typeof MOODS)[number]
 
+const FACE_GLOW = 1.6
+/** Seconds for a face to flicker out, then for the next to flicker in. */
+const FACE_OUT = 0.12
+const FACE_IN = 0.2
+
 let faces: Promise<Record<Face, THREE.Texture>> | null = null
 
 // White on black, so the screen's emissive color tints them.
@@ -80,19 +85,48 @@ function P03({ mood }: { mood: Mood }) {
       clawRight: part('ArmRight-ClawRight'),
     }
   }, [scene])
+  const face = mood === 'smug' ? 'happy' : mood
+  const screen = useRef<THREE.MeshStandardMaterial | null>(null)
+  // Set up once; after that the face changes in the frame loop, so it can flicker across.
   useLayoutEffect(() => {
-    const screen = (scene.getObjectByName('Head-RenderTargetPlane') as THREE.Mesh)
+    const material = (scene.getObjectByName('Head-RenderTargetPlane') as THREE.Mesh)
       .material as THREE.MeshStandardMaterial
     // Emissive only, so no light in the room can shade half the face.
-    screen.map = null
-    screen.color.set('#000000')
-    screen.alphaTest = 0
-    screen.emissiveMap = textures[mood === 'smug' ? 'happy' : mood]
-    screen.emissive.set(LIT)
-    screen.emissiveIntensity = 1.6
-    screen.needsUpdate = true
-  }, [scene, textures, mood])
+    material.map = null
+    material.color.set('#000000')
+    material.alphaTest = 0
+    material.emissive.set(LIT)
+    // Any face, so the shader is built with one; the frame loop puts on the right one.
+    material.emissiveMap = textures.happy
+    material.emissiveIntensity = FACE_GLOW
+    material.needsUpdate = true
+    screen.current = material
+  }, [scene, textures])
+  const swap = useRef({ face: null as Face | null, at: -1 })
   useFrame(({ clock }) => {
+    // A new face flickers in like a screen changing channel, rather than snapping.
+    const material = screen.current
+    const change = swap.current
+    if (material) {
+      const now = clock.elapsedTime
+      if (change.face === null || STILL) {
+        material.emissiveMap = textures[face]
+        change.face = face
+      } else if (change.face !== face && change.at < 0) change.at = now
+      if (change.at >= 0) {
+        const since = now - change.at
+        if (since >= FACE_OUT && change.face !== face) {
+          material.emissiveMap = textures[face]
+          change.face = face
+        }
+        const level = since < FACE_OUT ? 1 - since / FACE_OUT : Math.min(1, (since - FACE_OUT) / FACE_IN)
+        material.emissiveIntensity = FACE_GLOW * level * (Math.random() < 0.3 ? 0.4 : 1)
+        if (since >= FACE_OUT + FACE_IN) {
+          material.emissiveIntensity = FACE_GLOW
+          change.at = -1
+        }
+      }
+    }
     // Frozen at the rest pose with reduced motion; the mood's droop still shows.
     const t = STILL ? 0 : clock.getElapsedTime()
     const rest = (object: THREE.Object3D) =>

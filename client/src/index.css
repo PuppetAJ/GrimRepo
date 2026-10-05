@@ -442,6 +442,7 @@
 }
 .hologram-glow {
   height: 100%;
+  overflow-y: auto;
   padding-inline: 0.5rem;
   filter: drop-shadow(0 0 6px rgb(125 255 154 / 0.45));
 }

@@ -34,13 +34,17 @@ const WINDOW_PX = { width: 840, height: 540 }
 export const FADE = '[mask-image:linear-gradient(to_bottom,black_calc(100%-2.5rem),transparent)] pb-10'
 
 type Mode = 'terminal' | 'floating' | 'hologram'
+
+// On a short screen the projector's window reaches up under the title, so the words keep to its left, in the
+// width the 3D scene reports.
+const BESIDE = '[@media(max-height:920px)]:max-w-[calc(var(--window-left,16rem)-1.5rem)]'
 type Slots = { actions: HTMLElement | null; bar: HTMLElement | null; deckShown: boolean; mode: Mode }
 const SlotContext = createContext<Slots>({ actions: null, bar: null, deckShown: false, mode: 'terminal' })
 
 /** Whether the screen is the text table's terminal or over the 3D table, where its parts are see-through. */
 export const useScreenMode = () => use(SlotContext).mode
 
-/** The map in the projector's light: it switches on from the beam and flickers at random, never in a rhythm. */
+/** A screen in the projector's light: it flickers now and then, faintly and at random, so it stays easy to read. */
 function Hologram({ children }: { children: ReactNode }) {
   const light = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -49,17 +53,20 @@ function Hologram({ children }: { children: ReactNode }) {
     const flicker = () => {
       const element = light.current
       if (!element) return
-      const dip = Math.random() < 0.3
-      element.style.opacity = String(dip ? 0.55 + Math.random() * 0.25 : 0.88 + Math.random() * 0.1)
+      const dip = Math.random() < 0.15
+      element.style.opacity = String(dip ? 0.82 + Math.random() * 0.08 : 0.96 + Math.random() * 0.04)
       // A dip lasts a few frames; the steady glow, a random while.
-      timer = setTimeout(flicker, dip ? 40 + Math.random() * 100 : 300 + Math.random() * 2600)
+      timer = setTimeout(flicker, dip ? 40 + Math.random() * 80 : 1200 + Math.random() * 4000)
     }
     flicker()
     return () => clearTimeout(timer)
   }, [])
   return (
     <div ref={light} className="hologram">
-      <div className="hologram-glow">{children}</div>
+      {/* Only the content scrolls, inside the window. */}
+      <div data-scroller className="hologram-glow">
+        {children}
+      </div>
     </div>
   )
 }
@@ -379,7 +386,6 @@ export function Screen({
             // Pinned onto the projector's window by the 3D scene, which warps it to the window's corners every frame.
             <div
               ref={pinTo}
-              data-scroller
               className="hologram-window absolute top-0 left-0 origin-top-left"
               style={{ width: WINDOW_PX.width, height: WINDOW_PX.height }}
             >
@@ -390,9 +396,15 @@ export function Screen({
           <div ref={setHost} className="pointer-events-none absolute inset-0 z-40 *:pointer-events-auto" />
           {/* The title wraps rather than being cut off; short of room, the buttons drop to their own line. */}
           <header className="relative z-10 flex shrink-0 flex-wrap items-center gap-2">
-            <div className={`min-w-0 flex-1 ${stacked ? 'text-center' : 'basis-48'}`}>
+            <div
+              className={`min-w-0 flex-1 ${stacked ? 'text-center' : 'basis-48'} ${mode === 'hologram' ? BESIDE : ''}`}
+            >
               {caption ? <p className="text-base text-p03-dim">{caption}</p> : null}
-              <h2 className="text-3xl leading-tight text-balance [overflow-wrap:anywhere] text-p03">{title}</h2>
+              <h2
+                className={`text-3xl leading-tight text-balance [overflow-wrap:anywhere] text-p03 ${mode === 'hologram' ? '[@media(max-height:920px)]:text-2xl' : ''}`}
+              >
+                {title}
+              </h2>
             </div>
             {stacked ? null : buttonRow}
           </header>
@@ -406,7 +418,7 @@ export function Screen({
             <div className="flex min-h-0 min-w-0 flex-col gap-2">
               <div
                 ref={setBar}
-                className={`pointer-events-auto shrink-0 empty:hidden ${stacked ? 'text-center' : ''}`}
+                className={`pointer-events-auto shrink-0 empty:hidden ${stacked ? 'text-center' : ''} ${mode === 'hologram' ? BESIDE : ''}`}
               />
               {stacked ? <div className="pointer-events-auto">{buttonRow}</div> : null}
               {/* Only the content scrolls, inside a frame that stays the same size; padded so focus rings aren't cut. */}

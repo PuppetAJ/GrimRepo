@@ -11,6 +11,9 @@ import { Screen, ScreenActions } from '../text/Screen.tsx'
 import type { RunReady } from '../useRun.ts'
 import { BetweenBattles, warp } from './RunStage.tsx'
 
+/** The screens the projector throws up; the rest float over the room. */
+const PROJECTED = new Set<RunView>(['map', 'card', 'reward', 'event'])
+
 /** Everything off the board: the room in 3D, with the map in the projector's window and other screens over it. */
 function Between({
   run,
@@ -35,38 +38,53 @@ function Between({
 }) {
   const stage = useStage()
   const screen = useRunScreen(run)
-  const title = view === 'map' ? mapTitle(run.state) : screen.title
   // Loaded while the map is up, so a battle starts with its cards ready instead of a blank table.
   useEffect(() => void loadCardAssets(), [])
   const pin = useRef<HTMLDivElement>(null)
-  // A phone on its side is too short to read the window, so its map floats over the room like the other screens.
-  const projecting = view === 'map' && layout !== 'phone'
+  // A phone on its side is too short to read the window, so there every screen floats over the room.
+  const projects = (screen: RunView) => PROJECTED.has(screen) && layout !== 'phone'
+  // Going from a projected screen to a floating one, the projector shuts and lifts away first, showing the map.
+  const [shown, setShown] = useState(view)
+  const toFloat = projects(shown) && !projects(view)
+  if (shown !== view && !toFloat) setShown(view)
+  const projecting = projects(shown)
+  const body: RunView = toFloat ? 'map' : shown
+  const title = body === 'map' ? mapTitle(run.state) : screen.title
+  // With no projector to shut, it leaves at once.
+  useEffect(() => {
+    if (leaving && !projecting) onLeft()
+  }, [leaving, projecting, onLeft])
   return (
     <>
       <BetweenBattles
         state={run.state}
         lines={run.news.map((line) => `P03> ${line}`)}
         projecting={projecting}
+        content={body}
         from={glide ? 'table' : undefined}
-        leaving={leaving}
-        onLeft={onLeft}
-        onPin={(points) => {
+        closing={leaving || toFloat}
+        onClosed={leaving ? onLeft : () => setShown(view)}
+        onPin={(points, left) => {
           const element = pin.current
           if (!element) return
           element.style.visibility = points ? 'visible' : 'hidden'
           if (points) element.style.transform = warp(element.offsetWidth, element.offsetHeight, points)
+          // Rounded, so the words beside the window reflow only when it really moves.
+          const edge = `${Math.round(left / 8) * 8}px`
+          if (element.parentElement?.style.getPropertyValue('--window-left') !== edge)
+            element.parentElement?.style.setProperty('--window-left', edge)
         }}
       />
       {stage.ready ? (
         <Screen
           // Keyed by screen, so each one plays its entrance.
-          key={view}
+          key={body}
           run={run}
           layout={layout}
           title={title}
           caption={screen.caption}
-          stack={view === 'map'}
-          deck={view !== 'summary'}
+          stack={body === 'map'}
+          deck={body !== 'summary'}
           mode={projecting ? 'hologram' : 'floating'}
           pinTo={pin}
           onSwitch={{ label: 'Play on the text table', go: onText }}
@@ -79,7 +97,7 @@ function Between({
               </Button>
             </ScreenActions>
           ) : null}
-          <ScreenBody run={run} view={view} layout={layout} />
+          <ScreenBody run={run} view={body} layout={layout} />
         </Screen>
       ) : null}
     </>

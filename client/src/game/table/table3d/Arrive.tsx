@@ -4,7 +4,7 @@ import type * as THREE from 'three'
 import { STILL } from '../factory/constants.ts'
 
 /** How long a piece takes to settle onto the table, or to lift off it, in seconds. */
-export const SETTLE = 0.42
+export const SETTLE = 0.32
 
 /**
  * Sets its children down on the table after a delay, lowering them from just above, and lifts them away when it
