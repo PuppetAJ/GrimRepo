@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { scene, STAGES } from 'shared'
 import type { Seat } from '../controls.tsx'
 import { TerminalTable } from '../TerminalTable.tsx'
 import type { Layout } from '../text/useTextTable.ts'
@@ -15,8 +16,7 @@ import { useRunBattle } from './useRunBattle.ts'
 
 export type RunView = 'battle' | 'map' | 'card' | 'reward' | 'campfire' | 'stones' | 'event' | 'summary'
 
-const TITLES: Record<Exclude<RunView, 'battle'>, string> = {
-  map: 'Where to next?',
+const TITLES: Record<Exclude<RunView, 'battle' | 'map'>, string> = {
   card: 'Card choice',
   reward: "The boss's reward",
   campfire: 'Campfire',
@@ -35,8 +35,17 @@ export function RunText({ run, layout, seat }: { run: RunReady; layout: Layout; 
   const view: RunView =
     run.state.status !== 'playing' && (reviewing || !battle) ? 'summary' : battle ? 'battle' : (visit?.kind ?? 'map')
 
+  // The map's title is the stage itself; an event's is its scene's, under a caption saying what it is.
+  const title =
+    view === 'map'
+      ? `Stage ${run.state.stage + 1} of ${STAGES.length}: ${STAGES[run.state.stage]}`
+      : view === 'event' && visit?.kind === 'event'
+        ? scene(visit.event).title
+        : view === 'summary' && run.state.status === 'won'
+          ? 'Run cleared'
+          : TITLES[view === 'battle' ? 'summary' : view]
   return (
-    <div data-run-seed={run.state.seed} data-run-moves={run.moves} data-run-view={view}>
+    <div data-run-seed={run.state.seed} data-run-moves={run.moves} data-run-unsaved={run.unsaved} data-run-view={view}>
       {/* Negative margins give the table most of the gutter, as on the quick battle's page. */}
       <div className={layout === 'phone' ? '-mx-(--gutter)' : '-mx-[calc(var(--gutter)-0.75rem)]'}>
         {battle && view === 'battle' ? (
@@ -51,7 +60,8 @@ export function RunText({ run, layout, seat }: { run: RunReady; layout: Layout; 
           <Screen
             run={run}
             layout={layout}
-            title={view === 'summary' && run.state.status === 'won' ? 'Run cleared' : TITLES[view]}
+            title={title}
+            caption={view === 'event' ? 'Event' : undefined}
             deck={view !== 'summary'}
           >
             {view === 'summary' ? (

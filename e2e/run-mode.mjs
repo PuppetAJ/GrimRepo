@@ -97,7 +97,7 @@ check('and P03 says so', (await page.getByRole('status').filter({ hasText: 'join
 
 section('Resuming')
 // Only what the server has saved comes back.
-await page.getByText('saved', { exact: true }).waitFor()
+await page.locator('[data-run-unsaved="0"]').waitFor()
 await page.reload()
 await root.waitFor()
 check(
@@ -123,7 +123,10 @@ if (mirror.state.status !== 'playing') {
   )
   mirror = await playRun(page, mirror, { done: (state) => !inBattle(state) })
   check('and leads back to the map', await shows(page, 'map'))
-  check('with the battle counted', (await visibleText(page)).includes('1 battle won'))
+  // Where the run stands is in the menu.
+  await page.getByRole('button', { name: /^Run menu/ }).click()
+  check('with the battle counted', (await page.getByRole('menu').innerText()).includes('1 battle won'))
+  await page.keyboard.press('Escape')
 
   section('Losing on purpose')
   mirror = await playRun(page, mirror, { pick: losing, done: () => false })
@@ -285,20 +288,20 @@ section('A big deck, from a mockup')
   const { context, page } = await freshPage(browser, { width: 1440, height: 900 })
   await page.goto(`${BASE}/run/mockups/worst-campfire`)
   await shows(page, 'campfire', 30_000)
-  const search = page.getByRole('searchbox', { name: 'Search the deck for a card to warm' })
-  await search.fill('everything')
+  const docked = page.getByRole('complementary', { name: 'Your deck' })
+  check('with room, the deck sits open beside the screen', (await docked.count()) === 1)
+  check(
+    'and its search is the only one, so the campfire has none of its own',
+    (await page.getByRole('searchbox').count()) === 1,
+  )
+  await docked.getByRole('searchbox').fill('everything')
   const shown = await page.locator('[data-action="buff"]').count()
-  check('a search narrows the cards to choose from', shown > 0 && shown < 40)
+  check("the deck's search narrows the campfire's cards too", shown > 0 && shown < 40)
   await page.getByRole('button', { name: 'Read destroyEverything(everyone)' }).first().click()
   check('a name cut short opens the whole card', (await page.getByRole('dialog').count()) === 1)
   await page.keyboard.press('Escape')
   // The rest of the page is hidden from assistive tech until the reader has closed.
   await page.getByRole('dialog').waitFor({ state: 'detached' })
-  const docked = page.getByRole('complementary', { name: 'Your deck' })
-  check(
-    'with room, the deck sits open beside the screen, with its own search',
-    (await docked.getByRole('searchbox').count()) === 1,
-  )
   await docked
     .getByRole('button', { name: /what it does/ })
     .first()
@@ -308,13 +311,19 @@ section('A big deck, from a mockup')
   await page.getByRole('dialog').waitFor({ state: 'detached' })
   await page.getByRole('button', { name: /^Your deck, 40 cards/ }).click()
   check('the deck button folds it away', (await docked.count()) === 0)
+  check(
+    'and then the campfire offers the search itself',
+    (await page.getByRole('searchbox', { name: 'Search the deck for a card to warm' }).count()) === 1,
+  )
   await page.setViewportSize({ width: 390, height: 844 })
-  await page.getByRole('button', { name: /^Your deck, 40 cards/ }).click()
+  await page.getByRole('button', { name: /^Run menu/ }).click()
+  await page.getByRole('menuitem', { name: /Your deck/ }).click()
   const drawer = page.getByRole('dialog', { name: /Your deck/ })
+  await drawer.waitFor()
   const frame = await page.locator('[data-table="run"]').boundingBox()
   const inside = await drawer.boundingBox()
   check(
-    'on a phone it opens as a drawer inside the game frame',
+    'on a phone the deck opens from the menu, as a drawer inside the game frame',
     Boolean(inside) && inside.y >= frame.y - 1 && inside.y + inside.height <= frame.y + frame.height + 1,
   )
   await context.close()

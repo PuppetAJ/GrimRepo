@@ -1,5 +1,5 @@
 import { Search } from 'lucide-react'
-import { useState } from 'react'
+import { createContext, use, useState } from 'react'
 import { card, SIGILS, type SigilId, type Unit } from 'shared'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog.tsx'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover.tsx'
@@ -49,9 +49,15 @@ export function CardReader({ unit, onClose }: { unit: Unit | null; onClose: () =
   )
 }
 
-/** Matches a card by its name or a sigil's, ignoring case. */
+/** One search for a screen, so the deck's box also filters the cards the screen offers. */
+export const SearchContext = createContext<{ query: string; setQuery: (query: string) => void } | null>(null)
+
+/** Matches a card by its name or a sigil's, ignoring case; the screen's shared search where there is one. */
 export function useCardSearch() {
-  const [query, setQuery] = useState('')
+  const shared = use(SearchContext)
+  const [own, setOwn] = useState('')
+  const query = shared?.query ?? own
+  const setQuery = shared?.setQuery ?? setOwn
   const needle = query.trim().toLowerCase()
   const matches = (unit: Pick<Unit, 'card' | 'sigils'>) =>
     !needle ||
@@ -73,7 +79,7 @@ export function CardSearch({
   label: string
 }) {
   return (
-    <label className="flex items-center gap-2 rounded-md border-2 border-p03-edge bg-[#07130b] px-2 py-1 focus-within:outline-2 focus-within:outline-p03">
+    <label className="flex items-center gap-2 rounded-md border-2 border-p03-edge bg-[#07130b] px-2 py-1 focus-within:border-p03 focus-within:outline-2 focus-within:-outline-offset-4 focus-within:outline-p03">
       <Search aria-hidden className="size-4 shrink-0 text-p03-dim" />
       <span className="sr-only">{label}</span>
       <input

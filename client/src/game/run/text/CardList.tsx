@@ -1,10 +1,9 @@
 import { ZoomIn } from 'lucide-react'
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import { card, SIGILS, type Unit } from 'shared'
 import { PixelCard } from '../../CardReader.tsx'
 import { describe } from '../../controls.tsx'
-import { CardReader, CardSearch, SEARCH_FROM, SigilIcons, useCardSearch } from './CardBits.tsx'
-import { ScreenBar } from './Screen.tsx'
+import { CardReader, SigilIcons, useCardSearch } from './CardBits.tsx'
 
 type Props = {
   units: Unit[]
@@ -17,12 +16,8 @@ type Props = {
   /** Each card's sigils spelled out beneath it, for a choice where they matter. */
   detail?: boolean
   size?: string
-  /** Names the search box offered once there are enough cards to need one. */
-  search?: string
-  /** The screen's own words and buttons, kept above the cards with the search. */
-  head?: ReactNode
-  /** Off where the screen has its own bar, so the search stays with its list. */
-  pinned?: boolean
+  /** Narrowed by the screen's search, the one in the deck beside it or above the cards. */
+  filtered?: boolean
 }
 
 function Caption({ unit, detail, onRead }: { unit: Unit; detail: boolean; onRead: () => void }) {
@@ -66,31 +61,13 @@ export function CardList({
   picked = null,
   detail = false,
   size = 'w-28',
-  search,
-  head,
-  pinned = true,
+  filtered = false,
 }: Props) {
   const [reading, setReading] = useState<Unit | null>(null)
-  const { query, setQuery, matches } = useCardSearch()
-  const searching = search !== undefined && units.length >= SEARCH_FROM
-  const shown = searching ? units.filter(matches) : units
+  const { matches } = useCardSearch()
+  const shown = filtered ? units.filter(matches) : units
   return (
     <div className="flex flex-col gap-3">
-      {head || searching ? (
-        pinned ? (
-          <ScreenBar>
-            <div className="flex flex-col gap-2 pb-1">
-              {head}
-              {searching ? <CardSearch query={query} onChange={setQuery} label={search} /> : null}
-            </div>
-          </ScreenBar>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {head}
-            {searching ? <CardSearch query={query} onChange={setQuery} label={search} /> : null}
-          </div>
-        )
-      ) : null}
       <ul className="flex flex-wrap justify-center gap-4">
         {shown.map((unit) => {
           const allowed = can(unit)

@@ -7,7 +7,7 @@ import type { MapNode, NodeKind, StageMap } from './types.ts'
 export const MAP_COLUMNS = 5
 // Rows before the boss, and the paths walked up through them.
 const ROWS = 7
-const PATHS = 5
+const PATHS = 4
 const UTILITIES: NodeKind[] = ['campfire', 'stones', 'event']
 // The middle rows draw from this, battles most often.
 const MIXED: NodeKind[] = ['battle', 'battle', 'battle', 'battle', 'card', 'card', 'campfire', 'event', 'stones']

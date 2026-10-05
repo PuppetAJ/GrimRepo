@@ -6,7 +6,7 @@ import { NODE_ICONS, nodeName } from '../nodes.ts'
 import { usePlan } from '../plan.ts'
 import type { RunReady } from '../useRun.ts'
 import { PenLayer } from './PenLayer.tsx'
-import { ICON_BUTTON, ScreenBar } from './Screen.tsx'
+import { ICON_BUTTON, ScreenActions, ScreenBar } from './Screen.tsx'
 
 type Mark = 'here' | 'visited' | 'next' | 'lit' | 'ahead' | 'behind'
 type Link = 'taken' | 'open' | 'lit' | 'quiet'
@@ -158,137 +158,142 @@ export function RunMap({ run }: { run: RunReady }) {
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Above the map, so the legend and the pen stay in reach while it scrolls. */}
+      {/* The pen beside the menu, and the legend above the map, so both stay in reach while it scrolls. */}
+      <ScreenActions>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            aria-pressed={pen}
+            onClick={() => setPen((on) => !on)}
+            aria-label="Plan a route"
+            title="Plan a route: draw on the map, and the nodes you pass through are marked"
+            className={ICON_BUTTON}
+          >
+            <PenLine aria-hidden className="size-5" />
+          </button>
+          <button
+            type="button"
+            onClick={undo}
+            disabled={!plan.strokes.length}
+            aria-label="Undo the last stroke"
+            title="Undo the last stroke"
+            className={`${ICON_BUTTON} disabled:opacity-40`}
+          >
+            <Undo2 aria-hidden className="size-5" />
+          </button>
+          <button
+            type="button"
+            onClick={clear}
+            disabled={!plan.strokes.length && !plan.marks.length}
+            aria-label="Clear the plan"
+            title="Clear the plan"
+            className={`${ICON_BUTTON} disabled:opacity-40`}
+          >
+            <Eraser aria-hidden className="size-5" />
+          </button>
+        </div>
+      </ScreenActions>
       <ScreenBar>
-        <div className="flex flex-wrap items-center justify-between gap-2 pb-1">
+        <div className="pb-1">
           <Legend
             shown={shown}
             onHover={setHovered}
             onPick={(kind) => setPicked((now) => (now === kind ? null : kind))}
           />
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              aria-pressed={pen}
-              onClick={() => setPen((on) => !on)}
-              aria-label="Plan a route"
-              title="Plan a route: draw on the map, and the nodes you pass through are marked"
-              className={ICON_BUTTON}
-            >
-              <PenLine aria-hidden className="size-5" />
-            </button>
-            <button
-              type="button"
-              onClick={undo}
-              disabled={!plan.strokes.length}
-              aria-label="Undo the last stroke"
-              title="Undo the last stroke"
-              className={`${ICON_BUTTON} disabled:opacity-40`}
-            >
-              <Undo2 aria-hidden className="size-5" />
-            </button>
-            <button
-              type="button"
-              onClick={clear}
-              disabled={!plan.strokes.length && !plan.marks.length}
-              aria-label="Clear the plan"
-              title="Clear the plan"
-              className={`${ICON_BUTTON} disabled:opacity-40`}
-            >
-              <Eraser aria-hidden className="size-5" />
-            </button>
-          </div>
         </div>
       </ScreenBar>
-      <div ref={box} className="relative w-full" style={{ height: `calc(${ROW_HEIGHT} * ${state.map.rows.length})` }}>
-        {/* The links: one image tiled along each, turned to point at the node ahead. */}
-        <div aria-hidden className="absolute inset-0">
-          {size.width
-            ? state.map.rows.flat().flatMap((node) =>
-                node.next.map((id) => {
-                  const from = at(placed.get(node.id) as Spot)
-                  const to = at(placed.get(id) as Spot)
-                  const length = Math.hypot(to.x - from.x, to.y - from.y)
-                  const angle = Math.atan2(to.y - from.y, to.x - from.x)
-                  const style: CSSProperties = {
-                    left: from.x,
-                    top: from.y - 2,
-                    width: length,
-                    transform: `rotate(${angle}rad)`,
-                    maskImage: 'url(/run/link.svg)',
-                    maskRepeat: 'repeat-x',
-                  }
-                  return (
-                    <span
-                      key={`${node.id}>${id}`}
-                      style={style}
-                      className={`absolute h-1 origin-left ${LINK[linkOf(node, id)]}`}
-                    />
-                  )
-                }),
-              )
-            : null}
-        </div>
-        <PenLayer active={pen} strokes={plan.strokes} width={size.width} height={size.height} onStroke={addStroke} />
-        {/* In reading order from the start; placed with the boss at the top, as the run climbs toward it. */}
-        <ol aria-label="The map, from the start to the boss">
-          {state.map.rows.map((nodes, index) => (
-            <li key={index}>
-              <span className="sr-only">{index === last ? 'The boss:' : `Step ${index + 1}:`}</span>
-              <ul>
-                {nodes.map((node) => {
-                  const mark = markOf(node)
-                  const planned = inked.has(node.id) || plan.marks.includes(node.id)
-                  const spot = placed.get(node.id) as Spot
-                  const Icon = NODE_ICONS[node.kind]
-                  const name = `${nodeName(node)}${node.kind === 'boss' ? '' : `, ${sideOf(node)}`}`
-                  const words = [WORDS[mark], planned ? 'planned' : '', describeNext(state.map, node)].filter(Boolean)
-                  const label = `${name}${words.length ? `, ${words.join(', ')}` : ''}`
-                  const boss = node.kind === 'boss'
-                  const box = `absolute z-20 grid -translate-x-1/2 -translate-y-1/2 place-items-center rounded-md border-2 ${STYLE[mark]} ${planned ? 'ring-2 ring-[#ffb347] ring-offset-2 ring-offset-p03-ground' : ''} ${shown === node.kind ? 'shadow-[0_0_14px_rgb(125_255_154/0.75)] outline-2 outline-offset-4 outline-p03' : ''}`
-                  const style = {
-                    left: `${spot.x * 100}%`,
-                    top: `${spot.y * 100}%`,
-                    width: boss ? NODE * 1.5 : NODE,
-                    height: boss ? NODE * 1.5 : NODE,
-                  }
-                  const face = <Icon aria-hidden className={boss ? 'size-9' : 'size-6'} />
-                  // With the pen on, every node marks the plan; otherwise only the ones in reach are buttons.
-                  if (pen || mark === 'next')
+      {/* Padded, so the boss and the first row are never cut off at the top or bottom of the scroll. */}
+      <div className="py-8">
+        <div ref={box} className="relative w-full" style={{ height: `calc(${ROW_HEIGHT} * ${state.map.rows.length})` }}>
+          {/* The links: one image tiled along each, turned to point at the node ahead. */}
+          <div aria-hidden className="absolute inset-0">
+            {size.width
+              ? state.map.rows.flat().flatMap((node) =>
+                  node.next.map((id) => {
+                    const from = at(placed.get(node.id) as Spot)
+                    const to = at(placed.get(id) as Spot)
+                    const length = Math.hypot(to.x - from.x, to.y - from.y)
+                    const angle = Math.atan2(to.y - from.y, to.x - from.x)
+                    const style: CSSProperties = {
+                      left: from.x,
+                      top: from.y - 2,
+                      width: length,
+                      transform: `rotate(${angle}rad)`,
+                      maskImage: 'url(/run/link.svg)',
+                      maskRepeat: 'repeat-x',
+                    }
+                    return (
+                      <span
+                        key={`${node.id}>${id}`}
+                        style={style}
+                        className={`absolute h-1 origin-left ${LINK[linkOf(node, id)]}`}
+                      />
+                    )
+                  }),
+                )
+              : null}
+          </div>
+          <PenLayer active={pen} strokes={plan.strokes} width={size.width} height={size.height} onStroke={addStroke} />
+          {/* In reading order from the start; placed with the boss at the top, as the run climbs toward it. */}
+          <ol aria-label="The map, from the start to the boss">
+            {state.map.rows.map((nodes, index) => (
+              <li key={index}>
+                <span className="sr-only">{index === last ? 'The boss:' : `Step ${index + 1}:`}</span>
+                <ul>
+                  {nodes.map((node) => {
+                    const mark = markOf(node)
+                    const planned = inked.has(node.id) || plan.marks.includes(node.id)
+                    const spot = placed.get(node.id) as Spot
+                    const Icon = NODE_ICONS[node.kind]
+                    const name = `${nodeName(node)}${node.kind === 'boss' ? '' : `, ${sideOf(node)}`}`
+                    const words = [WORDS[mark], planned ? 'planned' : '', describeNext(state.map, node)].filter(Boolean)
+                    const label = `${name}${words.length ? `, ${words.join(', ')}` : ''}`
+                    const boss = node.kind === 'boss'
+                    const box = `absolute z-20 grid -translate-x-1/2 -translate-y-1/2 place-items-center rounded-md border-2 ${STYLE[mark]} ${planned ? 'ring-2 ring-[#ffb347] ring-offset-2 ring-offset-p03-ground' : ''} ${shown === node.kind ? 'shadow-[0_0_14px_rgb(125_255_154/0.75)] outline-2 outline-offset-4 outline-p03' : ''}`
+                    const style = {
+                      left: `${spot.x * 100}%`,
+                      top: `${spot.y * 100}%`,
+                      width: boss ? NODE * 1.5 : NODE,
+                      height: boss ? NODE * 1.5 : NODE,
+                    }
+                    const face = <Icon aria-hidden className={boss ? 'size-9' : 'size-6'} />
+                    // With the pen on, every node marks the plan; otherwise only the ones in reach are buttons.
+                    if (pen || mark === 'next')
+                      return (
+                        <li key={node.id}>
+                          <button
+                            ref={mark === 'next' ? (element) => void (here.current ??= element) : undefined}
+                            type="button"
+                            {...(pen ? { 'aria-pressed': planned } : { 'data-action': 'go', 'data-node': node.id })}
+                            aria-label={label}
+                            title={nodeName(node)}
+                            onClick={() => (pen ? toggleMark(node.id) : run.act({ type: 'go', node: node.id }))}
+                            onPointerEnter={() => setPeek(node.id)}
+                            onPointerLeave={() => setPeek(null)}
+                            onFocus={() => setPeek(node.id)}
+                            onBlur={() => setPeek(null)}
+                            style={style}
+                            data-planned={planned || undefined}
+                            className={`${box} focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03`}
+                          >
+                            {face}
+                          </button>
+                        </li>
+                      )
                     return (
                       <li key={node.id}>
-                        <button
-                          ref={mark === 'next' ? (element) => void (here.current ??= element) : undefined}
-                          type="button"
-                          {...(pen ? { 'aria-pressed': planned } : { 'data-action': 'go', 'data-node': node.id })}
-                          aria-label={label}
-                          title={nodeName(node)}
-                          onClick={() => (pen ? toggleMark(node.id) : run.act({ type: 'go', node: node.id }))}
-                          onPointerEnter={() => setPeek(node.id)}
-                          onPointerLeave={() => setPeek(null)}
-                          onFocus={() => setPeek(node.id)}
-                          onBlur={() => setPeek(null)}
-                          style={style}
-                          data-planned={planned || undefined}
-                          className={`${box} focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03`}
-                        >
+                        <span title={nodeName(node)} style={style} data-planned={planned || undefined} className={box}>
                           {face}
-                        </button>
+                          <span className="sr-only">{label}</span>
+                        </span>
                       </li>
                     )
-                  return (
-                    <li key={node.id}>
-                      <span title={nodeName(node)} style={style} data-planned={planned || undefined} className={box}>
-                        {face}
-                        <span className="sr-only">{label}</span>
-                      </span>
-                    </li>
-                  )
-                })}
-              </ul>
-            </li>
-          ))}
-        </ol>
+                  })}
+                </ul>
+              </li>
+            ))}
+          </ol>
+        </div>
       </div>
       <p className="sr-only">
         {choices.length

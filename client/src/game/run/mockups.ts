@@ -3,11 +3,10 @@ import {
   createRun,
   deckCard,
   findNode,
-  MAP_COLUMNS,
+  generateStage,
+  Rng,
   nextRunAction,
   SCENES,
-  type MapNode,
-  type NodeKind,
   type RunCard,
   type RunState,
   type SigilId,
@@ -41,46 +40,40 @@ function worstDeck(size = 40): RunCard[] {
   })
 }
 
+/** The densest map the generator makes for this stage over many seeds: the most nodes and links it can draw. */
 function worstMap(stage: number): StageMap {
-  const kinds: NodeKind[] = ['campfire', 'stones', 'card', 'event', 'battle']
-  // Every cell of the grid filled.
-  const rows: MapNode[][] = Array.from({ length: 7 }, (_, row) =>
-    Array.from({ length: MAP_COLUMNS }, (_, col) => ({
-      id: `${row}-${col}`,
-      kind: kinds[(row + col) % kinds.length] as NodeKind,
-      row,
-      col,
-      next: [],
-      boost: 'health' as const,
-    })),
-  )
-  const boss = ['localhost-boss', 'staging-boss', 'production-boss'][stage] as string
-  const top = Math.floor(MAP_COLUMNS / 2)
-  rows.push([{ id: `7-${top}`, kind: 'boss', row: 7, col: top, next: [], encounter: boss }])
-  // Every node leads to each neighbor ahead, the most links a row can have.
-  for (const [index, row] of rows.entries())
-    for (const node of row)
-      node.next = (rows[index + 1] ?? [])
-        .filter((ahead) => Math.abs(ahead.col - node.col) <= 1 || ahead.kind === 'boss')
-        .map((ahead) => ahead.id)
-  return { stage, rows }
+  let densest = generateStage(stage, new Rng(0))
+  const weight = (map: StageMap) => map.rows.flat().reduce((sum, node) => sum + 1 + node.next.length, 0)
+  for (let seed = 1; seed < 400; seed++) {
+    const map = generateStage(stage, new Rng(seed))
+    if (weight(map) > weight(densest)) densest = map
+  }
+  return densest
 }
 
-function worstRun(patch: Partial<RunState>): RunState {
+/** A worst-case run on the densest map, partway up a real route, with any changes laid over it. */
+function worstRun(patch: Partial<RunState>): { state: RunState; path: string[] } {
   const base = createRun({ seed: 1 })
-  return {
+  const map = worstMap(2)
+  // Four steps up the first route, so the map shows nodes visited, here, next and ahead.
+  const path: string[] = []
+  let node = map.rows[0]?.[0]
+  while (node && path.length < 4) {
+    path.push(node.id)
+    node = findNode(map, node.next[0] ?? '')
+  }
+  const state: RunState = {
     ...base,
     stage: 2,
-    map: worstMap(2),
-    at: '3-2',
+    map,
+    at: path.at(-1) ?? null,
     deck: worstDeck(),
     nextCard: 41,
     record: { battles: 9999, bosses: 3, overkill: 99999 },
     ...patch,
   }
+  return { state, path }
 }
-
-const WORST_PATH = ['0-1', '1-2', '2-2', '3-2']
 
 function withWorstScene(): string {
   SCENES[WORST_SCENE] ??= {
@@ -119,16 +112,15 @@ const isBoss = (state: RunState) =>
 
 export const MOCKUPS: Record<string, Entry> = {
   'worst-map': {
-    title: 'The map, every cell of the grid filled and every link',
+    title: 'The densest map the generator draws',
     group: 'worst',
-    make: () => ({ state: worstRun({}), path: WORST_PATH, news: LONG_NEWS }),
+    make: () => ({ ...worstRun({}), news: LONG_NEWS }),
   },
   'worst-card': {
     title: 'A card choice of the longest card',
     group: 'worst',
     make: () => ({
-      state: worstRun({ visit: { kind: 'card', node: '4-3', offer: [WORST_CARD, WORST_CARD, WORST_CARD] } }),
-      path: WORST_PATH,
+      ...worstRun({ visit: { kind: 'card', node: '4-3', offer: [WORST_CARD, WORST_CARD, WORST_CARD] } }),
       news: LONG_NEWS,
     }),
   },
@@ -136,16 +128,14 @@ export const MOCKUPS: Record<string, Entry> = {
     title: "A boss's reward of the longest card",
     group: 'worst',
     make: () => ({
-      state: worstRun({ visit: { kind: 'reward', offer: [WORST_CARD, WORST_CARD, WORST_CARD] } }),
-      path: WORST_PATH,
+      ...worstRun({ visit: { kind: 'reward', offer: [WORST_CARD, WORST_CARD, WORST_CARD] } }),
     }),
   },
   'worst-campfire': {
     title: 'A campfire with a 40-card deck',
     group: 'worst',
     make: () => ({
-      state: worstRun({ visit: { kind: 'campfire', node: '4-0', boost: 'health', card: null, buffs: 0 } }),
-      path: WORST_PATH,
+      ...worstRun({ visit: { kind: 'campfire', node: '4-0', boost: 'health', card: null, buffs: 0 } }),
       news: LONG_NEWS,
     }),
   },
@@ -153,22 +143,20 @@ export const MOCKUPS: Record<string, Entry> = {
     title: 'A campfire after one boost, offering a second',
     group: 'worst',
     make: () => ({
-      state: worstRun({ visit: { kind: 'campfire', node: '4-0', boost: 'attack', card: 1, buffs: 1 } }),
-      path: WORST_PATH,
+      ...worstRun({ visit: { kind: 'campfire', node: '4-0', boost: 'attack', card: 1, buffs: 1 } }),
       news: LONG_NEWS,
     }),
   },
   'worst-stones': {
     title: 'Sigil stones with a 40-card deck full of sigils',
     group: 'worst',
-    make: () => ({ state: worstRun({ visit: { kind: 'stones', node: '4-1' } }), path: WORST_PATH, news: LONG_NEWS }),
+    make: () => ({ ...worstRun({ visit: { kind: 'stones', node: '4-1' } }), news: LONG_NEWS }),
   },
   'worst-event': {
     title: 'An event with the longest title, text and four choices',
     group: 'worst',
     make: () => ({
-      state: worstRun({ visit: { kind: 'event', node: '4-1', event: withWorstScene() } }),
-      path: WORST_PATH,
+      ...worstRun({ visit: { kind: 'event', node: '4-1', event: withWorstScene() } }),
       news: LONG_NEWS,
     }),
   },
@@ -176,8 +164,7 @@ export const MOCKUPS: Record<string, Entry> = {
     title: 'A cleared run with the biggest numbers and deck',
     group: 'worst',
     make: () => ({
-      state: worstRun({ status: 'won' }),
-      path: WORST_PATH,
+      ...worstRun({ status: 'won' }),
       over: { status: 'won', score: 99_999_999, stage: 2, bosses: 3, forfeited: false },
     }),
   },
@@ -185,8 +172,7 @@ export const MOCKUPS: Record<string, Entry> = {
     title: 'An abandoned run',
     group: 'worst',
     make: () => ({
-      state: worstRun({ status: 'lost' }),
-      path: WORST_PATH,
+      ...worstRun({ status: 'lost' }),
       over: { status: 'lost', score: 99_999_999, stage: 2, bosses: 3, forfeited: true },
     }),
   },

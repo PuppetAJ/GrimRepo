@@ -21,10 +21,8 @@ export function EventScene({ run }: { run: RunReady }) {
   }, [found, act])
   if (!found) return null
   return (
-    <article className="flex max-w-3xl flex-col gap-4">
-      <header className="flex flex-col gap-2 border-b-2 border-p03-edge pb-3">
-        <h3 className="text-3xl leading-tight text-p03">{found.title}</h3>
-      </header>
+    // The scene's title is the screen's; a rule sets the scene off beneath it.
+    <article className="flex max-w-3xl flex-col gap-4 border-t-2 border-p03-edge pt-4">
       {/* The scene sits apart from P03's question and the choices, like a quote. */}
       <p className="border-l-2 border-p03-dim pl-4 text-xl leading-relaxed text-[#b8f5c4]">{found.text}</p>
       <p className="text-p03">P03&gt; Well? What do you do?</p>

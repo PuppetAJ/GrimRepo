@@ -4,7 +4,7 @@ import { SIDE_BUTTON } from '../../text/Panel.tsx'
 import { asUnit } from '../nodes.ts'
 import type { RunReady } from '../useRun.ts'
 import { CardList } from './CardList.tsx'
-import { ScreenBar } from './Screen.tsx'
+import { LeaveButton, ScreenBar, ScreenSearch } from './Screen.tsx'
 
 type Transfer = Extract<RunAction, { type: 'transfer' }>
 
@@ -30,7 +30,8 @@ export function Stones({ run }: { run: RunReady }) {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Above the cards, so the way out and the final choice are always in reach. */}
+      <LeaveButton label="Leave the stones" onLeave={() => run.act({ type: 'leave' })} />
+      {/* Above the cards, so the final choice is always in reach. */}
       <ScreenBar>
         <div className="flex flex-col gap-2 pb-1">
           <p className="text-lg">
@@ -38,26 +39,17 @@ export function Stones({ run }: { run: RunReady }) {
               ? 'None of your cards has a sigil to give. Leave the stones be.'
               : 'Sacrifice a card; one of its sigils moves to another.'}
           </p>
-          <div className="flex flex-wrap gap-3">
-            {giver && chosen && receiver ? (
-              <button
-                type="button"
-                data-action="transfer"
-                onClick={() => run.act({ type: 'transfer', from: giver.uid, to: receiver.uid, sigil: chosen })}
-                className={`${SIDE_BUTTON} border-p03 px-4`}
-              >
-                Sacrifice {card(giver.card).name} to give {card(receiver.card).name} {SIGILS[chosen].name}
-              </button>
-            ) : null}
+          {giver && chosen && receiver ? (
             <button
               type="button"
-              data-action="leave"
-              onClick={() => run.act({ type: 'leave' })}
-              className={`${SIDE_BUTTON} px-4`}
+              data-action="transfer"
+              onClick={() => run.act({ type: 'transfer', from: giver.uid, to: receiver.uid, sigil: chosen })}
+              className={`${SIDE_BUTTON} self-start border-p03 px-4 text-lg`}
             >
-              Leave the stones
+              Sacrifice {card(giver.card).name} to give {card(receiver.card).name} {SIGILS[chosen].name}
             </button>
-          </div>
+          ) : null}
+          {moves.length ? <ScreenSearch label="Search the deck" count={run.state.deck.length} /> : null}
         </div>
       </ScreenBar>
       {moves.length ? (
@@ -73,8 +65,7 @@ export function Stones({ run }: { run: RunReady }) {
               picked={from}
               data={(unit) => ({ 'data-action': 'give', 'data-card': unit.uid })}
               size="w-24 sm:w-28"
-              search="Search the deck for a card to sacrifice"
-              pinned={false}
+              filtered
             />
           </section>
           {giver && sigils.length > 1 ? (
@@ -111,8 +102,7 @@ export function Stones({ run }: { run: RunReady }) {
                 picked={to}
                 data={(unit) => ({ 'data-action': 'take-sigil', 'data-card': unit.uid })}
                 size="w-24 sm:w-28"
-                search="Search the deck for a card to gain the sigil"
-                pinned={false}
+                filtered
               />
             </section>
           ) : null}

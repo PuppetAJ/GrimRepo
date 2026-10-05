@@ -10,10 +10,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog.tsx'
-import { SIDE_BUTTON } from '../../text/Panel.tsx'
 import { asUnit, boostText } from '../nodes.ts'
 import type { RunReady } from '../useRun.ts'
 import { CardList } from './CardList.tsx'
+import { LeaveButton, ScreenBar, ScreenSearch } from './Screen.tsx'
 
 /** One card gets the campfire's boost; a second boost risks burning it, so that one asks first. */
 export function Campfire({ run }: { run: RunReady }) {
@@ -26,6 +26,19 @@ export function Campfire({ run }: { run: RunReady }) {
 
   return (
     <div className="flex flex-col gap-4">
+      <LeaveButton label="Leave the campfire" onLeave={() => run.act({ type: 'leave' })} />
+      <ScreenBar>
+        <div className="flex flex-col gap-2 pb-1">
+          <p className="text-lg">
+            {visit.buffs === 0
+              ? `Warm a card for ${boost}.`
+              : allowed.size
+                ? `Again for ${boost}? Half the time it burns.`
+                : 'The fire has done all it will.'}
+          </p>
+          <ScreenSearch label="Search the deck for a card to warm" count={run.state.deck.length} />
+        </div>
+      </ScreenBar>
       <CardList
         units={run.state.deck.map((entry) => asUnit(entry))}
         onPick={(unit) => (visit.buffs > 0 ? setRisking(unit) : buff(unit))}
@@ -33,26 +46,7 @@ export function Campfire({ run }: { run: RunReady }) {
         picked={visit.card}
         data={(unit) => ({ 'data-action': 'buff', 'data-card': unit.uid })}
         size="w-24 sm:w-28"
-        search="Search the deck for a card to warm"
-        head={
-          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-            <p className="min-w-0 flex-1 basis-48 text-lg">
-              {visit.buffs === 0
-                ? `Warm a card for ${boost}.`
-                : allowed.size
-                  ? `Again for ${boost}? Half the time it burns.`
-                  : 'The fire has done all it will.'}
-            </p>
-            <button
-              type="button"
-              data-action="leave"
-              onClick={() => run.act({ type: 'leave' })}
-              className={`${SIDE_BUTTON} shrink-0 px-3 py-1 text-lg`}
-            >
-              Leave
-            </button>
-          </div>
-        }
+        filtered
       />
       <AlertDialog open={risking !== null} onOpenChange={(open) => !open && setRisking(null)}>
         <AlertDialogContent>

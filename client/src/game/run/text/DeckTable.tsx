@@ -32,16 +32,10 @@ export function DeckTable({ deck, caption }: { deck: RunCard[]; caption: string 
               Card
             </th>
             <th scope="col" className="pb-1 text-right font-normal">
-              <span className="inline-flex">
-                <Sigil id="attack" size={14} color={LIGHT} />
-              </span>
-              <span className="sr-only">Attack</span>
+              Attack
             </th>
             <th scope="col" className="pb-1 text-right font-normal">
-              <span className="inline-flex">
-                <Sigil id="health" size={14} color={LIGHT} />
-              </span>
-              <span className="sr-only">Health</span>
+              Health
             </th>
           </tr>
         </thead>
