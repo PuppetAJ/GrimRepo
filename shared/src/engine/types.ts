@@ -1,7 +1,7 @@
 import type { SigilId } from '../cards.ts'
 
 /** Bumped whenever a change would make an old game replay differently. */
-export const RULES_VERSION = 5
+export const RULES_VERSION = 6
 
 export const LANES = 4
 /** Net damage needed to win, or to lose. */
@@ -23,6 +23,8 @@ export type Unit = {
   sigils: SigilId[]
   /** Its index in the library, for a card drawn from the deck. */
   source?: number
+  /** A Rollback card has spent the one hit it shrugs off. */
+  rolledBack?: boolean
 }
 
 export type Slot = Unit | null
@@ -80,6 +82,8 @@ export type GameEvent =
   | { type: 'advanced'; lane: number; uid: number }
   | { type: 'queued'; lane: number; unit: Unit }
   | { type: 'healed'; uid: number; amount: number; health: number }
+  | { type: 'shielded'; uid: number }
+  | { type: 'buffed'; uid: number; attack: number; health: number }
   | { type: 'phaseChanged'; phase: number; uids: number[] }
   | { type: 'turnStarted'; turn: number }
   | { type: 'gameOver'; outcome: 'win' | 'loss'; turns: number }

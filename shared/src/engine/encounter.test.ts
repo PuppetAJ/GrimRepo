@@ -44,7 +44,8 @@ describe('a battle with an encounter', () => {
       const moves = draw ? [{ type: 'draw', from: 'boilerplate' } as const] : []
       const { state: next, events } = play(state, ...moves, { type: 'ringBell' })
       turns.push(events.flatMap((event) => (event.type === 'queued' ? [event.unit.card] : [])))
-      state = next
+      // Levelled each turn, so P03's unanswered hits don't end the game before the plan runs out.
+      state = { ...next, scale: 0 }
     }
     assert.deepEqual(turns[0], ['GrimRepo', 'SpamBot'])
     assert.ok(['GrimRepo', 'CopyPaste'].includes(turns[1]?.[0] as string) && turns[1]?.length === 1)

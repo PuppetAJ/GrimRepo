@@ -1,6 +1,23 @@
 export type Tier = 'E' | 'D' | 'C' | 'B' | 'A' | 'S'
 
-export type SigilId = 'segfault' | 'bypass' | 'technical_debt' | 'try_catch' | 'rate_limiter' | 'fork' | 'hotfix'
+export type SigilId =
+  | 'segfault'
+  | 'bypass'
+  | 'technical_debt'
+  | 'try_catch'
+  | 'rate_limiter'
+  | 'fork'
+  | 'hotfix'
+  | 'fatal_error'
+  | 'rollback'
+  | 'tech_lead'
+  | 'code_smell'
+  | 'retry'
+  | 'deprecated'
+  | 'scope_creep'
+  | 'broadcast'
+  | 'popup'
+  | 'refactor'
 
 export type CardDef = {
   id: string
@@ -20,31 +37,41 @@ export const SIGILS: Record<SigilId, { name: string; text: string }> = {
   rate_limiter: { name: 'Rate Limiter', text: 'Deals 1 damage back to anything that attacks it.' },
   fork: { name: 'Fork', text: 'Attacks the lanes on either side instead of the one opposite.' },
   hotfix: { name: 'Hotfix', text: 'Heals 1 at the end of each turn.' },
+  fatal_error: { name: 'Fatal Error', text: 'Destroys any card it damages.' },
+  rollback: { name: 'Rollback', text: 'Shrugs off the first damage it takes.' },
+  tech_lead: { name: 'Tech Lead', text: 'Cards beside it get +1 attack.' },
+  code_smell: { name: 'Code Smell', text: 'The card opposite it has 1 less attack.' },
+  retry: { name: 'Retry', text: 'Attacks twice.' },
+  deprecated: { name: 'Deprecated', text: 'Dies after it attacks.' },
+  scope_creep: { name: 'Scope Creep', text: 'Gains 1 attack each time it destroys a card.' },
+  broadcast: { name: 'Broadcast', text: 'Attacks the lane opposite and both lanes beside it.' },
+  popup: { name: 'Pop-up', text: 'The card opposite it has 1 more attack.' },
+  refactor: { name: 'Refactor', text: 'When sacrificed, gives its attack and health to the card it pays for.' },
 }
 
 // Order matters: reordering changes what every seed deals.
 const table: [string, string, Tier, number, number, number, SigilId[]?][] = [
-  ['OffCenterDiv', 'OffCenterDiv', 'E', 0, 6, 0],
-  ['HelloWorld', 'Hello World', 'E', 1, 1, 0],
+  ['OffCenterDiv', 'OffCenterDiv', 'E', 0, 6, 0, ['refactor']],
+  ['HelloWorld', 'Hello World', 'E', 1, 1, 0, ['broadcast']],
   ['CronJob', 'Cron Job', 'E', 1, 2, 0, ['try_catch']],
-  ['InfiniteLoop', 'Infinite Loop', 'D', 1, 2, 0],
-  ['SpamBot', 'Spam Bot', 'D', 2, 1, 0],
+  ['InfiniteLoop', 'Infinite Loop', 'D', 1, 2, 0, ['retry']],
+  ['SpamBot', 'Spam Bot', 'D', 2, 1, 0, ['code_smell']],
   ['Watchdog', 'Watchdog', 'D', 2, 3, 0, ['rate_limiter']],
   ['CopyPaste', 'Copy Paste', 'D', 3, 1, 0],
   ['ZeroDay', 'Zero Day', 'C', 4, 1, 0],
-  ['GrimRepo', 'GrimRepo', 'C', 3, 2, 0],
+  ['GrimRepo', 'GrimRepo', 'C', 3, 2, 0, ['tech_lead']],
   ['MergeConflict', 'Merge Conflict', 'C', 2, 4, 1],
   ['Firewall', 'Firewall', 'C', 2, 6, 1, ['rate_limiter']],
   ['SQLInjection', 'SQL Injection', 'C', 4, 2, 1, ['bypass']],
-  ['NullPointer', 'NullPointer', 'C', 4, 2, 1],
+  ['NullPointer', 'NullPointer', 'C', 4, 2, 1, ['fatal_error']],
   ['Bug', 'Bug', 'C', 0, 8, 1],
   ['LegacyCode', 'Legacy Code', 'C', 3, 4, 1, ['technical_debt']],
-  ['Cookie', 'Cookie', 'C', 3, 4, 1],
-  ['Crawler', 'Crawler', 'C', 5, 2, 1],
+  ['Cookie', 'Cookie', 'C', 3, 4, 1, ['popup']],
+  ['Crawler', 'Crawler', 'C', 5, 2, 1, ['scope_creep']],
   ['Sandbox', 'Sandbox', 'C', 2, 5, 1, ['hotfix']],
-  ['DestroyEnemyYou', 'destroyEnemy(you)', 'B', 8, 2, 2],
+  ['DestroyEnemyYou', 'destroyEnemy(you)', 'B', 8, 2, 2, ['deprecated']],
   ['ForkBomb', 'Fork Bomb', 'B', 7, 3, 2, ['fork']],
-  ['JSONFoorhees', 'JSONFoorhees', 'B', 5, 8, 2],
+  ['JSONFoorhees', 'JSONFoorhees', 'B', 5, 8, 2, ['rollback']],
   ['Documentation', 'Documentation', 'B', 7, 7, 2],
   ['FourOhFour', 'FourOhFour', 'A', 4, 0, 4, ['segfault']],
   ['RubberDuck', 'RubberDuck', 'A', 4, 12, 3, ['hotfix']],

@@ -34,8 +34,8 @@ describe('combat', () => {
   })
 
   it('carries overkill into the card queued behind', () => {
-    // Mainframe deals 13 to InfiniteLoop's 2 health, so 11 carries into the Bug behind.
-    const { events } = bell(table({ board: ['Mainframe'], front: ['InfiniteLoop'], back: ['Bug'] }))
+    // Mainframe deals 13 to Cron Job's 2 health, so 11 carries into the Bug behind.
+    const { events } = bell(table({ board: ['Mainframe'], front: ['CronJob'], back: ['Bug'] }))
     const overkill = events.find((event) => event.type === 'overkill')
     assert.equal(overkill?.type === 'overkill' && overkill.amount, 11)
     assert.ok(events.some((event) => event.type === 'killed' && event.row === 'back'))

@@ -35,11 +35,11 @@ describe('a turn', () => {
   })
 
   it('moves queued cards up into empty lanes, and they attack straight away', () => {
-    const { state, events } = play(table({ back: ['CopyPaste', 'InfiniteLoop'], front: [null, 'GrimRepo'] }), {
+    const { state, events } = play(table({ back: ['CopyPaste', 'InfiniteLoop'], front: [null, 'CopyPaste'] }), {
       type: 'ringBell',
     })
     assert.equal(state.opponent.front[0]?.card, 'CopyPaste')
-    assert.equal(state.opponent.front[1]?.card, 'GrimRepo', 'a card that can attack still blocks its queue')
+    assert.equal(state.opponent.front[1]?.card, 'CopyPaste', 'a card that can attack still blocks its queue')
     assert.equal(state.opponent.back[1]?.card, 'InfiniteLoop')
     assert.ok(events.some((event) => event.type === 'advanced' && event.lane === 0))
     assert.equal(state.scale, -6, 'the new arrival and the blocker both hit an empty lane')

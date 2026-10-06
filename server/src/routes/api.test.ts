@@ -95,9 +95,10 @@ describe('a game', () => {
     const player = await signedIn()
     const game = await start(player.cookie)
     const { turns } = botGame(game.seed)
-    await submit(player.cookie, game.id, turns.slice(0, 2))
+    // One turn, since a game can't be won or lost in one; with stronger cards some end in two.
+    await submit(player.cookie, game.id, turns.slice(0, 1))
     const resumed = await start(player.cookie)
-    assert.deepEqual(resumed.actions, turns.slice(0, 2).flat())
+    assert.deepEqual(resumed.actions, turns.slice(0, 1).flat())
   })
 
   it('is scored by the server once its moves replay to a finished game', async () => {
