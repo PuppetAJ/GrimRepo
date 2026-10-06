@@ -1,4 +1,4 @@
-import type { Unit } from 'shared'
+import type { Shown } from '../shown.ts'
 import { CanvasTexture, SRGBColorSpace, type Texture } from 'three'
 import { loadArt } from '../art.ts'
 import { loadPlastic } from './diskMaterials.ts'
@@ -38,12 +38,12 @@ function texture(element: HTMLCanvasElement): Texture {
 
 const faces = new Map<string, Texture>()
 
-function drawn(unit: Unit, loaded: Assets, layer: Layer): Texture {
+function drawn(unit: Shown, loaded: Assets, layer: Layer): Texture {
   // The base depends only on rarity; the other layers on everything shown.
   const key =
     layer === 'base'
       ? `base:${kindOf(unit)}`
-      : `${layer}:${unit.card}:${unit.attack}:${unit.health}:${unit.maxHealth}:${unit.sigils.join(',')}`
+      : `${layer}:${unit.card}:${unit.attack}:${unit.aura ?? 0}:${unit.health}:${unit.maxHealth}:${unit.sigils.join(',')}`
   let found = faces.get(key)
   if (!found) {
     const [element, context] = canvas()
@@ -55,12 +55,12 @@ function drawn(unit: Unit, loaded: Assets, layer: Layer): Texture {
 }
 
 /** Shared by every card of the same rarity. */
-export const faceTexture = (unit: Unit, loaded: Assets): Texture => drawn(unit, loaded, 'base')
+export const faceTexture = (unit: Shown, loaded: Assets): Texture => drawn(unit, loaded, 'base')
 
-export const faceContent = (unit: Unit, loaded: Assets): Texture => drawn(unit, loaded, 'content')
+export const faceContent = (unit: Shown, loaded: Assets): Texture => drawn(unit, loaded, 'content')
 
 /** The emissive map. */
-export const faceLights = (unit: Unit, loaded: Assets): Texture => drawn(unit, loaded, 'lights')
+export const faceLights = (unit: Shown, loaded: Assets): Texture => drawn(unit, loaded, 'lights')
 
 export function backTexture(): Texture {
   let found = faces.get('back')
