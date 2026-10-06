@@ -26,6 +26,8 @@ export const HELP: [string, string][] = [
   ['whoami', 'Who you are. Nobody, probably'],
   ['p03', 'Me. Obviously'],
   ['play', 'Sit down. Finally'],
+  ['grep <word>', 'Cards by name or sigil'],
+  ['ps', 'What runs here. Me, mostly'],
   ['cd <page>', 'Readme, leaderboard, cards, game, account'],
   ['history', 'Everything you typed. I kept it'],
   ['clear', 'Wipe the screen. Not my memory'],

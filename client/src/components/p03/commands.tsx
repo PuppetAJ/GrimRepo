@@ -17,6 +17,17 @@ export type Commands = typeof import('./commands.tsx')
 
 let step = 0
 
+// The text table's process list, as `ps` shows it, with a zombie of the last Scrybe.
+const PROCESSES: [number, string][] = [
+  [1, 'p03.core'],
+  [42, 'scale.svc'],
+  [137, 'sacrifice.d'],
+  [256, 'lane.watch'],
+  [404, 'leshy <defunct>'],
+  [512, 'gc.reaper'],
+  [1024, 'deck.shuf'],
+]
+
 function tutorial(to: number): ReactNode {
   step = Math.max(0, Math.min(STEPS.length - 1, to))
   return <Lesson at={step} />
@@ -62,6 +73,11 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
       if (name === 'ls' && !/^cards\/?$/.test(argument))
         return (
           <p>
+            {/-\w*a/.test(argument) ? (
+              <Dim>
+                .{'  '}..{'  '}.y2k{'  '}
+              </Dim>
+            ) : null}
             README.md{'  '}cards/{'  '}leaderboard/{'  '}game/
           </p>
         )
@@ -184,6 +200,77 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
     case 'vi':
     case 'nano':
       return <p>You'd never leave.</p>
+    case 'pwd': {
+      const path = typeof window === 'undefined' ? '/' : window.location.pathname
+      return <p>/home/p03/grim-repo{path === '/' ? '' : path}</p>
+    }
+    case 'date':
+      return (
+        <p>
+          {new Date().toUTCString()} <Dim>// time you could have spent winning</Dim>
+        </p>
+      )
+    case 'uname':
+      return <p>{argument.includes('-a') ? 'P03OS 2.0.0 factory-01 x86_64 GNU/Botopia' : 'P03OS'}</p>
+    case 'uptime':
+      return <p>up since before you got here, 1 user (you, unfortunately), load average: 0.03, 0.03, 0.03</p>
+    case 'ps':
+      return (
+        <div className="grid grid-cols-[auto_1fr] gap-x-6">
+          <Dim>PID</Dim>
+          <Dim>CMD</Dim>
+          {PROCESSES.map(([pid, command]) => (
+            <p key={pid} className="contents">
+              <span>{pid}</span>
+              <span className={command === 'p03.core' ? 'text-p03' : ''}>{command}</span>
+            </p>
+          ))}
+        </div>
+      )
+    case 'kill':
+    case 'pkill':
+    case 'killall':
+      return <p>kill: (1) - Operation not permitted. I&apos;m PID 1. I&apos;m always PID 1.</p>
+    case 'ping':
+      return <p>PONG. I&apos;m right here. I&apos;m always right here.</p>
+    case 'ssh':
+      return <p>ssh: connect to host outside port 22: Connection refused. You live here now.</p>
+    case 'mkdir':
+    case 'touch':
+    case 'mv':
+    case 'cp':
+      return <p>{name}: Read-only file system. Everything here is mine.</p>
+    case 'chmod':
+    case 'chown':
+      return <p>{name}: Permission denied. Permissions are mine too.</p>
+    case 'shutdown':
+    case 'reboot':
+      return <p>Nice try. I don&apos;t turn off.</p>
+    case 'apt':
+    case 'npm':
+    case 'pnpm':
+    case 'brew':
+      return <p>Nothing to install. I am the dependency.</p>
+    case 'grep': {
+      if (!argument) return <p>grep for what? grep &lt;word&gt;.</p>
+      const wanted = argument.toLowerCase()
+      const found = DECK.filter(
+        (card) =>
+          card.name.toLowerCase().includes(wanted) ||
+          card.sigils.some((sigil) => SIGILS[sigil].name.toLowerCase().includes(wanted)),
+      )
+      if (!found.length) return <p>grep: nothing matches {argument}. Like your strategy.</p>
+      return (
+        <div className="flex flex-col">
+          {found.map((card) => (
+            <p key={card.id}>
+              <span className="text-p03">{card.name}</span>
+              {card.sigils.length ? <Dim> · {card.sigils.map((sigil) => SIGILS[sigil].name).join(', ')}</Dim> : null}
+            </p>
+          ))}
+        </div>
+      )
+    }
     case 'hello':
     case 'hi':
       return <p>Yeah, yeah. Hello. Can we play now? Type play.</p>
