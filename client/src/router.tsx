@@ -32,6 +32,8 @@ const optional = <T extends z.core.SomeType>(schema: T) => z.catch(z.optional(sc
 
 const page = z.object({ page: optional(z.coerce.number().check(z.int(), z.minimum(2))) })
 
+const leaderboardSearch = z.object({ ...page.shape, board: optional(z.enum(['runs'])) })
+
 const cardsSearch = z.object({
   q: optional(z.coerce.string()),
   view: optional(z.enum(['3d'])),
@@ -67,7 +69,7 @@ const signUp = createRoute({ getParentRoute: parent, path: '/signup', component:
 const leaderboard = createRoute({
   getParentRoute: parent,
   path: '/leaderboard',
-  validateSearch: page,
+  validateSearch: leaderboardSearch,
   component: Leaderboard,
 })
 const cards = createRoute({ getParentRoute: parent, path: '/cards', validateSearch: cardsSearch, component: Cards })

@@ -108,6 +108,13 @@ function resolve(state: RunState, rng: Rng, effect: Effect, events: RunEvent[]):
   } else if (effect.type === 'removeCard') {
     // A run never loses its last card.
     if (state.deck.length > 1) remove(state, rng.pick(state.deck), events)
+  } else if (effect.type === 'duplicate') {
+    // A copy keeps the card's buffs and sigils, as a fork would.
+    const source = rng.pick(state.deck)
+    const copy = { ...source, id: state.nextCard, sigils: [...source.sigils] }
+    state.nextCard += 1
+    state.deck.push(copy)
+    events.push({ type: 'added', card: copy })
   } else if (effect.type === 'boost') {
     const target = rng.pick(state.deck)
     target.attack += effect.attack

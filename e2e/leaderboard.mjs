@@ -76,6 +76,16 @@ section('The leaderboard')
     await page.getByText('0x01').waitFor()
     check('and Back returns to the top', true)
   }
+  await page.getByRole('navigation', { name: 'Leaderboards' }).getByRole('link', { name: 'Runs' }).click()
+  await page.waitForURL(/board=runs/)
+  // The seed data may hold no finished runs, so either the board or its empty note will do.
+  await page
+    .getByText(/runs cleared|Nobody has finished a run yet/)
+    .first()
+    .waitFor()
+  check('the runs board is a tab away', /git shortlog --runs/.test(await visibleText(page)))
+  await page.getByRole('navigation', { name: 'Leaderboards' }).getByRole('link', { name: 'Quick battles' }).click()
+  await page.getByText('0x01').waitFor()
   await page.getByRole('link', { name: 'PuppetAJ' }).click()
   await page.getByRole('heading', { name: 'PuppetAJ' }).waitFor()
   check('a name opens that player’s record', page.url().endsWith('/players/PuppetAJ'))

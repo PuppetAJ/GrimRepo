@@ -16,8 +16,12 @@ import { FaultyScreen } from '../components/p03/FaultyScreen.ts'
 
 export function Leaderboard() {
   const page = useSearch({ from: '/leaderboard', select: (search) => search.page ?? 1 })
+  const runs = useSearch({ from: '/leaderboard', select: (search) => search.board === 'runs' })
   const navigate = useNavigate({ from: '/leaderboard' })
-  const board = useAsync(() => api.leaderboard(page), `leaderboard:${page}`)
+  const board = useAsync(
+    () => (runs ? api.runLeaderboard(page) : api.leaderboard(page)),
+    `leaderboard:${runs ? 'runs' : 'battles'}:${page}`,
+  )
   const turn = (to: number) =>
     void navigate({ search: (now) => ({ ...now, page: to > 1 ? to : undefined }), resetScroll: false })
   const session = authClient.useSession()
@@ -62,8 +66,26 @@ export function Leaderboard() {
       ) : null}
       <div className="flex flex-col gap-2">
         <h1 className="font-display text-6xl leading-none">Contributors</h1>
-        <p className="font-mono text-sm text-muted-foreground">git shortlog --quick-battles --since="last reset"</p>
+        <p className="font-mono text-sm text-muted-foreground">
+          git shortlog {runs ? '--runs' : '--quick-battles'} --since="last reset"
+        </p>
       </div>
+      <nav aria-label="Leaderboards" className="flex gap-2">
+        {[
+          { label: 'Quick battles', board: undefined },
+          { label: 'Runs', board: 'runs' as const },
+        ].map((tab) => (
+          <Link
+            key={tab.label}
+            to="/leaderboard"
+            search={{ board: tab.board }}
+            aria-current={(tab.board === 'runs') === runs ? 'page' : undefined}
+            className="rounded-md border px-3 py-1.5 text-sm hover:bg-muted aria-[current=page]:border-p03 aria-[current=page]:text-p03"
+          >
+            {tab.label}
+          </Link>
+        ))}
+      </nav>
 
       {/* Reserves height so the page doesn't jump when the rows arrive. */}
       <div className="min-h-[65dvh]">
@@ -90,8 +112,8 @@ export function Leaderboard() {
         ) : null}
         {board.status === 'ready' && board.data.players.length === 0 ? (
           <p className="text-muted-foreground">
-            Nobody has finished a game yet.{' '}
-            <Link to="/game" className="text-primary underline underline-offset-2">
+            Nobody has finished a {runs ? 'run' : 'game'} yet.{' '}
+            <Link to={runs ? '/run' : '/game'} className="text-primary underline underline-offset-2">
               Be the first
             </Link>
             .
@@ -101,7 +123,7 @@ export function Leaderboard() {
           // Not clipped, so first place's corruption can spill past the board's edges.
           <div className="rounded-lg border bg-card">
             <table className="w-full border-collapse text-left">
-              <caption className="sr-only">Players by their best score</caption>
+              <caption className="sr-only">Players by their best {runs ? 'run' : 'score'}</caption>
               <thead className="text-xs tracking-wide text-muted-foreground uppercase">
                 <tr>
                   <th scope="col" className="w-px py-2.5 pr-4 pl-4 font-medium whitespace-nowrap sm:pr-5 sm:pl-6">
@@ -121,11 +143,12 @@ export function Leaderboard() {
               <tbody>
                 {board.data.players.map((row, index) =>
                   index === 0 && board.data.page === 1 ? (
-                    <FirstPlace key={row.username} row={row} mine={row.username.toLowerCase() === me} />
+                    <FirstPlace key={row.username} row={row} runs={runs} mine={row.username.toLowerCase() === me} />
                   ) : (
                     <Row
                       key={row.username}
                       row={row}
+                      runs={runs}
                       top={board.data.top || 1}
                       mine={row.username.toLowerCase() === me}
                     />
@@ -167,15 +190,15 @@ export function Leaderboard() {
   )
 }
 
-function Played({ row }: { row: LeaderboardRow }) {
+function Played({ row, runs }: { row: LeaderboardRow; runs: boolean }) {
   return (
     <>
-      {row.wins} of {row.games} won
+      {row.wins} of {row.games} {runs ? 'runs cleared' : 'won'}
     </>
   )
 }
 
-function FirstPlace({ row, mine }: { row: LeaderboardRow; mine: boolean }) {
+function FirstPlace({ row, runs, mine }: { row: LeaderboardRow; runs: boolean; mine: boolean }) {
   return (
     // Isolated so the negative-z layers sit behind the text but above the row's background.
     <tr className="p03-screen relative isolate border-y border-p03-edge font-terminal">
@@ -235,7 +258,7 @@ function FirstPlace({ row, mine }: { row: LeaderboardRow; mine: boolean }) {
               </span>
             </div>
             <span className="truncate font-mono text-sm text-p03-dim">
-              <Played row={row} />
+              <Played row={row} runs={runs} />
             </span>
           </div>
         </div>
@@ -248,7 +271,7 @@ function FirstPlace({ row, mine }: { row: LeaderboardRow; mine: boolean }) {
   )
 }
 
-function Row({ row, top, mine }: { row: LeaderboardRow; top: number; mine: boolean }) {
+function Row({ row, runs, top, mine }: { row: LeaderboardRow; runs: boolean; top: number; mine: boolean }) {
   return (
     <tr className={`border-t first:border-t-0 ${mine ? 'bg-muted' : ''}`}>
       <td className="py-3.5 pr-4 pl-4 font-mono text-muted-foreground sm:pr-5 sm:pl-6">#{row.rank}</td>
@@ -265,7 +288,7 @@ function Row({ row, top, mine }: { row: LeaderboardRow; top: number; mine: boole
               {mine ? <span className="sr-only"> (you)</span> : null}
             </Link>
             <span className="text-sm text-muted-foreground">
-              <Played row={row} />
+              <Played row={row} runs={runs} />
             </span>
           </div>
         </div>

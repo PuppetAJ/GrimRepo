@@ -123,11 +123,12 @@ export function GameOver({ result, className = '' }: { result: Finished; classNa
   )
 }
 
-/** "Phase 1 of 2" while fighting a boss, which starts its next phase when the scale tips; null otherwise. */
+/** A run battle's name, with "Phase 1 of 2" beside a boss's, which starts its next phase when the scale tips; null in a quick battle. */
 export function phaseText(state: GameState, phase: number): string | null {
   const id = state.opponent.encounter
-  const phases = id ? encounter(id).phases.length : 1
-  return phases > 1 ? `Phase ${phase + 1} of ${phases}` : null
+  if (!id) return null
+  const { name, phases } = encounter(id)
+  return phases.length > 1 ? `${name} · Phase ${phase + 1} of ${phases.length}` : name
 }
 
 /** The panel over the board once a game ends: the run's own, or the quick battle's result. */
