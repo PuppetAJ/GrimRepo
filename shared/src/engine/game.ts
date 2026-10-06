@@ -15,7 +15,7 @@ import {
   type Result,
   type Unit,
 } from './types.ts'
-import { costOf, deckCard, drawUnit, makeUnit, units, worthOf } from './units.ts'
+import { canOwe, costOf, DEBT, deckCard, drawUnit, indebted, makeUnit, units, worthOf } from './units.ts'
 
 export type GameOptions = {
   seed: number
@@ -85,7 +85,17 @@ const mustDraw = (state: GameState): boolean => !state.drawn
 const paid = (state: GameState): number =>
   (state.summon?.marked ?? []).reduce((sum, lane) => sum + worthOf(state.player.board[lane] as Unit), 0)
 
-const onBoard = (state: GameState): number => units(state.player.board).reduce((sum, unit) => sum + worthOf(unit), 0)
+const onBoard = (state: GameState): number =>
+  units(state.player.board)
+    .filter((unit) => !indebted(unit) || canOwe(state, 1))
+    .reduce((sum, unit) => sum + worthOf(unit), 0)
+
+/** Whether the card in a lane can be sacrificed alongside those marked, without its debt losing the game. */
+const affordable = (state: GameState, lane: number): boolean => {
+  if (!indebted(state.player.board[lane])) return true
+  const debts = (state.summon?.marked ?? []).filter((marked) => indebted(state.player.board[marked])).length
+  return canOwe(state, debts + 1)
+}
 
 /** Library cards not in hand or on the table, which an empty deck is rebuilt from. */
 const outOfPlay = (state: GameState): number[] => {
@@ -137,6 +147,7 @@ export function apply(current: GameState, action: Action): Result {
     if (!summon) return fail('Select a card first')
     if (!validLane(action.lane) || !state.player.board[action.lane]) return fail('Nothing there to sacrifice')
     if (summon.marked.includes(action.lane)) return fail('Already marked')
+    if (!affordable(state, action.lane)) return fail('Its debt would tip the scale to a loss')
     const unit = state.player.hand.find((candidate) => candidate.uid === summon.uid) as Unit
     if (paid(state) >= costOf(unit)) return fail('The cost is already paid')
     summon.marked.push(action.lane)
@@ -166,6 +177,11 @@ export function apply(current: GameState, action: Action): Result {
       const survived = victim.sigils.includes('try_catch')
       if (!survived) state.player.board[lane] = null
       events.push({ type: 'sacrificed', lane, uid: victim.uid, survived })
+      // A Technical Debt card pays 3, and the scale tips against its owner for it.
+      if (indebted(victim)) {
+        state.scale -= DEBT
+        events.push({ type: 'indebted', uid: victim.uid, amount: DEBT, scale: state.scale })
+      }
       if (!survived) perish(state, 'player', victim, lane, events)
     }
     // A Refactor card hands its stats to the card it pays for.
@@ -308,7 +324,7 @@ export function legalActions(state: GameState): Action[] {
       const occupant = state.player.board[lane]
       const marked = summon.marked.includes(lane)
       if (marked) actions.push({ type: 'unmark', lane })
-      else if (occupant && paid(state) < cost) actions.push({ type: 'mark', lane })
+      else if (occupant && paid(state) < cost && affordable(state, lane)) actions.push({ type: 'mark', lane })
       if (paid(state) >= cost && (!occupant || (marked && !occupant.sigils.includes('try_catch')))) {
         actions.push({ type: 'place', lane })
       }

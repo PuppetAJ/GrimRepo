@@ -37,7 +37,7 @@ export {
   type Slot,
   type Unit,
 } from './engine/types.ts'
-export { costOf, deckCard, worthOf } from './engine/units.ts'
+export { canOwe, costOf, deckCard, indebted, worthOf } from './engine/units.ts'
 export { Rng } from './rng.ts'
 export { SCORE_TURN_BASELINE, scoreBattle, scoreRun, type Outcome } from './scoring.ts'
 export { cardsIn, ENCOUNTERS, encounter, STAGES, type Encounter, type Plan, type Queued } from './encounters.ts'

@@ -119,6 +119,7 @@ export function step(view: View, event: GameEvent): View {
       return { ...view, board, front, back }
     }
     case 'hit':
+    case 'indebted':
       return { ...view, scale: event.scale }
     case 'advanced': {
       const unit = view.back[event.lane] ?? null
