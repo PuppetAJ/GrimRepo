@@ -171,6 +171,13 @@
   }
 }
 
+@keyframes warm-pop {
+  40% {
+    transform: scale(1.08);
+    filter: brightness(1.35) drop-shadow(0 0 10px rgb(255 180 84 / 0.8));
+  }
+}
+
 @keyframes fade-in {
   from {
     opacity: 0;

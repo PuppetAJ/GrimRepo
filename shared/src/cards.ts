@@ -52,7 +52,7 @@ export const SIGILS: Record<SigilId, { name: string; text: string }> = {
   popup: { name: 'Pop-up', text: 'The card opposite it has 1 more attack.' },
   refactor: {
     name: 'Refactor',
-    text: 'When sacrificed, gives its attack, health and Refactor to the card it pays for.',
+    text: 'When sacrificed, gives its attack, health and Refactor to the card it pays for, and is gone for the battle.',
   },
   hot_reload: { name: 'Hot Reload', text: 'When it dies, a fresh copy comes back to its owner, once.' },
   beta: { name: 'Beta', text: 'After a round on the table, it ships as a stronger card.' },

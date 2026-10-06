@@ -17,7 +17,7 @@ import type { RunReady } from '../useRun.ts'
 import { PenLayer } from './PenLayer.tsx'
 import { ICON_BUTTON, ScreenActions, ScreenBar, useScreenMode } from './Screen.tsx'
 
-type Mark = 'here' | 'visited' | 'next' | 'ahead' | 'behind'
+type Mark = 'here' | 'visited' | 'next' | 'ahead' | 'behind' | 'cut'
 type Link = 'taken' | 'open' | 'lit' | 'quiet'
 
 // Opaque grounds, so the screen's moving text never shows through a node.
@@ -27,6 +27,8 @@ const STYLE: Record<Mark, string> = {
   next: 'border-p03 bg-p03-ground text-p03 hover:bg-[#13261a] focus-visible:bg-[#13261a]',
   ahead: 'border-p03-edge bg-p03-ground text-p03-dim',
   behind: 'border-p03-edge/50 bg-p03-ground text-p03-dim/60',
+  // Ahead, but off every route from here.
+  cut: 'border-p03-edge/40 bg-p03-ground text-p03-dim opacity-30',
 }
 
 /** The choice the pointer or focus is on: the node you'd go to, outlined in dashes. */
@@ -39,7 +41,12 @@ const LINK: Record<Link, string> = {
   quiet: 'bg-p03-edge',
 }
 
-const WORDS: Partial<Record<Mark, string>> = { here: 'you are here', visited: 'visited', behind: 'passed by' }
+const WORDS: Partial<Record<Mark, string>> = {
+  here: 'you are here',
+  visited: 'visited',
+  behind: 'passed by',
+  cut: 'out of reach',
+}
 
 // Each row's share of the map's height, and the node's size: 44 pixels, the least a finger needs.
 // A hologram sets --map-row so the whole stage fits its height.
@@ -196,6 +203,15 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
   const placed = spots(state.map, state.seed, { x: room(cell.x), y: room(cell.y) })
   const open = reachable(state)
   const row = state.at === null ? -1 : (findNode(state.map, state.at)?.row ?? -1)
+  // Every node still on a route from here; the rest ahead are out of reach.
+  const ahead = new Set<string>()
+  const walk = [...open]
+  while (walk.length) {
+    const id = walk.pop() as string
+    if (ahead.has(id)) continue
+    ahead.add(id)
+    walk.push(...(findNode(state.map, id)?.next ?? []))
+  }
   const markOf = (node: MapNode): Mark =>
     node.id === state.at
       ? 'here'
@@ -205,7 +221,9 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
           ? 'next'
           : node.row <= row
             ? 'behind'
-            : 'ahead'
+            : ahead.has(node.id)
+              ? 'ahead'
+              : 'cut'
   const linkOf = (from: MapNode, to: string): Link => {
     const step = path.indexOf(from.id)
     if (step >= 0 && path[step + 1] === to) return 'taken'

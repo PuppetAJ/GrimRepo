@@ -13,6 +13,7 @@ import {
   owed,
   phaseText,
   prompt,
+  reshuffleNote,
   ScaleBar,
   SeatNote,
   skippedDraw,
@@ -68,6 +69,8 @@ export function Hud({
   const legal = busy || finished ? [] : legalActions(state)
   const mustDraw = has(legal, { type: 'draw' })
   const summoning = view.summon ? view.hand.find((unit) => unit.uid === view.summon?.uid) : undefined
+  // An empty deck says what a draw would shuffle back in, and what it costs in a run.
+  const reshuffle = view.deck ? null : reshuffleNote(state)
   const last = game.log.slice(-3)
   const ended = finished && !busy
   return (
@@ -77,6 +80,7 @@ export function Hud({
         <ScaleBar scale={view.scale} className="text-xl sm:text-2xl" />
         <span className="text-lg text-p03-dim sm:text-xl">
           Turn {view.turn} · Deck {view.deck}
+          {reshuffle ? ` · draw reshuffles ${reshuffle.cards}` : null}
           {phaseText(state, view.phase) ? ` · ${phaseText(state, view.phase)}` : null}
         </span>
         {pinned ? (
@@ -204,8 +208,12 @@ export function Hud({
               </Button>
             ) : mustDraw ? (
               <>
-                <Button data-action="draw-deck" onClick={() => act({ type: 'draw', from: 'deck' })}>
-                  Draw from the deck
+                <Button
+                  data-action="draw-deck"
+                  title={reshuffle?.text}
+                  onClick={() => act({ type: 'draw', from: 'deck' })}
+                >
+                  {reshuffle ? 'Reshuffle and draw' : 'Draw from the deck'}
                 </Button>
                 <Button
                   data-action="draw-boilerplate"
