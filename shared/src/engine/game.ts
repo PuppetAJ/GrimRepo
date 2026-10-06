@@ -160,16 +160,27 @@ export function apply(current: GameState, action: Action): Result {
     const cleared = summon.marked.includes(action.lane) && !occupant?.sigils.includes('try_catch')
     if (occupant && !cleared) return fail('That lane is taken')
 
+    const victims = new Map(summon.marked.map((lane) => [lane, state.player.board[lane] as Unit]))
     for (const lane of summon.marked) {
-      const victim = state.player.board[lane] as Unit
+      const victim = victims.get(lane) as Unit
       const survived = victim.sigils.includes('try_catch')
       if (!survived) state.player.board[lane] = null
       events.push({ type: 'sacrificed', lane, uid: victim.uid, survived })
     }
+    // A Refactor card hands its stats to the card it pays for.
+    const refactored = summon.marked
+      .map((lane) => victims.get(lane) as Unit)
+      .filter((victim) => victim.sigils.includes('refactor'))
     state.player.hand = state.player.hand.filter((candidate) => candidate.uid !== unit.uid)
     state.player.board[action.lane] = unit
     state.summon = null
     events.push({ type: 'placed', lane: action.lane, unit })
+    for (const victim of refactored) {
+      unit.attack += victim.attack
+      unit.health += victim.health
+      unit.maxHealth += victim.health
+      events.push({ type: 'buffed', uid: unit.uid, attack: unit.attack, health: unit.health })
+    }
 
     if (unit.sigils.includes('segfault')) {
       const wiped = [...units(state.opponent.front), ...units(state.opponent.back)].map((victim) => victim.uid)
