@@ -24,9 +24,12 @@ const list: Encounter[] = [
     boss: false,
     phases: [
       [
-        [{ lane: 1, card: 'HelloWorld' }],
+        [{ lane: 1, card: 'CopyPaste' }],
         [{ lane: 2, pick: ['CronJob', 'SpamBot'] }],
-        [],
+        [
+          { lane: 3, card: 'GrimRepo' },
+          { lane: 0, card: 'SpamBot' },
+        ],
         [{ lane: 0, card: 'InfiniteLoop' }],
         [{ lane: 3, pick: ['Watchdog', 'CopyPaste'] }],
       ],
@@ -39,9 +42,12 @@ const list: Encounter[] = [
     phases: [
       [
         [{ lane: 0, card: 'CronJob' }],
-        [{ lane: 3, card: 'CronJob' }],
-        [{ lane: 1, pick: ['SpamBot', 'HelloWorld'] }],
-        [],
+        [
+          { lane: 3, card: 'GrimRepo' },
+          { lane: 1, card: 'SpamBot' },
+        ],
+        [{ lane: 1, pick: ['GrimRepo', 'CopyPaste'] }],
+        [{ lane: 2, card: 'ZeroDay' }],
         [{ lane: 2, card: 'Watchdog' }],
       ],
     ],
@@ -51,19 +57,14 @@ const list: Encounter[] = [
     stage: 0,
     boss: true,
     phases: [
-      [
-        [{ lane: 1, card: 'Watchdog' }],
-        [{ lane: 2, card: 'SpamBot' }],
-        [{ lane: 0, pick: ['CopyPaste', 'InfiniteLoop'] }],
-        [{ lane: 3, card: 'Firewall' }],
-      ],
+      [[{ lane: 1, card: 'Watchdog' }], [{ lane: 2, card: 'SpamBot' }], [], [{ lane: 3, card: 'Watchdog' }]],
       [
         [
           { lane: 1, card: 'Bug' },
           { lane: 2, card: 'Bug' },
         ],
-        [{ lane: 0, card: 'ZeroDay' }],
-        [{ lane: 3, pick: ['Crawler', 'NullPointer'] }],
+        [{ lane: 0, card: 'CopyPaste' }],
+        [{ lane: 3, pick: ['CopyPaste', 'Watchdog'] }],
       ],
     ],
   },
@@ -87,8 +88,8 @@ const list: Encounter[] = [
     phases: [
       [
         [{ lane: 2, card: 'LegacyCode' }],
-        [{ lane: 0, card: 'Cookie' }],
-        [{ lane: 1, pick: ['Sandbox', 'MergeConflict'] }],
+        [{ lane: 0, card: 'Watchdog' }],
+        [{ lane: 1, pick: ['CronJob', 'MergeConflict'] }],
         [{ lane: 3, card: 'ZeroDay' }],
       ],
     ],
@@ -99,7 +100,7 @@ const list: Encounter[] = [
     boss: true,
     phases: [
       [
-        [{ lane: 0, card: 'Firewall' }],
+        [{ lane: 0, card: 'Sandbox' }],
         [{ lane: 2, card: 'Crawler' }],
         [{ lane: 1, pick: ['SQLInjection', 'NullPointer'] }],
         [{ lane: 3, card: 'LegacyCode' }],
@@ -113,9 +114,9 @@ const list: Encounter[] = [
     boss: false,
     phases: [
       [
-        [{ lane: 0, card: 'Crawler' }],
+        [{ lane: 0, card: 'SpamBot' }],
         [{ lane: 3, card: 'SQLInjection' }],
-        [{ lane: 1, pick: ['ForkBomb', 'DestroyEnemyYou'] }],
+        [{ lane: 1, pick: ['Cookie', 'Sandbox'] }],
         [{ lane: 2, card: 'Documentation' }],
       ],
     ],
@@ -126,8 +127,8 @@ const list: Encounter[] = [
     boss: false,
     phases: [
       [
-        [{ lane: 2, card: 'JSONFoorhees' }],
-        [{ lane: 1, card: 'NullPointer' }],
+        [{ lane: 2, card: 'LegacyCode' }],
+        [{ lane: 1, card: 'CopyPaste' }],
         [{ lane: 0, pick: ['Firewall', 'Cookie'] }],
         [{ lane: 3, pick: ['DestroyEnemyYou', 'ForkBomb'] }],
       ],
@@ -139,17 +140,17 @@ const list: Encounter[] = [
     boss: true,
     phases: [
       [
-        [{ lane: 1, card: 'Documentation' }],
+        [{ lane: 1, card: 'LegacyCode' }],
         [{ lane: 2, card: 'ForkBomb' }],
         [{ lane: 0, pick: ['JSONFoorhees', 'DestroyEnemyYou'] }],
         [{ lane: 3, card: 'RubberDuck' }],
       ],
       [
         [
-          { lane: 0, card: 'Mainframe' },
+          { lane: 0, card: 'RubberDuck' },
           { lane: 3, card: 'Firewall' },
         ],
-        [{ lane: 1, card: 'DestroyEnemyYou' }],
+        [{ lane: 1, card: 'Cookie' }],
         [{ lane: 2, pick: ['Documentation', 'ForkBomb'] }],
       ],
     ],
