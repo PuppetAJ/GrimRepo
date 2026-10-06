@@ -26,7 +26,7 @@ import { CursorSync, Exposure, Loaded } from './table3d/stage.tsx'
 type Attributes = Record<string, string | number>
 
 /** What the room shows: the factory's battery and monitors, and P03's mood. */
-type RoomState = { view: View; log: string[]; busy: boolean; outcome?: 'win' | 'loss' }
+type RoomState = { view: View; log: string[]; busy: boolean; outcome?: 'win' | 'loss'; patient?: boolean }
 type RoomHandlers = {
   onHold?: (screen: Screen, x: number, y: number) => void
   onPin?: (screen: Screen) => void
@@ -67,6 +67,7 @@ const sameRoom = (a: RoomState, b: RoomState) =>
   a.view === b.view &&
   a.busy === b.busy &&
   a.outcome === b.outcome &&
+  a.patient === b.patient &&
   a.log.length === b.log.length &&
   a.log.every((line, index) => b.log[index] === line)
 
@@ -176,7 +177,7 @@ export function TableStage({ children }: { children: ReactNode }) {
             {room ? (
               <>
                 <Factory view={room.view} log={room.log} onHold={onHold} onPin={onPin} />
-                <FactoryP03 view={room.view} busy={room.busy} outcome={room.outcome} />
+                <FactoryP03 view={room.view} busy={room.busy} outcome={room.outcome} patient={room.patient} />
               </>
             ) : null}
             <tunnel.Out />

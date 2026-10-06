@@ -61,7 +61,6 @@ function Between({
         state={run.state}
         lines={run.news.map((line) => `P03> ${line}`)}
         projecting={projecting}
-        content={body}
         from={glide ? 'table' : undefined}
         closing={leaving || toFloat}
         onClosed={leaving ? onLeft : () => setShown(view)}

@@ -37,7 +37,7 @@ function loadFaces(): Promise<Record<Face, THREE.Texture>> {
   return faces
 }
 
-function useMood(view: View, busy: boolean, outcome: 'win' | 'loss' | undefined): Mood {
+function useMood(view: View, busy: boolean, outcome: 'win' | 'loss' | undefined, patient: boolean): Mood {
   const [choking, setChoking] = useState(false)
   const [impatient, setImpatient] = useState(false)
   const scale = view.scale
@@ -52,12 +52,12 @@ function useMood(view: View, busy: boolean, outcome: 'win' | 'loss' | undefined)
   }, [scale])
   useEffect(() => {
     const calm = setTimeout(() => setImpatient(false), 0)
-    const waiting = busy ? undefined : setTimeout(() => setImpatient(true), 25_000)
+    const waiting = busy || patient ? undefined : setTimeout(() => setImpatient(true), 25_000)
     return () => {
       clearTimeout(calm)
       clearTimeout(waiting)
     }
-  }, [view, busy])
+  }, [view, busy, patient])
   if (outcome === 'win') return 'whiteflag'
   if (outcome === 'loss') return 'happy'
   if (choking) return 'choking'
@@ -150,8 +150,19 @@ function P03({ mood }: { mood: Mood }) {
   return <primitive object={scene} position={[CENTER_X, 9.06, -16]} rotation={[0, -Math.PI / 2, 0]} />
 }
 
-export function FactoryP03({ view, busy, outcome }: { view: View; busy: boolean; outcome?: 'win' | 'loss' }) {
-  const mood = useMood(view, busy, outcome)
+export function FactoryP03({
+  view,
+  busy,
+  outcome,
+  patient = false,
+}: {
+  view: View
+  busy: boolean
+  outcome?: 'win' | 'loss'
+  /** Off the board P03 isn't waiting on a move, so it never grows impatient. */
+  patient?: boolean
+}) {
+  const mood = useMood(view, busy, outcome, patient)
   return (
     <>
       <P03 mood={mood} />

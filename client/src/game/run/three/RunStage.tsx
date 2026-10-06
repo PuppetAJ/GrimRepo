@@ -135,8 +135,6 @@ const DROP = 0.25
 const SHRINK = 0.42
 const OFF = 0.52
 const CLOSED = OFF + LIFT
-/** Seconds the window takes to rise again with new content. */
-const RESCAN = 0.4
 useGLTF.preload(MODEL, false, false)
 
 /** The projector model, scaled to stand on the table, with its lens where the light leaves it. */
@@ -179,15 +177,12 @@ function opened(full: THREE.Vector3[], across: number, up: number, into: THREE.V
 function Projector({
   corners,
   ready,
-  content,
   closing,
   onClosed,
   onPin,
 }: {
   corners: THREE.Vector3[]
   ready: RefObject<number>
-  /** What the window shows; a change re-scans it, rising again from a line. */
-  content: string
   /** Shuts the window and lifts the projector away, then calls `onClosed`. */
   closing: boolean
   onClosed: () => void
@@ -219,8 +214,6 @@ function Projector({
     across: 1,
     up: 1,
     done: false,
-    content,
-    rescan: -Infinity,
   })
   const now = useRef([new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()])
   useFrame(({ clock }) => {
@@ -230,10 +223,6 @@ function Projector({
       state.born = t + Math.max(0, (ready.current - performance.now()) / 1000)
     const since = STILL ? Infinity : state.born < 0 ? -1 : t - state.born
     if (closing && state.shut < 0) state.shut = t
-    if (state.content !== content) {
-      state.content = content
-      state.rescan = t
-    }
     const shut = state.shut < 0 ? -1 : STILL ? Infinity : t - state.shut
     if (shut >= CLOSED && !state.done) {
       state.done = true
@@ -271,7 +260,7 @@ function Projector({
     // Closing starts from however far it had opened.
     if (shut < 0) {
       state.across = phase(opening, 0, ACROSS)
-      state.up = STILL ? 1 : Math.min(phase(opening, ACROSS, 1), phase(t - state.rescan, 0, RESCAN))
+      state.up = phase(opening, ACROSS, 1)
     }
     const across = shut < 0 ? state.across : state.across * (1 - phase(shut, DROP, SHRINK))
     const up = shut < 0 ? state.up : state.up * (1 - phase(shut, 0, DROP))
@@ -340,14 +329,11 @@ export function BetweenBattles({
   state,
   lines,
   projecting,
-  content,
   from,
   closing = false,
   onClosed,
   onPin,
 }: {
-  /** What the window shows; a change re-scans it. */
-  content: string
   /** Shuts the projector and lifts it away, then calls `onClosed`. */
   closing?: boolean
   onClosed: () => void
@@ -363,7 +349,9 @@ export function BetweenBattles({
   const stage = useStage()
   const view = useMemo(() => restView(state), [state])
   const corners = useMemo(() => windowCorners(), [])
-  useLayoutEffect(() => stage.room({ view, log: lines, busy: false }))
+  // P03 gloats over a lost run and gives up over a cleared one, and never grows impatient off the board.
+  const outcome = state.status === 'won' ? 'win' : state.status === 'lost' ? 'loss' : undefined
+  useLayoutEffect(() => stage.room({ view, log: lines, busy: false, outcome, patient: true }))
   // When the projector may start: once the loading screen has faded, or the camera has nearly glided back.
   const ready = useRef(Infinity)
   useEffect(() => {
@@ -378,14 +366,7 @@ export function BetweenBattles({
         <EndTurnButton active={false} rung={0} onClick={() => {}} />
         <FactoryEffects quality={stage.quality} />
         {projecting ? (
-          <Projector
-            corners={corners}
-            ready={ready}
-            content={content}
-            closing={closing}
-            onClosed={onClosed}
-            onPin={onPin}
-          />
+          <Projector corners={corners} ready={ready} closing={closing} onClosed={onClosed} onPin={onPin} />
         ) : null}
       </Selection>
       <WarmUp onWarm={stage.warm} />

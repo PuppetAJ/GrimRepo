@@ -1,5 +1,5 @@
-import { Search } from 'lucide-react'
-import { createContext, use, useState } from 'react'
+import { CircleOff, Search } from 'lucide-react'
+import { createContext, use, useState, type ReactNode } from 'react'
 import { card, SIGILS, type SigilId, type Unit } from 'shared'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog.tsx'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover.tsx'
@@ -68,6 +68,16 @@ export function useCardSearch() {
 
 // Fewer cards than this are easy to scan without a search.
 export const SEARCH_FROM = 9
+
+/** In place of a screen's cards when there's nothing to do with them, centered in the projector's window. */
+export function NothingHere({ children }: { children: ReactNode }) {
+  return (
+    <div data-center className="flex flex-col items-center gap-3 py-10 text-center text-p03-dim">
+      <CircleOff aria-hidden className="size-16" strokeWidth={1.5} />
+      <p className="text-lg">{children}</p>
+    </div>
+  )
+}
 
 export function CardSearch({
   query,

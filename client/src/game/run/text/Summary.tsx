@@ -20,7 +20,8 @@ export function Summary({ run }: { run: RunReady }) {
     ['Score', number(score)],
   ]
   return (
-    <div className="flex flex-col gap-4">
+    // Kept to a readable width, so a wide screen doesn't leave the facts stranded across it.
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
       <p className="text-3xl text-p03">
         {won
           ? 'You cleared the run. P03 is checking the logs for cheats.'
@@ -47,7 +48,7 @@ export function Summary({ run }: { run: RunReady }) {
           <DeckTable deck={state.deck} caption="The deck it ended with" />
         </div>
       </section>
-      <div className="flex flex-wrap gap-3 font-sans text-base">
+      <div className="-mt-1 flex flex-wrap gap-3 pb-6 font-sans text-base">
         <Button data-action="again" onClick={run.again}>
           Start another run
         </Button>

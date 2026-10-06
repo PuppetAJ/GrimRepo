@@ -14,6 +14,10 @@ const MIXED: NodeKind[] = ['battle', 'battle', 'battle', 'battle', 'card', 'card
 // Every route meets this many battles before the boss, so routes differ but a run's length barely does.
 const FEWEST_BATTLES = 2
 const MOST_BATTLES = 4
+// A map has at least this many nodes below the boss, and reaches both sides in at least this many rows, so it never
+// crowds into one corner.
+const FEWEST_NODES = 17
+const ROWS_EACH_SIDE = 3
 
 type Cell = { row: number; col: number }
 const key = ({ row, col }: Cell) => `${row}-${col}`
@@ -45,6 +49,17 @@ function walk(rng: Rng): Map<string, Set<string>> {
     }
   }
   return links
+}
+
+/** Whether the walked grid is full enough and reaches both sides. */
+function spread(links: Map<string, Set<string>>): boolean {
+  const cells = [...links.keys()].map((id) => id.split('-').map(Number) as [number, number])
+  const rows = (side: (col: number) => boolean) => new Set(cells.filter(([, col]) => side(col)).map(([row]) => row)).size
+  return (
+    cells.length >= FEWEST_NODES &&
+    rows((col) => col < Math.floor(MAP_COLUMNS / 2)) >= ROWS_EACH_SIDE &&
+    rows((col) => col > Math.floor(MAP_COLUMNS / 2)) >= ROWS_EACH_SIDE
+  )
 }
 
 /** The fewest and most battles on any route from each node to the boss. */
@@ -91,7 +106,9 @@ export function generateStage(stage: number, rng: Rng): StageMap {
   if (!fights.length || !boss) throw new Error(`Stage ${stage} has no encounters`)
   const scenes = Object.keys(SCENES)
 
-  const links = walk(rng)
+  // Walked again until it spreads out, keeping the last walk should it never.
+  let links = walk(rng)
+  for (let attempt = 0; attempt < 30 && !spread(links); attempt++) links = walk(rng)
   const top = { row: ROWS, col: Math.floor(MAP_COLUMNS / 2) }
   const rows: MapNode[][] = Array.from({ length: ROWS }, (_, row) =>
     Array.from({ length: MAP_COLUMNS }, (_, col) => ({ row, col }))

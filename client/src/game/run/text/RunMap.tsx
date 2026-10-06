@@ -9,7 +9,7 @@ import type { RunReady } from '../useRun.ts'
 import { PenLayer } from './PenLayer.tsx'
 import { ICON_BUTTON, ScreenActions, ScreenBar, useScreenMode } from './Screen.tsx'
 
-type Mark = 'here' | 'visited' | 'next' | 'lit' | 'ahead' | 'behind'
+type Mark = 'here' | 'visited' | 'next' | 'ahead' | 'behind'
 type Link = 'taken' | 'open' | 'lit' | 'quiet'
 
 // Opaque grounds, so the screen's moving text never shows through a node.
@@ -17,10 +17,12 @@ const STYLE: Record<Mark, string> = {
   here: 'border-p03 bg-[#13261a] text-p03',
   visited: 'border-p03-dim bg-[#0d1a10] text-p03-dim',
   next: 'border-p03 bg-p03-ground text-p03 hover:bg-[#13261a] focus-visible:bg-[#13261a]',
-  lit: 'border-p03 border-dashed bg-p03-ground text-p03',
   ahead: 'border-p03-edge bg-p03-ground text-p03-dim',
   behind: 'border-p03-edge/50 bg-p03-ground text-p03-dim/60',
 }
+
+/** The choice the pointer or focus is on: the node you'd go to, outlined in dashes. */
+const AIMED = 'outline-2 outline-offset-4 outline-dashed outline-p03'
 
 const LINK: Record<Link, string> = {
   taken: 'bg-p03-dim',
@@ -61,10 +63,10 @@ function Legend({
 }) {
   const mode = useScreenMode()
   const terminal = mode === 'terminal'
-  // In the projector's window it's a little grid of icons beside the map's buttons, named by tooltip and label.
+  // In the projector's window it's a row of icons under the title, named by tooltip and label.
   if (mode === 'hologram')
     return (
-      <ul aria-label="What the icons mean" className="grid grid-cols-3 gap-0.5 text-p03-dim">
+      <ul aria-label="What the icons mean" className="flex gap-1 text-p03-dim">
         {KINDS.map((kind) => {
           const Icon = NODE_ICONS[kind]
           return (
@@ -156,7 +158,6 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
   const placed = spots(state.map, state.seed, { x: room(cell.x), y: room(cell.y) })
   const open = reachable(state)
   const row = state.at === null ? -1 : (findNode(state.map, state.at)?.row ?? -1)
-  const lit = new Set(peek ? (findNode(state.map, peek)?.next ?? []) : [])
   const markOf = (node: MapNode): Mark =>
     node.id === state.at
       ? 'here'
@@ -164,16 +165,15 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
         ? 'visited'
         : open.includes(node.id)
           ? 'next'
-          : lit.has(node.id)
-            ? 'lit'
-            : node.row <= row
-              ? 'behind'
-              : 'ahead'
+          : node.row <= row
+            ? 'behind'
+            : 'ahead'
   const linkOf = (from: MapNode, to: string): Link => {
     const step = path.indexOf(from.id)
     if (step >= 0 && path[step + 1] === to) return 'taken'
+    // Pointing at a choice lights only the step to it, not the steps beyond, which would look like the way taken.
+    if (from.id === state.at && to === peek && open.includes(to)) return 'lit'
     if (from.id === state.at && open.includes(to)) return 'open'
-    if (from.id === peek) return 'lit'
     return 'quiet'
   }
   const at = (spot: Spot) => ({ x: spot.x * size.width, y: spot.y * size.height })
@@ -242,15 +242,11 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
           </button>
         </div>
       </ScreenActions>
-      {hologram ? (
-        <ScreenActions>{legend}</ScreenActions>
-      ) : (
-        <ScreenBar>
-          <div className="pb-1">{legend}</div>
-        </ScreenBar>
-      )}
+      <ScreenBar>
+        <div className="pb-1">{legend}</div>
+      </ScreenBar>
       {/* Padded, so the boss and the first row are never cut off at the top or bottom of the scroll. */}
-      <div className="py-8">
+      <div className={hologram ? 'py-5' : 'py-8'}>
         <div ref={box} className="relative w-full" style={{ height: `calc(${ROW_HEIGHT} * ${state.map.rows.length})` }}>
           {/* The links: one image tiled along each, turned to point at the node ahead. */}
           <div aria-hidden className="absolute inset-0">
@@ -296,7 +292,7 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
                     const words = [WORDS[mark], planned ? 'planned' : '', describeNext(state.map, node)].filter(Boolean)
                     const label = `${name}${words.length ? `, ${words.join(', ')}` : ''}`
                     const boss = node.kind === 'boss'
-                    const box = `absolute z-20 grid -translate-x-1/2 -translate-y-1/2 place-items-center rounded-md border-2 ${STYLE[mark]} ${planned ? 'ring-2 ring-[#ffb347] ring-offset-2 ring-offset-p03-ground' : ''} ${shown === node.kind ? 'shadow-[0_0_14px_rgb(125_255_154/0.75)] outline-2 outline-offset-4 outline-p03' : ''}`
+                    const box = `absolute z-20 grid -translate-x-1/2 -translate-y-1/2 place-items-center rounded-md border-2 ${STYLE[mark]} ${planned ? 'ring-2 ring-[#ffb347] ring-offset-2 ring-offset-p03-ground' : ''} ${peek === node.id && mark === 'next' ? AIMED : shown === node.kind ? 'shadow-[0_0_14px_rgb(125_255_154/0.75)] outline-2 outline-offset-4 outline-p03' : ''}`
                     const style = {
                       left: `${spot.x * 100}%`,
                       top: `${spot.y * 100}%`,

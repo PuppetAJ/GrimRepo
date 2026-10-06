@@ -8,7 +8,7 @@ export function Offer({ run }: { run: RunReady }) {
   const visit = run.state.visit
   if (visit?.kind !== 'card' && visit?.kind !== 'reward') return null
   return (
-    <div className="flex flex-col gap-4">
+    <div data-center className="flex flex-col gap-4">
       <ScreenBar>
         <p className="pb-1 text-lg">
           {visit.kind === 'reward'

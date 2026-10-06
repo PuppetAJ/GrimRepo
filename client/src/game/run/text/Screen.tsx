@@ -1,7 +1,7 @@
 import { useNavigate } from '@tanstack/react-router'
 import { Flag, Layers, LogOut, Maximize, Menu, Minimize, Repeat, X } from 'lucide-react'
 import { Dialog as DialogPrimitive } from 'radix-ui'
-import { createContext, use, useEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react'
+import { use, useEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { STAGES } from 'shared'
 import { AlertDialog } from '@/components/ui/alert-dialog.tsx'
@@ -23,6 +23,7 @@ import type { Layout } from '../../text/useTextTable.ts'
 import type { RunReady } from '../useRun.ts'
 import { CardSearch, SEARCH_FROM, SearchContext, useCardSearch } from './CardBits.tsx'
 import { DeckTable } from './DeckTable.tsx'
+import { SlotContext, type Mode } from './slots.ts'
 
 export const ICON_BUTTON =
   'relative grid size-10 shrink-0 place-items-center rounded-md border-2 border-p03-edge bg-[#07130b] text-p03 hover:bg-[#13261a] focus-visible:outline-2 focus-visible:outline-p03 aria-expanded:bg-[#13261a] aria-pressed:border-p03 aria-pressed:bg-[#13261a]'
@@ -33,13 +34,7 @@ const WINDOW_PX = { width: 840, height: 540 }
 /** Fades a scrolling area's last lines, so it ends softly instead of looking cut off. */
 export const FADE = '[mask-image:linear-gradient(to_bottom,black_calc(100%-2.5rem),transparent)] pb-10'
 
-type Mode = 'terminal' | 'floating' | 'hologram'
-
-type Slots = { actions: HTMLElement | null; bar: HTMLElement | null; deckShown: boolean; mode: Mode }
-const SlotContext = createContext<Slots>({ actions: null, bar: null, deckShown: false, mode: 'terminal' })
-
-/** Whether the screen is the text table's terminal or over the 3D table, where its parts are see-through. */
-export const useScreenMode = () => use(SlotContext).mode
+export { useScreenMode } from './slots.ts'
 
 /** A screen in the projector's light: it flickers now and then, faintly and at random, so it stays easy to read. */
 function Hologram({ children }: { children: ReactNode }) {
@@ -383,9 +378,9 @@ export function Screen({
                   {buttonRow}
                 </header>
                 <div ref={setBar} className="shrink-0 empty:hidden" />
-                {/* Only the content scrolls; a short screen sits in the middle of the window. */}
+                {/* Only the content scrolls; a screen marked data-center, such as a card choice, sits in the middle. */}
                 <div data-scroller className="flex min-h-0 flex-1 flex-col overflow-y-auto px-1">
-                  <div className="my-auto">{children}</div>
+                  <div className="has-[[data-center]]:my-auto">{children}</div>
                 </div>
               </Hologram>
             </div>
