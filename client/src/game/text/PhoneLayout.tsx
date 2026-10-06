@@ -41,7 +41,7 @@ function Menu() {
   }
   return (
     <div
-      className={`absolute top-12 z-40 flex w-72 max-w-[calc(100%-1rem)] flex-col gap-3 rounded-md border-2 border-p03-edge bg-[#07130b] p-2 ${sideways ? 'left-2' : 'right-2'}`}
+      className={`absolute top-12 z-40 flex w-72 max-w-[calc(100%-1rem)] animate-in flex-col gap-3 rounded-md border-2 border-p03-edge bg-[#07130b] p-2 duration-150 fade-in-0 slide-in-from-top-2 motion-reduce:animate-none ${sideways ? 'left-2' : 'right-2'}`}
     >
       <div className="grid grid-cols-2 gap-2 [&_svg]:size-4 [&_svg]:shrink-0">
         <button type="button" onClick={choose(() => setLogOpen(true))} className={MENU_BUTTON}>

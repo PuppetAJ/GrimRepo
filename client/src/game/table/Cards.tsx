@@ -12,7 +12,7 @@ import { MOOD } from './mood.ts'
 import { Disk, facePlanes, type DiskHandle } from './Disk.tsx'
 import { backTexture, faceContent, faceLights, faceTexture, type loadCardAssets } from './faces.ts'
 import { DECK, handPlace, slot, type Row, type Vec3 } from './layout.ts'
-import { LEAVE_MS, LUNGE_MS, type Lunge } from './playback.ts'
+import { LEAVE_MS, LUNGE_MS, SLIDE_MS, type Lunge, type Slide } from './playback.ts'
 import { holding, startHold } from './reading.ts'
 
 export { Popup } from './Popup.tsx'
@@ -37,6 +37,7 @@ export function Card({
   place,
   spawn,
   lunge,
+  slide,
   leavingAt,
   leavingHow = 'died',
   look = 'plain',
@@ -56,6 +57,8 @@ export function Card({
   place: Place
   spawn?: Vec3
   lunge?: Lunge
+  /** A move along the row, which lifts the card over the lanes between. */
+  slide?: Slide
   leavingAt?: number
   leavingHow?: 'died' | 'sacrificed'
   look?: Look
@@ -162,6 +165,9 @@ export function Card({
     }
     if (!STILL && lunge && now - lunge.at < LUNGE_MS)
       position.z += lunge.toward * 0.4 * Math.sin((Math.PI * (now - lunge.at)) / LUNGE_MS)
+    const sliding = !STILL && slide !== undefined && now - slide.at < SLIDE_MS
+    // Lifted off the table in an arc while it crosses, so the move reads as one.
+    if (sliding) position.y += Math.sin((Math.PI * (now - slide.at)) / SLIDE_MS) * 0.3
     const leaving = leavingAt === undefined ? 0 : Math.min(1, (now - leavingAt) / LEAVE_MS)
     const fold = THREE.MathUtils.smoothstep(leaving, 0, 0.45)
     const away = THREE.MathUtils.smoothstep(leaving, 0.4, 1)
@@ -192,7 +198,7 @@ export function Card({
       card.scale.copy(scale)
       placed.current = true
     }
-    easing.damp3(card.position, position, 0.07, delta)
+    easing.damp3(card.position, position, sliding ? 0.12 : 0.07, delta)
     easing.dampQ(card.quaternion, rotation, 0.07, delta)
     easing.damp3(card.scale, scale, 0.07, delta)
     if (!settled && open.current > 0.995) setSettled(true)

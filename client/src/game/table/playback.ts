@@ -14,10 +14,13 @@ export type Popup = {
 }
 export type Leaving = { unit: Unit; row: Row; lane: number; at: number; how: 'died' | 'sacrificed' }
 export type Lunge = { at: number; toward: 1 | -1 }
+/** A card moving along its row, from one lane to another. */
+export type Slide = { at: number; from: number; to: number }
 
 export type Playback = {
   view: View
   lunges: Map<number, Lunge>
+  slides: Map<number, Slide>
   popups: Popup[]
   leaving: Leaving[]
   spawns: Map<number, Vec3>
@@ -49,7 +52,7 @@ const PACE: Record<GameEvent['type'], number> = {
   shielded: 180,
   buffed: 180,
   shipped: 300,
-  moved: 240,
+  moved: 380,
   reloaded: 270,
   turnStarted: 0,
   gameOver: 0,
@@ -68,11 +71,13 @@ const FACE: Record<'player' | 'opponent', Vec3> = {
 }
 
 export const LUNGE_MS = 240
+/** How long a card takes to move from one lane to another. */
+export const SLIDE_MS = 380
 export const LEAVE_MS = 550
 export const POPUP_MS = 1000
 
 export function start(state: GameState): Playback {
-  return { view: project(state), lunges: new Map(), popups: [], leaving: [], spawns: new Map() }
+  return { view: project(state), lunges: new Map(), slides: new Map(), popups: [], leaving: [], spawns: new Map() }
 }
 
 let popupIds = 0
@@ -90,6 +95,7 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
     view: step(view, event),
     // Lunges expire so a card drawn again later doesn't strike twice.
     lunges: new Map([...playback.lunges].filter(([, lunge]) => now - lunge.at < 1000)),
+    slides: new Map([...playback.slides].filter(([, slide]) => now - slide.at < 1000)),
     popups: playback.popups.filter((popup) => now - popup.at < POPUP_MS),
     leaving: playback.leaving.filter((card) => now - card.at < LEAVE_MS),
     spawns: playback.spawns,
@@ -109,6 +115,9 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
       break
     case 'queued':
       next.spawns = new Map(next.spawns).set(event.unit.uid, P03_HAND)
+      break
+    case 'moved':
+      next.slides = new Map(next.slides).set(event.uid, { at: now, from: event.from, to: event.to })
       break
     case 'reloaded':
       // The copy rises from the lane the card left.
@@ -143,10 +152,16 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
       const found = where(view, event.uid)
       if (found) {
         const heal = event.type === 'healed'
-        popup(`${heal ? '+' : '-'}${event.amount}`, heal ? 'heal' : 'damage', slot(found.row, found.lane, 0.3), {
-          row: found.row,
-          lane: found.lane,
-        })
+        // Only Hotfix heals, so a heal says so.
+        popup(
+          heal ? `+${event.amount} hotfix` : `-${event.amount}`,
+          heal ? 'heal' : 'damage',
+          slot(found.row, found.lane, 0.3),
+          {
+            row: found.row,
+            lane: found.lane,
+          },
+        )
       }
       break
     }

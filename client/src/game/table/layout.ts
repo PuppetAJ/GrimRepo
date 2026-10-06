@@ -79,7 +79,7 @@ export const FOV = 60
 export const CAMERA: Record<CameraView, { position: Vec3; target: Vec3; fov?: number }> = {
   // Solved so the player's row clears the hand and P03's screen stays in frame at 16:9 and a 60° fov.
   table: { position: [CENTER_X, 8.7, -4.4], target: [CENTER_X, 7.4, -10.6] },
-  board: { position: [CENTER_X, 11.4, -6.9], target: [CENTER_X, TABLE_Y, -9.05] },
+  board: { position: [CENTER_X, 11.4, -6.35], target: [CENTER_X, TABLE_Y, -8.5] },
   // Between a run's battles: back from the seat and nearly level, with a narrow lens so the projector isn't stretched.
   map: { position: [CENTER_X, 10.4, -0.5], target: [CENTER_X, 9.1, -9], fov: 42 },
 }
