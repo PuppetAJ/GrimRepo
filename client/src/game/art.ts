@@ -9,6 +9,10 @@ const ICONS = byName(import.meta.glob<string>('./art/icons/*.png', { eager: true
 
 export type IconId = SigilId | 'attack' | 'health'
 
+/** Whether a card or icon has art of its own yet, rather than the stand-in. */
+export const hasArt = (kind: 'cards' | 'icons', id: string): boolean =>
+  (kind === 'cards' ? CARDS : ICONS)[id] !== undefined
+
 export const cardArt = (id: string): string => CARDS[id] ?? (CARDS['placeholder'] as string)
 // A sigil without its own icon yet shows the stand-in until one is drawn.
 export const iconArt = (id: IconId): string => ICONS[id] ?? (ICONS['placeholder'] as string)
