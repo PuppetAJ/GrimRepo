@@ -1,5 +1,6 @@
-import { card, SIGILS, type Unit } from 'shared'
+import { card, SIGILS } from 'shared'
 import { cardArt, iconArt, type IconId } from './art.ts'
+import type { Shown } from './shown.ts'
 
 const INK = '#0b1f12'
 
@@ -60,13 +61,20 @@ function CostPips({
   )
 }
 
+/** Attack the cards around it raise shows in amber, and lowered in the hurt red. */
+const auraColor = (unit: Shown) => (!unit.aura ? '' : unit.aura > 0 ? 'text-[#8a5a00]' : 'text-[#a3172b]')
+
 /** Attack with its sword and health with its shield; health turns red once hurt. */
-function Stats({ unit, icon, className }: { unit: Unit; icon: number; className: string }) {
+function Stats({ unit, icon, className }: { unit: Shown; icon: number; className: string }) {
   return (
     <p className={`flex shrink-0 justify-between border-t-2 border-[#0b1f12]/40 ${className}`}>
-      <span aria-label={`Attack ${unit.attack}`} className="flex items-center gap-1">
-        <Sigil id="attack" size={icon} />
+      <span
+        aria-label={`Attack ${unit.attack}${unit.aura ? `, ${unit.aura > 0 ? 'raised' : 'lowered'} ${Math.abs(unit.aura)} by the cards around it` : ''}`}
+        className={`flex items-center gap-1 ${auraColor(unit)}`}
+      >
+        <Sigil id="attack" size={icon} color="currentColor" />
         {unit.attack}
+        {unit.aura ? <span className="text-[0.6em]">({unit.aura > 0 ? `+${unit.aura}` : unit.aura})</span> : null}
       </span>
       <span
         aria-label={`Health ${unit.health}`}
@@ -79,7 +87,7 @@ function Stats({ unit, icon, className }: { unit: Unit; icon: number; className:
   )
 }
 
-export function PixelCard({ unit }: { unit: Unit }) {
+export function PixelCard({ unit }: { unit: Shown }) {
   const def = card(unit.card)
   const rare = def.tier === 'S'
   return (
@@ -118,8 +126,8 @@ export function PixelCard({ unit }: { unit: Unit }) {
           fontSize: `${Math.min(21, 44 / Math.max(String(unit.attack).length, String(unit.health).length))}cqw`,
         }}
       >
-        <span className="flex items-center gap-[2cqw]">
-          <Sigil id="attack" size="0.5em" />
+        <span className={`flex items-center gap-[2cqw] ${auraColor(unit)}`}>
+          <Sigil id="attack" size="0.5em" color="currentColor" />
           {unit.attack}
         </span>
         <span className={`flex items-center gap-[2cqw] ${unit.health < unit.maxHealth ? 'text-[#a3172b]' : ''}`}>
@@ -131,7 +139,7 @@ export function PixelCard({ unit }: { unit: Unit }) {
   )
 }
 
-export function ReaderBody({ unit }: { unit: Unit }) {
+export function ReaderBody({ unit }: { unit: Shown }) {
   return (
     <>
       <p className="flex shrink-0 items-start justify-between gap-2 text-[clamp(1.25rem,12cqi,1.875rem)] leading-none">
@@ -160,7 +168,7 @@ export function ReaderBody({ unit }: { unit: Unit }) {
   )
 }
 
-export function FlatReaderBody({ unit }: { unit: Unit }) {
+export function FlatReaderBody({ unit }: { unit: Shown }) {
   return (
     <>
       <div className="grid w-[38%] shrink-0 place-items-center rounded-sm border-2 border-[#0b1f12] bg-[#8fd3a0]">

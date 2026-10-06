@@ -2,6 +2,7 @@ import type { CSSProperties, KeyboardEvent, ReactNode } from 'react'
 import type { Slot } from 'shared'
 import { describe, Ending, laneAction, whyNot } from '../controls.tsx'
 import { PixelCard } from '../CardReader.tsx'
+import { shown } from '../shown.ts'
 import { LUNGE_MS, type Playback } from '../table/playback.ts'
 import { useTable } from './context.ts'
 import { Panel } from './Panel.tsx'
@@ -175,105 +176,109 @@ export function Board() {
         ))}
       </div>
       <div role="group" className={`flex justify-center ${compact ? 'gap-1' : 'gap-2'}`} aria-label="P03's row">
-        {view.front.map((unit, i) => (
-          <div
-            key={i}
-            {...inspectProps({ row: 'front', lane: i }, unit)}
-            {...lane(unit ? `P03's lane ${i + 1}: ${describe(unit)}` : `P03's lane ${i + 1}: empty`, unit, () =>
-              setReading({ row: 'front', lane: i }),
-            )}
-            onClick={tapToRead && unit ? () => setReading({ row: 'front', lane: i }) : undefined}
-            className={`${CELL} border-p03-lane`}
-            style={laneSize}
-          >
-            <Occupant row="front" lane={i} unit={unit} playback={playback} isNew={isNew} />
-          </div>
-        ))}
+        {view.front
+          .map((_, i) => shown(view, 'front', i))
+          .map((unit, i) => (
+            <div
+              key={i}
+              {...inspectProps({ row: 'front', lane: i }, unit)}
+              {...lane(unit ? `P03's lane ${i + 1}: ${describe(unit)}` : `P03's lane ${i + 1}: empty`, unit, () =>
+                setReading({ row: 'front', lane: i }),
+              )}
+              onClick={tapToRead && unit ? () => setReading({ row: 'front', lane: i }) : undefined}
+              className={`${CELL} border-p03-lane`}
+              style={laneSize}
+            >
+              <Occupant row="front" lane={i} unit={unit} playback={playback} isNew={isNew} />
+            </div>
+          ))}
       </div>
       <div className="border-t-2 border-death/50" />
       <div role="group" className={`flex justify-center ${compact ? 'gap-1' : 'gap-2'}`} aria-label="Your row">
-        {view.board.map((unit, i) => {
-          const action = laneAction(legal, i)
-          const marked = state.summon?.marked.includes(i) ?? false
-          // Once the cost is paid, the marked lane is where the new card goes.
-          const paid = marked && action?.type === 'place'
-          const verb =
-            action?.type === 'mark'
-              ? 'Sacrifice'
-              : action?.type === 'unmark'
-                ? 'Spare'
-                : action?.type === 'place'
-                  ? 'Play here'
-                  : null
-          const label = `Lane ${i + 1}: ${unit ? describe(unit) : 'empty'}${verb ? `. ${verb}` : ''}${marked ? ', marked for sacrifice' : ''}`
-          // Red marks a card that would be sacrificed.
-          const frame = paid
-            ? 'border-dashed border-p03'
-            : marked
-              ? 'border-dashed border-death bg-[#2a1214]'
-              : action?.type === 'mark'
-                ? 'border-dashed border-death/70 hover:border-death'
-                : action
-                  ? 'border-dashed border-p03/60 hover:border-p03'
-                  : 'border-p03-lane'
-          // The button overlays the lane, so the card underneath never remounts and replays its entrance.
-          return (
-            <div
-              key={i}
-              {...(action ? {} : lane(label, unit, () => setReading({ row: 'board', lane: i })))}
-              {...inspectProps({ row: 'board', lane: i }, unit)}
-              onClick={
-                action
-                  ? undefined
-                  : tapToRead && unit
-                    ? () => setReading({ row: 'board', lane: i })
-                    : () => !busy && showRefusal(`lane-${i}`, whyNot(state, { lane: i }))
-              }
-              // A container, so the lane's badge sizes to it.
-              className={`${CELL} @container relative ${frame}`}
-              style={{ ...laneSize, ...refusalShake(`lane-${i}`) }}
-            >
-              <Occupant
-                row="board"
-                isNew={isNew}
-                lane={i}
-                unit={unit}
-                playback={playback}
-                tilted={marked}
-                empty={
-                  verb ? (
-                    <span className="grid size-full place-items-center text-center text-base leading-none text-p03-dim">
-                      play here
-                    </span>
-                  ) : null
+        {view.board
+          .map((_, i) => shown(view, 'board', i))
+          .map((unit, i) => {
+            const action = laneAction(legal, i)
+            const marked = state.summon?.marked.includes(i) ?? false
+            // Once the cost is paid, the marked lane is where the new card goes.
+            const paid = marked && action?.type === 'place'
+            const verb =
+              action?.type === 'mark'
+                ? 'Sacrifice'
+                : action?.type === 'unmark'
+                  ? 'Spare'
+                  : action?.type === 'place'
+                    ? 'Play here'
+                    : null
+            const label = `Lane ${i + 1}: ${unit ? describe(unit) : 'empty'}${verb ? `. ${verb}` : ''}${marked ? ', marked for sacrifice' : ''}`
+            // Red marks a card that would be sacrificed.
+            const frame = paid
+              ? 'border-dashed border-p03'
+              : marked
+                ? 'border-dashed border-death bg-[#2a1214]'
+                : action?.type === 'mark'
+                  ? 'border-dashed border-death/70 hover:border-death'
+                  : action
+                    ? 'border-dashed border-p03/60 hover:border-p03'
+                    : 'border-p03-lane'
+            // The button overlays the lane, so the card underneath never remounts and replays its entrance.
+            return (
+              <div
+                key={i}
+                {...(action ? {} : lane(label, unit, () => setReading({ row: 'board', lane: i })))}
+                {...inspectProps({ row: 'board', lane: i }, unit)}
+                onClick={
+                  action
+                    ? undefined
+                    : tapToRead && unit
+                      ? () => setReading({ row: 'board', lane: i })
+                      : () => !busy && showRefusal(`lane-${i}`, whyNot(state, { lane: i }))
                 }
-              />
-              {paid ? (
-                <span className="absolute inset-x-1 bottom-1 z-10 rounded-sm bg-[#07130b]/90 py-0.5 text-center text-base text-p03">
-                  ↓ play here
-                </span>
-              ) : marked || action?.type === 'mark' ? (
-                // Said in words too, so the state doesn't rest on red alone.
-                <span
-                  aria-hidden
-                  className="absolute inset-x-1 top-1 z-10 rounded-sm bg-[#07130b]/90 py-0.5 text-center text-[min(1rem,17cqw)] leading-none whitespace-nowrap text-death"
-                >
-                  {marked ? '✕ marked' : 'sacrifice?'}
-                </span>
-              ) : null}
-              {action ? (
-                <button
-                  type="button"
-                  aria-label={label}
-                  data-action={action.type}
-                  data-lane={i}
-                  onClick={() => act(action)}
-                  className="absolute inset-0 z-20 rounded-md"
+                // A container, so the lane's badge sizes to it.
+                className={`${CELL} @container relative ${frame}`}
+                style={{ ...laneSize, ...refusalShake(`lane-${i}`) }}
+              >
+                <Occupant
+                  row="board"
+                  isNew={isNew}
+                  lane={i}
+                  unit={unit}
+                  playback={playback}
+                  tilted={marked}
+                  empty={
+                    verb ? (
+                      <span className="grid size-full place-items-center text-center text-base leading-none text-p03-dim">
+                        play here
+                      </span>
+                    ) : null
+                  }
                 />
-              ) : null}
-            </div>
-          )
-        })}
+                {paid ? (
+                  <span className="absolute inset-x-1 bottom-1 z-10 rounded-sm bg-[#07130b]/90 py-0.5 text-center text-base text-p03">
+                    ↓ play here
+                  </span>
+                ) : marked || action?.type === 'mark' ? (
+                  // Said in words too, so the state doesn't rest on red alone.
+                  <span
+                    aria-hidden
+                    className="absolute inset-x-1 top-1 z-10 rounded-sm bg-[#07130b]/90 py-0.5 text-center text-[min(1rem,17cqw)] leading-none whitespace-nowrap text-death"
+                  >
+                    {marked ? '✕ marked' : 'sacrifice?'}
+                  </span>
+                ) : null}
+                {action ? (
+                  <button
+                    type="button"
+                    aria-label={label}
+                    data-action={action.type}
+                    data-lane={i}
+                    onClick={() => act(action)}
+                    className="absolute inset-0 z-20 rounded-md"
+                  />
+                ) : null}
+              </div>
+            )
+          })}
       </div>
       {gameOver ? (
         <div className="absolute inset-0 grid place-items-center bg-black/60 p-4">
