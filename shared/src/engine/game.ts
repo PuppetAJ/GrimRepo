@@ -1,7 +1,7 @@
-import { BOILERPLATE, card, DEBUG_CARD, OUT_OF_MEMORY, PLAYER_DECK } from '../cards.ts'
+import { BOILERPLATE, card, DEBUG_CARD, OUT_OF_MEMORY, PLAYER_DECK, SHIPS_AS } from '../cards.ts'
 import { encounter } from '../encounters.ts'
 import { Rng } from '../rng.ts'
-import { attack } from './combat.ts'
+import { attack, perish } from './combat.ts'
 import { queue, queueCountFor, queuePlan, retireDeadCode } from './opponent.ts'
 import {
   HAND_LIMIT,
@@ -166,6 +166,7 @@ export function apply(current: GameState, action: Action): Result {
       const survived = victim.sigils.includes('try_catch')
       if (!survived) state.player.board[lane] = null
       events.push({ type: 'sacrificed', lane, uid: victim.uid, survived })
+      if (!survived) perish(state, 'player', victim, lane, events)
     }
     // A Refactor card hands its stats to the card it pays for.
     const refactored = summon.marked
@@ -222,6 +223,14 @@ function playTurn(state: GameState, rng: Rng, events: GameEvent[]): void {
 
     if (state.opponent.encounter) queuePlan(state, rng, events)
     else queue(state, rng, queueCountFor(state.turn, rng), state.turn, events)
+  }
+
+  // A Beta card that has been through a round on the table ships as its stronger form.
+  for (const unit of [...units(state.player.board), ...units(state.opponent.front)]) {
+    const shipped = SHIPS_AS[unit.card]
+    if (!unit.sigils.includes('beta') || !shipped) continue
+    Object.assign(unit, { ...deckCard(shipped), maxHealth: card(shipped).health })
+    events.push({ type: 'shipped', uid: unit.uid, unit: { ...unit } })
   }
 
   for (const unit of [...units(state.player.board), ...units(state.opponent.front), ...units(state.opponent.back)]) {

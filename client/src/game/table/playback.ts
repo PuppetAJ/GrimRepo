@@ -47,6 +47,9 @@ const PACE: Record<GameEvent['type'], number> = {
   healed: 150,
   shielded: 180,
   buffed: 180,
+  shipped: 300,
+  moved: 240,
+  reloaded: 270,
   turnStarted: 0,
   gameOver: 0,
 }
@@ -106,6 +109,18 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
     case 'queued':
       next.spawns = new Map(next.spawns).set(event.unit.uid, P03_HAND)
       break
+    case 'reloaded':
+      // The copy rises from the lane the card left.
+      next.spawns = new Map(next.spawns).set(
+        event.unit.uid,
+        slot(event.side === 'player' ? 'board' : 'front', event.from, 0.4),
+      )
+      break
+    case 'shipped': {
+      const found = where(view, event.uid)
+      if (found) popup('shipped', 'heal', slot(found.row, found.lane, 0.3), { row: found.row, lane: found.lane })
+      break
+    }
     case 'attacked': {
       const unit = (event.side === 'player' ? view.board : view.front)[event.lane]
       if (unit) next.lunges = new Map(next.lunges).set(unit.uid, { at: now, toward: event.side === 'player' ? -1 : 1 })

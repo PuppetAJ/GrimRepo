@@ -58,7 +58,7 @@ const list: Encounter[] = [
       [
         [
           { lane: 1, card: 'Bug' },
-          { lane: 2, card: 'Bug' },
+          { lane: 2, card: 'OffCenterDiv' },
         ],
         [{ lane: 0, card: 'CopyPaste' }],
         [{ lane: 3, pick: ['CopyPaste', 'Watchdog'] }],
@@ -71,9 +71,9 @@ const list: Encounter[] = [
     boss: false,
     phases: [
       [
-        [{ lane: 1, card: 'NullPointer' }],
+        [{ lane: 1, card: 'CopyPaste' }],
         [{ lane: 3, pick: ['Firewall', 'Bug'] }],
-        [{ lane: 0, card: 'CopyPaste' }],
+        [{ lane: 0, card: 'NullPointer' }],
         [{ lane: 2, pick: ['Crawler', 'SQLInjection'] }],
       ],
     ],

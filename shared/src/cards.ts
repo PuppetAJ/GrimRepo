@@ -18,6 +18,10 @@ export type SigilId =
   | 'broadcast'
   | 'popup'
   | 'refactor'
+  | 'hot_reload'
+  | 'beta'
+  | 'load_balancer'
+  | 'failover'
 
 export type CardDef = {
   id: string
@@ -47,6 +51,10 @@ export const SIGILS: Record<SigilId, { name: string; text: string }> = {
   broadcast: { name: 'Broadcast', text: 'Attacks the lane opposite and both lanes beside it.' },
   popup: { name: 'Pop-up', text: 'The card opposite it has 1 more attack.' },
   refactor: { name: 'Refactor', text: 'When sacrificed, gives its attack and health to the card it pays for.' },
+  hot_reload: { name: 'Hot Reload', text: 'When it dies, a fresh copy comes back to its owner.' },
+  beta: { name: 'Beta', text: 'After a round on the table, it ships as a stronger card.' },
+  load_balancer: { name: 'Load Balancer', text: 'After it attacks, it moves to the next free lane.' },
+  failover: { name: 'Failover', text: 'Moves to take an attack aimed at an empty lane.' },
 }
 
 // Order matters: reordering changes what every seed deals.
@@ -58,13 +66,13 @@ const table: [string, string, Tier, number, number, number, SigilId[]?][] = [
   ['SpamBot', 'Spam Bot', 'D', 2, 1, 0, ['code_smell']],
   ['Watchdog', 'Watchdog', 'D', 2, 3, 0, ['rate_limiter']],
   ['CopyPaste', 'Copy Paste', 'D', 3, 1, 0],
-  ['ZeroDay', 'Zero Day', 'C', 4, 1, 0],
+  ['ZeroDay', 'Zero Day', 'C', 4, 1, 0, ['load_balancer']],
   ['GrimRepo', 'GrimRepo', 'C', 3, 2, 0, ['tech_lead']],
-  ['MergeConflict', 'Merge Conflict', 'C', 2, 4, 1],
+  ['MergeConflict', 'Merge Conflict', 'C', 2, 4, 1, ['failover']],
   ['Firewall', 'Firewall', 'C', 2, 6, 1, ['rate_limiter']],
   ['SQLInjection', 'SQL Injection', 'C', 4, 2, 1, ['bypass']],
   ['NullPointer', 'NullPointer', 'C', 4, 2, 1, ['fatal_error']],
-  ['Bug', 'Bug', 'C', 0, 8, 1],
+  ['Bug', 'Bug', 'C', 0, 8, 1, ['hot_reload']],
   ['LegacyCode', 'Legacy Code', 'C', 3, 4, 1, ['technical_debt']],
   ['Cookie', 'Cookie', 'C', 3, 4, 1, ['popup']],
   ['Crawler', 'Crawler', 'C', 5, 2, 1, ['scope_creep']],
@@ -82,6 +90,9 @@ const table: [string, string, Tier, number, number, number, SigilId[]?][] = [
   ['Boilerplate', 'Boilerplate', 'E', 0, 1, 0],
   // P03's answer to a run's empty deck; it grows each time, so it is in no deck.
   ['OutOfMemory', 'Out of Memory', 'E', 1, 1, 0],
+  // A Beta card's two forms: it ships as the second after a round on the table, so only the first is dealt.
+  ['Prototype', 'Prototype', 'D', 1, 2, 0, ['beta']],
+  ['ShippedFeature', 'Shipped Feature', 'B', 4, 5, 0],
 ]
 
 export const CARDS: Record<string, CardDef> = Object.fromEntries(
@@ -95,8 +106,11 @@ export const BOILERPLATE = 'Boilerplate'
 export const DEBUG_CARD = 'Y2K'
 export const OUT_OF_MEMORY = 'OutOfMemory'
 
+/** What a Beta card ships as. */
+export const SHIPS_AS: Record<string, string> = { Prototype: 'ShippedFeature' }
+
 export const PLAYER_DECK: string[] = Object.keys(CARDS).filter(
-  (id) => id !== DEBUG_CARD && id !== BOILERPLATE && id !== OUT_OF_MEMORY,
+  (id) => id !== DEBUG_CARD && id !== BOILERPLATE && id !== OUT_OF_MEMORY && !Object.values(SHIPS_AS).includes(id),
 )
 
 /** No board wipe, or P03 could clear the player's side on a whim. */
