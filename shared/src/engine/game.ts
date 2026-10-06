@@ -6,6 +6,7 @@ import { queue, queueCountFor, queuePlan, retireDeadCode } from './opponent.ts'
 import {
   HAND_LIMIT,
   LANES,
+  MAX_SIGILS,
   TIP,
   TURN_LIMIT,
   type Action,
@@ -76,6 +77,9 @@ function dealFairly(player: GameState['player']): void {
   const [source] = player.deck.splice(found, 1)
   player.deck.splice(Math.min(2, player.deck.length), 0, source as number)
 }
+
+/** What a Beta card other than Prototype gains when it ships, as Prototype gains on becoming Shipped Feature. */
+const BETA_BOOST = 3
 
 const fail = (reason: string): Result => ({ ok: false, reason })
 
@@ -184,7 +188,7 @@ export function apply(current: GameState, action: Action): Result {
       }
       if (!survived) perish(state, 'player', victim, lane, events)
     }
-    // A Refactor card hands its stats to the card it pays for.
+    // A Refactor card hands its stats, and Refactor itself, to the card it pays for, so a chain of them stacks.
     const refactored = summon.marked
       .map((lane) => victims.get(lane) as Unit)
       .filter((victim) => victim.sigils.includes('refactor'))
@@ -196,7 +200,8 @@ export function apply(current: GameState, action: Action): Result {
       unit.attack += victim.attack
       unit.health += victim.health
       unit.maxHealth += victim.health
-      events.push({ type: 'buffed', uid: unit.uid, attack: unit.attack, health: unit.health })
+      if (!unit.sigils.includes('refactor') && unit.sigils.length < MAX_SIGILS) unit.sigils.push('refactor')
+      events.push({ type: 'buffed', uid: unit.uid, attack: unit.attack, health: unit.health, sigils: [...unit.sigils] })
     }
 
     if (unit.sigils.includes('segfault')) {
@@ -241,11 +246,18 @@ function playTurn(state: GameState, rng: Rng, events: GameEvent[]): void {
     else queue(state, rng, queueCountFor(state.turn, rng), state.turn, events)
   }
 
-  // A Beta card that has been through a round on the table ships as its stronger form.
+  // A Beta card that has been through a round on the table ships: as its stronger form, or else with +3/+3.
   for (const unit of [...units(state.player.board), ...units(state.opponent.front)]) {
+    if (!unit.sigils.includes('beta')) continue
     const shipped = SHIPS_AS[unit.card]
-    if (!unit.sigils.includes('beta') || !shipped) continue
-    Object.assign(unit, { ...deckCard(shipped), maxHealth: card(shipped).health })
+    if (shipped) Object.assign(unit, { ...deckCard(shipped), maxHealth: card(shipped).health })
+    else
+      Object.assign(unit, {
+        attack: unit.attack + BETA_BOOST,
+        health: unit.health + BETA_BOOST,
+        maxHealth: unit.maxHealth + BETA_BOOST,
+        sigils: unit.sigils.filter((sigil) => sigil !== 'beta'),
+      })
     events.push({ type: 'shipped', uid: unit.uid, unit: { ...unit } })
   }
 

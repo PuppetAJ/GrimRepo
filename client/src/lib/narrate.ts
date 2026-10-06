@@ -1,4 +1,16 @@
-import { apply, card, createGame, OUT_OF_MEMORY, type Action, type GameEvent, type GameState, type Unit } from 'shared'
+import {
+  apply,
+  card,
+  createGame,
+  OUT_OF_MEMORY,
+  SHIPS_AS,
+  type Action,
+  type GameEvent,
+  type GameState,
+  type Unit,
+} from 'shared'
+
+const SHIPPED = Object.values(SHIPS_AS)
 
 const lead = (scale: number) =>
   scale === 0 ? 'The scale is level.' : scale > 0 ? `You lead by ${scale}.` : `I lead by ${-scale}.`
@@ -92,7 +104,17 @@ export function narrate(before: GameState, events: GameEvent[]): string[] {
       case 'buffed':
         return [`${name(event.uid)} is now ${event.attack}/${event.health}.`]
       case 'shipped':
-        return [`${name(event.uid)} shipped as ${card(event.unit.card).name}. Untested, I assume.`]
+        return [
+          SHIPPED.includes(event.unit.card)
+            ? `${name(event.uid)} shipped as ${card(event.unit.card).name}. Untested, I assume.`
+            : `${name(event.uid)} shipped, now ${event.unit.attack}/${event.unit.health}. Untested, I assume.`,
+        ]
+      case 'leftBehind':
+        return [
+          event.side === 'player'
+            ? `Deprecated. A Boilerplate is all that's left in ${lane(event.lane)}.`
+            : `My card is deprecated. It left a Boilerplate in ${lane(event.lane)}. Don't get attached.`,
+        ]
       case 'moved':
         return [`${name(event.uid)} moved to ${lane(event.to)}.`]
       case 'reloaded':

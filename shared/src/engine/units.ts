@@ -1,4 +1,4 @@
-import { card } from '../cards.ts'
+import { card, SHIPS_AS } from '../cards.ts'
 import { TIP, type DeckCard, type GameState, type Slot, type Unit } from './types.ts'
 
 export const deckCard = (id: string): DeckCard => {
@@ -28,7 +28,16 @@ export const drawUnit = (state: GameState, source: number): Unit => ({
 export const costOf = (unit: Unit): number => card(unit.card).cost
 
 /** What a sacrificed unit pays toward a summon. */
-export const worthOf = (unit: Unit): number => (unit.sigils.includes('technical_debt') ? 3 : Math.max(costOf(unit), 1))
+export const worthOf = (unit: Unit): number =>
+  unit.sigils.includes('technical_debt')
+    ? 3
+    : // A shipped Beta card survived a round to get here, and pays for it.
+      Object.values(SHIPS_AS).includes(unit.card)
+      ? SHIPPED_WORTH
+      : Math.max(costOf(unit), 1)
+
+/** What a Beta card's shipped form pays when sacrificed. */
+export const SHIPPED_WORTH = 2
 
 /** How far sacrificing a Technical Debt card tips the scale against the player. */
 export const DEBT = 1

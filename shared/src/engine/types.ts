@@ -1,9 +1,11 @@
 import type { SigilId } from '../cards.ts'
 
 /** Bumped whenever a change would make an old game replay differently. */
-export const RULES_VERSION = 9
+export const RULES_VERSION = 10
 
 export const LANES = 4
+/** The most sigils a card carries. */
+export const MAX_SIGILS = 3
 /** Net damage needed to win, or to lose. */
 export const TIP = 24
 export const HAND_LIMIT = 7
@@ -86,7 +88,9 @@ export type GameEvent =
   | { type: 'queued'; lane: number; unit: Unit }
   | { type: 'healed'; uid: number; amount: number; health: number }
   | { type: 'shielded'; uid: number }
-  | { type: 'buffed'; uid: number; attack: number; health: number }
+  | { type: 'buffed'; uid: number; attack: number; health: number; sigils?: SigilId[] }
+  /** A card left in a lane, as a Deprecated card leaves a Boilerplate. */
+  | { type: 'leftBehind'; side: Side; lane: number; unit: Unit }
   /** `heading` is set when a Load Balancer moves on, which way it will go next. */
   | { type: 'moved'; uid: number; side: Side; from: number; to: number; heading?: 1 | -1 }
   /** A Hot Reload card's copy: back in the player's hand (lane null) or in P03's queue, from the lane it left. */

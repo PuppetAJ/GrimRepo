@@ -97,6 +97,7 @@ export function step(view: View, event: GameEvent): View {
         attack: event.attack,
         health: event.health,
         maxHealth: Math.max(unit.maxHealth, event.health),
+        sigils: event.sigils ?? unit.sigils,
       }))
     case 'shielded':
       return withUnit(view, event.uid, (unit) => ({ ...unit, rolledBack: true }))
@@ -127,6 +128,10 @@ export function step(view: View, event: GameEvent): View {
     }
     case 'queued':
       return { ...view, back: setAt(view.back, event.lane, event.unit) }
+    case 'leftBehind':
+      return event.side === 'player'
+        ? { ...view, board: setAt(view.board, event.lane, event.unit) }
+        : { ...view, front: setAt(view.front, event.lane, event.unit) }
     case 'turnStarted':
       return { ...view, turn: event.turn, drawn: view.hand.length >= HAND_LIMIT }
     case 'gameOver':

@@ -2,7 +2,7 @@ import type { SigilId } from '../cards.ts'
 import type { Action, DeckCard, GameEvent, GameState } from '../engine/types.ts'
 
 /** Bumped whenever a change would make an old run replay differently. */
-export const RUN_RULES_VERSION = 7
+export const RUN_RULES_VERSION = 8
 
 /** The most actions one save may send; 200 of the largest kind fit the server's 16 KB body limit. */
 export const RUN_SAVE_LIMIT = 200

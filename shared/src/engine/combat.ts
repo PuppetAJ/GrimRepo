@@ -1,3 +1,4 @@
+import { BOILERPLATE } from '../cards.ts'
 import { HAND_LIMIT, LANES, type GameEvent, type GameState, type Side, type Slot, type Unit } from './types.ts'
 import { drawUnit, makeUnit } from './units.ts'
 
@@ -12,21 +13,38 @@ export function perish(state: GameState, side: Side, unit: Unit, lane: number, e
   if (!unit.sigils.includes('hot_reload')) return
   if (side === 'player') {
     if (state.player.hand.length >= HAND_LIMIT) return
-    const copy = unit.source === undefined ? makeUnit(state, unit.card) : drawUnit(state, unit.source)
+    const copy = once(unit.source === undefined ? makeUnit(state, unit.card) : drawUnit(state, unit.source))
     state.player.hand.push(copy)
     events.push({ type: 'reloaded', side, unit: copy, from: lane, lane: null })
   } else if (!state.opponent.back[lane]) {
-    const copy = makeUnit(state, unit.card)
+    const copy = once(makeUnit(state, unit.card))
     state.opponent.back[lane] = copy
     events.push({ type: 'reloaded', side, unit: copy, from: lane, lane })
   }
 }
 
-/** A Failover card on the defending side, nearest the empty lane first, which moves in to take the attack. */
-function failover(row: Slot[], lane: number, side: Side, events: GameEvent[]): Unit | null {
-  const order = [...Array(LANES).keys()].sort((a, b) => Math.abs(a - lane) - Math.abs(b - lane))
-  const from = order.find((candidate) => row[candidate]?.sigils.includes('failover'))
-  if (from === undefined) return null
+/** A Hot Reload card comes back once: its copy reloads no more. */
+const once = (copy: Unit): Unit => ({ ...copy, sigils: copy.sigils.filter((sigil) => sigil !== 'hot_reload') })
+
+/** Which Failover card covers each empty lane: each moves to the attacked empty lane nearest where it stands. */
+function failoverPlan(row: Slot[], attacked: number[]): Map<number, number> {
+  const open = [...new Set(attacked)].filter((lane) => !row[lane]).sort((a, b) => a - b)
+  const plan = new Map<number, number>()
+  row.forEach((unit, from) => {
+    if (!unit?.sigils.includes('failover')) return
+    const to = open
+      .filter((lane) => !plan.has(lane))
+      .sort((a, b) => Math.abs(a - from) - Math.abs(b - from) || a - b)[0]
+    if (to !== undefined) plan.set(to, from)
+  })
+  return plan
+}
+
+/** The Failover card planned for an empty lane, which moves in to take the attack. */
+function failover(row: Slot[], lane: number, side: Side, plan: Map<number, number>, events: GameEvent[]): Unit | null {
+  const from = plan.get(lane)
+  if (from === undefined || !row[from]?.sigils.includes('failover') || row[lane]) return null
+  plan.delete(lane)
   const unit = row[from] as Unit
   row[from] = null
   row[lane] = unit
@@ -72,6 +90,18 @@ export function attack(state: GameState, side: Side, events: GameEvent[]): void 
   const toward = side === 'player' ? 1 : -1
   const within = (lanes: number[]) => lanes.filter((lane) => lane >= 0 && lane < LANES)
 
+  // The lanes this side's cards aim at, so each Failover card can pick the empty one nearest it.
+  const aims = attackers.flatMap((unit, lane) =>
+    !unit || unit.sigils.includes('bypass')
+      ? []
+      : unit.sigils.includes('broadcast')
+        ? within([lane - 1, lane, lane + 1])
+        : unit.sigils.includes('fork')
+          ? within([lane - 1, lane + 1])
+          : [lane],
+  )
+  const covers = failoverPlan(defenders, aims)
+
   // Each card attacks once, in the lane order it began in, even if a Load Balancer moves on into a later lane.
   for (const attacker of attackers.slice()) {
     if (!attacker) continue
@@ -94,7 +124,7 @@ export function attack(state: GameState, side: Side, events: GameEvent[]): void 
         struck = true
         const defended = attacker.sigils.includes('bypass')
           ? null
-          : (defenders[aimed] ?? failover(defenders, aimed, side === 'player' ? 'opponent' : 'player', events))
+          : (defenders[aimed] ?? failover(defenders, aimed, side === 'player' ? 'opponent' : 'player', covers, events))
         const defender = defended
         events.push({ type: 'attacked', side, lane, target: defender ? aimed : 'face' })
 
@@ -139,6 +169,10 @@ export function attack(state: GameState, side: Side, events: GameEvent[]): void 
       remove(attackers, attacker.uid)
       events.push({ type: 'killed', uid: attacker.uid, side, lane, row: 'front' })
       perish(state, side, attacker, lane, events)
+      // It leaves a Boilerplate behind: a blocker, and something to sacrifice.
+      const left = makeUnit(state, BOILERPLATE)
+      attackers[lane] = left
+      events.push({ type: 'leftBehind', side, lane, unit: left })
     }
     // A Load Balancer moves on after attacking, turning back at the edge or a taken lane.
     if (struck && attacker.sigils.includes('load_balancer') && attackers[lane]?.uid === attacker.uid) {
