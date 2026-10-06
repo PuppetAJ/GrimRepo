@@ -1,7 +1,7 @@
 import { PLAYER_DECK, card, type SigilId } from '../cards.ts'
 import { STAGES } from '../encounters.ts'
 import { apply, createGame, legalActions } from '../engine/game.ts'
-import { TIP, type DeckCard } from '../engine/types.ts'
+import { MAX_SIGILS, TIP, type DeckCard } from '../engine/types.ts'
 import { deckCard } from '../engine/units.ts'
 import { Rng } from '../rng.ts'
 import { findNode, generateStage } from './map.ts'
@@ -10,7 +10,6 @@ import type { MapNode, RunAction, RunCard, RunEvent, RunResult, RunState, Visit 
 
 export const STARTER_DECK = ['Watchdog', 'CronJob', 'SpamBot', 'MergeConflict']
 const OFFER_SIZE = 3
-const MAX_SIGILS = 3
 const MAX_BUFFS = 2
 /** The chance that a second buff at the same campfire burns the card. */
 const BURN_CHANCE = 0.5
