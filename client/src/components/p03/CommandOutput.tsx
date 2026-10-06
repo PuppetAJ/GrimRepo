@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
-import { SIGILS, type CardDef } from 'shared'
+import { SIGILS, type CardDef, type SigilId } from 'shared'
 import { cardArt } from '../../game/art.ts'
-import { PixelArt } from '../../game/CardReader.tsx'
+import { PixelArt, Sigil } from '../../game/CardReader.tsx'
 import { STEPS, type Step } from './commandData.ts'
 
 export const Dim = ({ children }: { children: ReactNode }) => <span className="text-p03-dim">{children}</span>
@@ -24,6 +24,18 @@ export function Art({ id, size = 'size-24' }: { id: string; size?: string }) {
   )
 }
 
+/** A sigil's icon and name, then what it does. */
+export function SigilLine({ id }: { id: SigilId }) {
+  return (
+    <p>
+      <span className="mr-2 inline-block align-[-0.1em]">
+        <Sigil id={id} size="1em" color="var(--p03)" />
+      </span>
+      <span className="text-p03">{SIGILS[id].name}</span>: {SIGILS[id].text}
+    </p>
+  )
+}
+
 export function CardUpClose({ card }: { card: CardDef }) {
   return (
     <div className="flex gap-4 py-1">
@@ -35,11 +47,7 @@ export function CardUpClose({ card }: { card: CardDef }) {
           <Dim>·</Dim> <span className="whitespace-nowrap">health {card.health}</span>
         </p>
         {card.sigils.length ? (
-          card.sigils.map((sigil) => (
-            <p key={sigil}>
-              <span className="text-p03">{SIGILS[sigil].name}</span>: {SIGILS[sigil].text}
-            </p>
-          ))
+          card.sigils.map((sigil) => <SigilLine key={sigil} id={sigil} />)
         ) : (
           <Dim>// no sigils</Dim>
         )}
