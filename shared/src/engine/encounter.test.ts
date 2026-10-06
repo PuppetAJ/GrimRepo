@@ -27,6 +27,12 @@ describe('the encounter data', () => {
       assert.equal(bosses[0]?.phases.length, 2)
     }
   })
+
+  it('gives every encounter its own name, and a line for P03 to open with', () => {
+    const all = Object.values(ENCOUNTERS)
+    assert.equal(new Set(all.map((found) => found.name)).size, all.length)
+    for (const found of all) assert.ok(found.name && /[.?!]$/.test(found.intro), found.id)
+  })
 })
 
 describe('a battle with an encounter', () => {

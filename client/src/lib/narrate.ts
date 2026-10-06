@@ -61,6 +61,10 @@ export function narrate(before: GameState, events: GameEvent[]): string[] {
           ? [`You hit me for ${event.amount}. ${lead(event.scale)}${big ? ` ${pick(EXCUSES, event.scale)}` : ''}`]
           : [`I hit you for ${event.amount}. ${lead(event.scale)}${big ? ` ${pick(TAUNTS, event.scale)}` : ''}`]
       }
+      case 'indebted':
+        return [
+          `${name(event.uid)}'s technical debt came due. The scale tips ${event.amount} against you. ${lead(event.scale)}`,
+        ]
       case 'killed':
         return [
           mine(event.uid)
