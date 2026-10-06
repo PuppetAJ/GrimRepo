@@ -145,7 +145,7 @@ export function attack(state: GameState, side: Side, events: GameEvent[]): void 
         attackers[lane] = null
         attackers[to] = attacker
         attacker.heading = to > lane ? 1 : -1
-        events.push({ type: 'moved', uid: attacker.uid, side, from: lane, to })
+        events.push({ type: 'moved', uid: attacker.uid, side, from: lane, to, heading: attacker.heading })
       }
     }
   }

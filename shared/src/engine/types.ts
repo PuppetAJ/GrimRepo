@@ -86,7 +86,8 @@ export type GameEvent =
   | { type: 'healed'; uid: number; amount: number; health: number }
   | { type: 'shielded'; uid: number }
   | { type: 'buffed'; uid: number; attack: number; health: number }
-  | { type: 'moved'; uid: number; side: Side; from: number; to: number }
+  /** `heading` is set when a Load Balancer moves on, which way it will go next. */
+  | { type: 'moved'; uid: number; side: Side; from: number; to: number; heading?: 1 | -1 }
   /** A Hot Reload card's copy: back in the player's hand (lane null) or in P03's queue, from the lane it left. */
   | { type: 'reloaded'; side: Side; unit: Unit; from: number; lane: number | null }
   | { type: 'shipped'; uid: number; unit: Unit }

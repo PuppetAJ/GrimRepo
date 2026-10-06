@@ -104,7 +104,8 @@ export function step(view: View, event: GameEvent): View {
       return withUnit(view, event.uid, () => event.unit)
     case 'moved': {
       const row = event.side === 'player' ? view.board : view.front
-      const unit = row[event.from] ?? null
+      const found = row[event.from] ?? null
+      const unit = found && event.heading ? { ...found, heading: event.heading } : found
       const moved = setAt(setAt(row, event.from, null), event.to, unit)
       return event.side === 'player' ? { ...view, board: moved } : { ...view, front: moved }
     }
