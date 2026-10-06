@@ -9,10 +9,10 @@ import type { Layout } from '../../text/useTextTable.ts'
 import { mapTitle, ScreenBody, useRunScreen, type RunView } from '../screens.tsx'
 import { Screen, ScreenActions } from '../text/Screen.tsx'
 import type { RunReady } from '../useRun.ts'
-import { BetweenBattles, warp } from './RunStage.tsx'
+import { BetweenBattles, warp, windowHeight } from './RunStage.tsx'
 
-/** The screens the projector throws up; the rest float over the room. */
-const PROJECTED = new Set<RunView>(['map', 'card', 'reward', 'event'])
+/** How tall, in CSS pixels, the projector's window must draw to be read; on a smaller stage the screens float instead. */
+const READABLE = 320
 
 /** Everything off the board: the room in 3D, with the map in the projector's window and other screens over it. */
 function Between({
@@ -41,8 +41,9 @@ function Between({
   // Loaded while the map is up, so a battle starts with its cards ready instead of a blank table.
   useEffect(() => void loadCardAssets(), [])
   const pin = useRef<HTMLDivElement>(null)
-  // A phone on its side is too short to read the window, so there every screen floats over the room.
-  const projects = (screen: RunView) => PROJECTED.has(screen) && layout !== 'phone'
+  // Every screen goes on the projector, unless the stage is too small to read its window; then they float.
+  const readable = windowHeight(stage.size.width, stage.size.height) >= READABLE
+  const projects = (screen: RunView) => screen !== 'battle' && readable
   // Going from a projected screen to a floating one, the projector shuts and lifts away first, showing the map.
   const [shown, setShown] = useState(view)
   const toFloat = projects(shown) && !projects(view)
@@ -64,15 +65,11 @@ function Between({
         from={glide ? 'table' : undefined}
         closing={leaving || toFloat}
         onClosed={leaving ? onLeft : () => setShown(view)}
-        onPin={(points, left) => {
+        onPin={(points) => {
           const element = pin.current
           if (!element) return
           element.style.visibility = points ? 'visible' : 'hidden'
           if (points) element.style.transform = warp(element.offsetWidth, element.offsetHeight, points)
-          // Rounded, so the words beside the window reflow only when it really moves.
-          const edge = `${Math.round(left / 8) * 8}px`
-          if (element.parentElement?.style.getPropertyValue('--window-left') !== edge)
-            element.parentElement?.style.setProperty('--window-left', edge)
         }}
       />
       {stage.ready ? (

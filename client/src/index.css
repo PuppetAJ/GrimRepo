@@ -422,7 +422,8 @@
 /* The run's map in the projector's window: a pane of green light, mostly solid, with the room faintly behind it. */
 .hologram-window {
   /* Rows fill the window, so the whole stage fits without scrolling. */
-  --map-row: calc((540px - 4rem) / 8);
+  /* The window less its padding, header and the map's own padding. */
+  --map-row: calc((540px - 8.5rem) / 8);
   z-index: 5;
   /* Dark until the 3D scene pins it, as the projector opens it. */
   visibility: hidden;
@@ -441,8 +442,10 @@
     inset 0 0 30px rgb(125 255 154 / 0.18);
 }
 .hologram-glow {
+  display: flex;
   height: 100%;
-  overflow-y: auto;
-  padding-inline: 0.5rem;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
   filter: drop-shadow(0 0 6px rgb(125 255 154 / 0.45));
 }

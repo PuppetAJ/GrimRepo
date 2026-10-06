@@ -1,6 +1,16 @@
 import { PerformanceMonitor, useProgress } from '@react-three/drei'
 import { Canvas } from '@react-three/fiber'
-import { createContext, Suspense, use, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import {
+  createContext,
+  Suspense,
+  use,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
 import * as THREE from 'three'
 import { useFullScreen } from '../fullScreen.ts'
 import { Boot } from './Boot.tsx'
@@ -31,6 +41,8 @@ type Stage = {
   ready: boolean
   /** True once the loading screen has started to fade. */
   warmed: boolean
+  /** The stage's size in CSS pixels. */
+  size: { width: number; height: number }
   /** Called once a scene's shaders are compiled, which ends the loading screen for good. */
   warm: () => void
   /** The scene's data attributes on the table's element, for the keyboard scope and tests. */
@@ -90,6 +102,23 @@ export function TableStage({ children }: { children: ReactNode }) {
   const onHold = useCallback((screen: Screen, x: number, y: number) => handlers.current.onHold?.(screen, x, y), [])
   const onPin = useCallback((screen: Screen) => handlers.current.onPin?.(screen), [])
   const fullScreen = useFullScreen()
+  const element = useRef<HTMLDivElement>(null)
+  const [size, setSize] = useState({ width: 0, height: 0 })
+  // Measured before the first paint, so a scene that depends on it never shows the wrong layout first.
+  useLayoutEffect(() => {
+    const box = element.current
+    if (!box) return
+    const measure = () =>
+      setSize((now) =>
+        now.width === box.clientWidth && now.height === box.clientHeight
+          ? now
+          : { width: box.clientWidth, height: box.clientHeight },
+      )
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(box)
+    return () => observer.disconnect()
+  }, [])
   useEffect(() => () => disposeFaces(), [])
 
   const stage: Stage = {
@@ -97,6 +126,7 @@ export function TableStage({ children }: { children: ReactNode }) {
     quality,
     ready,
     warmed,
+    size,
     warm: () => setWarmed(true),
     label: (next) => setAttributes((now) => (same(now, next) ? now : next)),
     onMissed: (handler) => {
@@ -111,6 +141,7 @@ export function TableStage({ children }: { children: ReactNode }) {
   return (
     <StageContext value={stage}>
       <div
+        ref={element}
         {...attributes}
         // Focusable, so a click anywhere on the table puts focus here and its shortcuts work.
         tabIndex={-1}

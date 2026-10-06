@@ -35,9 +35,6 @@ export const FADE = '[mask-image:linear-gradient(to_bottom,black_calc(100%-2.5re
 
 type Mode = 'terminal' | 'floating' | 'hologram'
 
-// On a short screen the projector's window reaches up under the title, so the words keep to its left, in the
-// width the 3D scene reports.
-const BESIDE = '[@media(max-height:920px)]:max-w-[calc(var(--window-left,16rem)-1.5rem)]'
 type Slots = { actions: HTMLElement | null; bar: HTMLElement | null; deckShown: boolean; mode: Mode }
 const SlotContext = createContext<Slots>({ actions: null, bar: null, deckShown: false, mode: 'terminal' })
 
@@ -63,10 +60,7 @@ function Hologram({ children }: { children: ReactNode }) {
   }, [])
   return (
     <div ref={light} className="hologram">
-      {/* Only the content scrolls, inside the window. */}
-      <div data-scroller className="hologram-glow">
-        {children}
-      </div>
+      <div className="hologram-glow">{children}</div>
     </div>
   )
 }
@@ -335,6 +329,16 @@ export function Screen({
   const [actions, setActions] = useState<HTMLDivElement | null>(null)
   const [bar, setBar] = useState<HTMLDivElement | null>(null)
   // The screen's own buttons, the deck and the menu, beside the title or, stacked, under the screen's line.
+  const menu = (
+    <RunMenu
+      run={run}
+      fullScreen={fullScreen}
+      onDeck={deck && !roomy ? () => setDrawer(true) : undefined}
+      onSwitch={onSwitch}
+      button={menuButton}
+    />
+  )
+  // Stacked, the menu keeps to the top right corner, so it has room, and the screen's own buttons sit centered below.
   const buttonRow = (
     <div className={`flex shrink-0 items-center gap-2 ${stacked ? 'justify-center' : 'ml-auto'}`}>
       <div ref={setActions} className="flex shrink-0 items-center gap-2 empty:hidden" />
@@ -346,26 +350,60 @@ export function Screen({
           onClick={() => dock(!docked)}
         />
       ) : null}
-      <RunMenu
-        run={run}
-        fullScreen={fullScreen}
-        onDeck={deck && !roomy ? () => setDrawer(true) : undefined}
-        onSwitch={onSwitch}
-        button={menuButton}
-      />
+      {stacked ? null : menu}
     </div>
   )
+  const drawerHost = <div ref={setHost} className="pointer-events-none absolute inset-0 z-40 *:pointer-events-auto" />
+  const deckDrawer =
+    deck && !roomy ? (
+      <DeckDrawer run={run} host={host} open={drawer} onOpenChange={setDrawer} returnTo={menuButton} />
+    ) : null
+
+  // Over the 3D table, everything goes in the projector's window, which the scene warps onto it every frame.
+  if (mode === 'hologram')
+    return (
+      <SlotContext value={{ actions, bar, deckShown: false, mode }}>
+        <SearchContext value={{ query, setQuery: (next) => setSearch({ title, query: next }) }}>
+          <div
+            data-table="run"
+            tabIndex={-1}
+            className="pointer-events-none absolute inset-0 z-10 overflow-hidden font-terminal text-xl text-[#b8f5c4]"
+          >
+            <div
+              ref={pinTo}
+              className="hologram-window pointer-events-auto absolute top-0 left-0 origin-top-left"
+              style={{ width: WINDOW_PX.width, height: WINDOW_PX.height }}
+            >
+              <Hologram>
+                <header className="flex shrink-0 items-center gap-3">
+                  <div className="min-w-0 flex-1">
+                    {caption ? <p className="text-base text-p03-dim">{caption}</p> : null}
+                    <h2 className="text-2xl leading-tight text-balance [overflow-wrap:anywhere] text-p03">{title}</h2>
+                  </div>
+                  {buttonRow}
+                </header>
+                <div ref={setBar} className="shrink-0 empty:hidden" />
+                {/* Only the content scrolls; a short screen sits in the middle of the window. */}
+                <div data-scroller className="flex min-h-0 flex-1 flex-col overflow-y-auto px-1">
+                  <div className="my-auto">{children}</div>
+                </div>
+              </Hologram>
+            </div>
+            {drawerHost}
+            {deckDrawer}
+          </div>
+        </SearchContext>
+      </SlotContext>
+    )
   // Over the 3D table, the scene behind is the frame, and its page decides full screen.
   const place =
-    mode === 'hologram'
-      ? 'absolute inset-0 z-10 p-3 sm:p-4'
-      : mode === 'floating'
-        ? `absolute z-10 bg-p03-ground/60 backdrop-blur-[3px] animate-in fade-in-0 slide-in-from-bottom-3 duration-500 motion-reduce:animate-none ${phone ? 'inset-0 p-3' : 'inset-x-3 inset-y-3 mx-auto max-w-6xl rounded-lg border p-4'}`
-        : phone
-          ? fullScreen.on
-            ? 'fixed inset-0 z-50 p-3'
-            : 'relative h-[calc(100dvh-7rem)] min-h-[30rem] p-3'
-          : `rounded-lg border p-4 ${fullScreen.on ? 'fixed z-50' : 'relative mx-auto'}`
+    mode === 'floating'
+      ? `absolute z-10 bg-p03-ground/60 backdrop-blur-[3px] animate-in fade-in-0 slide-in-from-bottom-3 duration-500 motion-reduce:animate-none ${phone ? 'inset-0 p-3' : 'inset-x-3 inset-y-3 mx-auto max-w-6xl rounded-lg border p-4'}`
+      : phone
+        ? fullScreen.on
+          ? 'fixed inset-0 z-50 p-3'
+          : 'relative h-[calc(100dvh-7rem)] min-h-[30rem] p-3'
+        : `rounded-lg border p-4 ${fullScreen.on ? 'fixed z-50' : 'relative mx-auto'}`
   return (
     <SlotContext value={{ actions, bar, deckShown: showDock, mode }}>
       <SearchContext value={{ query, setQuery: (next) => setSearch({ title, query: next }) }}>
@@ -376,57 +414,32 @@ export function Screen({
           // A table to the keyboard, so a screen's number keys work while focus is anywhere inside it.
           data-table="run"
           tabIndex={-1}
-          className={`flex flex-col gap-3 overflow-hidden border-p03-edge font-terminal text-xl sm:text-2xl ${mode === 'hologram' ? 'text-[#b8f5c4]' : 'p03-screen crt'} ${place}`}
+          className={`p03-screen crt flex flex-col gap-3 overflow-hidden border-p03-edge font-terminal text-xl sm:text-2xl ${place}`}
         >
           {terminal ? <FaultyScreenShader /> : null}
-          {mode === 'hologram' ? null : (
-            <span aria-hidden className="crt-glass pointer-events-none absolute inset-0 z-30" />
-          )}
-          {mode === 'hologram' ? (
-            // Pinned onto the projector's window by the 3D scene, which warps it to the window's corners every frame.
-            <div
-              ref={pinTo}
-              className="hologram-window absolute top-0 left-0 origin-top-left"
-              style={{ width: WINDOW_PX.width, height: WINDOW_PX.height }}
-            >
-              <Hologram>{children}</Hologram>
-            </div>
-          ) : null}
+          <span aria-hidden className="crt-glass pointer-events-none absolute inset-0 z-30" />
           {/* Where the deck drawer opens, covering the frame but taking no clicks until it does. */}
-          <div ref={setHost} className="pointer-events-none absolute inset-0 z-40 *:pointer-events-auto" />
+          {drawerHost}
           {/* The title wraps rather than being cut off; short of room, the buttons drop to their own line. */}
           <header className="relative z-10 flex shrink-0 flex-wrap items-center gap-2">
-            <div
-              className={`min-w-0 flex-1 ${stacked ? 'text-center' : 'basis-48'} ${mode === 'hologram' ? BESIDE : ''}`}
-            >
+            {/* Stacked, the title stays clear of the menu in the corner. */}
+            <div className={`min-w-0 flex-1 ${stacked ? 'px-12 text-center' : 'basis-48'}`}>
               {caption ? <p className="text-base text-p03-dim">{caption}</p> : null}
-              <h2
-                className={`text-3xl leading-tight text-balance [overflow-wrap:anywhere] text-p03 ${mode === 'hologram' ? '[@media(max-height:920px)]:text-2xl' : ''}`}
-              >
-                {title}
-              </h2>
+              <h2 className="text-3xl leading-tight text-balance [overflow-wrap:anywhere] text-p03">{title}</h2>
             </div>
-            {stacked ? null : buttonRow}
+            {stacked ? <div className="absolute top-0 right-0">{menu}</div> : buttonRow}
           </header>
-          {deck && !roomy ? (
-            <DeckDrawer run={run} host={host} open={drawer} onOpenChange={setDrawer} returnTo={menuButton} />
-          ) : null}
+          {deckDrawer}
           <div
-            // Over the hologram this layer lets clicks through to the window, except on its own bar.
-            className={`relative z-10 grid min-h-0 flex-1 gap-4 ${showDock ? 'grid-cols-[minmax(0,1fr)_20rem]' : ''} ${mode === 'hologram' ? 'pointer-events-none' : ''}`}
+            className={`relative z-10 grid min-h-0 flex-1 gap-4 ${showDock ? 'grid-cols-[minmax(0,1fr)_20rem]' : ''}`}
           >
             <div className="flex min-h-0 min-w-0 flex-col gap-2">
-              <div
-                ref={setBar}
-                className={`pointer-events-auto shrink-0 empty:hidden ${stacked ? 'text-center' : ''} ${mode === 'hologram' ? BESIDE : ''}`}
-              />
-              {stacked ? <div className="pointer-events-auto">{buttonRow}</div> : null}
+              <div ref={setBar} className={`shrink-0 empty:hidden ${stacked ? 'text-center' : ''}`} />
+              {stacked ? buttonRow : null}
               {/* Only the content scrolls, inside a frame that stays the same size; padded so focus rings aren't cut. */}
-              {mode === 'hologram' ? null : (
-                <div data-scroller className={`min-h-0 flex-1 overflow-y-auto px-1 ${FADE}`}>
-                  {children}
-                </div>
-              )}
+              <div data-scroller className={`min-h-0 flex-1 overflow-y-auto px-1 ${FADE}`}>
+                {children}
+              </div>
             </div>
             {showDock ? (
               <aside id="run-deck" aria-label="Your deck" className="min-h-0">

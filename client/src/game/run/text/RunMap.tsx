@@ -61,11 +61,35 @@ function Legend({
 }) {
   const mode = useScreenMode()
   const terminal = mode === 'terminal'
+  // In the projector's window it's a little grid of icons beside the map's buttons, named by tooltip and label.
+  if (mode === 'hologram')
+    return (
+      <ul aria-label="What the icons mean" className="grid grid-cols-3 gap-0.5 text-p03-dim">
+        {KINDS.map((kind) => {
+          const Icon = NODE_ICONS[kind]
+          return (
+            <li key={kind}>
+              <button
+                type="button"
+                aria-pressed={shown === kind}
+                aria-label={nodeName({ kind })}
+                title={nodeName({ kind })}
+                onClick={() => onPick(kind)}
+                onPointerEnter={() => onHover(kind)}
+                onPointerLeave={() => onHover(null)}
+                className="grid size-6 place-items-center rounded-sm hover:text-p03 hover:[filter:drop-shadow(0_0_6px_rgb(125_255_154/0.9))] focus-visible:outline-2 focus-visible:outline-p03 aria-pressed:text-p03 aria-pressed:outline-1 aria-pressed:outline-p03"
+              >
+                <Icon aria-hidden className="size-4" />
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+    )
   return (
     <ul
       aria-label="What the icons mean"
-      // On a short screen the projector's window rises into a row under the title, so the legend stands down the left.
-      className={`flex flex-wrap gap-1 text-base text-p03-dim ${centered ? 'justify-center' : ''} ${mode === 'hologram' ? '[@media(max-height:920px)]:flex-col [@media(max-height:920px)]:items-start' : ''}`}
+      className={`flex flex-wrap gap-1 text-base text-p03-dim ${centered ? 'justify-center' : ''}`}
     >
       {KINDS.map((kind) => {
         const Icon = NODE_ICONS[kind]
@@ -171,6 +195,16 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
   const choices = open.map((id) => findNode(state.map, id)).filter((node): node is MapNode => Boolean(node))
   const last = state.map.rows.length - 1
 
+  const hologram = useScreenMode() === 'hologram'
+  const legend = (
+    <Legend
+      shown={shown}
+      // Centered on a phone, upright or on its side.
+      centered={layout === 'phone'}
+      onHover={setHovered}
+      onPick={(kind) => setPicked((now) => (now === kind ? null : kind))}
+    />
+  )
   return (
     <div className="flex flex-col gap-3">
       {/* The pen beside the menu, and the legend above the map, so both stay in reach while it scrolls. */}
@@ -208,17 +242,13 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
           </button>
         </div>
       </ScreenActions>
-      <ScreenBar>
-        <div className="pb-1">
-          <Legend
-            shown={shown}
-            // Centered on a phone, upright or on its side.
-            centered={layout === 'phone'}
-            onHover={setHovered}
-            onPick={(kind) => setPicked((now) => (now === kind ? null : kind))}
-          />
-        </div>
-      </ScreenBar>
+      {hologram ? (
+        <ScreenActions>{legend}</ScreenActions>
+      ) : (
+        <ScreenBar>
+          <div className="pb-1">{legend}</div>
+        </ScreenBar>
+      )}
       {/* Padded, so the boss and the first row are never cut off at the top or bottom of the scroll. */}
       <div className="py-8">
         <div ref={box} className="relative w-full" style={{ height: `calc(${ROW_HEIGHT} * ${state.map.rows.length})` }}>

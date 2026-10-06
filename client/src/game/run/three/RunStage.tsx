@@ -6,9 +6,9 @@ import { LANES, type RunState } from 'shared'
 import * as THREE from 'three'
 import { EndTurnButton, FactoryEffects } from '../../table/Factory.tsx'
 import { STILL } from '../../table/factory/constants.ts'
-import { CAMERA, CENTER_X, TABLE_Y, type CameraView, type Vec3 } from '../../table/layout.ts'
+import { CAMERA, CENTER_X, FOV, TABLE_Y, type CameraView, type Vec3 } from '../../table/layout.ts'
 import { TINT } from '../../table/palette.ts'
-import { CameraRig, WarmUp } from '../../table/table3d/stage.tsx'
+import { CameraRig, fitFov, WarmUp } from '../../table/table3d/stage.tsx'
 import { useStage } from '../../table/TableStage.tsx'
 import type { View } from '../../view.ts'
 
@@ -39,7 +39,7 @@ const FACING = new THREE.Vector3(...CAMERA.map.position).sub(new THREE.Vector3(.
 /** Where the window's bottom edge floats, just above the lens. */
 const WINDOW_BOTTOM = new THREE.Vector3(CENTER_X, TABLE_Y + 0.6, PROJECTOR[2] - 0.15)
 /** The window's size in world units, in the proportions of the page element drawn into it. */
-export const WINDOW = { width: (3.8 * 840) / 540, height: 3.8 }
+export const WINDOW = { width: (4.3 * 840) / 540, height: 4.3 }
 
 /** The window's corners, top left first and clockwise, turned to face the map's camera. */
 function windowCorners(): THREE.Vector3[] {
@@ -49,6 +49,27 @@ function windowCorners(): THREE.Vector3[] {
   const tall = up.multiplyScalar(WINDOW.height)
   const at = (x: number, y: number) => WINDOW_BOTTOM.clone().addScaledVector(across, x).addScaledVector(tall, y)
   return [at(-1, 1), at(1, 1), at(1, 0), at(-1, 0)]
+}
+
+/** The tangent of the window's half-width from the map's camera, with a margin, which the lens must keep in view. */
+const FIT = (() => {
+  const camera = new THREE.PerspectiveCamera()
+  camera.position.set(...CAMERA.map.position)
+  camera.lookAt(...CAMERA.map.target)
+  camera.updateMatrixWorld()
+  const local = windowCorners().map((corner) => corner.applyMatrix4(camera.matrixWorldInverse))
+  return Math.max(...local.map((corner) => Math.abs(corner.x / corner.z))) * 1.06
+})()
+
+/** How tall the open window draws on a stage of this size, in CSS pixels. */
+export function windowHeight(width: number, height: number): number {
+  if (!width || !height) return 0
+  const camera = new THREE.PerspectiveCamera(fitFov(CAMERA.map.fov ?? FOV, FIT, width / height), width / height)
+  camera.position.set(...CAMERA.map.position)
+  camera.lookAt(...CAMERA.map.target)
+  camera.updateMatrixWorld()
+  const [top, , bottom] = windowCorners().map((corner) => corner.project(camera).y)
+  return ((top! - bottom!) / 2) * height
 }
 
 // A 3x3 projective transform from four points to four points, as CSS matrix3d warps a page element.
@@ -170,7 +191,7 @@ function Projector({
   /** Shuts the window and lifts the projector away, then calls `onClosed`. */
   closing: boolean
   onClosed: () => void
-  onPin: (points: number[] | null, left: number) => void
+  onPin: (points: number[] | null) => void
 }) {
   const { model, lens } = useProjector()
   const { camera, size } = useThree()
@@ -279,7 +300,6 @@ function Projector({
     }
 
     // Where the page element goes on screen, so the map moves with the room as the camera does.
-    const screenX = (corner: THREE.Vector3) => ((point.copy(corner).project(camera).x + 1) / 2) * size.width
     onPin(
       lit
         ? window.flatMap((corner) => {
@@ -287,8 +307,6 @@ function Projector({
             return [((point.x + 1) / 2) * size.width, ((1 - point.y) / 2) * size.height]
           })
         : null,
-      // The open window's left edge, so the screen's words can keep beside it.
-      Math.min(screenX(corners[0]!), screenX(corners[3]!)),
     )
   })
   return (
@@ -339,8 +357,8 @@ export function BetweenBattles({
   projecting: boolean
   /** The view the camera glides back from, after a battle. */
   from?: CameraView
-  /** Given where the window's page element goes on screen every frame, or null while it's dark, and its open left edge. */
-  onPin: (points: number[] | null, left: number) => void
+  /** Given where the window's page element goes on screen every frame, or null while it's dark. */
+  onPin: (points: number[] | null) => void
 }) {
   const stage = useStage()
   const view = useMemo(() => restView(state), [state])
@@ -354,7 +372,7 @@ export function BetweenBattles({
   return (
     <stage.Scene>
       {/* Across the table at the window, gliding back from the seat after a battle. */}
-      <CameraRig view="map" from={from} />
+      <CameraRig view="map" from={from} fit={FIT} />
       <Selection>
         {/* Bolted to the table, so it stays between battles, locked. */}
         <EndTurnButton active={false} rung={0} onClick={() => {}} />

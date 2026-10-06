@@ -7,6 +7,10 @@ import { STILL } from '../factory/constants.ts'
 import { BOARD_CENTER, CAMERA, FOV, type CameraView } from '../layout.ts'
 import { MOOD } from '../mood.ts'
 
+/** A view's field of view, widened if need be so `fit` (a tangent of the half-width) stays in view at this aspect. */
+export const fitFov = (fov: number, fit: number | undefined, aspect: number) =>
+  fit ? Math.max(fov, THREE.MathUtils.radToDeg(2 * Math.atan(fit / aspect))) : fov
+
 const seat = new THREE.Vector3()
 const aim = new THREE.Vector3()
 const easeInOut = (t: number) => (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2)
@@ -22,11 +26,14 @@ export function CameraRig({
   from,
   glide = 0.55,
   arrive = 1.15,
+  fit,
 }: {
   view: CameraView
   from?: CameraView
   glide?: number
   arrive?: number
+  /** The tangent of the half-width to keep in view: on a narrow screen the lens widens until it fits. */
+  fit?: number
 }) {
   const target = useRef(new THREE.Vector3(...CAMERA[from ?? view].target))
   const gliding = useRef<Glide | null>(null)
@@ -34,7 +41,7 @@ export function CameraRig({
   useFrame(({ camera, pointer, clock }, delta) => {
     const lens = camera as THREE.PerspectiveCamera
     const goal = CAMERA[view]
-    const fov = goal.fov ?? FOV
+    const fov = fitFov(goal.fov ?? FOV, fit, lens.aspect)
     // With nowhere to glide from, a scene starts in its view.
     if (shown.current === null && !from) {
       camera.position.set(...goal.position)
