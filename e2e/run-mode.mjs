@@ -77,7 +77,7 @@ const inBattle = (state) => state.visit?.kind === 'battle'
 const battleWon = (state) => inBattle(state) && state.visit.game.status === 'won'
 
 section('Starting a run')
-const { context, page } = await freshPage(browser, { width: 1440, height: 900 })
+const { context, page } = await freshPage(browser, { width: 1440, height: 900, table: 'text' })
 const player = await signUp(page, newPlayer('Run'))
 await page.goto(`${BASE}/run`)
 const root = page.locator(ROOT)
@@ -174,7 +174,7 @@ await context.close()
 
 section('The campfire, from a mockup')
 {
-  const { context, page } = await freshPage(browser, { width: 1440, height: 900 })
+  const { context, page } = await freshPage(browser, { width: 1440, height: 900, table: 'text' })
   await page.goto(`${BASE}/run/mockups/campfire`, MOCKUP)
   check('a campfire offers every card in the deck', await shows(page, 'campfire', 30_000))
   const first = page.locator('[data-action="buff"]').first()
@@ -203,7 +203,7 @@ section('The campfire, from a mockup')
 
 section('The sigil stones, from a mockup')
 {
-  const { context, page } = await freshPage(browser, { width: 1440, height: 900 })
+  const { context, page } = await freshPage(browser, { width: 1440, height: 900, table: 'text' })
   await page.goto(`${BASE}/run/mockups/stones`, MOCKUP)
   check('the stones open', await shows(page, 'stones', 30_000))
   check(
@@ -223,7 +223,7 @@ section('The sigil stones, from a mockup')
 
 section('An event, from a mockup')
 {
-  const { context, page } = await freshPage(browser, { width: 1440, height: 900 })
+  const { context, page } = await freshPage(browser, { width: 1440, height: 900, table: 'text' })
   await page.goto(`${BASE}/run/mockups/event`, MOCKUP)
   check(
     'an event shows its scene and two choices',
@@ -238,7 +238,7 @@ section('An event, from a mockup')
 
 section('Planning a route, from a mockup')
 {
-  const { context, page } = await freshPage(browser, { width: 1440, height: 900 })
+  const { context, page } = await freshPage(browser, { width: 1440, height: 900, table: 'text' })
   await page.goto(`${BASE}/run/mockups/map`, MOCKUP)
   await shows(page, 'map', 30_000)
   check(
@@ -287,7 +287,7 @@ section('Planning a route, from a mockup')
 
 section('A big deck, from a mockup')
 {
-  const { context, page } = await freshPage(browser, { width: 1440, height: 900 })
+  const { context, page } = await freshPage(browser, { width: 1440, height: 900, table: 'text' })
   await page.goto(`${BASE}/run/mockups/worst-campfire`, MOCKUP)
   await shows(page, 'campfire', 30_000)
   const docked = page.getByRole('complementary', { name: 'Your deck' })

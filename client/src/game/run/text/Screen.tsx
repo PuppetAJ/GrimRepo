@@ -1,7 +1,7 @@
 import { useNavigate } from '@tanstack/react-router'
-import { Flag, Layers, LogOut, Maximize, Menu, Minimize, X } from 'lucide-react'
+import { Flag, Layers, LogOut, Maximize, Menu, Minimize, Repeat, X } from 'lucide-react'
 import { Dialog as DialogPrimitive } from 'radix-ui'
-import { createContext, use, useRef, useState, type ComponentProps, type ReactNode } from 'react'
+import { use, useEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { STAGES } from 'shared'
 import { AlertDialog } from '@/components/ui/alert-dialog.tsx'
@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu.tsx'
 import FaultyScreenShader from '../../../components/p03/FaultyScreenShader.tsx'
+import { prefersReducedMotion } from '../../../lib/motion.ts'
 import { ForfeitConfirm } from '../../controls.tsx'
 import { useFullScreen } from '../../fullScreen.ts'
 import { Panel } from '../../text/Panel.tsx'
@@ -22,15 +23,48 @@ import type { Layout } from '../../text/useTextTable.ts'
 import type { RunReady } from '../useRun.ts'
 import { CardSearch, SEARCH_FROM, SearchContext, useCardSearch } from './CardBits.tsx'
 import { DeckTable } from './DeckTable.tsx'
+import { SlotContext, type Mode } from './slots.ts'
 
 export const ICON_BUTTON =
   'relative grid size-10 shrink-0 place-items-center rounded-md border-2 border-p03-edge bg-[#07130b] text-p03 hover:bg-[#13261a] focus-visible:outline-2 focus-visible:outline-p03 aria-expanded:bg-[#13261a] aria-pressed:border-p03 aria-pressed:bg-[#13261a]'
 
+/** The map's page size in the projector's window, in the window's proportions. */
+const WINDOW_PX = { width: 840, height: 540 }
+
 /** Fades a scrolling area's last lines, so it ends softly instead of looking cut off. */
 export const FADE = '[mask-image:linear-gradient(to_bottom,black_calc(100%-2.5rem),transparent)] pb-10'
 
-type Slots = { actions: HTMLElement | null; bar: HTMLElement | null; deckShown: boolean }
-const SlotContext = createContext<Slots>({ actions: null, bar: null, deckShown: false })
+export { useScreenMode } from './slots.ts'
+
+/** A screen in the projector's light: it flickers now and then, faintly and at random, so it stays easy to read. */
+function Hologram({ fading, children }: { fading: boolean; children: ReactNode }) {
+  const light = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (prefersReducedMotion()) return
+    let timer: ReturnType<typeof setTimeout>
+    const flicker = () => {
+      const element = light.current
+      if (!element) return
+      const dip = Math.random() < 0.15
+      element.style.opacity = String(dip ? 0.82 + Math.random() * 0.08 : 0.96 + Math.random() * 0.04)
+      // A dip lasts a few frames; the steady glow, a random while.
+      timer = setTimeout(flicker, dip ? 40 + Math.random() * 80 : 1200 + Math.random() * 4000)
+    }
+    flicker()
+    return () => clearTimeout(timer)
+  }, [])
+  return (
+    <div ref={light} className="hologram">
+      {/* Fades in as a screen takes the window, and out before the next one does. */}
+      <div
+        inert={fading}
+        className={`hologram-glow animate-in duration-200 fade-in-0 motion-reduce:animate-none ${fading ? 'opacity-0 transition-opacity duration-150' : ''}`}
+      >
+        {children}
+      </div>
+    </div>
+  )
+}
 
 /** A screen's own buttons, in the header beside the menu. */
 export function ScreenActions({ children }: { children: ReactNode }) {
@@ -44,17 +78,15 @@ export function ScreenBar({ children }: { children: ReactNode }) {
   return bar ? createPortal(children, bar) : null
 }
 
+/** A worded button in the header, beside the menu. */
+export const HEADER_BUTTON =
+  'flex h-10 shrink-0 items-center rounded-md border-2 border-p03-edge bg-[#07130b] px-3 text-lg text-p03 hover:bg-[#13261a] focus-visible:outline-2 focus-visible:outline-p03'
+
 /** Leaving a screen of cards, in the header beside the menu. */
 export function LeaveButton({ label, onLeave }: { label: string; onLeave: () => void }) {
   return (
     <ScreenActions>
-      <button
-        type="button"
-        data-action="leave"
-        onClick={onLeave}
-        aria-label={label}
-        className="flex h-10 shrink-0 items-center rounded-md border-2 border-p03-edge bg-[#07130b] px-3 text-lg text-p03 hover:bg-[#13261a] focus-visible:outline-2 focus-visible:outline-p03"
-      >
+      <button type="button" data-action="leave" onClick={onLeave} aria-label={label} className={HEADER_BUTTON}>
         Leave
       </button>
     </ScreenActions>
@@ -138,6 +170,9 @@ function DeckDrawer({
   )
 }
 
+/** The menu's way to the other table. */
+export type Switch = { label: string; go: () => void }
+
 function saveWords(run: RunReady): string {
   if (run.id === -1) return 'mockup, never saved'
   return run.saving ? 'saving…' : run.unsaved ? `${run.unsaved} unsaved` : 'saved'
@@ -148,12 +183,14 @@ function RunMenu({
   run,
   fullScreen,
   onDeck,
+  onSwitch,
   button,
 }: {
   run: RunReady
   fullScreen: ReturnType<typeof useFullScreen>
   /** Set where the deck isn't beside the screen, so the menu opens it. */
   onDeck?: () => void
+  onSwitch?: Switch
   button: React.RefObject<HTMLButtonElement | null>
 }) {
   const { state } = run
@@ -207,6 +244,12 @@ function RunMenu({
               {fullScreen.on ? 'Leave full screen' : 'Full screen'}
             </DropdownMenuItem>
           ) : null}
+          {onSwitch ? (
+            <DropdownMenuItem onSelect={onSwitch.go} className="text-lg">
+              <Repeat aria-hidden />
+              {onSwitch.label}
+            </DropdownMenuItem>
+          ) : null}
           {state.status === 'playing' ? (
             <DropdownMenuItem onSelect={() => setAbandoning(true)} className="text-lg">
               <Flag aria-hidden />
@@ -234,8 +277,14 @@ export function Screen({
   caption,
   stack = false,
   deck = true,
+  mode = 'terminal',
+  onSwitch,
+  pinTo,
+  fading = false,
   children,
 }: {
+  /** Fades the projected content out, before the next screen takes the window. */
+  fading?: boolean
   run: RunReady
   layout: Layout
   title: string
@@ -245,13 +294,20 @@ export function Screen({
   stack?: boolean
   /** Off for a screen that shows the deck itself. */
   deck?: boolean
+  /** The text table's terminal; over the 3D table, a floating panel, or the map as a hologram above the board. */
+  mode?: Mode
+  onSwitch?: Switch
+  /** The hologram's page element, which the 3D scene pins onto the projector's window. */
+  pinTo?: React.RefObject<HTMLDivElement | null>
   children: ReactNode
 }) {
   const { state } = run
+  const terminal = mode === 'terminal'
   const phone = layout === 'phone'
   const stacked = phone && stack
   // Room enough for the deck beside the screen, so it docks open instead of covering it.
-  const roomy = layout === 'wide'
+  // Over the hologram the deck is a drawer, so the room stays in view.
+  const roomy = layout === 'wide' && mode !== 'hologram'
   const [docked, setDocked] = useState(dockedAtFirst)
   const dock = (open: boolean) => {
     setDocked(open)
@@ -275,6 +331,16 @@ export function Screen({
   const [actions, setActions] = useState<HTMLDivElement | null>(null)
   const [bar, setBar] = useState<HTMLDivElement | null>(null)
   // The screen's own buttons, the deck and the menu, beside the title or, stacked, under the screen's line.
+  const menu = (
+    <RunMenu
+      run={run}
+      fullScreen={fullScreen}
+      onDeck={deck && !roomy ? () => setDrawer(true) : undefined}
+      onSwitch={onSwitch}
+      button={menuButton}
+    />
+  )
+  // Stacked, the menu keeps to the top right corner, so it has room, and the screen's own buttons sit centered below.
   const buttonRow = (
     <div className={`flex shrink-0 items-center gap-2 ${stacked ? 'justify-center' : 'ml-auto'}`}>
       <div ref={setActions} className="flex shrink-0 items-center gap-2 empty:hidden" />
@@ -286,46 +352,87 @@ export function Screen({
           onClick={() => dock(!docked)}
         />
       ) : null}
-      <RunMenu
-        run={run}
-        fullScreen={fullScreen}
-        onDeck={deck && !roomy ? () => setDrawer(true) : undefined}
-        button={menuButton}
-      />
+      {stacked ? null : menu}
     </div>
   )
-  const place = phone
-    ? fullScreen.on
-      ? 'fixed inset-0 z-50 p-3'
-      : 'relative h-[calc(100dvh-7rem)] min-h-[30rem] p-3'
-    : `rounded-lg border p-4 ${fullScreen.on ? 'fixed z-50' : 'relative mx-auto'}`
+  const drawerHost = <div ref={setHost} className="pointer-events-none absolute inset-0 z-40 *:pointer-events-auto" />
+  const deckDrawer =
+    deck && !roomy ? (
+      <DeckDrawer run={run} host={host} open={drawer} onOpenChange={setDrawer} returnTo={menuButton} />
+    ) : null
+
+  // Over the 3D table, everything goes in the projector's window, which the scene warps onto it every frame.
+  if (mode === 'hologram')
+    return (
+      <SlotContext value={{ actions, bar, deckShown: false, mode }}>
+        <SearchContext value={{ query, setQuery: (next) => setSearch({ title, query: next }) }}>
+          <div
+            data-table="run"
+            tabIndex={-1}
+            className="pointer-events-none absolute inset-0 z-10 overflow-hidden font-terminal text-xl text-[#b8f5c4]"
+          >
+            <div
+              ref={pinTo}
+              className="hologram-window pointer-events-auto absolute top-0 left-0 origin-top-left"
+              style={{ width: WINDOW_PX.width, height: WINDOW_PX.height }}
+            >
+              <Hologram fading={fading}>
+                <header className="flex shrink-0 items-center gap-3">
+                  <div className="min-w-0 flex-1">
+                    {caption ? <p className="text-base text-p03-dim">{caption}</p> : null}
+                    <h2 className="text-2xl leading-tight text-balance [overflow-wrap:anywhere] text-p03">{title}</h2>
+                  </div>
+                  {buttonRow}
+                </header>
+                <div ref={setBar} className="shrink-0 empty:hidden" />
+                {/* Only the content scrolls; a screen marked data-center, such as a card choice, sits in the middle. */}
+                <div data-scroller className="flex min-h-0 flex-1 flex-col overflow-y-auto px-1">
+                  <div className="has-[[data-center]]:my-auto">{children}</div>
+                </div>
+              </Hologram>
+            </div>
+            {drawerHost}
+            {deckDrawer}
+          </div>
+        </SearchContext>
+      </SlotContext>
+    )
+  // Over the 3D table, the scene behind is the frame, and its page decides full screen.
+  const place =
+    mode === 'floating'
+      ? `absolute z-10 bg-p03-ground/60 backdrop-blur-[3px] animate-in fade-in-0 slide-in-from-bottom-3 duration-500 motion-reduce:animate-none ${phone ? 'inset-0 p-3' : 'inset-x-3 inset-y-3 mx-auto max-w-6xl rounded-lg border p-4'}`
+      : phone
+        ? fullScreen.on
+          ? 'fixed inset-0 z-50 p-3'
+          : 'relative h-[calc(100dvh-7rem)] min-h-[30rem] p-3'
+        : `rounded-lg border p-4 ${fullScreen.on ? 'fixed z-50' : 'relative mx-auto'}`
   return (
-    <SlotContext value={{ actions, bar, deckShown: showDock }}>
+    <SlotContext value={{ actions, bar, deckShown: showDock, mode }}>
       <SearchContext value={{ query, setQuery: (next) => setSearch({ title, query: next }) }}>
-        {fullScreen.on ? <div aria-hidden className="fixed inset-0 z-40 bg-[#030604]" /> : null}
+        {terminal && fullScreen.on ? <div aria-hidden className="fixed inset-0 z-40 bg-[#030604]" /> : null}
         <div
-          ref={phone ? undefined : frame}
-          style={phone ? undefined : size}
+          ref={phone || !terminal ? undefined : frame}
+          style={phone || !terminal ? undefined : size}
           // A table to the keyboard, so a screen's number keys work while focus is anywhere inside it.
           data-table="run"
           tabIndex={-1}
           className={`p03-screen crt flex flex-col gap-3 overflow-hidden border-p03-edge font-terminal text-xl sm:text-2xl ${place}`}
         >
+          {/* The terminal's glyphs, also when a screen floats over the 3D table in place of the projector. */}
           <FaultyScreenShader />
           <span aria-hidden className="crt-glass pointer-events-none absolute inset-0 z-30" />
           {/* Where the deck drawer opens, covering the frame but taking no clicks until it does. */}
-          <div ref={setHost} className="pointer-events-none absolute inset-0 z-40 *:pointer-events-auto" />
+          {drawerHost}
           {/* The title wraps rather than being cut off; short of room, the buttons drop to their own line. */}
           <header className="relative z-10 flex shrink-0 flex-wrap items-center gap-2">
-            <div className={`min-w-0 flex-1 ${stacked ? 'text-center' : 'basis-48'}`}>
+            {/* Stacked, the title stays clear of the menu in the corner. */}
+            <div className={`min-w-0 flex-1 ${stacked ? 'px-12 text-center' : 'basis-48'}`}>
               {caption ? <p className="text-base text-p03-dim">{caption}</p> : null}
               <h2 className="text-3xl leading-tight text-balance [overflow-wrap:anywhere] text-p03">{title}</h2>
             </div>
-            {stacked ? null : buttonRow}
+            {stacked ? <div className="absolute top-0 right-0">{menu}</div> : buttonRow}
           </header>
-          {deck && !roomy ? (
-            <DeckDrawer run={run} host={host} open={drawer} onOpenChange={setDrawer} returnTo={menuButton} />
-          ) : null}
+          {deckDrawer}
           <div
             className={`relative z-10 grid min-h-0 flex-1 gap-4 ${showDock ? 'grid-cols-[minmax(0,1fr)_20rem]' : ''}`}
           >

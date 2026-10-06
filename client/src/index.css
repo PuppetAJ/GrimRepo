@@ -418,3 +418,34 @@
     url(/cursors/full.svg) 2 2,
     not-allowed;
 }
+
+/* The run's map in the projector's window: a pane of green light, mostly solid, with the room faintly behind it. */
+.hologram-window {
+  /* Rows fill the window, so the whole stage fits without scrolling. */
+  /* The window less its padding, header, legend and the map's own padding. */
+  --map-row: calc((540px - 9.25rem) / 8);
+  z-index: 5;
+  /* Dark until the 3D scene pins it, as the projector opens it. */
+  visibility: hidden;
+}
+/* The pane itself; the 3D scene warps the window to its part-open corners, so the pane and map open together. */
+.hologram {
+  height: 100%;
+  overflow: hidden;
+  border: 2px solid rgb(125 255 154 / 0.6);
+  border-radius: 6px;
+  background:
+    repeating-linear-gradient(0deg, rgb(125 255 154 / 0.06) 0 1px, transparent 1px 4px),
+    radial-gradient(ellipse at 50% 100%, rgb(125 255 154 / 0.2), rgb(125 255 154 / 0.05) 70%), rgb(4 18 9 / 0.86);
+  box-shadow:
+    0 0 24px rgb(125 255 154 / 0.35),
+    inset 0 0 30px rgb(125 255 154 / 0.18);
+}
+.hologram-glow {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  filter: drop-shadow(0 0 6px rgb(125 255 154 / 0.45));
+}

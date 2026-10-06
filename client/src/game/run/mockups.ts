@@ -204,6 +204,11 @@ export const MOCKUPS: Record<string, Entry> = {
       return { ...found, state: { ...state, nextCard: state.nextCard + 1, deck: [...state.deck, giver] } }
     },
   },
+  'stones-empty': {
+    title: 'Sigil stones with no sigil to give',
+    group: 'reached',
+    make: () => reached((s) => s.visit?.kind === 'stones'),
+  },
   event: { title: 'An event', group: 'reached', make: () => reached((s) => s.visit?.kind === 'event') },
   reward: { title: "A boss's reward", group: 'reached', make: () => reached((s) => s.visit?.kind === 'reward') },
   'next-stage': {

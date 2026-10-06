@@ -146,8 +146,10 @@ export function Forfeit({
   run = false,
   disabled = false,
   className = '',
+  title,
   children = run ? 'Abandon run' : 'Forfeit',
 }: {
+  title?: string
   forfeit: () => Promise<void>
   /** Forfeiting a battle in a run abandons the whole run. */
   run?: boolean
@@ -158,7 +160,7 @@ export function Forfeit({
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button variant="ghost" disabled={disabled} className={`text-muted-foreground ${className}`}>
+        <Button variant="ghost" disabled={disabled} title={title} className={`text-muted-foreground ${className}`}>
           {children}
         </Button>
       </AlertDialogTrigger>

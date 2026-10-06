@@ -47,6 +47,17 @@ describe('a stage map', () => {
         }
   })
 
+  it('spreads out: at least 17 nodes below the boss, reaching both sides in at least three rows', () => {
+    for (const stage of [0, 1, 2])
+      for (const map of maps(stage)) {
+        const nodes = map.rows.slice(0, -1).flat()
+        const rows = (side: (col: number) => boolean) =>
+          new Set(nodes.filter((node) => side(node.col)).map((node) => node.row)).size
+        assert.ok(nodes.length >= 17)
+        assert.ok(rows((col) => col < 2) >= 3 && rows((col) => col > 2) >= 3)
+      }
+  })
+
   it('offers real choices: more than one start, and routes that split and merge', () => {
     for (const map of maps(2)) {
       assert.ok((map.rows[0]?.length ?? 0) >= 2)

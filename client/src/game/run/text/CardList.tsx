@@ -68,7 +68,8 @@ export function CardList({
   const shown = filtered ? units.filter(matches) : units
   return (
     <div className="flex flex-col gap-3">
-      <ul className="flex flex-wrap justify-center gap-4">
+      {/* Room above, so a chosen card's lift and outline aren't cut off by the top of the scroll. */}
+      <ul className="flex flex-wrap justify-center gap-4 pt-3">
         {shown.map((unit) => {
           const allowed = can(unit)
           const chosen = picked === unit.uid

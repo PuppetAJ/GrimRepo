@@ -9,6 +9,7 @@ import { LIT } from './constants.ts'
 
 // The cap's top sits 0.11 above the collar rim at 0.22, and the cap is 0.53 tall at this scale.
 const CAP_Y = 0.33 - 0.53
+const LOCKED = '#ff4a3d'
 
 export function EndTurnButton({
   onClick,
@@ -31,25 +32,32 @@ export function EndTurnButton({
   useEffect(() => {
     if (rung) pressed.current = 1
   }, [rung])
-  const label = useMemo(() => {
+  const canvas = useMemo(() => {
     const canvas = document.createElement('canvas')
     canvas.width = 256
     canvas.height = 64
-    const context = canvas.getContext('2d') as CanvasRenderingContext2D
-    context.fillStyle = '#0b0e11'
-    context.fillRect(0, 0, 256, 64)
-    context.strokeStyle = '#3a4650'
-    context.lineWidth = 4
-    context.strokeRect(6, 6, 244, 52)
-    context.fillStyle = LIT
-    context.font = '40px VT323'
-    context.textAlign = 'center'
-    context.textBaseline = 'middle'
-    context.fillText('EXECUTE', 128, 33)
+    return canvas
+  }, [])
+  const label = useMemo(() => {
     const map = new THREE.CanvasTexture(canvas)
     map.colorSpace = THREE.SRGBColorSpace
     return map
-  }, [])
+  }, [canvas])
+  // Red and locked while it can't be pressed, so it reads as bolted down rather than broken.
+  useEffect(() => {
+    const context = canvas.getContext('2d') as CanvasRenderingContext2D
+    context.fillStyle = '#0b0e11'
+    context.fillRect(0, 0, 256, 64)
+    context.strokeStyle = active ? '#3a4650' : '#5a2024'
+    context.lineWidth = 4
+    context.strokeRect(6, 6, 244, 52)
+    context.fillStyle = active ? LIT : LOCKED
+    context.font = '40px VT323'
+    context.textAlign = 'center'
+    context.textBaseline = 'middle'
+    context.fillText(active ? 'EXECUTE' : 'LOCKED', 128, 33)
+    label.needsUpdate = true
+  }, [canvas, label, active])
   useEffect(() => () => label.dispose(), [label])
   useFrame((_, delta) => {
     pressed.current = Math.max(0, pressed.current - delta * 5)

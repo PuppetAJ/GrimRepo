@@ -149,6 +149,7 @@ Built by Adrian Jimenez, rewritten from his 2022 bootcamp project ([original rep
 - **The battery:** [Inscryption Act 3 battery and counter](https://sketchfab.com/3d-models/inscryption-act-3-battery-and-counter-9f65d14097f74a1b9885272b9d2b6a58) by p03_real_account (CC BY 4.0), split into the battery and the gem module.
 - **The button's cap:** from [Scifi button](https://sketchfab.com/3d-models/scifi-button-8dcd82d477e441d7b6789f1851924b5f) by lorib2306 (CC BY 4.0), cut from its stand.
 - **The ceiling light:** [Weathered Fluorescent Light/Lamp](https://sketchfab.com/3d-models/weathered-fluorescent-lightlamp-07c2805b50b6476f8e0ad467fae00b82) by Mark Peters (CC BY 4.0).
+- **The run's projector:** [Hologram projector with hologram](https://sketchfab.com/3d-models/hologram-projector-with-hologram-ca0a3bc92a3d4a3f9b0fa19cbc73b420) by t.flores (CC BY 4.0), without its hologram, which the game draws itself.
 - **The factory's metal:** Metal029, DiamondPlate008C and CorrugatedSteel005 from [ambientCG](https://ambientcg.com) (CC0).
 - **The cards:** Adrian Jimenez's 1-bit pixel art, drawn for the rebuild in a sprite editor made for it; it replaced the 2022 card art.
 - **The name filter:** word lists from [obscenity](https://github.com/jo3-l/obscenity) (MIT) and [LDNOOBW](https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words) (CC BY 4.0).
