@@ -106,7 +106,6 @@ const game = createRoute({
   ),
 })
 
-// Not linked from the home page until the 3D table plays runs too.
 const run = createRoute({
   getParentRoute: parent,
   path: '/run',
