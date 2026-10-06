@@ -19,8 +19,24 @@ const listen = (page) => {
   if (process.env.E2E_DEBUG) page.on('requestfailed', (request) => console.log(`  [request failed] ${request.url()}`))
 }
 
-// A page load can stall behind software WebGL still drawing the last page, most of all in Firefox on CI.
-const NAVIGATION = 60_000
+// Firefox on CI now and then stalls a page load outright, even in a fresh context, so a stalled load is tried once more.
+const NAVIGATION = 30_000
+
+/** Sets a page's timeouts, and retries a page load that stalls, saying so in the output. */
+function steady(page) {
+  page.setDefaultTimeout(20_000)
+  page.setDefaultNavigationTimeout(NAVIGATION)
+  const goto = page.goto.bind(page)
+  page.goto = async (url, options) => {
+    try {
+      return await goto(url, options)
+    } catch (error) {
+      if (error?.name !== 'TimeoutError') throw error
+      console.log(`  (a page load stalled and was tried again: ${url})`)
+      return goto(url, options)
+    }
+  }
+}
 
 export async function launch({ width = 1280, height = 800 } = {}) {
   // Without a GPU, headless browsers draw WebGL in software only when asked, and the 3D table needs it.
@@ -31,8 +47,7 @@ export async function launch({ width = 1280, height = 800 } = {}) {
       : await chromium.launch({ args: ['--enable-unsafe-swiftshader'] })
   const context = await browser.newContext({ viewport: { width, height } })
   const page = await context.newPage()
-  page.setDefaultTimeout(20_000)
-  page.setDefaultNavigationTimeout(NAVIGATION)
+  steady(page)
 
   listen(page)
 
@@ -86,8 +101,7 @@ export async function resetRateLimits() {
 /** Shares the context's cookies, so it is the same player. */
 export async function newTab(context) {
   const page = await context.newPage()
-  page.setDefaultTimeout(20_000)
-  page.setDefaultNavigationTimeout(NAVIGATION)
+  steady(page)
   listen(page)
   return page
 }
@@ -97,8 +111,7 @@ export async function freshPage(browser, { width = 1280, height = 900, table } =
   const context = await browser.newContext({ viewport: { width, height } })
   if (table) await context.addInitScript((mode) => localStorage.setItem('grimrepo:table', mode), table)
   const page = await context.newPage()
-  page.setDefaultTimeout(20_000)
-  page.setDefaultNavigationTimeout(NAVIGATION)
+  steady(page)
   listen(page)
   return { context, page }
 }
