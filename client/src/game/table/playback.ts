@@ -41,6 +41,7 @@ const PACE: Record<GameEvent['type'], number> = {
   struckBack: 180,
   killed: 315,
   hit: 240,
+  indebted: 240,
   retired: 315,
   advanced: 270,
   queued: 225,
@@ -154,6 +155,9 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
       break
     case 'hit':
       popup(`-${event.amount}`, 'damage', FACE[event.side], { face: event.side })
+      break
+    case 'indebted':
+      popup(`debt -${event.amount}`, 'damage', FACE.player, { face: 'player' })
       break
     case 'killed':
     case 'retired':
