@@ -35,7 +35,7 @@ describe('the sigils', () => {
     assert.equal(hits(events, 'opponent'), 3 + 4)
   })
 
-  it('Code Smell takes 1 from the attack of the card opposite', () => {
+  it('Packet Loss takes 1 from the attack of the card opposite', () => {
     const { events } = bell(table({ board: ['CopyPaste'], front: ['SpamBot'] }))
     const hit = dealt(events)
     assert.equal(hit?.type === 'damaged' && hit.amount, 2)
