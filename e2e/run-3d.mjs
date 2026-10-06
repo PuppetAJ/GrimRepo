@@ -37,8 +37,9 @@ section('The map on the projector')
   check('with the stage as its title, inside it', (title ?? '').startsWith('Stage 1 of 3'), title)
   check(
     'and the legend and the menu inside it too',
-    (await lit(page).getByRole('list', { name: 'What the icons mean' }).count()) === 1 &&
-      (await lit(page).getByRole('button', { name: 'Run menu' }).count()) === 1,
+    // Waited for, since the window shows as soon as it starts to open.
+    (await shown(lit(page).getByRole('list', { name: 'What the icons mean' }), 20_000)) &&
+      (await shown(lit(page).getByRole('button', { name: 'Run menu' }), 20_000)),
   )
   // A node to a screen off the board, clicked through the warped window.
   const node = page.locator('[data-action="go"]:not([aria-label^="Battle"])').first()
