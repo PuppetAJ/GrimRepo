@@ -207,7 +207,13 @@ export const MOCKUPS: Record<string, Entry> = {
   'stones-empty': {
     title: 'Sigil stones with no sigil to give',
     group: 'reached',
-    make: () => reached((s) => s.visit?.kind === 'stones'),
+    make: () => {
+      const found = reached((s) => s.visit?.kind === 'stones')
+      if (!found) return null
+      // The starter deck carries sigils, so they're taken off to show the stones with nothing to move.
+      const deck = found.state.deck.map((entry) => ({ ...entry, sigils: [] }))
+      return { ...found, state: { ...found.state, deck } }
+    },
   },
   event: { title: 'An event', group: 'reached', make: () => reached((s) => s.visit?.kind === 'event') },
   reward: { title: "A boss's reward", group: 'reached', make: () => reached((s) => s.visit?.kind === 'reward') },
