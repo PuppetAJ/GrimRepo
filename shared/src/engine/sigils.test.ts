@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { cardAt, play, table, uidOf } from './test-support.ts'
+import { cardAt, play, refused, table, uidOf } from './test-support.ts'
 import type { GameEvent, GameState } from './types.ts'
 
 const bell = (state: GameState) => play(state, { type: 'ringBell' })
@@ -81,6 +81,36 @@ describe('the sigils', () => {
     assert.equal(placed?.card, 'LegacyCode')
     assert.equal(placed?.attack, 3)
     assert.equal(placed?.health, 4 + 6)
+  })
+
+  it('Technical Debt pays 3, and tips the scale 1 against the player', () => {
+    const start = table({ hand: ['Mainframe'], board: ['LegacyCode'] })
+    const { state, events } = play(
+      start,
+      { type: 'select', uid: uidOf(start, 'Mainframe') },
+      { type: 'mark', lane: 0 },
+      { type: 'place', lane: 0 },
+    )
+    assert.equal(cardAt(state.player.board, 0), 'Mainframe')
+    assert.equal(state.scale, -1)
+    assert.ok(events.some((event) => event.type === 'indebted' && event.amount === 1 && event.scale === -1))
+  })
+
+  it("Technical Debt can't be taken on when it would lose the game", () => {
+    const start = table({ hand: ['Mainframe'], board: ['LegacyCode'], scale: -23 })
+    assert.match(refused(start, { type: 'select', uid: uidOf(start, 'Mainframe') }), /Not enough/)
+    const paid = table({
+      hand: ['Mainframe'],
+      board: ['LegacyCode', 'Boilerplate', 'Boilerplate', 'Boilerplate'],
+      scale: -23,
+    })
+    const { state: picked } = play(paid, { type: 'select', uid: uidOf(paid, 'Mainframe') })
+    assert.match(refused(picked, { type: 'mark', lane: 0 }), /debt/)
+    const { state } = play(table({ hand: ['Mainframe'], board: ['LegacyCode'], scale: -22 }), {
+      type: 'select',
+      uid: uidOf(start, 'Mainframe'),
+    })
+    assert.equal(play(state, { type: 'mark', lane: 0 }).state.summon?.marked.length, 1, 'one short of a loss is fine')
   })
 })
 

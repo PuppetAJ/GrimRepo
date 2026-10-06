@@ -1,7 +1,7 @@
 import type { SigilId } from '../cards.ts'
 
 /** Bumped whenever a change would make an old game replay differently. */
-export const RULES_VERSION = 8
+export const RULES_VERSION = 9
 
 export const LANES = 4
 /** Net damage needed to win, or to lose. */
@@ -80,6 +80,7 @@ export type GameEvent =
   | { type: 'struckBack'; uid: number; amount: number }
   | { type: 'killed'; uid: number; side: Side; lane: number; row: 'front' | 'back' }
   | { type: 'hit'; side: Side; amount: number; scale: number }
+  | { type: 'indebted'; uid: number; amount: number; scale: number }
   | { type: 'retired'; lane: number; uid: number }
   | { type: 'advanced'; lane: number; uid: number }
   | { type: 'queued'; lane: number; unit: Unit }

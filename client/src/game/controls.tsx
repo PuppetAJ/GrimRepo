@@ -3,9 +3,11 @@ import { useState, type ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
 import {
   type Action,
+  canOwe,
   card,
   costOf,
   encounter,
+  indebted,
   type GameState,
   HAND_LIMIT,
   type Outcome,
@@ -66,6 +68,10 @@ export function whyNot(state: GameState, target: { card: Unit } | { lane: number
   const summoning = state.summon ? state.player.hand.find((unit) => unit.uid === state.summon?.uid) : undefined
   if (!summoning) return "you haven't picked a card from your hand to play"
   const left = owed(summoning, state.player.board, state.summon?.marked ?? [])
+  const marked = state.summon?.marked ?? []
+  const debts = marked.filter((lane) => indebted(state.player.board[lane])).length
+  if (left > 0 && indebted(state.player.board[target.lane]) && !canOwe(state, debts + 1))
+    return 'its technical debt would tip the scale to a loss'
   if (left > 0) return `${card(summoning.card).name} still needs ${left} more sacrificed`
   return 'that lane is taken'
 }
