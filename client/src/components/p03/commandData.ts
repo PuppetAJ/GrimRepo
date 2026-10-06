@@ -17,11 +17,11 @@ export const PAGES: Record<string, Page> = {
 }
 
 export const HELP: [string, string][] = [
-  ['tutorial', 'The rules, since you clearly need them'],
+  ['tutorial', 'A walkthrough of the rules, since you clearly need them'],
   ['cards', 'Every card in your deck. Weak, all of them'],
-  ['card <name>', 'One card, up close'],
+  ['card <name>', 'One card up close'],
   ['sigils', 'What the sigils do'],
-  ['rules', 'The whole game on one screen'],
+  ['rules', 'All of the rules in one command'],
   ['top', 'The five who got lucky'],
   ['whoami', 'Who you are. Nobody, probably'],
   ['p03', 'Me. Obviously'],
