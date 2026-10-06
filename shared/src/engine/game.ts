@@ -104,8 +104,15 @@ const affordable = (state: GameState, lane: number): boolean => {
 /** Library cards not in hand or on the table, which an empty deck is rebuilt from. */
 const outOfPlay = (state: GameState): number[] => {
   const inPlay = new Set([...state.player.hand, ...units(state.player.board)].map((unit) => unit.source))
-  return [...state.player.library.keys()].filter((source) => !inPlay.has(source))
+  const spent = new Set(state.player.spent)
+  return [...state.player.library.keys()].filter((source) => !inPlay.has(source) && !spent.has(source))
 }
+
+/** How many cards a draw from the empty deck would shuffle back in; 0 while the deck still has cards. */
+export const reshuffleSize = (state: GameState): number => (state.player.deck.length ? 0 : outOfPlay(state).length)
+
+/** Whether the next reshuffle gives P03 an Out of Memory card, as every one after a run battle's first does. */
+export const reshuffleCostsMemory = (state: GameState): boolean => (state.rebuilds ?? -1) >= 1
 
 const validLane = (lane: number): boolean => Number.isInteger(lane) && lane >= 0 && lane < LANES
 
@@ -192,6 +199,10 @@ export function apply(current: GameState, action: Action): Result {
     const refactored = summon.marked
       .map((lane) => victims.get(lane) as Unit)
       .filter((victim) => victim.sigils.includes('refactor'))
+    // A card refactored away is gone for the battle, so its stats can't come round again on a reshuffle.
+    for (const victim of refactored)
+      if (victim.source !== undefined && !victim.sigils.includes('try_catch'))
+        state.player.spent = [...(state.player.spent ?? []), victim.source]
     state.player.hand = state.player.hand.filter((candidate) => candidate.uid !== unit.uid)
     state.player.board[action.lane] = unit
     state.summon = null

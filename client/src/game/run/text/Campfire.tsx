@@ -33,8 +33,8 @@ export function Campfire({ run }: { run: RunReady }) {
             {visit.buffs === 0
               ? `Warm a card for ${boost}.`
               : allowed.size
-                ? `Again for ${boost}? Half the time it burns.`
-                : 'The fire has done all it will.'}
+                ? `Warm it again for more? Something is creeping in at the edge of the light. Half the time, it takes the card.`
+                : 'The fire has done all it will. Whatever was out there has gone quiet.'}
           </p>
           <ScreenSearch label="Search the deck for a card to warm" count={run.state.deck.length} />
         </div>
@@ -43,7 +43,9 @@ export function Campfire({ run }: { run: RunReady }) {
         units={run.state.deck.map((entry) => asUnit(entry))}
         onPick={(unit) => (visit.buffs > 0 ? setRisking(unit) : buff(unit))}
         can={(unit) => allowed.has(unit.uid)}
-        picked={visit.card}
+        // Nothing stays selected once warmed; the warmed card pops with what it gained instead.
+        picked={null}
+        flash={visit.card !== null && visit.buffs > 0 ? { uid: visit.card, key: visit.buffs, text: boost } : undefined}
         data={(unit) => ({ 'data-action': 'buff', 'data-card': unit.uid })}
         size="w-24 sm:w-28"
         filtered
@@ -51,10 +53,10 @@ export function Campfire({ run }: { run: RunReady }) {
       <AlertDialog open={risking !== null} onOpenChange={(open) => !open && setRisking(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Push {risking ? card(risking.card).name : 'it'} in again?</AlertDialogTitle>
+            <AlertDialogTitle>Warm {risking ? card(risking.card).name : 'it'} again for more?</AlertDialogTitle>
             <AlertDialogDescription>
-              Half the time it comes out with another {boost}. The other half, it burns and leaves your deck for the
-              rest of the run.
+              Something is creeping in at the edge of the light, drawn by the heat. Half the time the card comes out
+              with another {boost}. The other half, it burns, and leaves your deck for the rest of the run.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

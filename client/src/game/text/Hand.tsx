@@ -1,5 +1,5 @@
-import { card, HAND_LIMIT, type Action } from 'shared'
-import { describe, has, whyNot } from '../controls.tsx'
+import { card, HAND_LIMIT, reshuffleCostsMemory, type Action } from 'shared'
+import { describe, has, reshuffleNote, whyNot } from '../controls.tsx'
 import { PixelCard } from '../CardReader.tsx'
 import { useTable } from './context.ts'
 
@@ -55,7 +55,9 @@ export function Hand() {
 }
 
 export function Piles() {
-  const { view, mustDraw, handFull, act, compact, phone, sideways, refusal, refusalShake } = useTable()
+  const { view, state, mustDraw, handFull, act, compact, phone, sideways, refusal, refusalShake } = useTable()
+  // An empty deck shows what a draw would shuffle back in, not a bare 0.
+  const reshuffle = view.deck ? null : reshuffleNote(state)
   const size = sideways ? 'w-10' : phone ? 'w-8 tall:w-10' : compact ? 'w-12 sm:w-16' : 'w-20'
   const full = handFull ? `Your hand is full (${HAND_LIMIT})` : undefined
   return (
@@ -69,15 +71,17 @@ export function Piles() {
         data-action="draw-deck"
         disabled={!mustDraw}
         data-full={handFull || undefined}
-        title={full}
+        title={full ?? reshuffle?.text}
         onClick={() => act({ type: 'draw', from: 'deck' })}
-        aria-label={`Draw from the deck, ${view.deck} left`}
+        aria-label={reshuffle ? `Draw from the deck. ${reshuffle.text}` : `Draw from the deck, ${view.deck} left`}
         className={`flex flex-col items-center gap-1 text-p03 disabled:brightness-50 disabled:saturate-50 ${size}`}
       >
         <span className="grid aspect-[5/7] w-full place-items-center rounded-md border-2 border-p03-edge bg-[#0b1f12] text-3xl shadow-[3px_3px_0_#1f3a26,6px_6px_0_#13261a]">
           ▦
         </span>
-        <span className="text-lg">x{view.deck}</span>
+        <span className={`text-lg ${reshuffle && reshuffleCostsMemory(state) ? 'text-[#ffb454]' : ''}`}>
+          {reshuffle ? `↻${reshuffle.cards}` : `x${view.deck}`}
+        </span>
       </button>
       <button
         type="button"

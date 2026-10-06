@@ -224,7 +224,8 @@ export function useRun(mockup: Mockup | null = null): Run {
       const story = told(table, outcome.state, outcome.events)
       const visit = table.state.visit
       const aftermath =
-        action.type === 'choose' && visit?.kind === 'event'
+        // An event that opens a screen of its own, as the linter does, goes straight there.
+        action.type === 'choose' && visit?.kind === 'event' && !outcome.state.visit
           ? { event: visit.event, option: action.option, lines: story.news }
           : null
       setTable({ ...table, moves: table.moves + 1, ...story, aftermath })

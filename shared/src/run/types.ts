@@ -2,7 +2,7 @@ import type { SigilId } from '../cards.ts'
 import type { Action, DeckCard, GameEvent, GameState } from '../engine/types.ts'
 
 /** Bumped whenever a change would make an old run replay differently. */
-export const RUN_RULES_VERSION = 8
+export const RUN_RULES_VERSION = 9
 
 /** The most actions one save may send; 200 of the largest kind fit the server's 16 KB body limit. */
 export const RUN_SAVE_LIMIT = 200
@@ -38,6 +38,8 @@ export type Visit =
   | { kind: 'campfire'; node: string; boost: 'attack' | 'health'; card: number | null; buffs: number }
   | { kind: 'stones'; node: string }
   | { kind: 'event'; node: string; event: string }
+  /** The linter, after its event: one sigil may be deleted from one card. */
+  | { kind: 'lint'; node: string }
 
 export type RunState = {
   seed: number
@@ -60,6 +62,7 @@ export type RunAction =
   | { type: 'buff'; card: number }
   | { type: 'transfer'; from: number; to: number; sigil: SigilId }
   | { type: 'choose'; option: number }
+  | { type: 'strip'; card: number; sigil: SigilId }
   | { type: 'leave' }
 
 /** In order, for the client to show what a run action did. */
@@ -69,6 +72,7 @@ export type RunEvent =
   | { type: 'added'; card: RunCard }
   | { type: 'changed'; card: RunCard }
   | { type: 'removed'; card: RunCard }
+  | { type: 'stripped'; card: RunCard; sigil: SigilId }
   | { type: 'stageCleared'; stage: number }
   | { type: 'runOver'; outcome: 'win' | 'loss' }
 

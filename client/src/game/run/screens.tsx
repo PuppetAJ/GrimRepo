@@ -4,6 +4,7 @@ import type { Layout } from '../text/useTextTable.ts'
 import { BattleOver } from './BattleOver.tsx'
 import { Campfire } from './text/Campfire.tsx'
 import { EventScene } from './text/EventScene.tsx'
+import { Linter } from './text/Linter.tsx'
 import { Offer } from './text/Offer.tsx'
 import { RunMap } from './text/RunMap.tsx'
 import { Stones } from './text/Stones.tsx'
@@ -11,7 +12,7 @@ import { Summary } from './text/Summary.tsx'
 import type { RunReady } from './useRun.ts'
 import { useRunBattle } from './useRunBattle.ts'
 
-export type RunView = 'battle' | 'map' | 'card' | 'reward' | 'campfire' | 'stones' | 'event' | 'summary'
+export type RunView = 'battle' | 'map' | 'card' | 'reward' | 'campfire' | 'stones' | 'event' | 'lint' | 'summary'
 
 const TITLES: Record<Exclude<RunView, 'battle' | 'map'>, string> = {
   card: 'Card choice',
@@ -19,6 +20,7 @@ const TITLES: Record<Exclude<RunView, 'battle' | 'map'>, string> = {
   campfire: 'Campfire',
   stones: 'Sigil stones',
   event: 'Event',
+  lint: 'The linter',
   summary: 'The run is over',
 }
 
@@ -65,5 +67,6 @@ export function ScreenBody({ run, view, layout }: { run: RunReady; view: RunView
   if (view === 'campfire') return <Campfire run={run} />
   if (view === 'stones') return <Stones run={run} />
   if (view === 'event') return <EventScene run={run} />
+  if (view === 'lint') return <Linter run={run} />
   return <RunMap run={run} layout={layout} />
 }

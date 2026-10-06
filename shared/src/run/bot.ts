@@ -1,4 +1,4 @@
-import { card } from '../cards.ts'
+import { card, type SigilId } from '../cards.ts'
 import { nextBotAction, type Strategy } from '../engine/bot.ts'
 import { findNode } from './map.ts'
 import { legalRunActions } from './run.ts'
@@ -8,6 +8,13 @@ import type { RunAction, RunCard, RunState } from './types.ts'
 const value = (entry: { attack: number; health: number }) => entry.attack * 2 + entry.health
 const cardValue = (id: string) => value(card(id)) / (card(id).cost + 1)
 const best = (deck: RunCard[]) => [...deck].sort((a, b) => value(b) - value(a))[0]
+
+// Sigils with a drawback, which the linter is worth visiting to delete.
+const DRAWBACKS: SigilId[] = ['technical_debt', 'deprecated']
+const drawback = (deck: RunCard[]) =>
+  deck.flatMap((entry) =>
+    DRAWBACKS.filter((sigil) => entry.sigils.includes(sigil)).map((sigil) => ({ entry, sigil })),
+  )[0]
 
 /** Roughly what an event's effect is worth, against the deck's average card. */
 function effectWorth(state: RunState, effect: Effect): number {
@@ -25,6 +32,8 @@ function effectWorth(state: RunState, effect: Effect): number {
       return 2
     case 'duplicate':
       return 1
+    case 'lint':
+      return drawback(state.deck) ? 2 : 0
   }
 }
 
@@ -60,6 +69,10 @@ export function nextRunAction(state: RunState, strategy: Strategy = 'greedy'): R
         option.effects.reduce((sum, effect) => sum + effectWorth(state, effect), 0),
       )
       return { type: 'choose', option: scores.indexOf(Math.max(...scores)) }
+    }
+    case 'lint': {
+      const found = drawback(state.deck)
+      return found ? { type: 'strip', card: found.entry.id, sigil: found.sigil } : { type: 'leave' }
     }
     case 'stones': {
       // Moves a sigil from its weakest card onto its strongest, when that's a step up.

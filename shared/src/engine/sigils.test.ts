@@ -85,6 +85,23 @@ describe('the sigils', () => {
     assert.ok(placed?.sigils.includes('refactor'), 'and Refactor with them')
   })
 
+  it('Refactor is gone for the battle once sacrificed, so a reshuffle never brings it back', () => {
+    const start = table({ hand: ['LegacyCode'], board: ['OffCenterDiv'] })
+    const div = start.player.board[0]?.source
+    const { state } = play(
+      start,
+      { type: 'select', uid: uidOf(start, 'LegacyCode') },
+      { type: 'mark', lane: 0 },
+      { type: 'place', lane: 0 },
+    )
+    assert.ok(div !== undefined && state.player.spent?.includes(div))
+    // Empty the deck, so the next draw rebuilds it from what's out of play.
+    const emptied = { ...state, drawn: false, player: { ...state.player, deck: [] } }
+    const { state: drawn } = play(emptied, { type: 'draw', from: 'deck' })
+    const back = [...drawn.player.deck, ...drawn.player.hand.map((unit) => unit.source)]
+    assert.ok(!back.includes(div), 'Off-Center Div stays out of the rebuilt deck')
+  })
+
   it('Refactor passed on stacks through a chain of sacrifices', () => {
     const start = table({ hand: ['LegacyCode', 'Firewall'], board: ['OffCenterDiv'] })
     const { state } = play(

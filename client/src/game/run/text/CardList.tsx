@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { card, SIGILS, type Unit } from 'shared'
 import { PixelCard } from '../../CardReader.tsx'
 import { describe } from '../../controls.tsx'
+import { Rising } from '../../text/Board.tsx'
 import { CardReader, SigilIcons, useCardSearch } from './CardBits.tsx'
 
 type Props = {
@@ -18,6 +19,8 @@ type Props = {
   size?: string
   /** Narrowed by the screen's search, the one in the deck beside it or above the cards. */
   filtered?: boolean
+  /** A card that just changed: it pops, with `text` rising over it; a new `key` plays it again. */
+  flash?: { uid: number; key: number; text: string }
 }
 
 function Caption({ unit, detail, onRead }: { unit: Unit; detail: boolean; onRead: () => void }) {
@@ -62,6 +65,7 @@ export function CardList({
   detail = false,
   size = 'w-28',
   filtered = false,
+  flash,
 }: Props) {
   const [reading, setReading] = useState<Unit | null>(null)
   const { matches } = useCardSearch()
@@ -73,6 +77,16 @@ export function CardList({
         {shown.map((unit) => {
           const allowed = can(unit)
           const chosen = picked === unit.uid
+          const flashed = flash?.uid === unit.uid ? flash : undefined
+          const face = flashed ? (
+            <span key={flashed.key} className="relative block motion-safe:animate-[warm-pop_650ms_ease-out]">
+              <PixelCard unit={unit} />
+              {/* The rise animation centers the text on this point itself. */}
+              <Rising text={flashed.text} tone="note" className="top-1/3 left-1/2 text-2xl" />
+            </span>
+          ) : (
+            <PixelCard unit={unit} />
+          )
           return (
             <li key={unit.uid} className={`flex shrink-0 flex-col gap-2 ${size}`}>
               {onPick ? (
@@ -85,12 +99,10 @@ export function CardList({
                   onClick={() => onPick(unit)}
                   className={`rounded-md p-1 transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03 disabled:brightness-50 disabled:saturate-50 motion-reduce:transition-none ${chosen ? '-translate-y-2 outline-2 outline-p03 outline-dashed' : 'enabled:hover:-translate-y-1'}`}
                 >
-                  <PixelCard unit={unit} />
+                  {face}
                 </button>
               ) : (
-                <div className="p-1">
-                  <PixelCard unit={unit} />
-                </div>
+                <div className="p-1">{face}</div>
               )}
               <Caption unit={unit} detail={detail} onRead={() => setReading(unit)} />
             </li>

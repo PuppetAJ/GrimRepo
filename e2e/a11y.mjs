@@ -83,6 +83,7 @@ if (runs('run')) {
     ['campfire', 'campfire'],
     ['stones', 'stones'],
     ['event', 'event'],
+    ['lint', 'lint'],
     ['boss-phase', 'battle'],
     ['worst-map', 'map'],
     ['worst-reward', 'reward'],

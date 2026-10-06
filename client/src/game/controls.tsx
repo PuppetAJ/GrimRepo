@@ -10,6 +10,8 @@ import {
   indebted,
   type GameState,
   HAND_LIMIT,
+  reshuffleCostsMemory,
+  reshuffleSize,
   type Outcome,
   SIGILS,
   type Slot,
@@ -56,6 +58,14 @@ export function describe(unit: Shown): string {
 export function owed(summoning: Unit, board: Slot[], marked: number[]): number {
   const paid = marked.reduce((sum, lane) => sum + (board[lane] ? worthOf(board[lane]) : 0), 0)
   return Math.max(0, costOf(summoning) - paid)
+}
+
+/** What a draw does once the deck is empty: how many cards it shuffles back, and whether P03 gains an Out of Memory. */
+export function reshuffleNote(state: GameState): { cards: number; text: string } | null {
+  const cards = reshuffleSize(state)
+  if (!cards) return null
+  const cost = reshuffleCostsMemory(state) ? ', and P03 gets an Out of Memory' : ''
+  return { cards, text: `The deck is empty: a draw shuffles ${cards} ${cards === 1 ? 'card' : 'cards'} back in${cost}` }
 }
 
 /** The turn began with a full hand, so its draw was skipped. */

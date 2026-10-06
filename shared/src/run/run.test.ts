@@ -162,6 +162,22 @@ describe('an event', () => {
     assert.equal(new Set(after.deck.map((entry) => entry.id)).size, after.deck.length, 'with its own id')
   })
 
+  it('the linter deletes one sigil from the card the player picks', () => {
+    const state = at('event', { kind: 'event', node: '0-0', event: 'linter' })
+    const opened = step(state, { type: 'choose', option: 0 })
+    assert.equal(opened.visit?.kind, 'lint')
+    const target = opened.deck.find((entry) => entry.sigils.length) as (typeof opened.deck)[number]
+    const sigil = target.sigils[0] as NonNullable<(typeof target.sigils)[number]>
+    const after = step(opened, { type: 'strip', card: target.id, sigil })
+    assert.ok(!after.deck.find((entry) => entry.id === target.id)?.sigils.includes(sigil))
+    assert.equal(after.visit, null)
+    assert.equal(
+      refused(opened, { type: 'strip', card: target.id, sigil: 'segfault' }),
+      'That card does not have that sigil',
+    )
+    assert.equal(step(opened, { type: 'leave' }).visit, null, 'and can be left without fixing anything')
+  })
+
   it('is the only way to the event-only cards', () => {
     const hire = at('event', { kind: 'event', node: '0-0', event: 'code-review' })
     const after = step(hire, { type: 'choose', option: 0 })
