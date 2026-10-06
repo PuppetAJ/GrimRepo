@@ -15,6 +15,10 @@ section('The README')
   await page.goto(BASE)
   await page.getByRole('heading', { name: 'Grim Repo', level: 1 }).waitFor()
   check('it has the title and the way to play', (await page.getByRole('link', { name: 'Quick battle' }).count()) === 1)
+  check(
+    'and the way to start a run',
+    (await page.getByRole('link', { name: 'Start a run' }).getAttribute('href')) === '/run',
+  )
   // Only a production build serves the home page prerendered.
   const served = await (await page.request.get(BASE)).text()
   if (!served.includes('/@vite/client')) {
