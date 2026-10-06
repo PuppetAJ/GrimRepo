@@ -1,4 +1,4 @@
-import { applyRun, createRun, legalActions, nextRunAction, scoreRun } from '../shared/src/index.ts'
+import { applyRun, createRun, legalActions, nextRunAction, scoreRun, SIGILS } from '../shared/src/index.ts'
 import {
   BASE,
   clickMove,
@@ -52,6 +52,13 @@ async function playRun(page, mirror, { pick = nextRunAction, done }) {
       if (action.type === 'buff' && state.visit.buffs > 0) {
         await page.locator(targetFor(action)).click()
         await clickMove(page, '[data-action="risk"]', expected)
+      } else if (action.type === 'transfer') {
+        // The giver, its sigil when it has more than one, the receiver, then the stones' button.
+        await page.locator(`[data-action="give"][data-card="${action.from}"]`).click()
+        const sigil = page.getByRole('radio', { name: new RegExp(`^${SIGILS[action.sigil].name}\\.`) })
+        if (await sigil.count()) await sigil.check()
+        await page.locator(`[data-action="take-sigil"][data-card="${action.to}"]`).click()
+        await clickMove(page, '[data-action="transfer"]', expected)
       } else await clickMove(page, targetFor(action), expected)
     } catch (error) {
       console.log(
