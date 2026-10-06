@@ -37,7 +37,7 @@ export const FADE = '[mask-image:linear-gradient(to_bottom,black_calc(100%-2.5re
 export { useScreenMode } from './slots.ts'
 
 /** A screen in the projector's light: it flickers now and then, faintly and at random, so it stays easy to read. */
-function Hologram({ children }: { children: ReactNode }) {
+function Hologram({ fading, children }: { fading: boolean; children: ReactNode }) {
   const light = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (prefersReducedMotion()) return
@@ -55,7 +55,13 @@ function Hologram({ children }: { children: ReactNode }) {
   }, [])
   return (
     <div ref={light} className="hologram">
-      <div className="hologram-glow">{children}</div>
+      {/* Fades in as a screen takes the window, and out before the next one does. */}
+      <div
+        inert={fading}
+        className={`hologram-glow animate-in duration-200 fade-in-0 motion-reduce:animate-none ${fading ? 'opacity-0 transition-opacity duration-150' : ''}`}
+      >
+        {children}
+      </div>
     </div>
   )
 }
@@ -72,17 +78,15 @@ export function ScreenBar({ children }: { children: ReactNode }) {
   return bar ? createPortal(children, bar) : null
 }
 
+/** A worded button in the header, beside the menu. */
+export const HEADER_BUTTON =
+  'flex h-10 shrink-0 items-center rounded-md border-2 border-p03-edge bg-[#07130b] px-3 text-lg text-p03 hover:bg-[#13261a] focus-visible:outline-2 focus-visible:outline-p03'
+
 /** Leaving a screen of cards, in the header beside the menu. */
 export function LeaveButton({ label, onLeave }: { label: string; onLeave: () => void }) {
   return (
     <ScreenActions>
-      <button
-        type="button"
-        data-action="leave"
-        onClick={onLeave}
-        aria-label={label}
-        className="flex h-10 shrink-0 items-center rounded-md border-2 border-p03-edge bg-[#07130b] px-3 text-lg text-p03 hover:bg-[#13261a] focus-visible:outline-2 focus-visible:outline-p03"
-      >
+      <button type="button" data-action="leave" onClick={onLeave} aria-label={label} className={HEADER_BUTTON}>
         Leave
       </button>
     </ScreenActions>
@@ -276,8 +280,11 @@ export function Screen({
   mode = 'terminal',
   onSwitch,
   pinTo,
+  fading = false,
   children,
 }: {
+  /** Fades the projected content out, before the next screen takes the window. */
+  fading?: boolean
   run: RunReady
   layout: Layout
   title: string
@@ -369,7 +376,7 @@ export function Screen({
               className="hologram-window pointer-events-auto absolute top-0 left-0 origin-top-left"
               style={{ width: WINDOW_PX.width, height: WINDOW_PX.height }}
             >
-              <Hologram>
+              <Hologram fading={fading}>
                 <header className="flex shrink-0 items-center gap-3">
                   <div className="min-w-0 flex-1">
                     {caption ? <p className="text-base text-p03-dim">{caption}</p> : null}
@@ -411,7 +418,8 @@ export function Screen({
           tabIndex={-1}
           className={`p03-screen crt flex flex-col gap-3 overflow-hidden border-p03-edge font-terminal text-xl sm:text-2xl ${place}`}
         >
-          {terminal ? <FaultyScreenShader /> : null}
+          {/* The terminal's glyphs, also when a screen floats over the 3D table in place of the projector. */}
+          <FaultyScreenShader />
           <span aria-hidden className="crt-glass pointer-events-none absolute inset-0 z-30" />
           {/* Where the deck drawer opens, covering the frame but taking no clicks until it does. */}
           {drawerHost}

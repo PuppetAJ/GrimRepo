@@ -1,6 +1,7 @@
 import { Swords } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button.tsx'
+import { prefersReducedMotion } from '../../../lib/motion.ts'
 import type { Seat } from '../../controls.tsx'
 import { loadCardAssets } from '../../table/faces.ts'
 import { Battle3D } from '../../table/Table3D.tsx'
@@ -10,6 +11,9 @@ import { mapTitle, ScreenBody, useRunScreen, type RunView } from '../screens.tsx
 import { Screen, ScreenActions } from '../text/Screen.tsx'
 import type { RunReady } from '../useRun.ts'
 import { BetweenBattles, warp, windowHeight } from './RunStage.tsx'
+
+/** How long a projected screen takes to fade out before the next one comes in, in milliseconds. */
+const FADE_MS = 160
 
 /** How tall, in CSS pixels, the projector's window must draw to be read; on a smaller stage the screens float instead. */
 const READABLE = 320
@@ -45,12 +49,23 @@ function Between({
   const readable = windowHeight(stage.size.width, stage.size.height) >= READABLE
   const projects = (screen: RunView) => screen !== 'battle' && readable
   // Going from a projected screen to a floating one, the projector shuts and lifts away first, showing the map.
+  // Between projected screens, the old one fades out, drawn from the run as it last saw it, before the next fades in.
   const [shown, setShown] = useState(view)
+  const live = { run, title: view === 'map' ? mapTitle(run.state) : screen.title, caption: screen.caption }
+  const [seen, setSeen] = useState(live)
+  if (view === shown && seen.run !== run) setSeen(live)
   const toFloat = projects(shown) && !projects(view)
-  if (shown !== view && !toFloat) setShown(view)
+  const fading = shown !== view && projects(shown) && projects(view)
+  if (shown !== view && !toFloat && !fading) setShown(view)
+  useEffect(() => {
+    if (!fading) return
+    const swap = setTimeout(() => setShown(view), prefersReducedMotion() ? 0 : FADE_MS)
+    return () => clearTimeout(swap)
+  }, [fading, view])
+  const screenRun = fading ? seen.run : run
   const projecting = projects(shown)
   const body: RunView = toFloat ? 'map' : shown
-  const title = body === 'map' ? mapTitle(run.state) : screen.title
+  const title = fading ? seen.title : body === 'map' ? mapTitle(run.state) : screen.title
   // With no projector to shut, it leaves at once.
   useEffect(() => {
     if (leaving && !projecting) onLeft()
@@ -75,10 +90,11 @@ function Between({
         <Screen
           // Keyed by screen, so each one plays its entrance.
           key={body}
-          run={run}
+          run={screenRun}
+          fading={fading}
           layout={layout}
           title={title}
-          caption={screen.caption}
+          caption={fading ? seen.caption : screen.caption}
           stack={body === 'map'}
           deck={body !== 'summary'}
           mode={projecting ? 'hologram' : 'floating'}
@@ -93,7 +109,7 @@ function Between({
               </Button>
             </ScreenActions>
           ) : null}
-          <ScreenBody run={run} view={body} layout={layout} />
+          <ScreenBody run={screenRun} view={body} layout={layout} />
         </Screen>
       ) : null}
     </>
