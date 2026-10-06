@@ -36,7 +36,7 @@ export type CardDef = {
 export const SIGILS: Record<SigilId, { name: string; text: string }> = {
   segfault: { name: 'Segfault', text: 'When played, destroys every card on the other side of the table.' },
   bypass: { name: 'Bypass', text: 'Attacks the opponent directly, over any card in the way.' },
-  technical_debt: { name: 'Technical Debt', text: 'Worth 3 when sacrificed.' },
+  technical_debt: { name: 'Technical Debt', text: 'Worth 3 when sacrificed, but tips the scale 1 against you.' },
   try_catch: { name: 'try/catch', text: 'Survives being sacrificed.' },
   rate_limiter: { name: 'Rate Limiter', text: 'Deals 1 damage back to anything that attacks it.' },
   fork: { name: 'Fork', text: 'Attacks the lanes on either side instead of the one opposite.' },
