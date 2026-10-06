@@ -121,6 +121,8 @@ section('The 3D table')
     await click('bell')
     await page.getByText("P03's turn…").waitFor()
     check("ringing the bell plays out P03's turn", true)
+    // Software WebGL on CI can take longer than the wait to play a turn out, so it is fast-forwarded once begun.
+    await page.evaluate(() => window.__game.skip())
     await until(page, () => !window.__game.busy(), undefined, 30_000)
     const turn = await page.evaluate(() => window.__game.state().turn)
     check(
@@ -178,6 +180,7 @@ section('The 3D table')
     await page.keyboard.press('e')
     await page.getByText("P03's turn…").waitFor()
     check('pressing E rings the bell', true)
+    await page.evaluate(() => window.__game.skip())
     await until(page, () => !window.__game.busy(), undefined, 30_000)
 
     section('To the end')
