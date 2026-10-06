@@ -22,8 +22,8 @@ describe('combat', () => {
   })
 
   it('damages the card opposite instead, and leaves it wounded', () => {
-    const { state } = bell(table({ board: ['CopyPaste'], front: ['Firewall'] }))
-    assert.equal(state.opponent.front[0]?.health, 3)
+    const { state } = bell(table({ board: ['CopyPaste'], front: ['Bug'] }))
+    assert.equal(state.opponent.front[0]?.health, 5)
     assert.equal(state.scale, 0)
   })
 

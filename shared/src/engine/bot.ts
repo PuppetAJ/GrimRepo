@@ -71,12 +71,15 @@ export function nextBotAction(state: GameState, strategy: Strategy = 'greedy'): 
     // Only trade up: what is sacrificed must be worth less than what arrives.
     let paid = 0
     let given = 0
+    let freed = false
     for (const victim of [...board].sort((a, b) => value(a) - value(b))) {
       if (paid >= cost) break
       paid += worthOf(victim)
       given += value(victim)
+      freed ||= !victim.sigils.includes('try_catch')
     }
-    if (paid >= cost && given < value(unit)) return { type: 'select', uid: unit.uid }
+    // A try/catch card survives its sacrifice, so the new card needs a free lane or another sacrifice to make one.
+    if (paid >= cost && given < value(unit) && (empty.length || freed)) return { type: 'select', uid: unit.uid }
   }
 
   return { type: 'ringBell' }
