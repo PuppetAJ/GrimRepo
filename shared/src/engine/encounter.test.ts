@@ -46,9 +46,9 @@ describe('a battle with an encounter', () => {
       turns.push(events.flatMap((event) => (event.type === 'queued' ? [event.unit.card] : [])))
       state = next
     }
-    assert.deepEqual(turns[0], ['CronJob'])
-    assert.ok(['SpamBot', 'HelloWorld'].includes(turns[1]?.[0] as string) && turns[1]?.length === 1)
-    assert.deepEqual(turns[2], [])
+    assert.deepEqual(turns[0], ['GrimRepo', 'SpamBot'])
+    assert.ok(['GrimRepo', 'CopyPaste'].includes(turns[1]?.[0] as string) && turns[1]?.length === 1)
+    assert.deepEqual(turns[2], ['ZeroDay'])
     assert.deepEqual(turns[3], ['Watchdog'])
     assert.equal(state.opponent.step, 5, 'the next turn is past the plan')
   })
