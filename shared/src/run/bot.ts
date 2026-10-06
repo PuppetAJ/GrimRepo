@@ -11,7 +11,7 @@ const best = (deck: RunCard[]) => [...deck].sort((a, b) => value(b) - value(a))[
 // Nodes the bot heads for first, since they only ever strengthen the deck.
 const PREFERRED = ['card', 'campfire', 'event', 'stones', 'battle', 'boss']
 
-/** Deterministic: takes the best-value card, buffs its strongest card once, and plays battles greedily. */
+/** Deterministic: takes the best-value card, buffs its strongest card once, moves a sigil up, and plays battles greedily. */
 export function nextRunAction(state: RunState, strategy: Strategy = 'greedy'): RunAction {
   const legal = legalRunActions(state)
   const visit = state.visit
@@ -36,8 +36,13 @@ export function nextRunAction(state: RunState, strategy: Strategy = 'greedy'): R
     }
     case 'event':
       return { type: 'choose', option: 0 }
-    case 'stones':
-      return { type: 'leave' }
+    case 'stones': {
+      // Moves a sigil from its weakest card onto its strongest, when that's a step up.
+      const worth = (id: number) => value(state.deck.find((entry) => entry.id === id) as RunCard)
+      const moves = legal.filter((action) => action.type === 'transfer')
+      const bestMove = [...moves].sort((a, b) => worth(b.to) - worth(b.from) - (worth(a.to) - worth(a.from)))[0]
+      return bestMove && worth(bestMove.to) > worth(bestMove.from) ? bestMove : { type: 'leave' }
+    }
   }
 }
 
