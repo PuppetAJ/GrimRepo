@@ -11,7 +11,7 @@ export type SigilId =
   | 'fatal_error'
   | 'rollback'
   | 'tech_lead'
-  | 'code_smell'
+  | 'packet_loss'
   | 'retry'
   | 'deprecated'
   | 'scope_creep'
@@ -44,7 +44,7 @@ export const SIGILS: Record<SigilId, { name: string; text: string }> = {
   fatal_error: { name: 'Fatal Error', text: 'Destroys any card it damages.' },
   rollback: { name: 'Rollback', text: 'Shrugs off the first damage it takes.' },
   tech_lead: { name: 'Tech Lead', text: 'Cards beside it get +1 attack.' },
-  code_smell: { name: 'Code Smell', text: 'The card opposite it has 1 less attack.' },
+  packet_loss: { name: 'Packet Loss', text: 'The card opposite it has 1 less attack.' },
   retry: { name: 'Retry', text: 'Attacks twice.' },
   deprecated: { name: 'Deprecated', text: 'Dies after it attacks.' },
   scope_creep: { name: 'Scope Creep', text: 'Gains 1 attack each time it destroys a card.' },
@@ -63,7 +63,7 @@ const table: [string, string, Tier, number, number, number, SigilId[]?][] = [
   ['HelloWorld', 'Hello World', 'E', 1, 1, 0, ['broadcast']],
   ['CronJob', 'Cron Job', 'E', 1, 2, 0, ['try_catch']],
   ['InfiniteLoop', 'Infinite Loop', 'D', 1, 2, 0, ['retry']],
-  ['SpamBot', 'Spam Bot', 'D', 2, 1, 0, ['code_smell']],
+  ['SpamBot', 'Spam Bot', 'D', 2, 1, 0, ['packet_loss']],
   ['Watchdog', 'Watchdog', 'D', 2, 3, 0, ['rate_limiter']],
   ['CopyPaste', 'Copy Paste', 'D', 3, 1, 0],
   ['ZeroDay', 'Zero Day', 'C', 4, 1, 0, ['load_balancer']],

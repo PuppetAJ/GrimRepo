@@ -1,7 +1,7 @@
 import type { SigilId } from '../cards.ts'
 
 /** Bumped whenever a change would make an old game replay differently. */
-export const RULES_VERSION = 7
+export const RULES_VERSION = 8
 
 export const LANES = 4
 /** Net damage needed to win, or to lose. */

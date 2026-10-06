@@ -34,7 +34,7 @@ function failover(row: Slot[], lane: number, side: Side, events: GameEvent[]): U
   return unit
 }
 
-/** What a card hits for: its own attack, +1 for each Tech Lead beside it, and the Code Smell or Pop-up opposite it. */
+/** What a card hits for: its own attack, +1 for each Tech Lead beside it, and the Packet Loss or Pop-up opposite it. */
 export function attackOf(state: GameState, side: Side, lane: number): number {
   const row = side === 'player' ? state.player.board : state.opponent.front
   const facing = side === 'player' ? state.opponent.front : state.player.board
@@ -42,9 +42,9 @@ export function attackOf(state: GameState, side: Side, lane: number): number {
   if (!unit) return 0
   const leads = [lane - 1, lane + 1].filter((beside) => row[beside]?.sigils.includes('tech_lead')).length
   const opposite = facing[lane]
-  const smell = opposite?.sigils.includes('code_smell') ? 1 : 0
+  const loss = opposite?.sigils.includes('packet_loss') ? 1 : 0
   const popup = opposite?.sigils.includes('popup') ? 1 : 0
-  return Math.max(0, unit.attack + leads - smell + popup)
+  return Math.max(0, unit.attack + leads - loss + popup)
 }
 
 /** Deals damage to a card: a Rollback card shrugs off the first, and Fatal Error makes any damage deadly. */
