@@ -102,6 +102,9 @@ section('Resuming')
   const resumer = await signUp(page, newPlayer('Resume'))
   await page.goto(`${BASE}/game`)
   const seed = await page.locator('[data-seed]').getAttribute('data-seed')
+  const game = await page.locator('[data-seed]').getAttribute('data-game-id')
+  const account = page.getByRole('button', { name: 'Account menu' })
+  const who = await account.innerText()
   const { state } = await playWithBot(page, { stopAfterTurn: 2 })
   await page.getByText('saved', { exact: true }).waitFor()
   const consoleRegion = page.getByRole('log', { name: "P03's console" })
@@ -110,9 +113,16 @@ section('Resuming')
     .filter((line) => line.startsWith('P03>') && !line.includes('You came back'))
   await page.reload()
   await page.locator('[data-seed]').waitFor()
+  // Says what changed if it fails, since a new game after a reload has only ever happened on CI.
+  const now = {
+    seed: await page.locator('[data-seed]').getAttribute('data-seed'),
+    game: await page.locator('[data-seed]').getAttribute('data-game-id'),
+    who: await account.innerText(),
+  }
   check(
     'a reload deals the same game, not a new one',
-    (await page.locator('[data-seed]').getAttribute('data-seed')) === seed,
+    now.seed === seed,
+    `seed ${seed} then ${now.seed}, game ${game} then ${now.game}, account ${who} then ${now.who}`,
   )
   check('and picks it up at the same turn', (await visibleText(page)).includes(`Turn ${state.turn}`))
   check('P03 notices', /You came back/.test(await visibleText(page)))

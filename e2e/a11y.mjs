@@ -5,6 +5,10 @@ await resetRateLimits()
 const { page, context, pageErrors, close } = await launch()
 const { check, section, report } = reporter()
 
+// CI runs the suite in parts at once, named by A11Y_PART; without it, every part runs.
+const PART = process.env.A11Y_PART
+const runs = (part) => !PART || PART === part
+
 // Start with the README taken over, so axe checks the terminal, not the screenshot before it.
 await context.addCookies([{ name: 'grimrepo_seen', value: '1', url: BASE }])
 
@@ -38,17 +42,21 @@ async function audit(name, path, ready = () => page.waitForLoadState('networkidl
   check(`${name} has no violations`, found.length === 0, found.slice(0, 6).join('\n      '))
 }
 
-for (const [label, width, height] of [
-  ['On a laptop', 1280, 800],
-  ['On a 320px phone', 320, 640],
-]) {
+for (const [label, width, height] of runs('pages')
+  ? [
+      ['On a laptop', 1280, 800],
+      ['On a 320px phone', 320, 640],
+    ]
+  : []) {
   section(label)
   await page.setViewportSize({ width, height })
   for (const [name, path] of PAGES) await audit(name, path)
 }
 
-section('The game')
-{
+if (runs('tables')) {
+  section('The game')
+  // On its own, this part starts on a blank page, whose storage can't be written.
+  await page.goto(BASE)
   // Signed out, the game deals a guest in; the text table in each layout, then the 3D table's controls.
   const textTable = () => page.locator('[data-table="text"]').waitFor()
   for (const [layout, width, height] of [
@@ -65,8 +73,8 @@ section('The game')
   await audit('the 3D table', '/game', () => tableReady(page))
 }
 
-section('A run')
-{
+if (runs('run')) {
+  section('A run')
   // From mockups, so every screen is checked whatever a real run's seed would deal, and at its worst.
   const screen = (name) => () => page.locator(`[data-run-view="${name}"]`).waitFor({ timeout: 30_000 })
   const MOCKED = [
@@ -99,8 +107,14 @@ section('A run')
       },
     )
   }
+  await page.setViewportSize({ width: 1280, height: 800 })
+}
+
+if (runs('tables')) {
   // At the 3D table, each screen in the projector's window, once it has opened.
+  section('A run on the projector')
   await page.setViewportSize({ width: 1440, height: 900 })
+  const screen = (name) => () => page.locator(`[data-run-view="${name}"]`).waitFor({ timeout: 30_000 })
   const projected = (view) => async () => {
     await screen(view)()
     await page.locator('.hologram-window').filter({ visible: true }).waitFor({ timeout: 90_000 })
@@ -116,8 +130,8 @@ section('A run')
   await page.setViewportSize({ width: 1280, height: 800 })
 }
 
-section('The table keeps its shortcuts')
-{
+if (runs('tables')) {
+  section('The table keeps its shortcuts')
   await page.evaluate(() => localStorage.setItem('grimrepo:table', 'text'))
   await page.goto(`${BASE}/game`)
   const table = page.locator('[data-table="text"]')
@@ -155,11 +169,13 @@ section('The table keeps its shortcuts')
   check('but after a click outside the table, E does nothing', !(await reaches(before + 1)))
 }
 
-section('Signed in')
-await page.setViewportSize({ width: 1280, height: 800 })
-await signInAsDemo(page)
-await audit('the account page', '/account')
-await audit('the README, signed in', '/')
+if (runs('pages')) {
+  section('Signed in')
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await signInAsDemo(page)
+  await audit('the account page', '/account')
+  await audit('the README, signed in', '/')
+}
 
 await close()
 process.exit(report(pageErrors))
