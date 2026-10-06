@@ -18,6 +18,7 @@ import { COARSE, type Reader } from './reader.ts'
 import { Arrive } from './Arrive.tsx'
 import { CameraRig, WarmUp } from './stage.tsx'
 import { TestHandle } from './TestHandle.tsx'
+import { shown } from '../../shown.ts'
 
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
 
@@ -178,7 +179,8 @@ export function Scene({
           )
         })}
         {(['board', 'front', 'back'] as const).flatMap((row) =>
-          view[row].map((unit, lane) => {
+          view[row].map((_, lane) => {
+            const unit = shown(view, row, lane)
             // P03's opening cards come down with the first card dealt.
             if (!unit || dealt === 0) return null
             const action = row === 'board' ? laneAction(legal, lane) : null

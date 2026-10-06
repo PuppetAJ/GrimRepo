@@ -38,6 +38,11 @@ function failover(row: Slot[], lane: number, side: Side, events: GameEvent[]): U
 export function attackOf(state: GameState, side: Side, lane: number): number {
   const row = side === 'player' ? state.player.board : state.opponent.front
   const facing = side === 'player' ? state.opponent.front : state.player.board
+  return attackIn(row, facing, lane)
+}
+
+/** What the card in a lane of an attacking row hits for, facing the other row. */
+export function attackIn(row: Slot[], facing: Slot[], lane: number): number {
   const unit = row[lane]
   if (!unit) return 0
   const leads = [lane - 1, lane + 1].filter((beside) => row[beside]?.sigils.includes('tech_lead')).length

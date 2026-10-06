@@ -70,7 +70,31 @@ function worst(): GameState {
   }
 }
 
-const FIXTURES: Record<string, () => GameState> = { worst }
+// Attack changed by the cards around it: Tech Lead beside, and Pop-up and Packet Loss opposite.
+function auras(): GameState {
+  uid = 0
+  const state = worst()
+  uid = 200
+  return {
+    ...state,
+    turn: 3,
+    scale: 0,
+    summon: null,
+    player: {
+      ...state.player,
+      hand: [unit('CopyPaste'), unit('Watchdog')],
+      board: [unit('CopyPaste'), unit('GrimRepo'), unit('CopyPaste'), unit('SpamBot')],
+    },
+    opponent: {
+      ...state.opponent,
+      front: [unit('Cookie'), null, null, unit('CopyPaste')],
+      back: [null, unit('Bug'), null, null],
+    },
+    nextUid: 300,
+  }
+}
+
+const FIXTURES: Record<string, () => GameState> = { worst, auras }
 
 export function fixture(): { name: string; state: GameState; log: string[] } | null {
   if (!FIXTURES_ON) return null

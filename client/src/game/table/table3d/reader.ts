@@ -1,4 +1,5 @@
 import type { Unit } from 'shared'
+import { shown, type Shown } from '../../shown.ts'
 import type { View } from '../../view.ts'
 import type { Screen, Target } from '../reading.ts'
 
@@ -17,8 +18,15 @@ export type Reader = {
   pin: (screen: Screen) => void
 }
 
-export type Readout = { unit: Unit } | { lines: string[] }
+export type Readout = { unit: Shown } | { lines: string[] }
 
-export function unitOf(view: View, uid: number): Unit | null {
-  return [...view.hand, ...view.board, ...view.front, ...view.back].find((unit) => unit?.uid === uid) ?? null
+/** A card by uid, with its attack as the table shows it. */
+export function unitOf(view: View, uid: number): Shown | null {
+  const hand = view.hand.find((unit) => unit.uid === uid)
+  if (hand) return hand
+  for (const row of ['board', 'front', 'back'] as const) {
+    const lane = view[row].findIndex((unit) => unit?.uid === uid)
+    if (lane >= 0) return shown(view, row, lane)
+  }
+  return null
 }

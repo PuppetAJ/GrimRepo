@@ -1,4 +1,5 @@
-import { card, type Unit } from 'shared'
+import { card } from 'shared'
+import type { Shown } from '../shown.ts'
 import { cardImage, iconImage } from '../art.ts'
 import { CORNER_HOLES, DISK, RECESS, SCREEN_DIVIDER, SECTIONS, SIGIL_BAND } from './layout.ts'
 import { TINT } from './palette.ts'
@@ -28,6 +29,8 @@ type Palette = {
   plateInk: string
   cost: string
   hurt: string
+  /** Attack raised by the cards around it. */
+  boost: string
 }
 const COMMON: Palette = {
   body: TINT.card.body,
@@ -38,6 +41,7 @@ const COMMON: Palette = {
   plateInk: '#1b1a0c',
   cost: '#ff9a2e',
   hurt: '#ff4d5e',
+  boost: '#ffe14d',
 }
 const RARE: Palette = {
   body: '#5a1622',
@@ -48,6 +52,7 @@ const RARE: Palette = {
   plateInk: '#1a1214',
   cost: '#ffb14a',
   hurt: '#ffd3d0',
+  boost: '#fff2a8',
 }
 
 const tints = new Map<string, HTMLCanvasElement>()
@@ -174,7 +179,7 @@ function sprite(
 export type Layer = 'base' | 'content' | 'lights'
 
 /** base stays when the disk closes, content fades out with it, and lights is content on black for the emissive map. */
-export function drawFace(context: CanvasRenderingContext2D, unit: Unit, layer: Layer): void {
+export function drawFace(context: CanvasRenderingContext2D, unit: Shown, layer: Layer): void {
   const def = card(unit.card)
   const palette = def.tier === 'S' ? RARE : COMMON
   context.clearRect(0, 0, W, H)
@@ -237,7 +242,8 @@ export function drawFace(context: CanvasRenderingContext2D, unit: Unit, layer: L
   pixels(context, iconImage('attack'), ax + 6, ay + ah / 2 - 4 * icon, icon, palette.line)
   pixels(context, iconImage('health'), hx + hw - 6 - 8 * icon, hy + hh / 2 - 4 * icon, icon, palette.line)
   context.font = Math.max(unit.attack, unit.health) > 99 ? '40px VT323' : '64px VT323'
-  context.fillStyle = palette.line
+  // Attack the cards around it change shows in its own color: raised in yellow, lowered like hurt health.
+  context.fillStyle = !unit.aura ? palette.line : unit.aura > 0 ? palette.boost : palette.hurt
   centered(context, String(unit.attack), ax + aw / 2 + 12, ay + ah / 2)
   context.fillStyle = unit.health < unit.maxHealth ? palette.hurt : palette.line
   centered(context, String(unit.health), hx + hw / 2 - 12, hy + hh / 2)

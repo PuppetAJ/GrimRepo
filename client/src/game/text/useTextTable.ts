@@ -5,6 +5,7 @@ import { usePlayback } from '../table/usePlayback.ts'
 import type { Ready } from '../useGame.ts'
 import { authClient } from '../../lib/auth.ts'
 import { useBellKey } from './useBellKey.ts'
+import { shown } from '../shown.ts'
 import { useHoldToMagnify } from './useHoldToMagnify.ts'
 import { useTableLayout, type Layout } from './useTableLayout.ts'
 
@@ -47,7 +48,7 @@ export function useTextTable({
       ? null
       : 'uid' in place
         ? (view.hand.find((unit) => unit.uid === place.uid) ?? null)
-        : (view[place.row][place.lane] ?? null)
+        : shown(view, place.row, place.lane)
   // Keeps the last card pointed at, so a zoom moving the page under a still pointer doesn't empty the reader.
   const inspected = summoning ?? unitAt(looking) ?? null
 

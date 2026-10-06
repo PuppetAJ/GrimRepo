@@ -32,6 +32,7 @@ import { Button } from '@/components/ui/button.tsx'
 import type { Finished } from '../lib/api.ts'
 import { authClient, DEMO } from '../lib/auth.ts'
 import { number } from '../lib/format.ts'
+import type { Shown } from './shown.ts'
 import type { Ready } from './useGame.ts'
 
 export const has = (legal: Action[], match: Partial<Action>) =>
@@ -43,9 +44,12 @@ export function laneAction(legal: Action[], lane: number): Action | null {
   return null
 }
 
-export function describe(unit: Unit): string {
+export function describe(unit: Shown): string {
   const sigils = unit.sigils.map((sigil) => SIGILS[sigil].name).join(', ')
-  return `${card(unit.card).name}, ${unit.attack} attack, ${unit.health} health${sigils ? `, ${sigils}` : ''}`
+  const aura = unit.aura
+    ? ` (${unit.aura > 0 ? 'raised' : 'lowered'} ${Math.abs(unit.aura)} by the cards around it)`
+    : ''
+  return `${card(unit.card).name}, ${unit.attack} attack${aura}, ${unit.health} health${sigils ? `, ${sigils}` : ''}`
 }
 
 /** What a summon still costs after the cards marked so far. */
