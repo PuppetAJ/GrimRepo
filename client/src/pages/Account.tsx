@@ -16,7 +16,9 @@ import { Button } from '@/components/ui/button.tsx'
 import { Input } from '@/components/ui/input.tsx'
 import { Label } from '@/components/ui/label.tsx'
 import { PasswordInput } from '../components/PasswordInput.tsx'
+import { api } from '../lib/api.ts'
 import { authClient, authError, DEMO, settled } from '../lib/auth.ts'
+import { useAsync } from '../lib/useAsync.ts'
 import { P03Line } from '../components/p03/P03Line.tsx'
 
 export function Account() {
@@ -27,6 +29,12 @@ export function Account() {
   const [renaming, setRenaming] = useState(false)
   const [password, setPassword] = useState('')
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const stats = useAsync(
+    () => (user?.username ? api.stats(user.username) : Promise.resolve(null)),
+    `account-stats:${user?.username}`,
+  )
+  // Only a player who has lost is told P03 remembers it.
+  const lost = stats.status === 'ready' && Boolean(stats.data?.losses)
 
   async function rename(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -61,7 +69,10 @@ export function Account() {
     <div className="mx-auto flex w-full max-w-lg flex-col gap-10">
       <div className="flex flex-col gap-3">
         <h1 className="font-display text-5xl">Account</h1>
-        <P03Line>Rename yourself all you like. I remember every loss either way.</P03Line>
+        <P03Line>
+          Rename yourself all you like.{' '}
+          {lost ? "I remember every time you've lost either way." : "I'll still know it's you."}
+        </P03Line>
         <p className="text-muted-foreground">Signed in as {user?.email}.</p>
       </div>
 
