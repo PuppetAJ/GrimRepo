@@ -33,14 +33,23 @@ export function useRunScreen(run: RunReady) {
   const visit = run.state.visit
   const decided = visit?.kind === 'battle' && visit.game.status !== 'playing'
   const battle = useRunBattle(run, decided ? <BattleOver run={run} onSummary={() => setReviewing(true)} /> : null)
+  // A decided event stays up, saying what happened, until the player moves on.
+  const after = run.state.status === 'playing' ? run.aftermath : null
   const view: RunView =
-    run.state.status !== 'playing' && (reviewing || !battle) ? 'summary' : battle ? 'battle' : (visit?.kind ?? 'map')
+    run.state.status !== 'playing' && (reviewing || !battle)
+      ? 'summary'
+      : battle
+        ? 'battle'
+        : after
+          ? 'event'
+          : (visit?.kind ?? 'map')
+  const eventId = after?.event ?? (visit?.kind === 'event' ? visit.event : null)
   // The map's title is the stage itself; an event's is its scene's, under a caption saying what it is.
   const title =
     view === 'map'
       ? mapTitle(run.state)
-      : view === 'event' && visit?.kind === 'event'
-        ? scene(visit.event).title
+      : view === 'event' && eventId
+        ? scene(eventId).title
         : view === 'summary' && run.state.status === 'won'
           ? 'Run cleared'
           : view === 'battle'

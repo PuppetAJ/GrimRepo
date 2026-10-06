@@ -3,7 +3,7 @@ import type { Slot } from 'shared'
 import { describe, Ending, laneAction, whyNot } from '../controls.tsx'
 import { PixelCard } from '../CardReader.tsx'
 import { shown } from '../shown.ts'
-import { LUNGE_MS, type Playback } from '../table/playback.ts'
+import { LUNGE_MS, SLIDE_MS, type Playback } from '../table/playback.ts'
 import { useTable } from './context.ts'
 import { Panel } from './Panel.tsx'
 import type { BoardRow } from './useTextTable.ts'
@@ -29,6 +29,7 @@ function Occupant({
   isNew: (uid: number) => boolean
 }) {
   const lunge = unit ? playback.lunges.get(unit.uid) : undefined
+  const slide = unit ? playback.slides.get(unit.uid) : undefined
   // Keyed by start time below, so each lunge plays its animation once.
   const striking = lunge
   const leaving = playback.leaving.filter((gone) => gone.row === row && gone.lane === lane)
@@ -39,12 +40,18 @@ function Occupant({
     <span className="relative block size-full">
       {unit ? (
         <span
-          key={unit.uid}
+          // Keyed by its move too, so a card that changes lanes slides in from the one it left.
+          key={`${unit.uid}:${slide?.at ?? 0}`}
           className={`block size-full transition-transform duration-200 motion-reduce:transition-none ${tilted ? '-translate-y-1 rotate-6' : ''}`}
           style={
-            isNew(unit.uid)
-              ? { animation: `${row === 'board' ? 'arrive-up' : 'arrive-down'} 280ms ease-out` }
-              : undefined
+            slide
+              ? ({
+                  animation: `slide-lane ${SLIDE_MS}ms ease-in-out`,
+                  '--from': `calc(${slide.from - slide.to} * (100% + 0.5rem))`,
+                } as CSSProperties)
+              : isNew(unit.uid)
+                ? { animation: `${row === 'board' ? 'arrive-up' : 'arrive-down'} 280ms ease-out` }
+                : undefined
           }
         >
           <span
@@ -96,7 +103,7 @@ export function Rising({
   return (
     <span
       aria-hidden
-      className={`pointer-events-none absolute z-10 text-3xl whitespace-nowrap [text-shadow:0_0_6px_#000,0_0_2px_#000] ${className} ${tone === 'heal' ? 'text-p03' : tone === 'note' ? 'text-[#f2c14e]' : 'text-death'}`}
+      className={`pointer-events-none absolute z-10 text-3xl whitespace-nowrap [-webkit-text-stroke:1px_#000] [text-shadow:0_0_6px_#000,0_0_2px_#000,0_0_1px_#000] ${className} ${tone === 'heal' ? 'text-p03' : tone === 'note' ? 'text-[#f2c14e]' : 'text-death'}`}
       style={{ animation: 'rise 1s ease-out forwards' }}
     >
       {text}

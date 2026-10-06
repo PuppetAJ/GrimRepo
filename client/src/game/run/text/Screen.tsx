@@ -445,7 +445,11 @@ export function Screen({
               </div>
             </div>
             {showDock ? (
-              <aside id="run-deck" aria-label="Your deck" className="min-h-0">
+              <aside
+                id="run-deck"
+                aria-label="Your deck"
+                className="min-h-0 animate-in duration-200 fade-in-0 slide-in-from-right-4 motion-reduce:animate-none"
+              >
                 <Panel className="flex h-full min-h-0 flex-col gap-2">
                   <div className="flex items-center justify-between gap-2">
                     <h2 className="text-p03">Your deck ({state.deck.length})</h2>

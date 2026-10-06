@@ -1,7 +1,15 @@
 import { Eraser, PenLine, Undo2 } from 'lucide-react'
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+} from 'react'
 import { findNode, MAP_COLUMNS, reachable, type MapNode, type NodeKind, type StageMap } from 'shared'
-import { sideOf, spots, type Spot } from '../layout.ts'
+import { mapRows, sideOf, spots, type Spot } from '../layout.ts'
 import { NODE_ICONS, nodeName } from '../nodes.ts'
 import { usePlan } from '../plan.ts'
 import type { Layout } from '../../text/useTextTable.ts'
@@ -37,6 +45,8 @@ const WORDS: Partial<Record<Mark, string>> = { here: 'you are here', visited: 'v
 // A hologram sets --map-row so the whole stage fits its height.
 const ROW_HEIGHT = 'var(--map-row, clamp(3.75rem, 9dvh, 5rem))'
 const NODE = 44
+/** How long a press must last to read a node instead of clicking it, in milliseconds. */
+const HOLD_MS = 350
 
 const describeNext = (map: StageMap, node: MapNode) =>
   node.next.length
@@ -124,6 +134,34 @@ function Legend({
 export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
   const { state, path } = run
   const [peek, setPeek] = useState<string | null>(null)
+  // Holding a node shows it larger with its name, for touch and for anyone not hovering; the release then isn't a click.
+  const [held, setHeld] = useState<string | null>(null)
+  const hold = useRef<{ timer?: ReturnType<typeof setTimeout>; fired: boolean }>({ fired: false })
+  useEffect(() => () => clearTimeout(hold.current.timer), [])
+  const holdProps = (id: string) => ({
+    onPointerDown: (event: ReactPointerEvent) => {
+      if (event.button !== 0) return
+      clearTimeout(hold.current.timer)
+      hold.current.fired = false
+      hold.current.timer = setTimeout(() => {
+        hold.current.fired = true
+        setHeld(id)
+      }, HOLD_MS)
+    },
+    onPointerUp: () => {
+      clearTimeout(hold.current.timer)
+      setHeld(null)
+    },
+    onPointerLeave: () => {
+      clearTimeout(hold.current.timer)
+      setHeld(null)
+    },
+    onPointerCancel: () => {
+      clearTimeout(hold.current.timer)
+      setHeld(null)
+    },
+    onContextMenu: (event: ReactMouseEvent) => event.preventDefault(),
+  })
   const [pen, setPen] = useState(false)
   const [hovered, setHovered] = useState<NodeKind | null>(null)
   const [picked, setPicked] = useState<NodeKind | null>(null)
@@ -153,7 +191,7 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
 
   // A nudge never brings two nodes closer than this many pixels.
   const gap = 8
-  const cell = { x: size.width / MAP_COLUMNS, y: size.height / state.map.rows.length }
+  const cell = { x: size.width / MAP_COLUMNS, y: size.height / mapRows(state.map) }
   const room = (span: number) => (span ? Math.max(0, (span - NODE - gap) / 2 / span) : 0)
   const placed = spots(state.map, state.seed, { x: room(cell.x), y: room(cell.y) })
   const open = reachable(state)
@@ -247,7 +285,7 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
       </ScreenBar>
       {/* Padded, so the boss and the first row are never cut off at the top or bottom of the scroll. */}
       <div className={hologram ? 'py-5' : 'py-8'}>
-        <div ref={box} className="relative w-full" style={{ height: `calc(${ROW_HEIGHT} * ${state.map.rows.length})` }}>
+        <div ref={box} className="relative w-full" style={{ height: `calc(${ROW_HEIGHT} * ${mapRows(state.map)})` }}>
           {/* The links: one image tiled along each, turned to point at the node ahead. */}
           <div aria-hidden className="absolute inset-0">
             {size.width
@@ -300,6 +338,18 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
                       height: boss ? NODE * 1.5 : NODE,
                     }
                     const face = <Icon aria-hidden className={boss ? 'size-9' : 'size-6'} />
+                    const reading =
+                      held === node.id ? (
+                        <span
+                          aria-hidden
+                          style={{ left: style.left, top: style.top }}
+                          className={`pointer-events-none absolute z-40 flex -translate-x-1/2 ${spot.y < 0.3 ? 'translate-y-9' : '-translate-y-[calc(100%+2.25rem)]'} flex-col items-center gap-1 rounded-md border-2 border-p03 bg-p03-ground px-3 py-2 text-center whitespace-nowrap text-p03 shadow-[0_0_18px_rgb(125_255_154/0.5)] motion-safe:animate-[fade-in_120ms_ease-out]`}
+                        >
+                          <Icon className="size-10" />
+                          <span className="text-xl">{nodeName(node)}</span>
+                          {WORDS[mark] ? <span className="text-base text-p03-dim">{WORDS[mark]}</span> : null}
+                        </span>
+                      ) : null
                     // With the pen on, every node marks the plan; otherwise only the ones in reach are buttons.
                     if (pen || mark === 'next')
                       return (
@@ -310,9 +360,18 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
                             {...(pen ? { 'aria-pressed': planned } : { 'data-action': 'go', 'data-node': node.id })}
                             aria-label={label}
                             title={nodeName(node)}
-                            onClick={() => (pen ? toggleMark(node.id) : run.act({ type: 'go', node: node.id }))}
+                            onClick={() => {
+                              // A press long enough to read the node isn't a click on it.
+                              if (hold.current.fired) return void (hold.current.fired = false)
+                              if (pen) toggleMark(node.id)
+                              else run.act({ type: 'go', node: node.id })
+                            }}
+                            {...holdProps(node.id)}
                             onPointerEnter={() => setPeek(node.id)}
-                            onPointerLeave={() => setPeek(null)}
+                            onPointerLeave={() => {
+                              setPeek(null)
+                              holdProps(node.id).onPointerLeave()
+                            }}
                             onFocus={() => setPeek(node.id)}
                             onBlur={() => setPeek(null)}
                             style={style}
@@ -321,14 +380,22 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
                           >
                             {face}
                           </button>
+                          {reading}
                         </li>
                       )
                     return (
                       <li key={node.id}>
-                        <span title={nodeName(node)} style={style} data-planned={planned || undefined} className={box}>
+                        <span
+                          title={nodeName(node)}
+                          style={style}
+                          data-planned={planned || undefined}
+                          className={`${box} touch-none select-none`}
+                          {...holdProps(node.id)}
+                        >
                           {face}
                           <span className="sr-only">{label}</span>
                         </span>
+                        {reading}
                       </li>
                     )
                   })}

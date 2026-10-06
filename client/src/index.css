@@ -162,6 +162,22 @@
   }
 }
 
+@keyframes slide-lane {
+  from {
+    transform: translateX(var(--from));
+  }
+  50% {
+    transform: translateX(calc(var(--from) / 2)) translateY(-12%);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
 @keyframes blink {
   50% {
     opacity: 0;
@@ -315,6 +331,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  @keyframes slide-lane {
+    from {
+      opacity: 0.4;
+    }
+  }
   @keyframes shake {
     50% {
       opacity: 0.6;

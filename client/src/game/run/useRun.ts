@@ -8,6 +8,9 @@ import { narrateRun } from './narrate.ts'
 
 type Listener = (events: RunEvent[]) => void
 
+/** An event just decided: the scene, the choice, and what it did, kept on screen until the player moves on. */
+export type Aftermath = { event: string; option: number; lines: string[] }
+
 export type Run =
   | { status: 'loading' }
   | { status: 'error'; message: string }
@@ -25,6 +28,9 @@ export type Run =
       news: string[]
       /** The nodes entered on this stage's map, in order. */
       path: string[]
+      aftermath: Aftermath | null
+      /** Closes the aftermath, back to the map. */
+      dismiss: () => void
       unsaved: number
       saving: boolean
       /** The server's verdict, once the run has ended and been saved. */
@@ -46,6 +52,7 @@ type Table = {
   log: string[]
   news: string[]
   path: string[]
+  aftermath: Aftermath | null
 }
 
 const LOG_LINES = 2_000
@@ -93,7 +100,7 @@ function open(run: OpenRun): Table {
     story = told(story, result.state, result.events)
   }
   generations += 1
-  return { id: run.id, generation: generations, moves: run.actions.length, ...story }
+  return { id: run.id, generation: generations, moves: run.actions.length, aftermath: null, ...story }
 }
 
 /** Plays the open run locally and saves it at every step off the board, and at every draw and bell on it; a mockup is never saved. */
@@ -127,6 +134,7 @@ export function useRun(mockup: Mockup | null = null): Run {
           log: ['P03> A mockup: played here and never saved.'],
           news: mockup.news ?? [],
           path: mockup.path,
+          aftermath: null,
         })
         setOver(mockup.over ?? null)
       })
@@ -213,7 +221,13 @@ export function useRun(mockup: Mockup | null = null): Run {
       if (table.id !== -1) pending.current.push(action)
       setUnsaved(pending.current.length)
       for (const listener of listeners.current) listener(outcome.events)
-      setTable({ ...table, moves: table.moves + 1, ...told(table, outcome.state, outcome.events) })
+      const story = told(table, outcome.state, outcome.events)
+      const visit = table.state.visit
+      const aftermath =
+        action.type === 'choose' && visit?.kind === 'event'
+          ? { event: visit.event, option: action.option, lines: story.news }
+          : null
+      setTable({ ...table, moves: table.moves + 1, ...story, aftermath })
       // On the board, saves wait for a draw or the bell, as a quick battle's do, or a reload could peek at a draw.
       const quiet = action.type === 'play' && action.action.type !== 'draw' && action.action.type !== 'ringBell'
       if (!quiet || outcome.state.status !== 'playing') void save()
@@ -236,8 +250,9 @@ export function useRun(mockup: Mockup | null = null): Run {
   }, [id, playing])
 
   const next = useCallback(() => setReloads((n) => n + 1), [])
+  const dismiss = useCallback(() => setTable((now) => now && { ...now, aftermath: null }), [])
 
   if (error) return { status: 'error', message: error }
   if (!table) return { status: 'loading' }
-  return { status: 'ready', ...table, unsaved, saving, over, act, abandon, again: next, subscribe }
+  return { status: 'ready', ...table, unsaved, saving, over, act, abandon, again: next, dismiss, subscribe }
 }

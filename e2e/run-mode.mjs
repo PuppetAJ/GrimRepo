@@ -60,6 +60,8 @@ async function playRun(page, mirror, { pick = nextRunAction, done }) {
         await page.locator(`[data-action="take-sigil"][data-card="${action.to}"]`).click()
         await clickMove(page, '[data-action="transfer"]', expected)
       } else await clickMove(page, targetFor(action), expected)
+      // An event's result stays up until the player moves on.
+      if (action.type === 'choose') await page.locator('[data-action="continue"]').click()
     } catch (error) {
       console.log(
         `  The mirror wanted ${JSON.stringify(action)} as move ${moves + 1}, on the ${await view(page)} view.`,
@@ -239,7 +241,16 @@ section('An event, from a mockup')
   // A number key picks a choice once focus is in the game, as the table's shortcuts work.
   await page.locator('[data-table="run"]').click({ position: { x: 20, y: 20 } })
   await page.keyboard.press('1')
-  check('a number key picks that choice, and the run goes back to the map', await shows(page, 'map'))
+  check(
+    'a number key picks that choice, and the event says what it did',
+    await page
+      .locator('[data-action="continue"]')
+      .waitFor()
+      .then(() => true)
+      .catch(() => false),
+  )
+  await page.keyboard.press('Enter')
+  check('and Enter goes back to the map', await shows(page, 'map'))
   await context.close()
 }
 

@@ -47,8 +47,13 @@ export function useTextTable({
     !place
       ? null
       : 'uid' in place
-        ? (view.hand.find((unit) => unit.uid === place.uid) ?? null)
+        ? (view.hand.find((unit) => unit.uid === place.uid) ?? placed(place.uid))
         : shown(view, place.row, place.lane)
+  // A hand card just played is read where it landed, so the reader doesn't go blank under a still pointer.
+  function placed(uid: number) {
+    const lane = view.board.findIndex((unit) => unit?.uid === uid)
+    return lane < 0 ? null : shown(view, 'board', lane)
+  }
   // Keeps the last card pointed at, so a zoom moving the page under a still pointer doesn't empty the reader.
   const inspected = summoning ?? unitAt(looking) ?? null
 
