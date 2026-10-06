@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { card } from '../cards.ts'
+import { card, EVENT_ONLY, PLAYER_DECK } from '../cards.ts'
 import { Rng } from '../rng.ts'
 import { scoreRun } from '../scoring.ts'
 import { playRun } from './bot.ts'
@@ -150,6 +150,24 @@ describe('an event', () => {
     const after = step(state, { type: 'choose', option: 0 })
     const gained = after.deck.filter((entry) => entry.added === 'bypass')
     assert.equal(gained.length, 1)
+  })
+
+  it('can fork a card, buffs and sigils and all, as a new card', () => {
+    const state = at('event', { kind: 'event', node: '0-0', event: 'fork-repo' })
+    for (const entry of state.deck) entry.attack += 5
+    const after = step(state, { type: 'choose', option: 0 })
+    const copy = after.deck.at(-1)
+    assert.equal(after.deck.length, state.deck.length + 1)
+    assert.ok(copy && copy.attack === card(copy.card).attack + 5, 'the copy kept its buff')
+    assert.equal(new Set(after.deck.map((entry) => entry.id)).size, after.deck.length, 'with its own id')
+  })
+
+  it('is the only way to the event-only cards', () => {
+    const hire = at('event', { kind: 'event', node: '0-0', event: 'code-review' })
+    const after = step(hire, { type: 'choose', option: 0 })
+    assert.equal(after.deck.at(-1)?.card, 'SeniorDev')
+    assert.equal(after.deck.length, hire.deck.length, 'a card made room for it')
+    for (const id of EVENT_ONLY) assert.ok(!PLAYER_DECK.includes(id), `${id} is never dealt or offered`)
   })
 })
 

@@ -10,7 +10,7 @@ describe('the cards', () => {
     assert.equal(CARDS['HelloWorld']?.name, 'Hello World')
   })
 
-  it("make a deck of 26: everything but the debug card, Boilerplate and a Beta card's shipped form", () => {
+  it("make a deck of 26: everything but the debug card, Boilerplate, a Beta card's shipped form and the event-only cards", () => {
     assert.equal(PLAYER_DECK.length, 26)
     assert.ok(!PLAYER_DECK.includes(DEBUG_CARD) && !PLAYER_DECK.includes(BOILERPLATE))
     assert.ok(!PLAYER_DECK.includes('ShippedFeature'))
