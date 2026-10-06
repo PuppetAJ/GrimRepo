@@ -88,7 +88,7 @@ describe('a boss', () => {
     assert.equal(state.opponent.phase, 1)
     assert.equal(state.scale, 0)
     assert.ok(events.some((event) => event.type === 'phaseChanged'))
-    assert.deepEqual(queued(state).sort(), ['Bug', 'Bug'])
+    assert.deepEqual(queued(state).sort(), ['Bug', 'OffCenterDiv'])
     assert.equal(units(state.opponent.front).length, 0)
   })
 

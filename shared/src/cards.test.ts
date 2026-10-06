@@ -10,14 +10,15 @@ describe('the cards', () => {
     assert.equal(CARDS['HelloWorld']?.name, 'Hello World')
   })
 
-  it('make a deck of 25: everything but the debug card and Boilerplate', () => {
-    assert.equal(PLAYER_DECK.length, 25)
+  it("make a deck of 26: everything but the debug card, Boilerplate and a Beta card's shipped form", () => {
+    assert.equal(PLAYER_DECK.length, 26)
     assert.ok(!PLAYER_DECK.includes(DEBUG_CARD) && !PLAYER_DECK.includes(BOILERPLATE))
-    assert.equal(new Set(PLAYER_DECK).size, 25)
+    assert.ok(!PLAYER_DECK.includes('ShippedFeature'))
+    assert.equal(new Set(PLAYER_DECK).size, 26)
   })
 
   it('give the opponent every deck card but the board wipe', () => {
-    assert.equal(OPPONENT_POOL.length, 24)
+    assert.equal(OPPONENT_POOL.length, 25)
     assert.ok(!OPPONENT_POOL.includes('FourOhFour'))
   })
 
