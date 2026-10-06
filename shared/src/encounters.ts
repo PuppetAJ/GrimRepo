@@ -8,6 +8,9 @@ export type Plan = Queued[][]
 
 export type Encounter = {
   id: string
+  name: string
+  /** What P03 says as the battle starts. */
+  intro: string
   /** 0 to 2: Localhost, Staging, Production. */
   stage: number
   boss: boolean
@@ -20,6 +23,8 @@ export const STAGES = ['Localhost', 'Staging', 'Production'] as const
 const list: Encounter[] = [
   {
     id: 'localhost-hello',
+    name: 'Hello, World',
+    intro: "Your first real battle. I'll go easy on you. That was a lie.",
     stage: 0,
     boss: false,
     phases: [
@@ -34,6 +39,8 @@ const list: Encounter[] = [
   },
   {
     id: 'localhost-cron',
+    name: 'Scheduled Maintenance',
+    intro: 'Everything here runs on a schedule. Unlike you.',
     stage: 0,
     boss: false,
     phases: [
@@ -51,6 +58,8 @@ const list: Encounter[] = [
   },
   {
     id: 'localhost-boss',
+    name: 'The Watchdog',
+    intro: 'My watchdog never sleeps, and it never forgets a bad commit.',
     stage: 0,
     boss: true,
     phases: [
@@ -67,6 +76,8 @@ const list: Encounter[] = [
   },
   {
     id: 'staging-null',
+    name: 'Null Reference',
+    intro: 'Something in here points at nothing. Probably your strategy.',
     stage: 1,
     boss: false,
     phases: [
@@ -80,6 +91,8 @@ const list: Encounter[] = [
   },
   {
     id: 'staging-legacy',
+    name: 'Legacy Codebase',
+    intro: 'Nobody knows how this works. Including me. Especially me.',
     stage: 1,
     boss: false,
     phases: [
@@ -93,6 +106,8 @@ const list: Encounter[] = [
   },
   {
     id: 'staging-boss',
+    name: 'The Sandbox Escape',
+    intro: "Your sandbox has a hole in it. I'm coming through.",
     stage: 1,
     boss: true,
     phases: [
@@ -107,6 +122,8 @@ const list: Encounter[] = [
   },
   {
     id: 'production-outage',
+    name: 'The Outage',
+    intro: 'Production is down. The status page still says everything is fine.',
     stage: 2,
     boss: false,
     phases: [
@@ -120,6 +137,8 @@ const list: Encounter[] = [
   },
   {
     id: 'production-hotfix',
+    name: 'Friday Deploy',
+    intro: 'A hotfix, on a Friday, straight to production. What could go wrong?',
     stage: 2,
     boss: false,
     phases: [
@@ -133,6 +152,8 @@ const list: Encounter[] = [
   },
   {
     id: 'production-boss',
+    name: 'The Postmortem',
+    intro: "This is the postmortem. Yours. I've already written the root cause.",
     stage: 2,
     boss: true,
     phases: [
