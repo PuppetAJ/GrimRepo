@@ -54,7 +54,8 @@ function walk(rng: Rng): Map<string, Set<string>> {
 /** Whether the walked grid is full enough and reaches both sides. */
 function spread(links: Map<string, Set<string>>): boolean {
   const cells = [...links.keys()].map((id) => id.split('-').map(Number) as [number, number])
-  const rows = (side: (col: number) => boolean) => new Set(cells.filter(([, col]) => side(col)).map(([row]) => row)).size
+  const rows = (side: (col: number) => boolean) =>
+    new Set(cells.filter(([, col]) => side(col)).map(([row]) => row)).size
   return (
     cells.length >= FEWEST_NODES &&
     rows((col) => col < Math.floor(MAP_COLUMNS / 2)) >= ROWS_EACH_SIDE &&
