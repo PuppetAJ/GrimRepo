@@ -161,3 +161,20 @@ describe('a run', () => {
     assert.equal((await pool.query('SELECT 1 FROM runs WHERE id = $1', [run.id])).rowCount, 0)
   })
 })
+
+describe('the runs leaderboard', () => {
+  it('ranks players by their best finished run, counting the runs they cleared', async () => {
+    const player = await signedIn()
+    assert.deepEqual((await app.call('GET', '/api/leaderboard/runs')).body.players, [])
+    const run = await start(player.cookie)
+    const { state, actions } = playRun(createRun({ seed: run.seed }), step)
+    assert.deepEqual((await app.call('GET', '/api/leaderboard/runs')).body.players, [], 'an open run is not ranked')
+    await submit(player.cookie, run.id, actions)
+    const { body } = await app.call('GET', '/api/leaderboard/runs')
+    assert.equal(body.players.length, 1)
+    assert.equal(body.players[0].bestScore, scoreRun(state.record, state.status === 'won'))
+    assert.equal(body.players[0].games, 1)
+    assert.equal(body.players[0].wins, state.status === 'won' ? 1 : 0)
+    assert.equal(body.top, body.players[0].bestScore)
+  })
+})
