@@ -1,7 +1,7 @@
 import { BOILERPLATE } from '../cards.ts'
 import { legalActions } from './game.ts'
 import { LANES, type Action, type GameState, type Unit } from './types.ts'
-import { costOf, units, worthOf } from './units.ts'
+import { canOwe, costOf, indebted, units, worthOf } from './units.ts'
 
 const value = (unit: Unit): number => unit.attack * 2 + unit.health
 
@@ -72,8 +72,12 @@ export function nextBotAction(state: GameState, strategy: Strategy = 'greedy'): 
     let paid = 0
     let given = 0
     let freed = false
+    let debts = 0
     for (const victim of [...board].sort((a, b) => value(a) - value(b))) {
       if (paid >= cost) break
+      // A debt that would lose the game can't be taken on.
+      if (indebted(victim) && !canOwe(state, debts + 1)) continue
+      if (indebted(victim)) debts += 1
       paid += worthOf(victim)
       given += value(victim)
       freed ||= !victim.sigils.includes('try_catch')
