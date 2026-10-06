@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react'
-import { SIGILS } from 'shared'
+import { SIGILS, type SigilId } from 'shared'
 import { api } from '../../lib/api.ts'
 import { number } from '../../lib/format.ts'
+import { Sigil } from '../../game/CardReader.tsx'
 import { DECK } from '../../game/deck.ts'
 import { find, HELP, PAGES, STEPS, type Page } from './commandData.ts'
-import { CardUpClose, Cost, Dim, Lesson } from './CommandOutput.tsx'
+import { CardUpClose, Cost, Dim, Lesson, SigilLine } from './CommandOutput.tsx'
 
 export type Context = {
   user: string | undefined
@@ -68,7 +69,15 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
         <div className="grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-x-6">
           {DECK.map((card) => (
             <p key={card.id} className="flex justify-between gap-3">
-              <span className="truncate text-p03">{card.name}</span>
+              <span className="flex min-w-0 items-center gap-1.5">
+                <span className="truncate text-p03">{card.name}</span>
+                {card.sigils.map((sigil) => (
+                  <span key={sigil} title={SIGILS[sigil].name} className="shrink-0">
+                    <Sigil id={sigil} size="0.9em" color="var(--p03-dim)" />
+                    <span className="sr-only">{SIGILS[sigil].name}</span>
+                  </span>
+                ))}
+              </span>
               <span className="whitespace-nowrap">
                 <Cost cost={card.cost} /> {card.attack}/{card.health}
               </span>
@@ -90,10 +99,8 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
     case 'sigils':
       return (
         <div className="flex flex-col">
-          {Object.values(SIGILS).map((sigil) => (
-            <p key={sigil.name}>
-              <span className="text-p03">{sigil.name}</span>: {sigil.text}
-            </p>
+          {(Object.keys(SIGILS) as SigilId[]).map((id) => (
+            <SigilLine key={id} id={id} />
           ))}
         </div>
       )
@@ -118,7 +125,8 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
       return (
         <p>
           <span className="text-[#ffb454]">{context.user}</span>. {stats.games} {stats.games === 1 ? 'game' : 'games'},{' '}
-          {stats.wins} won, best {number(stats.bestScore)}. I remember every loss.
+          {stats.wins} won, best {number(stats.bestScore)}.
+          {stats.losses ? " I remember every time you've lost." : ' Not a single loss. Yet.'}
         </p>
       )
     }
@@ -132,7 +140,7 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
             className="h-20 -scale-y-100 [filter:sepia(1)_hue-rotate(70deg)_saturate(3)] [image-rendering:pixelated]"
           />
           <p>
-            P03. Scrybe of Technology. I run this factory, this repository and your game. Leshy could never pull that
+            P03. Scrybe of Technology. I run this factory, this repository, and your game. Leshy could never pull that
             off.
           </p>
         </div>
