@@ -1,5 +1,6 @@
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
+import { writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { gzipSync } from 'node:zlib'
 import { defineConfig, type Plugin } from 'vite'
@@ -14,6 +15,45 @@ const mockupsSlash: Plugin = {
     server.middlewares.use((req, _res, next) => {
       if (req.url === '/mockups') req.url = '/mockups/'
       next()
+    })
+  },
+}
+
+// The /art page's editor saves a card's art (24x24) or an icon (8x8) as a PNG into src/game/art; development only.
+const ART_DIR = fileURLToPath(new URL('./src/game/art/', import.meta.url))
+const ART_SIZE = { cards: 24, icons: 8 } as const
+const artEditor: Plugin = {
+  name: 'art-editor',
+  apply: 'serve',
+  configureServer(server) {
+    server.middlewares.use('/__art/save', (req, res) => {
+      if (req.method !== 'POST') return void res.writeHead(405).end()
+      let body = ''
+      req.on('data', (chunk: Buffer) => (body += chunk))
+      req.on('end', () => {
+        const refuse = (why: string) => void res.writeHead(400, { 'content-type': 'text/plain' }).end(why)
+        let sent: { kind?: unknown; id?: unknown; png?: unknown }
+        try {
+          sent = JSON.parse(body)
+        } catch {
+          return refuse('not JSON')
+        }
+        const { kind, id, png } = sent
+        if (kind !== 'cards' && kind !== 'icons') return refuse('no such kind of art')
+        if (typeof id !== 'string' || !/^[A-Za-z0-9_]+$/.test(id)) return refuse('no such art')
+        if (typeof png !== 'string') return refuse('no image')
+        const bytes = Buffer.from(png, 'base64')
+        // A PNG's width and height are the first two numbers of its header chunk.
+        const size = ART_SIZE[kind]
+        if (
+          bytes.toString('latin1', 1, 4) !== 'PNG' ||
+          bytes.readUInt32BE(16) !== size ||
+          bytes.readUInt32BE(20) !== size
+        )
+          return refuse(`this art is ${size} by ${size}`)
+        writeFileSync(`${ART_DIR}${kind}/${id}.png`, bytes)
+        res.writeHead(204).end()
+      })
     })
   },
 }
@@ -41,7 +81,7 @@ const budget: Plugin = {
 }
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), mockupsSlash, budget],
+  plugins: [react(), tailwindcss(), mockupsSlash, artEditor, budget],
 
   // Must match the "@/*" alias in tsconfig.json, which shadcn/ui's components use.
   resolve: {
