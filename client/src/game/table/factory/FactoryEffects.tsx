@@ -27,6 +27,8 @@ export function FactoryEffects({ quality = 0 }: { quality?: number }) {
   useEffect(() => {
     if (bloom.current) bloom.current.resolution.scale = quality >= 2 ? 0.25 : 0.5
   }, [quality])
+  // At the last resort, for a machine that can't keep up even so, they go, or its timers starve and the game stalls.
+  if (quality >= 3) return null
   return (
     <EffectComposer multisampling={0}>
       <Bloom

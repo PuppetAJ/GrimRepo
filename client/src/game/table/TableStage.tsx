@@ -35,7 +35,7 @@ type RoomHandlers = {
 type Stage = {
   /** Where a scene puts its 3D content; the canvas drawing it stays mounted as scenes come and go. */
   Scene: Tunnel['In']
-  /** 1 drops card glow, 2 makes the other effects cheaper, 3 lowers the resolution. */
+  /** 1 drops card glow, 2 makes the other effects cheaper, 3 drops them and lowers the resolution. */
   quality: number
   /** True once the first scene has loaded. */
   ready: boolean
