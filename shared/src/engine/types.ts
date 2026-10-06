@@ -1,7 +1,7 @@
 import type { SigilId } from '../cards.ts'
 
 /** Bumped whenever a change would make an old game replay differently. */
-export const RULES_VERSION = 6
+export const RULES_VERSION = 7
 
 export const LANES = 4
 /** Net damage needed to win, or to lose. */
@@ -25,6 +25,8 @@ export type Unit = {
   source?: number
   /** A Rollback card has spent the one hit it shrugs off. */
   rolledBack?: boolean
+  /** Which way a Load Balancer card moves next: 1 toward the higher lanes. */
+  heading?: 1 | -1
 }
 
 export type Slot = Unit | null
@@ -84,6 +86,10 @@ export type GameEvent =
   | { type: 'healed'; uid: number; amount: number; health: number }
   | { type: 'shielded'; uid: number }
   | { type: 'buffed'; uid: number; attack: number; health: number }
+  | { type: 'moved'; uid: number; side: Side; from: number; to: number }
+  /** A Hot Reload card's copy: back in the player's hand (lane null) or in P03's queue, from the lane it left. */
+  | { type: 'reloaded'; side: Side; unit: Unit; from: number; lane: number | null }
+  | { type: 'shipped'; uid: number; unit: Unit }
   | { type: 'phaseChanged'; phase: number; uids: number[] }
   | { type: 'turnStarted'; turn: number }
   | { type: 'gameOver'; outcome: 'win' | 'loss'; turns: number }

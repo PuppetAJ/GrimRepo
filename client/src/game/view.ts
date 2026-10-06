@@ -100,6 +100,18 @@ export function step(view: View, event: GameEvent): View {
       }))
     case 'shielded':
       return withUnit(view, event.uid, (unit) => ({ ...unit, rolledBack: true }))
+    case 'shipped':
+      return withUnit(view, event.uid, () => event.unit)
+    case 'moved': {
+      const row = event.side === 'player' ? view.board : view.front
+      const unit = row[event.from] ?? null
+      const moved = setAt(setAt(row, event.from, null), event.to, unit)
+      return event.side === 'player' ? { ...view, board: moved } : { ...view, front: moved }
+    }
+    case 'reloaded':
+      return event.lane === null
+        ? { ...view, hand: [...view.hand, event.unit] }
+        : { ...view, back: setAt(view.back, event.lane, event.unit) }
     case 'killed':
     case 'retired': {
       const [board, front, back] = rows(view).map((row) => without(row, event.uid)) as [Slot[], Slot[], Slot[]]

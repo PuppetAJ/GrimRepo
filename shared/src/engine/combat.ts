@@ -1,9 +1,37 @@
-import { LANES, type GameEvent, type GameState, type Side, type Slot, type Unit } from './types.ts'
+import { HAND_LIMIT, LANES, type GameEvent, type GameState, type Side, type Slot, type Unit } from './types.ts'
+import { drawUnit, makeUnit } from './units.ts'
 
 function remove(row: Slot[], uid: number): number {
   const lane = row.findIndex((slot) => slot?.uid === uid)
   if (lane >= 0) row[lane] = null
   return lane
+}
+
+/** A Hot Reload card that died or was sacrificed sends a fresh copy back: to the player's hand, or P03's queue. */
+export function perish(state: GameState, side: Side, unit: Unit, lane: number, events: GameEvent[]): void {
+  if (!unit.sigils.includes('hot_reload')) return
+  if (side === 'player') {
+    if (state.player.hand.length >= HAND_LIMIT) return
+    const copy = unit.source === undefined ? makeUnit(state, unit.card) : drawUnit(state, unit.source)
+    state.player.hand.push(copy)
+    events.push({ type: 'reloaded', side, unit: copy, from: lane, lane: null })
+  } else if (!state.opponent.back[lane]) {
+    const copy = makeUnit(state, unit.card)
+    state.opponent.back[lane] = copy
+    events.push({ type: 'reloaded', side, unit: copy, from: lane, lane })
+  }
+}
+
+/** A Failover card on the defending side, nearest the empty lane first, which moves in to take the attack. */
+function failover(row: Slot[], lane: number, side: Side, events: GameEvent[]): Unit | null {
+  const order = [...Array(LANES).keys()].sort((a, b) => Math.abs(a - lane) - Math.abs(b - lane))
+  const from = order.find((candidate) => row[candidate]?.sigils.includes('failover'))
+  if (from === undefined) return null
+  const unit = row[from] as Unit
+  row[from] = null
+  row[lane] = unit
+  events.push({ type: 'moved', uid: unit.uid, side, from, to: lane })
+  return unit
 }
 
 /** What a card hits for: its own attack, +1 for each Tech Lead beside it, and the Code Smell or Pop-up opposite it. */
@@ -39,9 +67,11 @@ export function attack(state: GameState, side: Side, events: GameEvent[]): void 
   const toward = side === 'player' ? 1 : -1
   const within = (lanes: number[]) => lanes.filter((lane) => lane >= 0 && lane < LANES)
 
-  for (let lane = 0; lane < LANES; lane++) {
-    const attacker = attackers[lane]
+  // Each card attacks once, in the lane order it began in, even if a Load Balancer moves on into a later lane.
+  for (const attacker of attackers.slice()) {
     if (!attacker) continue
+    const lane = attackers.findIndex((slot) => slot?.uid === attacker.uid)
+    if (lane < 0) continue
     const lanes = attacker.sigils.includes('broadcast')
       ? within([lane - 1, lane, lane + 1])
       : attacker.sigils.includes('fork')
@@ -57,7 +87,10 @@ export function attack(state: GameState, side: Side, events: GameEvent[]): void 
         const power = attackOf(state, side, lane)
         if (power <= 0) break
         struck = true
-        const defender = attacker.sigils.includes('bypass') ? null : defenders[aimed]
+        const defended = attacker.sigils.includes('bypass')
+          ? null
+          : (defenders[aimed] ?? failover(defenders, aimed, side === 'player' ? 'opponent' : 'player', events))
+        const defender = defended
         events.push({ type: 'attacked', side, lane, target: defender ? aimed : 'face' })
 
         if (!defender) {
@@ -83,6 +116,7 @@ export function attack(state: GameState, side: Side, events: GameEvent[]): void 
             lane: aimed,
             row: 'front',
           })
+          perish(state, side === 'player' ? 'opponent' : 'player', defender, aimed, events)
           // Scope Creep grows with every card it takes down.
           if (attacker.sigils.includes('scope_creep') && attackers[lane]?.uid === attacker.uid) {
             attacker.attack += 1
@@ -99,6 +133,20 @@ export function attack(state: GameState, side: Side, events: GameEvent[]): void 
     if (struck && attacker.sigils.includes('deprecated') && attackers[lane]?.uid === attacker.uid) {
       remove(attackers, attacker.uid)
       events.push({ type: 'killed', uid: attacker.uid, side, lane, row: 'front' })
+      perish(state, side, attacker, lane, events)
+    }
+    // A Load Balancer moves on after attacking, turning back at the edge or a taken lane.
+    if (struck && attacker.sigils.includes('load_balancer') && attackers[lane]?.uid === attacker.uid) {
+      const ahead = lane + (attacker.heading ?? 1)
+      const back = lane - (attacker.heading ?? 1)
+      const free = (to: number) => to >= 0 && to < LANES && !attackers[to]
+      const to = free(ahead) ? ahead : free(back) ? back : null
+      if (to !== null) {
+        attackers[lane] = null
+        attackers[to] = attacker
+        attacker.heading = to > lane ? 1 : -1
+        events.push({ type: 'moved', uid: attacker.uid, side, from: lane, to })
+      }
     }
   }
 }
@@ -115,6 +163,7 @@ function strikeBack(state: GameState, side: Side, attacker: Unit, events: GameEv
   const row = side === 'player' ? state.player.board : state.opponent.front
   const lane = remove(row, attacker.uid)
   events.push({ type: 'killed', uid: attacker.uid, side, lane, row: 'front' })
+  perish(state, side, attacker, lane, events)
 }
 
 function overkill(state: GameState, lane: number, unit: Unit, amount: number, events: GameEvent[]): void {
@@ -122,4 +171,5 @@ function overkill(state: GameState, lane: number, unit: Unit, amount: number, ev
   if (damage(unit, amount, false, events) > 0) return
   state.opponent.back[lane] = null
   events.push({ type: 'killed', uid: unit.uid, side: 'opponent', lane, row: 'back' })
+  perish(state, 'opponent', unit, lane, events)
 }

@@ -87,6 +87,16 @@ export function narrate(before: GameState, events: GameEvent[]): string[] {
         return [`${name(event.uid)} rolled the damage back. Annoying.`]
       case 'buffed':
         return [`${name(event.uid)} is now ${event.attack}/${event.health}.`]
+      case 'shipped':
+        return [`${name(event.uid)} shipped as ${card(event.unit.card).name}. Untested, I assume.`]
+      case 'moved':
+        return [`${name(event.uid)} moved to ${lane(event.to)}.`]
+      case 'reloaded':
+        return [
+          event.lane === null
+            ? `Your ${card(event.unit.card).name} hot-reloaded into your hand.`
+            : `My ${card(event.unit.card).name} hot-reloaded behind ${lane(event.lane)}.`,
+        ]
       case 'turnStarted':
         return [`Turn ${event.turn}. Draw.${event.turn % 5 === 0 ? ` ${pick(PATIENCE, event.turn / 5)}` : ''}`]
       case 'gameOver':

@@ -83,3 +83,32 @@ describe('the sigils', () => {
     assert.equal(placed?.health, 4 + 6)
   })
 })
+
+describe('the sigils that move cards', () => {
+  it('Failover moves to take an attack aimed at an empty lane', () => {
+    const { state, events } = bell(table({ board: [null, null, null, 'MergeConflict'], front: ['CopyPaste'] }))
+    assert.ok(events.some((event) => event.type === 'moved' && event.side === 'player' && event.to === 0))
+    assert.equal(state.player.board[0]?.card, 'MergeConflict')
+    assert.equal(hits(events, 'player'), 0, 'the attack hit the card, not the player')
+  })
+
+  it('Load Balancer moves on after it attacks, and attacks only once', () => {
+    const { state, events } = bell(table({ board: ['ZeroDay'] }))
+    assert.equal(hits(events, 'opponent'), 4)
+    assert.equal(state.player.board[1]?.card, 'ZeroDay')
+  })
+
+  it('Hot Reload sends a fresh copy back to the hand when the card dies', () => {
+    const start = table({ board: ['Bug'], front: ['NullPointer'] })
+    const { state, events } = bell(start)
+    assert.ok(events.some((event) => event.type === 'reloaded' && event.lane === null))
+    assert.ok(state.player.hand.some((unit) => unit.card === 'Bug' && unit.health === 8))
+  })
+
+  it('Beta ships as its stronger form after a round on the table', () => {
+    const { state, events } = bell(table({ board: ['Prototype'] }))
+    assert.ok(events.some((event) => event.type === 'shipped'))
+    assert.equal(state.player.board[0]?.card, 'ShippedFeature')
+    assert.equal(state.player.board[0]?.attack, 4)
+  })
+})
