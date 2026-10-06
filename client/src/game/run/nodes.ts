@@ -24,7 +24,10 @@ export const boostText = (boost: 'attack' | 'health' | undefined) => (boost === 
 
 export function nodeName(node: Pick<MapNode, 'kind'> & Partial<Pick<MapNode, 'boost' | 'encounter'>>): string {
   if (node.kind === 'campfire' && node.boost) return `${NAMES.campfire}: ${boostText(node.boost)}`
-  if (node.kind === 'boss' && node.encounter) return `${NAMES.boss}: ${encounter(node.encounter).phases.length} phases`
+  if (node.kind === 'boss' && node.encounter) {
+    const boss = encounter(node.encounter)
+    return `${NAMES.boss}: ${boss.name}, ${boss.phases.length} phases`
+  }
   return NAMES[node.kind]
 }
 
