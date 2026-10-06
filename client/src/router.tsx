@@ -23,6 +23,7 @@ const Player = lazyRouteComponent(() => import('./pages/Player.tsx'), 'Player')
 const Run = lazyRouteComponent(() => import('./pages/Run.tsx'), 'Run')
 const MockupIndex = lazyRouteComponent(() => import('./pages/Mockups.tsx'), 'MockupIndex')
 const MockupRun = lazyRouteComponent(() => import('./pages/Mockups.tsx'), 'MockupRun')
+const ArtEditor = lazyRouteComponent(() => import('./pages/ArtEditor.tsx'), 'ArtEditor')
 const SignIn = lazyRouteComponent(() => import('./pages/SignIn.tsx'), 'SignIn')
 const SignUp = lazyRouteComponent(() => import('./pages/SignUp.tsx'), 'SignUp')
 
@@ -126,6 +127,9 @@ const mockup = createRoute({
   component: MockupRun,
 })
 
+// Development only; elsewhere the page is the not-found page.
+const art = createRoute({ getParentRoute: parent, path: '/art', component: ArtEditor })
+
 const tree = root.addChildren([
   home,
   signIn,
@@ -138,6 +142,7 @@ const tree = root.addChildren([
   game,
   run,
   mockups,
+  art,
   mockup,
 ])
 

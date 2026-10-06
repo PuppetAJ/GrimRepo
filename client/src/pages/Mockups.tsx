@@ -68,6 +68,14 @@ export function MockupIndex() {
         <p className="text-sm text-muted-foreground">Stopped from a bot's seeded run, so each follows the rules.</p>
         <List group="reached" />
       </section>
+      {import.meta.env.DEV ? (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-xl font-semibold">Art</h2>
+          <Link to="/art" className="text-primary underline underline-offset-2">
+            The pixel editor for card art and sigil icons
+          </Link>
+        </section>
+      ) : null}
       <section className="flex flex-col gap-3">
         <h2 className="text-xl font-semibold">The quick battle</h2>
         <Link to="/game" search={{ fixture: 'worst', text: '' }} className="text-primary underline underline-offset-2">
