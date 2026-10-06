@@ -82,6 +82,13 @@ section('Into a battle from the map')
   // Walks the mockup's map to a battle, through whatever lies between.
   for (let step = 0; step < 12 && (await view(page)) !== 'battle'; step++) {
     const current = await view(page)
+    // A decided event says what it did until it's closed, which is no move of the run's.
+    const onward = page.locator('[data-action="continue"]')
+    if (current === 'event' && (await onward.count())) {
+      await onward.click()
+      await page.locator(`${ROOT}[data-run-view="map"]`).waitFor()
+      continue
+    }
     const battle = page.locator('[data-action="go"][aria-label^="Battle"]')
     const target =
       current === 'map'

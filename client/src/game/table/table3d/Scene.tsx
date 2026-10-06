@@ -193,6 +193,7 @@ export function Scene({
                 place={place}
                 spawn={playback.spawns.get(unit.uid) ?? (dealing ? P03_HAND : undefined)}
                 lunge={playback.lunges.get(unit.uid)}
+                slide={playback.slides.get(unit.uid)}
                 look={marked ? 'marked' : action?.type === 'mark' ? 'markable' : 'plain'}
                 assets={assets}
                 onClick={action ? () => act(action) : undefined}

@@ -26,8 +26,8 @@ export function WideLayout() {
         <FaultyScreenShader />
         <span aria-hidden className="crt-glass pointer-events-none absolute inset-0 z-30" />
         <aside aria-label="Turn and scale" className="relative z-10 flex min-h-0 flex-col gap-3 overflow-hidden">
-          <Panel className="flex items-center justify-between text-2xl">
-            <TurnLabel />
+          <Panel className="flex items-center justify-between gap-2 text-2xl">
+            <TurnLabel stack />
             <SaveStatus className="text-base text-p03-dim" />
           </Panel>
           <Panel>
