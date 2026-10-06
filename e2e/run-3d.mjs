@@ -14,7 +14,7 @@ const ROOT = '[data-run-moves]'
 async function open(name, { width = 1440, height = 900 } = {}) {
   const { context, page } = await freshPage(browser, { width, height })
   page.setDefaultTimeout(30_000)
-  await page.goto(`${BASE}/run/mockups/${name}?table=3d`, { ...MOCKUP, timeout: SLOW })
+  await page.goto(`${BASE}/run/mockups/${name}?table=3d`, MOCKUP)
   await page.locator(ROOT).waitFor({ timeout: SLOW })
   return { context, page }
 }
