@@ -80,7 +80,8 @@ export default function Terminal({ lines, user }: { lines: readonly string[]; us
       const node = await loaded.run(command, {
         user,
         history: history.current,
-        navigate: (to) => void navigate({ to }),
+        // Already there, as with cd .. on the README, so nothing happens and the terminal keeps its scroll.
+        navigate: (to) => void (to !== pathname && navigate({ to })),
         clear: () => setEntries([]),
       })
       if (node !== null) add({ id: nextId++, kind: 'output', node })
