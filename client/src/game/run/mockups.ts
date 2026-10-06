@@ -215,7 +215,25 @@ export const MOCKUPS: Record<string, Entry> = {
       return { ...found, state: { ...found.state, deck } }
     },
   },
-  event: { title: 'An event', group: 'reached', make: () => reached((s) => s.visit?.kind === 'event') },
+  event: {
+    title: 'An event',
+    group: 'reached',
+    make: () => {
+      const found = reached((s) => s.visit?.kind === 'event')
+      if (!found || found.state.visit?.kind !== 'event') return null
+      // A fixed scene, since which one a seed meets changes whenever events are added.
+      return { ...found, state: { ...found.state, visit: { ...found.state.visit, event: 'stack-overflow' } } }
+    },
+  },
+  lint: {
+    title: 'The linter, after its event',
+    group: 'reached',
+    make: () => {
+      const found = reached((s) => s.visit?.kind === 'event')
+      if (!found || found.state.visit?.kind !== 'event') return null
+      return { ...found, state: { ...found.state, visit: { kind: 'lint', node: found.state.visit.node } } }
+    },
+  },
   reward: { title: "A boss's reward", group: 'reached', make: () => reached((s) => s.visit?.kind === 'reward') },
   'next-stage': {
     title: 'The map of the second stage',

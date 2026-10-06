@@ -59,6 +59,12 @@ async function playRun(page, mirror, { pick = nextRunAction, done }) {
         if (await sigil.count()) await sigil.check()
         await page.locator(`[data-action="take-sigil"][data-card="${action.to}"]`).click()
         await clickMove(page, '[data-action="transfer"]', expected)
+      } else if (action.type === 'strip') {
+        // The card, its sigil when it has more than one, then the linter's button.
+        await page.locator(`[data-action="lint-card"][data-card="${action.card}"]`).click()
+        const sigil = page.getByRole('radio', { name: new RegExp(`^${SIGILS[action.sigil].name}\\.`) })
+        if (!(await sigil.isChecked())) await sigil.check()
+        await clickMove(page, '[data-action="strip"]', expected)
       } else await clickMove(page, targetFor(action), expected)
       // An event's result stays up until the player moves on.
       if (action.type === 'choose') await page.locator('[data-action="continue"]').click()
@@ -189,7 +195,7 @@ section('The campfire, from a mockup')
   const first = page.locator('[data-action="buff"]').first()
   const id = await first.getAttribute('data-card')
   await first.click()
-  check('one boost takes', (await visibleText(page)).includes('Half the time it burns'))
+  check('one boost takes', (await visibleText(page)).includes('Warm it again for more'))
   check(
     'then only that card can go back in',
     (await page.locator('[data-action="buff"]:not([disabled])').count()) === 1,

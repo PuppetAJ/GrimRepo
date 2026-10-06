@@ -7,6 +7,8 @@ export type Effect =
   | { type: 'boost'; attack: number; health: number }
   | { type: 'addSigil'; sigil: SigilId }
   | { type: 'duplicate' }
+  /** Opens the linter, where the player deletes one sigil from one card. */
+  | { type: 'lint' }
 
 /** An event node's text and its choices. */
 export type Scene = { id: string; title: string; text: string; options: { label: string; effects: Effect[] }[] }
@@ -145,6 +147,15 @@ const list: Scene[] = [
     options: [
       { label: 'Bring it along', effects: [{ type: 'addCard', card: 'LegacyCode' }] },
       { label: 'Leave a TODO', effects: [{ type: 'addSigil', sigil: 'technical_debt' }] },
+    ],
+  },
+  {
+    id: 'linter',
+    title: 'The linter',
+    text: 'The linter has opinions about your deck. Hundreds of them. One is even right.',
+    options: [
+      { label: 'Fix one warning', effects: [{ type: 'lint' }] },
+      { label: 'Suppress them all', effects: [{ type: 'boost', attack: 0, health: 1 }] },
     ],
   },
 ]

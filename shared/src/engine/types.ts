@@ -1,7 +1,7 @@
 import type { SigilId } from '../cards.ts'
 
 /** Bumped whenever a change would make an old game replay differently. */
-export const RULES_VERSION = 10
+export const RULES_VERSION = 11
 
 export const LANES = 4
 /** The most sigils a card carries. */
@@ -45,7 +45,8 @@ export type GameState = {
   /** Damage dealt minus damage taken; the game ends at TIP either way. */
   scale: number
   /** The deck is indices into the library, which holds every card the player brought. */
-  player: { library: DeckCard[]; deck: number[]; hand: Unit[]; board: Slot[] }
+  /** `spent` holds library cards refactored away, which never come back to the deck that battle. */
+  player: { library: DeckCard[]; deck: number[]; hand: Unit[]; board: Slot[]; spent?: number[] }
   /** Without an encounter, P03 queues from its whole pool; `step` is the next turn of the plan. */
   opponent: { front: Slot[]; back: Slot[]; encounter: string | null; phase: number; step: number }
   /** The card being summoned and the lanes marked to pay for it. */

@@ -19,6 +19,8 @@ export {
   createGame,
   legalActions,
   replay,
+  reshuffleCostsMemory,
+  reshuffleSize,
   summary,
   type GameOptions,
   type Replay,

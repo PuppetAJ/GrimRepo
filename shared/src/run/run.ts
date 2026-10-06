@@ -107,6 +107,8 @@ function resolve(state: RunState, rng: Rng, effect: Effect, events: RunEvent[]):
   } else if (effect.type === 'removeCard') {
     // A run never loses its last card.
     if (state.deck.length > 1) remove(state, rng.pick(state.deck), events)
+  } else if (effect.type === 'lint') {
+    // The caller opens the linter, since it knows the node.
   } else if (effect.type === 'duplicate') {
     // A copy keeps the card's buffs and sigils, as a fork would.
     const source = rng.pick(state.deck)
@@ -216,11 +218,23 @@ function step(state: RunState, rng: Rng, action: RunAction, events: RunEvent[]):
       const option = Number.isInteger(action.option) ? scene(visit.event).options[action.option] : undefined
       if (!option) return 'No such choice'
       for (const effect of option.effects) resolve(state, rng, effect, events)
+      const lints = option.effects.some((effect) => effect.type === 'lint')
+      state.visit = lints && state.deck.some((entry) => entry.sigils.length) ? { kind: 'lint', node: visit.node } : null
+      return
+    }
+    case 'strip': {
+      if (visit?.kind !== 'lint') return 'There is no linter here'
+      const target = inDeck(action.card)
+      if (!target?.sigils.includes(action.sigil)) return 'That card does not have that sigil'
+      target.sigils = target.sigils.filter((sigil) => sigil !== action.sigil)
+      // A card whose added sigil is deleted may gain another.
+      if (target.added === action.sigil) target.added = null
+      events.push({ type: 'stripped', card: target, sigil: action.sigil })
       state.visit = null
       return
     }
     case 'leave': {
-      if (visit?.kind === 'campfire' || visit?.kind === 'stones') {
+      if (visit?.kind === 'campfire' || visit?.kind === 'stones' || visit?.kind === 'lint') {
         state.visit = null
         return
       }
@@ -267,6 +281,12 @@ export function legalRunActions(state: RunState): RunAction[] {
       if (visit.buffs >= MAX_BUFFS || (visit.buffs > 0 && state.deck.length <= 1)) return actions
       for (const entry of state.deck)
         if (visit.card === null || entry.id === visit.card) actions.push({ type: 'buff', card: entry.id })
+      return actions
+    }
+    case 'lint': {
+      const actions: RunAction[] = [{ type: 'leave' }]
+      for (const entry of state.deck)
+        for (const sigil of entry.sigils) actions.push({ type: 'strip', card: entry.id, sigil })
       return actions
     }
     case 'stones': {
