@@ -117,7 +117,11 @@ const list: Encounter[] = [
         [{ lane: 1, pick: ['SQLInjection', 'NullPointer'] }],
         [{ lane: 3, card: 'LegacyCode' }],
       ],
-      [[{ lane: 1, pick: ['ForkBomb', 'Crawler'] }], [{ lane: 2, card: 'Sandbox' }], [{ lane: 0, pick: ['Crawler', 'ZeroDay'] }]],
+      [
+        [{ lane: 1, pick: ['ForkBomb', 'Crawler'] }],
+        [{ lane: 2, card: 'Sandbox' }],
+        [{ lane: 0, pick: ['Crawler', 'ZeroDay'] }],
+      ],
     ],
   },
   {
