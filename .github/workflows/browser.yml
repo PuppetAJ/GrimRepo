@@ -4,6 +4,10 @@ name: Browser suites
 
 on:
   pull_request:
+    # Art and notes can't break the pages, so a pull request of only those skips the suites; ci.yml still runs.
+    paths-ignore:
+      - '**/*.png'
+      - '**/*.md'
 
 concurrency:
   group: browser-${{ github.ref }}
@@ -15,11 +19,19 @@ jobs:
     timeout-minutes: 20
 
     # One runner per suite and engine, so the wall clock is the slowest suite rather than all of them in a row.
+    # The accessibility suite, much the longest, runs in three parts at once.
     strategy:
       fail-fast: false
       matrix:
-        suite: [smoke, auth, leaderboard, game, run-mode, run-3d, table, a11y]
+        suite: [smoke, auth, leaderboard, game, run-mode, run-3d, table]
         engine: [chromium, firefox]
+        include:
+          - { suite: a11y, part: pages, engine: chromium }
+          - { suite: a11y, part: pages, engine: firefox }
+          - { suite: a11y, part: run, engine: chromium }
+          - { suite: a11y, part: run, engine: firefox }
+          - { suite: a11y, part: tables, engine: chromium }
+          - { suite: a11y, part: tables, engine: firefox }
 
     services:
       postgres:
@@ -42,6 +54,7 @@ jobs:
       BETTER_AUTH_SECRET: ci-secret-not-used-for-anything-real-0123456789
       E2E_BASE_URL: http://localhost:3000
       E2E_BROWSER: ${{ matrix.engine }}
+      A11Y_PART: ${{ matrix.part }}
 
     steps:
       - uses: actions/checkout@v7
@@ -94,7 +107,7 @@ jobs:
       - if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: failure-${{ matrix.suite }}-${{ matrix.engine }}
+          name: failure-${{ matrix.suite }}${{ matrix.part && format('-{0}', matrix.part) || '' }}-${{ matrix.engine }}
           path: |
             app.log
             e2e-failure.png

@@ -19,6 +19,9 @@ const listen = (page) => {
   if (process.env.E2E_DEBUG) page.on('requestfailed', (request) => console.log(`  [request failed] ${request.url()}`))
 }
 
+// A page load can stall behind software WebGL still drawing the last page, most of all in Firefox on CI.
+const NAVIGATION = 60_000
+
 export async function launch({ width = 1280, height = 800 } = {}) {
   // Without a GPU, headless browsers draw WebGL in software only when asked, and the 3D table needs it.
   const browser =
@@ -29,7 +32,7 @@ export async function launch({ width = 1280, height = 800 } = {}) {
   const context = await browser.newContext({ viewport: { width, height } })
   const page = await context.newPage()
   page.setDefaultTimeout(20_000)
-  page.setDefaultNavigationTimeout(30_000)
+  page.setDefaultNavigationTimeout(NAVIGATION)
 
   listen(page)
 
@@ -84,6 +87,7 @@ export async function resetRateLimits() {
 export async function newTab(context) {
   const page = await context.newPage()
   page.setDefaultTimeout(20_000)
+  page.setDefaultNavigationTimeout(NAVIGATION)
   listen(page)
   return page
 }
@@ -94,6 +98,7 @@ export async function freshPage(browser, { width = 1280, height = 900, table } =
   if (table) await context.addInitScript((mode) => localStorage.setItem('grimrepo:table', mode), table)
   const page = await context.newPage()
   page.setDefaultTimeout(20_000)
+  page.setDefaultNavigationTimeout(NAVIGATION)
   listen(page)
   return { context, page }
 }
