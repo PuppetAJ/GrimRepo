@@ -10,7 +10,8 @@ const ICONS = byName(import.meta.glob<string>('./art/icons/*.png', { eager: true
 export type IconId = SigilId | 'attack' | 'health'
 
 export const cardArt = (id: string): string => CARDS[id] ?? (CARDS['placeholder'] as string)
-export const iconArt = (id: IconId): string => ICONS[id] as string
+// A sigil without its own icon yet shows the stand-in until one is drawn.
+export const iconArt = (id: IconId): string => ICONS[id] ?? (ICONS['placeholder'] as string)
 
 const images = new Map<string, HTMLImageElement>()
 let decoding: Promise<void> | null = null

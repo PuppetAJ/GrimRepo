@@ -45,6 +45,8 @@ const PACE: Record<GameEvent['type'], number> = {
   advanced: 270,
   queued: 225,
   healed: 150,
+  shielded: 180,
+  buffed: 180,
   turnStarted: 0,
   gameOver: 0,
 }
@@ -110,6 +112,16 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
       break
     }
     case 'damaged':
+    case 'shielded':
+    case 'buffed': {
+      const found = where(view, event.uid)
+      if (found)
+        popup(event.type === 'shielded' ? 'rolled back' : 'buffed', 'note', slot(found.row, found.lane, 0.3), {
+          row: found.row,
+          lane: found.lane,
+        })
+      break
+    }
     case 'struckBack':
     case 'healed': {
       const found = where(view, event.uid)

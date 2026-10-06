@@ -83,6 +83,10 @@ export function narrate(before: GameState, events: GameEvent[]): string[] {
         ]
       case 'healed':
         return [`${name(event.uid)} patched itself up to ${event.health}.`]
+      case 'shielded':
+        return [`${name(event.uid)} rolled the damage back. Annoying.`]
+      case 'buffed':
+        return [`${name(event.uid)} is now ${event.attack}/${event.health}.`]
       case 'turnStarted':
         return [`Turn ${event.turn}. Draw.${event.turn % 5 === 0 ? ` ${pick(PATIENCE, event.turn / 5)}` : ''}`]
       case 'gameOver':

@@ -91,6 +91,15 @@ export function step(view: View, event: GameEvent): View {
       return withUnit(view, event.uid, (unit) => ({ ...unit, health: Math.max(0, unit.health - event.amount) }))
     case 'healed':
       return withUnit(view, event.uid, (unit) => ({ ...unit, health: event.health }))
+    case 'buffed':
+      return withUnit(view, event.uid, (unit) => ({
+        ...unit,
+        attack: event.attack,
+        health: event.health,
+        maxHealth: Math.max(unit.maxHealth, event.health),
+      }))
+    case 'shielded':
+      return withUnit(view, event.uid, (unit) => ({ ...unit, rolledBack: true }))
     case 'killed':
     case 'retired': {
       const [board, front, back] = rows(view).map((row) => without(row, event.uid)) as [Slot[], Slot[], Slot[]]
