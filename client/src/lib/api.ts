@@ -69,6 +69,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   leaderboard: (page = 1) => request<BoardPage>(`/api/leaderboard?page=${page}`),
+  runLeaderboard: (page = 1) => request<BoardPage>(`/api/leaderboard/runs?page=${page}`),
   stats: (username: string) => request<PlayerStats>(`/api/players/${encodeURIComponent(username)}/stats`),
   games: (username: string, page: number) =>
     request<GamesPage>(`/api/players/${encodeURIComponent(username)}/games?page=${page}`),

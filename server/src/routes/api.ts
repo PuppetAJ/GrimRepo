@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { USERNAME_PATTERN } from '../auth/auth.ts'
 import { requireUser, type SignedIn } from '../auth/session.ts'
 import { forfeitGame, GameError, leaderboard, playerGames, playerStats, recordMoves, startGame } from '../db/games.ts'
-import { forfeitRun, recordRunMoves, startRun } from '../db/runs.ts'
+import { forfeitRun, recordRunMoves, runLeaderboard, startRun } from '../db/runs.ts'
 
 export const api = express.Router()
 
@@ -68,6 +68,10 @@ const pageQuery = z.coerce.number().int().min(1).catch(1)
 
 api.get('/leaderboard', async (req, res) => {
   res.json(await leaderboard(pageQuery.parse(req.query['page'] ?? 1)))
+})
+
+api.get('/leaderboard/runs', async (req, res) => {
+  res.json(await runLeaderboard(pageQuery.parse(req.query['page'] ?? 1)))
 })
 
 api.get('/me', requireUser, async (_req, res) => {

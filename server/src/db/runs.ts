@@ -1,7 +1,7 @@
 import { randomInt } from 'node:crypto'
 import { replayRun, RULES_VERSION, RUN_RULES_VERSION, scoreRun, type RunAction, type RunState } from 'shared'
 import { pool } from '../config/db.ts'
-import { GameError } from './games.ts'
+import { BOARD_PAGE, GameError, type BoardPage, type LeaderboardRow } from './games.ts'
 
 export type OpenRun = { id: number; seed: number; actions: RunAction[]; resumed: boolean; rulesChanged: boolean }
 
@@ -122,4 +122,30 @@ async function finish(
     [status, JSON.stringify(actions), state.stage, state.record.battles, state.record.bosses, score, forfeited, runId],
   )
   return { status, score, stage: state.stage, bosses: state.record.bosses, forfeited }
+}
+
+/** Ranks players by their best run as leaderboard() ranks games; `wins` counts runs cleared, and guests are left off. */
+export async function runLeaderboard(page = 1): Promise<BoardPage> {
+  const { rows: sizes } = await pool.query<{ total: number; top: number }>(
+    `SELECT COUNT(DISTINCT r.user_id)::int AS total, COALESCE(MAX(r.score), 0)::int AS top
+     FROM runs r JOIN users u ON u.id = r.user_id
+     WHERE r.status <> 'playing' AND NOT u.is_anonymous`,
+  )
+  const { total, top } = sizes[0] ?? { total: 0, top: 0 }
+  const pages = Math.max(1, Math.ceil(total / BOARD_PAGE))
+  const at = Math.min(Math.max(1, page), pages)
+  const { rows } = await pool.query<LeaderboardRow>(
+    `SELECT RANK() OVER (ORDER BY MAX(r.score) DESC)::int AS rank,
+            u.display_username AS username,
+            MAX(r.score)::int AS "bestScore",
+            COUNT(*)::int AS games,
+            COUNT(*) FILTER (WHERE r.status = 'won')::int AS wins
+     FROM runs r JOIN users u ON u.id = r.user_id
+     WHERE r.status <> 'playing' AND NOT u.is_anonymous
+     GROUP BY u.id, u.display_username
+     ORDER BY "bestScore" DESC, u.display_username
+     LIMIT $1 OFFSET $2`,
+    [BOARD_PAGE, (at - 1) * BOARD_PAGE],
+  )
+  return { players: rows, page: at, pages, total, top }
 }
