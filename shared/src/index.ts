@@ -5,6 +5,7 @@ export {
   DEBUG_CARD,
   OPPONENT_POOL,
   PLAYER_DECK,
+  SHIPS_AS,
   SIGILS,
   card,
   type CardDef,

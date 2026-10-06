@@ -52,10 +52,11 @@ describe('the sigils', () => {
     assert.equal(hits(events, 'opponent'), 2)
   })
 
-  it('Deprecated dies after it attacks', () => {
+  it('Deprecated dies after it attacks, and leaves a Boilerplate in its lane', () => {
     const { state, events } = bell(table({ board: ['DestroyEnemyYou'] }))
     assert.equal(hits(events, 'opponent'), 8)
-    assert.equal(cardAt(state.player.board, 0), null)
+    assert.equal(cardAt(state.player.board, 0), 'Boilerplate')
+    assert.ok(events.some((event) => event.type === 'leftBehind' && event.lane === 0))
   })
 
   it('Scope Creep gains 1 attack for each card it destroys', () => {
@@ -81,6 +82,35 @@ describe('the sigils', () => {
     assert.equal(placed?.card, 'LegacyCode')
     assert.equal(placed?.attack, 3)
     assert.equal(placed?.health, 4 + 6)
+    assert.ok(placed?.sigils.includes('refactor'), 'and Refactor with them')
+  })
+
+  it('Refactor passed on stacks through a chain of sacrifices', () => {
+    const start = table({ hand: ['LegacyCode', 'Firewall'], board: ['OffCenterDiv'] })
+    const { state } = play(
+      start,
+      { type: 'select', uid: uidOf(start, 'LegacyCode') },
+      { type: 'mark', lane: 0 },
+      { type: 'place', lane: 0 },
+      { type: 'select', uid: uidOf(start, 'Firewall') },
+      { type: 'mark', lane: 0 },
+      { type: 'place', lane: 0 },
+    )
+    const placed = state.player.board[0]
+    assert.equal(placed?.card, 'Firewall')
+    assert.equal(placed?.attack, 2 + 3 + 0)
+    assert.equal(placed?.health, 6 + 4 + 6)
+  })
+
+  it('a shipped Beta card is worth 2 when sacrificed', () => {
+    const start = table({ hand: ['JSONFoorhees'], board: ['ShippedFeature'] })
+    const { state } = play(
+      start,
+      { type: 'select', uid: uidOf(start, 'JSONFoorhees') },
+      { type: 'mark', lane: 0 },
+      { type: 'place', lane: 0 },
+    )
+    assert.equal(cardAt(state.player.board, 0), 'JSONFoorhees')
   })
 
   it('Technical Debt pays 3, and tips the scale 1 against the player', () => {
@@ -115,6 +145,14 @@ describe('the sigils', () => {
 })
 
 describe('the sigils that move cards', () => {
+  it('Failover covers the attacked empty lane nearest where it stands, not the first attacked', () => {
+    const { state, events } = bell(
+      table({ board: [null, null, 'MergeConflict', null], front: ['CopyPaste', null, null, 'CopyPaste'] }),
+    )
+    assert.equal(state.player.board[3]?.card, 'MergeConflict')
+    assert.equal(hits(events, 'player'), 3, 'lane 1, left uncovered, hits the player')
+  })
+
   it('Failover moves to take an attack aimed at an empty lane', () => {
     const { state, events } = bell(table({ board: [null, null, null, 'MergeConflict'], front: ['CopyPaste'] }))
     assert.ok(events.some((event) => event.type === 'moved' && event.side === 'player' && event.to === 0))
@@ -135,10 +173,26 @@ describe('the sigils that move cards', () => {
     assert.ok(state.player.hand.some((unit) => unit.card === 'Bug' && unit.health === 8))
   })
 
+  it('Hot Reload brings a card back only once', () => {
+    const { state } = bell(table({ board: ['Bug'], front: ['NullPointer'] }))
+    const copy = state.player.hand.find((unit) => unit.card === 'Bug')
+    assert.ok(copy && !copy.sigils.includes('hot_reload'))
+  })
+
   it('Beta ships as its stronger form after a round on the table', () => {
     const { state, events } = bell(table({ board: ['Prototype'] }))
     assert.ok(events.some((event) => event.type === 'shipped'))
     assert.equal(state.player.board[0]?.card, 'ShippedFeature')
     assert.equal(state.player.board[0]?.attack, 4)
+  })
+
+  it('Beta on any other card ships it with +3/+3', () => {
+    const start = table({ board: ['CopyPaste'] })
+    start.player.board[0]?.sigils.push('beta')
+    const { state } = bell(start)
+    const shipped = state.player.board[0]
+    assert.equal(shipped?.card, 'CopyPaste')
+    assert.equal(shipped?.attack, 3 + 3)
+    assert.ok(shipped && !shipped.sigils.includes('beta'))
   })
 })
