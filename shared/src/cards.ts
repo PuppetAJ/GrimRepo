@@ -36,7 +36,7 @@ export type CardDef = {
 export const SIGILS: Record<SigilId, { name: string; text: string }> = {
   segfault: { name: 'Segfault', text: 'When played, destroys every card on the other side of the table.' },
   bypass: { name: 'Bypass', text: 'Attacks the opponent directly, over any card in the way.' },
-  technical_debt: { name: 'Technical Debt', text: 'Worth 3 when sacrificed.' },
+  technical_debt: { name: 'Technical Debt', text: 'Worth 3 when sacrificed, but tips the scale 1 against you.' },
   try_catch: { name: 'try/catch', text: 'Survives being sacrificed.' },
   rate_limiter: { name: 'Rate Limiter', text: 'Deals 1 damage back to anything that attacks it.' },
   fork: { name: 'Fork', text: 'Attacks the lanes on either side instead of the one opposite.' },
@@ -93,6 +93,10 @@ const table: [string, string, Tier, number, number, number, SigilId[]?][] = [
   // A Beta card's two forms: it ships as the second after a round on the table, so only the first is dealt.
   ['Prototype', 'Prototype', 'D', 1, 2, 0, ['beta']],
   ['ShippedFeature', 'Shipped Feature', 'B', 4, 5, 0],
+  // Found only at events, so they are in no deck and never offered.
+  ['Regex', 'Regex', 'C', 1, 1, 1, ['fatal_error']],
+  ['SeniorDev', 'Senior Dev', 'B', 3, 4, 2, ['tech_lead']],
+  ['Daemon', 'Daemon', 'C', 2, 2, 1, ['hot_reload']],
 ]
 
 export const CARDS: Record<string, CardDef> = Object.fromEntries(
@@ -109,8 +113,16 @@ export const OUT_OF_MEMORY = 'OutOfMemory'
 /** What a Beta card ships as. */
 export const SHIPS_AS: Record<string, string> = { Prototype: 'ShippedFeature' }
 
+/** Cards a run gains only from events. */
+export const EVENT_ONLY = ['Regex', 'SeniorDev', 'Daemon']
+
 export const PLAYER_DECK: string[] = Object.keys(CARDS).filter(
-  (id) => id !== DEBUG_CARD && id !== BOILERPLATE && id !== OUT_OF_MEMORY && !Object.values(SHIPS_AS).includes(id),
+  (id) =>
+    id !== DEBUG_CARD &&
+    id !== BOILERPLATE &&
+    id !== OUT_OF_MEMORY &&
+    !Object.values(SHIPS_AS).includes(id) &&
+    !EVENT_ONLY.includes(id),
 )
 
 /** No board wipe, or P03 could clear the player's side on a whim. */

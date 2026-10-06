@@ -58,10 +58,13 @@ function logAfter(log: string[], before: RunState, after: RunState, events: RunE
   const entered = events.find((event) => event.type === 'entered')
   if (entered && after.visit?.kind === 'battle') {
     const [, ...queued] = opening(after.visit.game)
-    const phases = after.visit.game.opponent.encounter
-      ? encounter(after.visit.game.opponent.encounter).phases.length
-      : 1
-    const first = entered.kind === 'boss' ? `A boss. ${phases} phases. Try to keep up. Draw.` : 'Another battle. Draw.'
+    const id = after.visit.game.opponent.encounter
+    const fight = id ? encounter(id) : null
+    const first = !fight
+      ? 'Another battle. Draw.'
+      : fight.boss
+        ? `${fight.name}. ${fight.intro} ${fight.phases.length} phases. Try to keep up. Draw.`
+        : `${fight.name}. ${fight.intro} Draw.`
     return p03([first, ...queued])
   }
   const game = before.visit?.kind === 'battle' ? before.visit.game : null
