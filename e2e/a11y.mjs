@@ -89,12 +89,30 @@ section('A run')
   ]) {
     await page.setViewportSize({ width, height })
     for (const [name, view] of MOCKED)
-      await audit(`the run's ${name}, ${layout}`, `/run/mockups/${name}?layout=${layout}`, screen(view))
-    await audit(`the run's summary after a loss, ${layout}`, `/run/mockups/lost?layout=${layout}`, async () => {
-      await page.locator('[data-action="summary"]').click()
-      await screen('summary')()
-    })
+      await audit(`the run's ${name}, ${layout}`, `/run/mockups/${name}?layout=${layout}&table=text`, screen(view))
+    await audit(
+      `the run's summary after a loss, ${layout}`,
+      `/run/mockups/lost?layout=${layout}&table=text`,
+      async () => {
+        await page.locator('[data-action="summary"]').click()
+        await screen('summary')()
+      },
+    )
   }
+  // At the 3D table, each screen in the projector's window, once it has opened.
+  await page.setViewportSize({ width: 1440, height: 900 })
+  const projected = (view) => async () => {
+    await screen(view)()
+    await page.locator('.hologram-window').filter({ visible: true }).waitFor({ timeout: 90_000 })
+  }
+  for (const [name, view] of [
+    ['map', 'map'],
+    ['worst-card', 'card'],
+    ['worst-campfire', 'campfire'],
+    ['worst-event', 'event'],
+    ['worst-summary', 'summary'],
+  ])
+    await audit(`the run's ${name} on the projector`, `/run/mockups/${name}?table=3d`, projected(view))
   await page.setViewportSize({ width: 1280, height: 800 })
 }
 

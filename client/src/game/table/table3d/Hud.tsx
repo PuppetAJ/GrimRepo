@@ -1,4 +1,4 @@
-import { Flag, LayoutGrid, LogOut, Maximize, Minimize, MoveUp, Type } from 'lucide-react'
+import { Flag, LayoutGrid, LogOut, Map as MapIcon, Maximize, Minimize, MoveUp, Type } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
 import { legalActions, type Unit } from 'shared'
@@ -24,8 +24,10 @@ import type { View } from '../../view.ts'
 import type { CameraView } from '../layout.ts'
 import { ScreenReadout } from './ScreenReadout.tsx'
 
-// Hidden on a sideways phone, where the icon stands in; screen readers always get it.
-const Label = ({ children }: { children: ReactNode }) => <span className="short:sr-only">{children}</span>
+// Hidden on a sideways phone or a narrow screen, where the icon and its tooltip stand in; screen readers always get it.
+const Label = ({ children }: { children: ReactNode }) => (
+  <span className="max-lg:sr-only short:sr-only">{children}</span>
+)
 
 export function Hud({
   game,
@@ -42,7 +44,10 @@ export function Hud({
   lifted,
   pinned,
   onUnpin,
+  onMap,
 }: {
+  /** In a run, glides back to look at the map on the projector. */
+  onMap?: () => void
   lifted: Unit | null
   pinned: string[] | null
   onUnpin: () => void
@@ -95,7 +100,7 @@ export function Hud({
       </div>
 
       <div className="absolute top-0 right-0 z-10 flex flex-col items-end gap-1 p-3 sm:p-4">
-        {/* Icons only on a sideways phone, so the row stays off P03's face. */}
+        {/* Icons only on a sideways phone or a narrow screen, so the row stays off P03's face and the scale. */}
         <div className="flex flex-wrap justify-end">
           <Button
             size="sm"
@@ -103,16 +108,28 @@ export function Hud({
             disabled={Boolean(view.summon)}
             onClick={() => setCamera(camera === 'table' ? 'board' : 'table')}
             aria-keyshortcuts={camera === 'table' ? 'W' : 'S'}
+            title={camera === 'table' ? 'Look at the board' : 'Look up'}
           >
             {camera === 'table' ? <LayoutGrid aria-hidden /> : <MoveUp aria-hidden />}
             <Label>{camera === 'table' ? 'Look at the board' : 'Look up'}</Label>
           </Button>
-          <Button size="sm" variant="ghost" onClick={onText}>
+          {onMap ? (
+            <Button size="sm" variant="ghost" onClick={onMap} aria-keyshortcuts="M" title="Look at the map">
+              <MapIcon aria-hidden />
+              <Label>Look at the map</Label>
+            </Button>
+          ) : null}
+          <Button size="sm" variant="ghost" onClick={onText} title="Text table">
             <Type aria-hidden />
             <Label>Text table</Label>
           </Button>
           {fullScreen.supported ? (
-            <Button size="sm" variant="ghost" onClick={fullScreen.toggle}>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={fullScreen.toggle}
+              title={fullScreen.on ? 'Leave full screen' : 'Full screen'}
+            >
               {fullScreen.on ? <Minimize aria-hidden /> : <Maximize aria-hidden />}
               <Label>{fullScreen.on ? 'Leave full screen' : 'Full screen'}</Label>
             </Button>
@@ -122,6 +139,7 @@ export function Hud({
             size="sm"
             variant="ghost"
             asChild
+            title="Exit"
             className={fullScreen.on ? 'inline-flex' : 'hidden short:inline-flex'}
           >
             <Link to="/">
@@ -134,6 +152,7 @@ export function Hud({
               forfeit={game.forfeit}
               run={Boolean(game.run)}
               disabled={game.state.status !== 'playing'}
+              title={game.run ? 'Abandon run' : 'Forfeit'}
               className="h-8 px-3"
             >
               <Flag aria-hidden />

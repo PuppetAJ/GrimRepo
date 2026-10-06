@@ -1,49 +1,13 @@
-import { useState } from 'react'
-import { scene, STAGES } from 'shared'
 import type { Seat } from '../controls.tsx'
 import { TerminalTable } from '../TerminalTable.tsx'
 import type { Layout } from '../text/useTextTable.ts'
-import { BattleOver } from './BattleOver.tsx'
-import { Campfire } from './text/Campfire.tsx'
-import { EventScene } from './text/EventScene.tsx'
-import { Offer } from './text/Offer.tsx'
-import { RunMap } from './text/RunMap.tsx'
+import { ScreenBody, useRunScreen } from './screens.tsx'
 import { Screen } from './text/Screen.tsx'
-import { Stones } from './text/Stones.tsx'
-import { Summary } from './text/Summary.tsx'
 import type { RunReady } from './useRun.ts'
-import { useRunBattle } from './useRunBattle.ts'
-
-export type RunView = 'battle' | 'map' | 'card' | 'reward' | 'campfire' | 'stones' | 'event' | 'summary'
-
-const TITLES: Record<Exclude<RunView, 'battle' | 'map'>, string> = {
-  card: 'Card choice',
-  reward: "The boss's reward",
-  campfire: 'Campfire',
-  stones: 'Sigil stones',
-  event: 'Event',
-  summary: 'The run is over',
-}
 
 /** The run at the text table: its battles on the text table itself, and every other screen as a terminal panel. */
-export function RunText({ run, layout, seat }: { run: RunReady; layout: Layout; seat: Seat }) {
-  // A run that ends on the board stays there until the player asks for the summary.
-  const [reviewing, setReviewing] = useState(false)
-  const visit = run.state.visit
-  const decided = visit?.kind === 'battle' && visit.game.status !== 'playing'
-  const battle = useRunBattle(run, decided ? <BattleOver run={run} onSummary={() => setReviewing(true)} /> : null)
-  const view: RunView =
-    run.state.status !== 'playing' && (reviewing || !battle) ? 'summary' : battle ? 'battle' : (visit?.kind ?? 'map')
-
-  // The map's title is the stage itself; an event's is its scene's, under a caption saying what it is.
-  const title =
-    view === 'map'
-      ? `Stage ${run.state.stage + 1} of ${STAGES.length}: ${STAGES[run.state.stage]}`
-      : view === 'event' && visit?.kind === 'event'
-        ? scene(visit.event).title
-        : view === 'summary' && run.state.status === 'won'
-          ? 'Run cleared'
-          : TITLES[view === 'battle' ? 'summary' : view]
+export function RunText({ run, layout, seat, on3d }: { run: RunReady; layout: Layout; seat: Seat; on3d: () => void }) {
+  const { view, battle, title, caption } = useRunScreen(run)
   return (
     <div data-run-seed={run.state.seed} data-run-moves={run.moves} data-run-unsaved={run.unsaved} data-run-view={view}>
       {/* Negative margins give the table most of the gutter, as on the quick battle's page. */}
@@ -55,29 +19,19 @@ export function RunText({ run, layout, seat }: { run: RunReady; layout: Layout; 
             game={battle}
             seat={seat}
             layout={layout}
+            on3d={on3d}
           />
         ) : view !== 'battle' ? (
           <Screen
             run={run}
             layout={layout}
             title={title}
-            caption={view === 'event' ? 'Event' : undefined}
+            caption={caption}
             stack={view === 'map'}
             deck={view !== 'summary'}
+            onSwitch={{ label: 'Play on the 3D table', go: on3d }}
           >
-            {view === 'summary' ? (
-              <Summary run={run} />
-            ) : view === 'card' || view === 'reward' ? (
-              <Offer run={run} />
-            ) : view === 'campfire' ? (
-              <Campfire run={run} />
-            ) : view === 'stones' ? (
-              <Stones run={run} />
-            ) : view === 'event' ? (
-              <EventScene run={run} />
-            ) : (
-              <RunMap run={run} layout={layout} />
-            )}
+            <ScreenBody run={run} view={view} layout={layout} />
           </Screen>
         ) : null}
       </div>

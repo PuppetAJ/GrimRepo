@@ -18,17 +18,27 @@ function List({ group }: { group: 'worst' | 'reached' }) {
               {entry.title}
             </Link>
             <span className="text-sm text-muted-foreground">
+              text:{' '}
               {LAYOUTS.map((layout) => (
                 <Link
                   key={layout}
                   to="/run/mockups/$name"
                   params={{ name }}
-                  search={{ layout }}
+                  search={{ layout, table: 'text' }}
                   className="mr-2 underline-offset-2 hover:underline"
                 >
                   {layout}
                 </Link>
               ))}
+              ·{' '}
+              <Link
+                to="/run/mockups/$name"
+                params={{ name }}
+                search={{ table: '3d' }}
+                className="ml-1 font-medium text-primary underline-offset-2 hover:underline"
+              >
+                3D table
+              </Link>
             </span>
           </li>
         ))}
@@ -43,8 +53,8 @@ export function MockupIndex() {
     <div className="flex max-w-3xl flex-col gap-6">
       <h1 className="text-3xl font-semibold">Mockups</h1>
       <p className="text-muted-foreground">
-        Every screen of a run, played here and never saved. Resize the window to see each layout, or force one with the
-        links beside each. Choices work, so a screen's next steps can be tried too.
+        Every screen of a run, played here and never saved, on the text table or the 3D one. Resize the window to see
+        each layout, or force one with the links beside each. Choices work, so a screen's next steps can be tried too.
       </p>
       <section className="flex flex-col gap-3">
         <h2 className="text-xl font-semibold">The worst case</h2>
@@ -70,8 +80,8 @@ export function MockupIndex() {
 
 export function MockupRun() {
   const { name } = useParams({ from: '/run/mockups/$name' })
-  const { layout } = useSearch({ from: '/run/mockups/$name' })
+  const { layout, table } = useSearch({ from: '/run/mockups/$name' })
   const mockup = useMemo(() => (FIXTURES_ON ? (MOCKUPS[name]?.make() ?? null) : null), [name])
   if (!mockup) return <NotFound />
-  return <RunTable key={name} mockup={mockup} forced={layout} />
+  return <RunTable key={`${name}:${table}`} mockup={mockup} forced={layout} table={table} />
 }

@@ -47,6 +47,10 @@ const gameSearch = z.object({
 })
 
 const runSearch = z.object({ layout: optional(z.enum(['wide', 'mid', 'phone'])) })
+const mockupSearch = z.object({
+  layout: optional(z.enum(['wide', 'mid', 'phone'])),
+  table: optional(z.enum(['3d', 'text'])),
+})
 
 export type CardsSearch = z.infer<typeof cardsSearch>
 export type GameSearch = z.infer<typeof gameSearch>
@@ -118,7 +122,7 @@ const mockups = createRoute({ getParentRoute: parent, path: '/run/mockups', comp
 const mockup = createRoute({
   getParentRoute: parent,
   path: '/run/mockups/$name',
-  validateSearch: runSearch,
+  validateSearch: mockupSearch,
   component: MockupRun,
 })
 

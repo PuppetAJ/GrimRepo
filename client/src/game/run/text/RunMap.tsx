@@ -7,9 +7,9 @@ import { usePlan } from '../plan.ts'
 import type { Layout } from '../../text/useTextTable.ts'
 import type { RunReady } from '../useRun.ts'
 import { PenLayer } from './PenLayer.tsx'
-import { ICON_BUTTON, ScreenActions, ScreenBar } from './Screen.tsx'
+import { ICON_BUTTON, ScreenActions, ScreenBar, useScreenMode } from './Screen.tsx'
 
-type Mark = 'here' | 'visited' | 'next' | 'lit' | 'ahead' | 'behind'
+type Mark = 'here' | 'visited' | 'next' | 'ahead' | 'behind'
 type Link = 'taken' | 'open' | 'lit' | 'quiet'
 
 // Opaque grounds, so the screen's moving text never shows through a node.
@@ -17,10 +17,12 @@ const STYLE: Record<Mark, string> = {
   here: 'border-p03 bg-[#13261a] text-p03',
   visited: 'border-p03-dim bg-[#0d1a10] text-p03-dim',
   next: 'border-p03 bg-p03-ground text-p03 hover:bg-[#13261a] focus-visible:bg-[#13261a]',
-  lit: 'border-p03 border-dashed bg-p03-ground text-p03',
   ahead: 'border-p03-edge bg-p03-ground text-p03-dim',
   behind: 'border-p03-edge/50 bg-p03-ground text-p03-dim/60',
 }
+
+/** The choice the pointer or focus is on: the node you'd go to, outlined in dashes. */
+const AIMED = 'outline-2 outline-offset-4 outline-dashed outline-p03'
 
 const LINK: Record<Link, string> = {
   taken: 'bg-p03-dim',
@@ -32,7 +34,8 @@ const LINK: Record<Link, string> = {
 const WORDS: Partial<Record<Mark, string>> = { here: 'you are here', visited: 'visited', behind: 'passed by' }
 
 // Each row's share of the map's height, and the node's size: 44 pixels, the least a finger needs.
-const ROW_HEIGHT = 'clamp(3.75rem, 9dvh, 5rem)'
+// A hologram sets --map-row so the whole stage fits its height.
+const ROW_HEIGHT = 'var(--map-row, clamp(3.75rem, 9dvh, 5rem))'
 const NODE = 44
 
 const describeNext = (map: StageMap, node: MapNode) =>
@@ -58,6 +61,33 @@ function Legend({
   onHover: (kind: NodeKind | null) => void
   onPick: (kind: NodeKind) => void
 }) {
+  const mode = useScreenMode()
+  const terminal = mode === 'terminal'
+  // In the projector's window it's a row of icons under the title, named by tooltip and label.
+  if (mode === 'hologram')
+    return (
+      <ul aria-label="What the icons mean" className="flex gap-1 text-p03-dim">
+        {KINDS.map((kind) => {
+          const Icon = NODE_ICONS[kind]
+          return (
+            <li key={kind}>
+              <button
+                type="button"
+                aria-pressed={shown === kind}
+                aria-label={nodeName({ kind })}
+                title={nodeName({ kind })}
+                onClick={() => onPick(kind)}
+                onPointerEnter={() => onHover(kind)}
+                onPointerLeave={() => onHover(null)}
+                className="grid size-6 place-items-center rounded-sm hover:text-p03 hover:[filter:drop-shadow(0_0_6px_rgb(125_255_154/0.9))] focus-visible:outline-2 focus-visible:outline-p03 aria-pressed:text-p03 aria-pressed:outline-1 aria-pressed:outline-p03"
+              >
+                <Icon aria-hidden className="size-4" />
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+    )
   return (
     <ul
       aria-label="What the icons mean"
@@ -73,7 +103,12 @@ function Legend({
               onClick={() => onPick(kind)}
               onPointerEnter={() => onHover(kind)}
               onPointerLeave={() => onHover(null)}
-              className="flex items-center gap-1 rounded-sm px-1.5 py-0.5 hover:bg-[#13261a] hover:text-p03 focus-visible:outline-2 focus-visible:outline-p03 aria-pressed:bg-[#13261a] aria-pressed:text-p03"
+              className={`flex items-center gap-1 rounded-sm px-1.5 py-0.5 hover:text-p03 focus-visible:outline-2 focus-visible:outline-p03 aria-pressed:text-p03 ${
+                // Over the 3D table nothing gets a ground, so the room shows through; the light brightens instead.
+                terminal
+                  ? 'hover:bg-[#13261a] aria-pressed:bg-[#13261a]'
+                  : 'hover:[text-shadow:0_0_8px_rgb(125_255_154/0.9)] aria-pressed:underline aria-pressed:underline-offset-4 aria-pressed:[text-shadow:0_0_8px_rgb(125_255_154/0.9)]'
+              }`}
             >
               <Icon aria-hidden className="size-4" />
               {nodeName({ kind })}
@@ -123,7 +158,6 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
   const placed = spots(state.map, state.seed, { x: room(cell.x), y: room(cell.y) })
   const open = reachable(state)
   const row = state.at === null ? -1 : (findNode(state.map, state.at)?.row ?? -1)
-  const lit = new Set(peek ? (findNode(state.map, peek)?.next ?? []) : [])
   const markOf = (node: MapNode): Mark =>
     node.id === state.at
       ? 'here'
@@ -131,16 +165,15 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
         ? 'visited'
         : open.includes(node.id)
           ? 'next'
-          : lit.has(node.id)
-            ? 'lit'
-            : node.row <= row
-              ? 'behind'
-              : 'ahead'
+          : node.row <= row
+            ? 'behind'
+            : 'ahead'
   const linkOf = (from: MapNode, to: string): Link => {
     const step = path.indexOf(from.id)
     if (step >= 0 && path[step + 1] === to) return 'taken'
+    // Pointing at a choice lights only the step to it, not the steps beyond, which would look like the way taken.
+    if (from.id === state.at && to === peek && open.includes(to)) return 'lit'
     if (from.id === state.at && open.includes(to)) return 'open'
-    if (from.id === peek) return 'lit'
     return 'quiet'
   }
   const at = (spot: Spot) => ({ x: spot.x * size.width, y: spot.y * size.height })
@@ -162,6 +195,16 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
   const choices = open.map((id) => findNode(state.map, id)).filter((node): node is MapNode => Boolean(node))
   const last = state.map.rows.length - 1
 
+  const hologram = useScreenMode() === 'hologram'
+  const legend = (
+    <Legend
+      shown={shown}
+      // Centered on a phone, upright or on its side.
+      centered={layout === 'phone'}
+      onHover={setHovered}
+      onPick={(kind) => setPicked((now) => (now === kind ? null : kind))}
+    />
+  )
   return (
     <div className="flex flex-col gap-3">
       {/* The pen beside the menu, and the legend above the map, so both stay in reach while it scrolls. */}
@@ -200,18 +243,10 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
         </div>
       </ScreenActions>
       <ScreenBar>
-        <div className="pb-1">
-          <Legend
-            shown={shown}
-            // Centered on a phone, upright or on its side.
-            centered={layout === 'phone'}
-            onHover={setHovered}
-            onPick={(kind) => setPicked((now) => (now === kind ? null : kind))}
-          />
-        </div>
+        <div className="pb-1">{legend}</div>
       </ScreenBar>
       {/* Padded, so the boss and the first row are never cut off at the top or bottom of the scroll. */}
-      <div className="py-8">
+      <div className={hologram ? 'py-5' : 'py-8'}>
         <div ref={box} className="relative w-full" style={{ height: `calc(${ROW_HEIGHT} * ${state.map.rows.length})` }}>
           {/* The links: one image tiled along each, turned to point at the node ahead. */}
           <div aria-hidden className="absolute inset-0">
@@ -257,7 +292,7 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
                     const words = [WORDS[mark], planned ? 'planned' : '', describeNext(state.map, node)].filter(Boolean)
                     const label = `${name}${words.length ? `, ${words.join(', ')}` : ''}`
                     const boss = node.kind === 'boss'
-                    const box = `absolute z-20 grid -translate-x-1/2 -translate-y-1/2 place-items-center rounded-md border-2 ${STYLE[mark]} ${planned ? 'ring-2 ring-[#ffb347] ring-offset-2 ring-offset-p03-ground' : ''} ${shown === node.kind ? 'shadow-[0_0_14px_rgb(125_255_154/0.75)] outline-2 outline-offset-4 outline-p03' : ''}`
+                    const box = `absolute z-20 grid -translate-x-1/2 -translate-y-1/2 place-items-center rounded-md border-2 ${STYLE[mark]} ${planned ? 'ring-2 ring-[#ffb347] ring-offset-2 ring-offset-p03-ground' : ''} ${peek === node.id && mark === 'next' ? AIMED : shown === node.kind ? 'shadow-[0_0_14px_rgb(125_255_154/0.75)] outline-2 outline-offset-4 outline-p03' : ''}`
                     const style = {
                       left: `${spot.x * 100}%`,
                       top: `${spot.y * 100}%`,

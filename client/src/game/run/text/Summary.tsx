@@ -1,10 +1,10 @@
 import { Link } from '@tanstack/react-router'
 import { scoreRun, STAGES } from 'shared'
-import { Button } from '@/components/ui/button.tsx'
 import { number } from '../../../lib/format.ts'
 import { Panel } from '../../text/Panel.tsx'
 import type { RunReady } from '../useRun.ts'
 import { DeckTable } from './DeckTable.tsx'
+import { HEADER_BUTTON, ScreenActions } from './Screen.tsx'
 
 /** How the run went, once it's over: how far it got, the score, and the deck it ended with. */
 export function Summary({ run }: { run: RunReady }) {
@@ -20,7 +20,17 @@ export function Summary({ run }: { run: RunReady }) {
     ['Score', number(score)],
   ]
   return (
-    <div className="flex flex-col gap-4">
+    // Kept to a readable width, so a wide screen doesn't leave the facts stranded across it.
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 pb-6">
+      {/* In the header, so they're in reach without scrolling past the deck. */}
+      <ScreenActions>
+        <button type="button" data-action="again" onClick={run.again} className={`${HEADER_BUTTON} border-p03`}>
+          Start another run
+        </button>
+        <Link to="/" className={HEADER_BUTTON}>
+          Home
+        </Link>
+      </ScreenActions>
       <p className="text-3xl text-p03">
         {won
           ? 'You cleared the run. P03 is checking the logs for cheats.'
@@ -47,14 +57,6 @@ export function Summary({ run }: { run: RunReady }) {
           <DeckTable deck={state.deck} caption="The deck it ended with" />
         </div>
       </section>
-      <div className="flex flex-wrap gap-3 font-sans text-base">
-        <Button data-action="again" onClick={run.again}>
-          Start another run
-        </Button>
-        <Button variant="outline" asChild>
-          <Link to="/">Home</Link>
-        </Button>
-      </div>
     </div>
   )
 }

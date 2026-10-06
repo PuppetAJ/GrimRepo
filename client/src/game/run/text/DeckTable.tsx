@@ -5,17 +5,19 @@ import { asUnit } from '../nodes.ts'
 
 const LIGHT = '#b8f5c4'
 import { CardReader, CardSearch, SEARCH_FROM, SigilIcons, useCardSearch } from './CardBits.tsx'
+import { useScreenMode } from './slots.ts'
 
 /** The deck as rows of name, sigils and stats; a long name is cut short and opens the whole card. */
 export function DeckTable({ deck, caption }: { deck: RunCard[]; caption: string }) {
   const [reading, setReading] = useState<Unit | null>(null)
   const { query, setQuery, matches } = useCardSearch()
+  const terminal = useScreenMode() === 'terminal'
   const rows = [...deck].sort((a, b) => card(a.card).name.localeCompare(card(b.card).name)).filter(matches)
   return (
     <div className="flex min-w-0 flex-col gap-2">
       {deck.length >= SEARCH_FROM ? (
-        // Pinned while the deck scrolls under it.
-        <div className="sticky top-0 z-10 bg-p03-ground pb-1">
+        // Pinned while the deck scrolls under it, on a band of the terminal's ground; over the 3D table, on nothing.
+        <div className={`sticky top-0 z-10 pb-1 ${terminal ? 'bg-p03-ground' : ''}`}>
           <CardSearch query={query} onChange={setQuery} label={`Search ${caption.toLowerCase()}`} />
         </div>
       ) : null}

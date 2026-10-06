@@ -3,6 +3,7 @@ import { card, legalRunActions, SIGILS, type RunAction, type SigilId } from 'sha
 import { SIDE_BUTTON } from '../../text/Panel.tsx'
 import { asUnit } from '../nodes.ts'
 import type { RunReady } from '../useRun.ts'
+import { NothingHere } from './CardBits.tsx'
 import { CardList } from './CardList.tsx'
 import { LeaveButton, ScreenBar, ScreenSearch } from './Screen.tsx'
 
@@ -107,7 +108,9 @@ export function Stones({ run }: { run: RunReady }) {
             </section>
           ) : null}
         </>
-      ) : null}
+      ) : (
+        <NothingHere>No card has a sigil to give.</NothingHere>
+      )}
     </div>
   )
 }
