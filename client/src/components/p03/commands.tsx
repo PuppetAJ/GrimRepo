@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { ITEMS, SIGILS, type ItemId, type SigilId } from 'shared'
+import { CARD_TYPES, ITEMS, SIGILS, type ItemId, type SigilId } from 'shared'
 import { api } from '../../lib/api.ts'
 import { number } from '../../lib/format.ts'
 import { Sigil } from '../../game/CardReader.tsx'
@@ -95,6 +95,7 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
                 ))}
               </span>
               <span className="whitespace-nowrap">
+                {card.type ? <Dim>{CARD_TYPES[card.type].name.toLowerCase()} </Dim> : null}
                 <Cost cost={card.cost} /> {card.attack}/{card.health}
               </span>
             </p>

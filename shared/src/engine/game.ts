@@ -1,7 +1,7 @@
 import { BOILERPLATE, card, DEBUG_CARD, OUT_OF_MEMORY, PLAYER_DECK, SHIPS_AS } from '../cards.ts'
 import { encounter } from '../encounters.ts'
 import { Rng } from '../rng.ts'
-import { attack, perish } from './combat.ts'
+import { attack, perish, reinforce } from './combat.ts'
 import { ITEMS, type ItemId } from '../items.ts'
 import { queue, queueCountFor, queuePlan, retireDeadCode } from './opponent.ts'
 import {
@@ -216,6 +216,7 @@ export function apply(current: GameState, action: Action): Result {
     state.player.board[action.lane] = unit
     state.summon = null
     events.push({ type: 'placed', lane: action.lane, unit })
+    reinforce(state.player.board, action.lane, events)
     for (const victim of refactored) {
       unit.attack += victim.attack
       unit.health += victim.health
@@ -322,6 +323,7 @@ function playTurn(state: GameState, rng: Rng, events: GameEvent[]): void {
         state.opponent.front[lane] = waiting
         state.opponent.back[lane] = null
         events.push({ type: 'advanced', lane, uid: waiting.uid })
+        reinforce(state.opponent.front, lane, events)
       }
     }
 

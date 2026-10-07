@@ -1,4 +1,4 @@
-import { SIGILS, type CardDef } from 'shared'
+import { CARD_TYPES, SIGILS, type CardDef } from 'shared'
 import { Glass } from '../../components/p03/Glass.tsx'
 import { PixelCard, Sigil } from '../../game/CardReader.tsx'
 import { unitOf } from './deck.ts'
@@ -17,6 +17,12 @@ export function Facts({ def, sigils = 'max-h-28' }: { def: CardDef; sigils?: str
     <>
       <p className="flex flex-wrap items-center gap-x-3 text-sm">
         <Cost cost={def.cost} />
+        {def.type ? (
+          <span className="flex items-center gap-1">
+            <Sigil id={`type-${def.type}`} size={12} color="currentColor" />
+            {CARD_TYPES[def.type].name}
+          </span>
+        ) : null}
         <span>Attack: {def.attack}</span>
         <span>Health: {def.health}</span>
       </p>
