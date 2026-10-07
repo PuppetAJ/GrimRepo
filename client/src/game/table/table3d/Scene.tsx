@@ -18,7 +18,7 @@ import { COARSE, type Reader } from './reader.ts'
 import { Arrive } from './Arrive.tsx'
 import { CameraRig, WarmUp } from './stage.tsx'
 import { TestHandle } from './TestHandle.tsx'
-import { ItemTray } from './ItemTray.tsx'
+import { ItemRack } from './ItemRack.tsx'
 import { shown } from '../../shown.ts'
 
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
@@ -158,7 +158,7 @@ export function Scene({
             full={handFull}
           />
         </Arrive>
-        <ItemTray
+        <ItemRack
           items={items}
           usable={(slot) => legal.some((action) => action.type === 'use' && action.slot === slot)}
           aiming={aiming}

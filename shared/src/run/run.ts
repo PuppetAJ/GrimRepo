@@ -13,8 +13,7 @@ import type { MapNode, Pick, RunAction, RunCard, RunEvent, RunResult, RunState, 
 export const STARTER_DECKS: Record<string, { name: string; about: string; cards: string[] }> = {
   'hello-world': {
     name: 'Hello, World',
-    about:
-      "Three cards: one that hits every lane while they're empty, one that survives its sacrifice, one that guards.",
+    about: 'Steady: hits every empty lane, survives its sacrifice, and guards.',
     cards: ['HelloWorld', 'CronJob', 'MergeConflict'],
   },
   'legacy-stack': {

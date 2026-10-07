@@ -202,6 +202,8 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
           onUnpin={() => setPinned(null)}
           aimed={busy || aiming === null ? null : (game.state.items?.[aiming] ?? null)}
           onPutBack={() => setAiming(null)}
+          aiming={busy ? null : aiming}
+          onAim={setAiming}
         />
       ) : null}
       {magnifiedRead && magnified ? (

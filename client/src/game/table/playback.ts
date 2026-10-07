@@ -1,4 +1,4 @@
-import type { GameEvent, GameState, Unit } from 'shared'
+import { ITEMS, type GameEvent, type GameState, type Unit } from 'shared'
 import { locate, project, step, type View } from '../view.ts'
 import { CENTER_X, DECK, P03_HAND, PILE, slot, TABLE_Y, type Row, type Vec3 } from './layout.ts'
 
@@ -137,6 +137,9 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
     case 'skipped':
       popup('skipped', 'note', FACE.opponent, { face: 'opponent' })
       break
+    case 'used':
+      popup(ITEMS[event.item].name, 'note', FACE.player, { face: 'player' })
+      break
     case 'leftBehind':
       // The Boilerplate comes off the pile into the lane the Deprecated card left.
       next.spawns = new Map(next.spawns).set(event.unit.uid, event.side === 'player' ? PILE : P03_HAND)
@@ -156,10 +159,20 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
     case 'buffed': {
       const found = where(view, event.uid)
       if (found)
-        popup(event.type === 'shielded' ? 'rolled back' : 'buffed', 'note', slot(found.row, found.lane, 0.3), {
-          row: found.row,
-          lane: found.lane,
-        })
+        popup(
+          event.type === 'shielded'
+            ? 'rolled back'
+            : // The Pliers leave a card with no sigils.
+              event.type === 'buffed' && event.sigils?.length === 0
+              ? 'sigils pulled'
+              : 'buffed',
+          'note',
+          slot(found.row, found.lane, 0.3),
+          {
+            row: found.row,
+            lane: found.lane,
+          },
+        )
       break
     }
     case 'struckBack':

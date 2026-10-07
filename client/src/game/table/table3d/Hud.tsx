@@ -14,7 +14,7 @@ import type { ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
 import { ITEMS, legalActions, type ItemId, type Unit } from 'shared'
 import { Button } from '@/components/ui/button.tsx'
-import { FlatReaderBody } from '../../CardReader.tsx'
+import { FlatReaderBody, Sigil } from '../../CardReader.tsx'
 import {
   Ending,
   Forfeit,
@@ -59,7 +59,12 @@ export function Hud({
   onMap,
   aimed = null,
   onPutBack,
+  aiming = null,
+  onAim,
 }: {
+  /** The item slot picked up to aim, and how to pick one up or put it back. */
+  aiming?: number | null
+  onAim?: (slot: number | null) => void
   /** In a run, glides back to look at the map on the projector. */
   onMap?: () => void
   /** The item picked up to aim at a card, and how to put it back. */
@@ -99,6 +104,33 @@ export function Hud({
           {reshuffle ? ` · draw reshuffles ${reshuffle.cards}` : null}
           {phaseText(state, view.phase) ? ` · ${phaseText(state, view.phase)}` : null}
         </span>
+        {/* The rack is far off and out of view from the board, so the items are here too. */}
+        {state.items?.length ? (
+          <div role="group" aria-label="Your items" className="pointer-events-auto mt-1 flex gap-1.5">
+            {state.items.map((item, slot) => {
+              const def = ITEMS[item]
+              const usable = !busy && legal.some((action) => action.type === 'use' && action.slot === slot)
+              return (
+                <button
+                  key={`${item}-${slot}`}
+                  type="button"
+                  data-action="use"
+                  data-slot={slot}
+                  disabled={!usable}
+                  aria-pressed={def.target === 'none' ? undefined : aiming === slot}
+                  aria-label={`${def.name}: ${def.text}`}
+                  title={`${def.name}: ${def.text}`}
+                  onClick={() =>
+                    def.target === 'none' ? game.act({ type: 'use', slot }) : onAim?.(aiming === slot ? null : slot)
+                  }
+                  className={`grid size-10 place-items-center rounded-md border-2 bg-p03-ground/80 text-p03 focus-visible:outline-2 focus-visible:outline-p03 enabled:hover:bg-[#13261a] disabled:opacity-40 ${aiming === slot ? 'border-p03 outline-2 outline-p03 outline-dashed' : 'border-p03-edge'}`}
+                >
+                  <Sigil id={item} size={22} color="currentColor" />
+                </button>
+              )
+            })}
+          </div>
+        ) : null}
         {pinned ? (
           // Takes the pointer so it can be scrolled.
           <ScreenReadout
