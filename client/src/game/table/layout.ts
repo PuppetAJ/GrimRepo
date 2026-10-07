@@ -47,13 +47,13 @@ export function slot(row: Row, lane: number, lift = 0): Vec3 {
 export const lanes = [...Array(LANES).keys()]
 
 // Camera space: x right, y up, z toward the viewer.
-const HAND = { distance: 1.5, scale: 0.4, y: -0.455, radius: 3, raise: 0.14, hover: 0.09, stowed: -0.5 }
+const HAND = { distance: 1.5, scale: 0.4, y: -0.455, radius: 3, raise: 0.14, hover: 0.09, stowed: -0.5, lowered: -0.42 }
 export const HAND_SCALE = HAND.scale
 
 export function handPlace(
   index: number,
   count: number,
-  { selected = false, hovered = false, summoning = false } = {},
+  { selected = false, hovered = false, summoning = false, lowered = false } = {},
 ): { position: Vec3; roll: number; scale: number } {
   // Past five cards the hand shrinks so it stays clear of the board and the screen's edge.
   const scale = HAND.scale * (count > 5 ? 1 - (count - 5) * 0.05 : 1)
@@ -61,7 +61,10 @@ export function handPlace(
   const step = (CARD.width * scale * 1.04) / (HAND.radius - (CARD.height * scale) / 2)
   const angle = (summoning && selected ? 0 : index - (count - 1) / 2) * step
   // Mid-summon the chosen card rises only a little, to stay clear of the lanes.
-  const raise = summoning ? (selected ? 0.04 : HAND.stowed) : selected ? HAND.raise : hovered ? HAND.hover : 0
+  // Looking down at the board, the hand sinks to the screen's edge, the card being summoned too, so the lanes stay clear.
+  // The card pointed at rises most of the way, not all, so it stays under the pointer.
+  const sink = !lowered ? 0 : summoning ? HAND.lowered : selected ? 0 : hovered ? HAND.lowered * 0.4 : HAND.lowered
+  const raise = (summoning ? (selected ? 0.04 : HAND.stowed) : selected ? HAND.raise : hovered ? HAND.hover : 0) + sink
   const reach = HAND.radius + raise
   const near = angle * 0.08 + (hovered || selected ? 0.04 : 0)
   return {
@@ -71,7 +74,7 @@ export function handPlace(
   }
 }
 
-export type CameraView = 'table' | 'board' | 'map'
+export type CameraView = 'table' | 'board' | 'queue' | 'map'
 
 /** The camera's vertical field of view, in degrees, unless a view sets its own. */
 export const FOV = 60
@@ -79,7 +82,9 @@ export const FOV = 60
 export const CAMERA: Record<CameraView, { position: Vec3; target: Vec3; fov?: number }> = {
   // Solved so the player's row clears the hand and P03's screen stays in frame at 16:9 and a 60° fov.
   table: { position: [CENTER_X, 8.7, -4.4], target: [CENTER_X, 7.4, -10.6] },
-  board: { position: [CENTER_X, 11.4, -6.35], target: [CENTER_X, TABLE_Y, -8.5] },
+  // Close on the two rows that fight, so their numbers read; the queue view pulls back to show P03's queue too.
+  board: { position: [CENTER_X, 11.0, -7.6], target: [CENTER_X, TABLE_Y, -9.75] },
+  queue: { position: [CENTER_X, 11.4, -6.35], target: [CENTER_X, TABLE_Y, -8.5] },
   // Between a run's battles: back from the seat and nearly level, with a narrow lens so the projector isn't stretched.
   map: { position: [CENTER_X, 10.4, -0.5], target: [CENTER_X, 9.1, -9], fov: 42 },
 }
