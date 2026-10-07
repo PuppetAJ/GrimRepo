@@ -1,5 +1,6 @@
 import { PerformanceMonitor, useProgress } from '@react-three/drei'
 import { Canvas } from '@react-three/fiber'
+import { Selection } from '@react-three/postprocessing'
 import {
   createContext,
   Suspense,
@@ -12,14 +13,16 @@ import {
   type ReactNode,
 } from 'react'
 import * as THREE from 'three'
+import type { ItemId } from 'shared'
 import { useFullScreen } from '../fullScreen.ts'
 import { Boot } from './Boot.tsx'
 import { disposeFaces } from './faces.ts'
 import type { View } from '../view.ts'
-import { Factory, FactoryP03 } from './Factory.tsx'
+import { EndTurnButton, Factory, FactoryEffects, FactoryP03 } from './Factory.tsx'
 import { CAMERA, FOV } from './layout.ts'
 import type { Screen } from './reading.ts'
 import { createTunnel, type Tunnel } from './stage/tunnel.tsx'
+import { ItemRack } from './table3d/ItemRack.tsx'
 import { COARSE } from './table3d/reader.ts'
 import { CursorSync, Exposure, Loaded } from './table3d/stage.tsx'
 
@@ -31,6 +34,10 @@ type RoomHandlers = {
   onHold?: (screen: Screen, x: number, y: number) => void
   onPin?: (screen: Screen) => void
 }
+
+/** What's bolted to the table: the end-turn button and the tool rack, each locked unless a battle unlocks it. */
+type BenchState = { items: ItemId[]; usable: boolean[]; aiming: number | null; active: boolean; rung: number }
+type BenchHandlers = { onRing?: () => void; onPick?: (slot: number) => void }
 
 type Stage = {
   /** Where a scene puts its 3D content; the canvas drawing it stays mounted as scenes come and go. */
@@ -51,6 +58,8 @@ type Stage = {
   onMissed: (handler: () => void) => void
   /** Sets what the room shows; the room itself stays, so its dust, P03 and monitors carry on between scenes. */
   room: (room: RoomState & RoomHandlers) => void
+  /** Sets the button's and the rack's state; they stay too, so neither blinks out as scenes swap. */
+  bench: (bench: BenchState & BenchHandlers) => void
 }
 
 const StageContext = createContext<Stage | null>(null)
@@ -70,6 +79,13 @@ const sameRoom = (a: RoomState, b: RoomState) =>
   a.patient === b.patient &&
   a.log.length === b.log.length &&
   a.log.every((line, index) => b.log[index] === line)
+const sameList = <T,>(a: T[], b: T[]) => a.length === b.length && a.every((entry, index) => b[index] === entry)
+const sameBench = (a: BenchState, b: BenchState) =>
+  a.aiming === b.aiming &&
+  a.active === b.active &&
+  a.rung === b.rung &&
+  sameList(a.items, b.items) &&
+  sameList(a.usable, b.usable)
 
 /** The 3D table's canvas, loaded once: battles and the run's screens between them swap in and out of it. */
 export function TableStage({ children }: { children: ReactNode }) {
@@ -102,6 +118,11 @@ export function TableStage({ children }: { children: ReactNode }) {
   // Stable, so the monitors never re-render for a new handler.
   const onHold = useCallback((screen: Screen, x: number, y: number) => handlers.current.onHold?.(screen, x, y), [])
   const onPin = useCallback((screen: Screen) => handlers.current.onPin?.(screen), [])
+  const [bench, setBench] = useState<BenchState | null>(null)
+  const benchHandlers = useRef<BenchHandlers>({})
+  const onRing = useCallback(() => benchHandlers.current.onRing?.(), [])
+  const onPick = useCallback((slot: number) => benchHandlers.current.onPick?.(slot), [])
+  const usable = useCallback((slot: number) => bench?.usable[slot] ?? false, [bench])
   const fullScreen = useFullScreen()
   const element = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ width: 0, height: 0 })
@@ -136,6 +157,10 @@ export function TableStage({ children }: { children: ReactNode }) {
     room: ({ onHold, onPin, ...next }) => {
       handlers.current = { onHold, onPin }
       setRoom((now) => (now && sameRoom(now, next) ? now : next))
+    },
+    bench: ({ onRing, onPick, ...next }) => {
+      benchHandlers.current = { onRing, onPick }
+      setBench((now) => (now && sameBench(now, next) ? now : next))
     },
   }
 
@@ -175,19 +200,29 @@ export function TableStage({ children }: { children: ReactNode }) {
               onFallback={() => setQuality(3)}
             />
           ) : null}
-          <Suspense fallback={null}>
-            {room ? (
-              <>
-                <Factory view={room.view} log={room.log} onHold={onHold} onPin={onPin} />
-                <FactoryP03 view={room.view} busy={room.busy} outcome={room.outcome} patient={room.patient} />
-              </>
-            ) : null}
-            {/* Its own boundary, so a scene still loading never hides the room for a few frames as it swaps in. */}
+          {/* One selection and one set of effects for the whole stage, so they never drop out as scenes swap. */}
+          <Selection>
+            <FactoryEffects quality={quality} />
             <Suspense fallback={null}>
-              <tunnel.Out />
-              <Loaded onLoad={setReady} />
+              {room ? (
+                <>
+                  <Factory view={room.view} log={room.log} onHold={onHold} onPin={onPin} />
+                  <FactoryP03 view={room.view} busy={room.busy} outcome={room.outcome} patient={room.patient} />
+                </>
+              ) : null}
+              {bench ? (
+                <>
+                  <EndTurnButton active={bench.active} rung={bench.rung} onClick={onRing} />
+                  <ItemRack items={bench.items} usable={usable} aiming={bench.aiming} onPick={onPick} />
+                </>
+              ) : null}
+              {/* Its own boundary, so a scene still loading never hides the room for a few frames as it swaps in. */}
+              <Suspense fallback={null}>
+                <tunnel.Out />
+                <Loaded onLoad={setReady} />
+              </Suspense>
             </Suspense>
-          </Suspense>
+          </Selection>
         </Canvas>
         <Boot stage={warmed ? 'done' : active ? 'assets' : 'warming'} progress={progress} files={files} />
         <Suspense fallback={null}>{children}</Suspense>
