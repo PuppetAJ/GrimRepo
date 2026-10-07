@@ -1,5 +1,4 @@
-import { Selection } from '@react-three/postprocessing'
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useState } from 'react'
 import { ITEMS, legalActions, PLAYER_DECK, type Action } from 'shared'
 import { has, hasEnded, laneAction, skippedDraw } from '../../controls.tsx'
 import type { Ready } from '../../useGame.ts'
@@ -7,7 +6,7 @@ import type { View } from '../../view.ts'
 import { CardBatch } from '../Batch.tsx'
 import { Card, Popup, type Look, type Place } from '../Cards.tsx'
 import type { loadCardAssets } from '../faces.ts'
-import { EndTurnButton, FactoryEffects, TechBoard } from '../Factory.tsx'
+import { TechBoard } from '../Factory.tsx'
 import { DECK, P03_HAND, type CameraView } from '../layout.ts'
 import { TINT } from '../palette.ts'
 import { Deck, Pile } from '../Piles.tsx'
@@ -18,8 +17,8 @@ import { COARSE, type Reader } from './reader.ts'
 import { Arrive } from './Arrive.tsx'
 import { CameraRig, WarmUp } from './stage.tsx'
 import { TestHandle } from './TestHandle.tsx'
-import { ItemRack } from './ItemRack.tsx'
 import { shown } from '../../shown.ts'
+import { useStage } from '../TableStage.tsx'
 
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
 
@@ -56,7 +55,6 @@ export function Scene({
   hinted,
   onHint,
   onWarm,
-  quality,
   reader,
   leaving = false,
   onLeft,
@@ -69,7 +67,6 @@ export function Scene({
   /** Packs the table away: cards slide off to their owners, the piles lift, the board rolls back; then `onLeft`. */
   leaving?: boolean
   onLeft?: () => void
-  quality: number
   reader: Reader
   game: Ready
   assets: Assets
@@ -118,6 +115,19 @@ export function Scene({
   const at = (seconds: number) => (setting ? seconds : undefined)
   const dealt = useDeal(setting)
   const dealing = dealt !== Infinity
+  // The button and the rack are the stage's, so they stay put as the table swaps in; the battle unlocks them.
+  const stage = useStage()
+  useLayoutEffect(() =>
+    stage.bench({
+      items,
+      usable: items.map((_, slot) => legal.some((action) => action.type === 'use' && action.slot === slot)),
+      aiming,
+      active: !dealing && can({ type: 'ringBell' }),
+      rung,
+      onRing: () => act({ type: 'ringBell' }),
+      onPick: pickItem,
+    }),
+  )
   const [leftAt, setLeftAt] = useState<number | undefined>(undefined)
   useEffect(() => {
     if (!leaving) return
@@ -130,11 +140,10 @@ export function Scene({
   }, [leaving, onLeft])
   return (
     <CardBatch assets={assets}>
-      <Selection>
+      <>
         <CameraRig view={camera} from={from} />
         {/* The room and P03 are the stage's; it draws them once every light and the fog are in place. */}
         <WarmUp onWarm={onWarm} />
-        <FactoryEffects quality={quality} />
         <TechBoard appear={at(SET.board)} leave={leaving} />
         <Arrive delay={at(SET.lanes)} leave={leaving}>
           <Lanes view={view} legal={legal} act={act} play={TINT.play} aimed={aimed} onAim={setAimed} />
@@ -158,18 +167,6 @@ export function Scene({
             full={handFull}
           />
         </Arrive>
-        <ItemRack
-          items={items}
-          usable={(slot) => legal.some((action) => action.type === 'use' && action.slot === slot)}
-          aiming={aiming}
-          onPick={pickItem}
-        />
-        {/* Bolted to the table, so it's there between battles too, and locked until the table is set. */}
-        <EndTurnButton
-          active={!dealing && can({ type: 'ringBell' })}
-          rung={rung}
-          onClick={() => act({ type: 'ringBell' })}
-        />
 
         {view.hand.map((unit, index) => {
           if (index >= dealt) return null
@@ -257,7 +254,7 @@ export function Scene({
         {import.meta.env.DEV || import.meta.env.VITE_TEST_HANDLE === '1' ? (
           <TestHandle game={game} view={view} busy={busy} skip={skip} />
         ) : null}
-      </Selection>
+      </>
     </CardBatch>
   )
 }
