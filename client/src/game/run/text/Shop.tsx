@@ -52,13 +52,16 @@ export function Shop({ run }: { run: RunReady }) {
         })}
       </ul>
       {visit.item ? (
-        <section aria-labelledby="tool" className="flex flex-col gap-2 border-t-2 border-p03-edge pt-4">
+        <section
+          aria-labelledby="tool"
+          className="flex flex-col items-center gap-2 border-t-2 border-p03-edge pt-4 text-center"
+        >
           <h3 id="tool" className="text-p03">
             A tool, for one use
           </h3>
-          <div className="flex flex-wrap items-center gap-4">
+          <div className="flex max-w-xl flex-col items-center gap-3">
             <Sigil id={visit.item.id} size={48} color="var(--p03)" />
-            <p className="min-w-0 flex-1 font-sans text-base text-[#b8f5c4]">
+            <p className="font-sans text-base text-[#b8f5c4]">
               <strong className="font-terminal text-xl text-p03">{ITEMS[visit.item.id].name}.</strong>{' '}
               {ITEMS[visit.item.id].text}
             </p>

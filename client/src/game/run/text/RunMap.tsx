@@ -370,7 +370,9 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
                       width: boss ? nodeSize * 1.5 : nodeSize,
                       height: boss ? nodeSize * 1.5 : nodeSize,
                     }
-                    const face = <Icon aria-hidden className={boss ? 'size-9' : 'size-6'} />
+                    // The icon keeps its share of the node, so a small node keeps its padding.
+                    const icon = Math.round(nodeSize * (boss ? 0.8 : 0.55))
+                    const face = <Icon aria-hidden style={{ width: icon, height: icon }} />
                     const reading =
                       held === node.id ? (
                         <span

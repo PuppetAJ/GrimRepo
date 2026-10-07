@@ -16,7 +16,7 @@ export function StarterDeck({ run }: { run: RunReady }) {
         {Object.entries(STARTER_DECKS).map(([id, deck], index) => (
           <li key={id} className="flex w-full max-w-3xl flex-col items-center gap-3 text-center">
             {/* A short rule between decks, not the screen's width. */}
-            {index ? <span aria-hidden className="mb-2 h-0.5 w-24 bg-p03-edge" /> : null}
+            {index ? <span aria-hidden className="mb-2 h-0.5 w-full max-w-sm bg-p03-edge" /> : null}
             <h3 className="text-2xl text-p03">{deck.name}</h3>
             <p className="font-sans text-base text-[#b8f5c4]">{deck.about}</p>
             <CardList units={deck.cards.map((card, cardIndex) => asUnit(card, cardIndex + 1))} size="w-24 sm:w-28" />
