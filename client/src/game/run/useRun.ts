@@ -93,7 +93,12 @@ function told(story: Story, after: RunState, events: RunEvent[]): Story {
 }
 
 function open(run: OpenRun): Table {
-  let story: Story = { state: createRun({ seed: run.seed, death: run.death }), log: [], news: [], path: [] }
+  let story: Story = {
+    state: createRun({ seed: run.seed, death: run.death, rival: run.rival }),
+    log: [],
+    news: [],
+    path: [],
+  }
   for (const action of run.actions) {
     const result = applyRun(story.state, action)
     if (!result.ok) throw new Error('This run could not be replayed. Abandon it to start another.')

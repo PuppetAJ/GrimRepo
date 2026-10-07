@@ -105,7 +105,11 @@ export function narrate(before: GameState, events: GameEvent[]): string[] {
         return [
           event.unit.card === OUT_OF_MEMORY
             ? `Your deck ran out again. Out of Memory, ${event.unit.attack}/${event.unit.health}, behind ${lane(event.lane)}. It grows.`
-            : `I queued ${card(event.unit.card).name} behind ${lane(event.lane)}.`,
+            : event.haunt?.by
+              ? `I queued ${card(event.unit.card).name} behind ${lane(event.lane)}, a death card from ${event.haunt.by}'s lost run.`
+              : event.haunt
+                ? `Root cause: ${card(event.unit.card).name}, behind ${lane(event.lane)}. You wrote this.`
+                : `I queued ${card(event.unit.card).name} behind ${lane(event.lane)}.`,
         ]
       case 'healed':
         return [`${name(event.uid)} patched itself up to ${event.health}.`]

@@ -3,7 +3,7 @@ import type { ItemId } from '../items.ts'
 import type { Action, DeckCard, GameEvent, GameState } from '../engine/types.ts'
 
 /** Bumped whenever a change would make an old run replay differently. */
-export const RUN_RULES_VERSION = 13
+export const RUN_RULES_VERSION = 14
 
 /** The most actions one save may send; 200 of the largest kind fit the server's 16 KB body limit. */
 export const RUN_SAVE_LIMIT = 200
@@ -87,6 +87,8 @@ export type RunState = {
   items: ItemId[]
   /** The player's death card from a lost run: offered once, at the first card choice, unless left out for more score. */
   death: { card: string; skipped: boolean; offered: boolean } | null
+  /** Another player's death card, which the Staging boss brings into its last phase; `by` is its maker. */
+  rival: { card: string; by: string } | null
 }
 
 export type RunAction =

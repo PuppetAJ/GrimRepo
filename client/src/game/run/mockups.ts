@@ -13,6 +13,7 @@ import {
   scoreRun,
   type ItemId,
   type RunCard,
+  type RunDealt,
   type RunState,
   type SigilId,
   type StageMap,
@@ -23,7 +24,8 @@ import { MOST_SIGILS, withWorstCard, WORST_CARD } from '../fixtures.ts'
 /** A run state to look at, played locally and never saved. */
 export type Mockup = { state: RunState; path: string[]; news?: string[]; over?: RunOver }
 
-type Entry = { title: string; group: 'worst' | 'reached'; make: () => Mockup | null }
+/** `revision` goes up when the screen changes, so an approval of an older one shows as needing another look. */
+type Entry = { title: string; group: 'worst' | 'reached'; revision?: number; make: () => Mockup | null }
 
 // The longest names, the most sigils and the biggest numbers the screens may have to hold.
 const LONG_NEWS = [
@@ -132,10 +134,20 @@ const SAMPLE_DEATH = deathCardId({
   sigils: ['try_catch'],
 })
 
+/** Another player's death card, under the cap. */
+const SAMPLE_RIVAL = deathCardId({ name: 'gitBlame', cost: 1, attack: 4, health: 3, art: 'Crawler', sigils: [] })
+
+/** A boss on this stage that has just brought its death card into play. */
+const haunted = (state: RunState, stage: number) =>
+  state.stage === stage &&
+  state.visit?.kind === 'battle' &&
+  Boolean(state.visit.game.opponent.haunt?.played) &&
+  state.visit.game.status === 'playing'
+
 /** Stops a seeded bot run at the first state that matches, so these follow the rules. */
-function reached(stop: (state: RunState) => boolean, death: string | null = null): Mockup | null {
+function reached(stop: (state: RunState) => boolean, dealt: RunDealt = {}): Mockup | null {
   for (let seed = 1; seed <= 120; seed++) {
-    let state = createRun({ seed, death })
+    let state = createRun({ seed, ...dealt })
     let path: string[] = []
     while (state.status === 'playing' && !stop(state)) {
       const result = applyRun(state, nextRunAction(state))
@@ -232,16 +244,18 @@ export const MOCKUPS: Record<string, Entry> = {
   'death-start': {
     title: 'The starter deck choice, with a death card to leave out',
     group: 'reached',
+    revision: 1,
     make: () => ({ state: createRun({ seed: 1, death: SAMPLE_DEATH }), path: [] }),
   },
   'death-offer': {
     title: 'The first card choice, offering the death card',
     group: 'reached',
-    make: () => reached((s) => s.visit?.kind === 'card' && s.visit.offer.some(isDeathCard), SAMPLE_DEATH),
+    make: () => reached((s) => s.visit?.kind === 'card' && s.visit.offer.some(isDeathCard), { death: SAMPLE_DEATH }),
   },
   'death-build': {
-    title: 'A lost run, building a death card',
+    title: 'A lost run, building a death card from three hands',
     group: 'reached',
+    revision: 1,
     make: () => {
       const found = reached((s) => s.status === 'lost' && s.deck.length >= 5)
       return (
@@ -310,6 +324,15 @@ export const MOCKUPS: Record<string, Entry> = {
       if (!found || found.state.visit?.kind !== 'event') return null
       // A fixed scene, since which one a seed meets changes whenever events are added.
       return { ...found, state: { ...found.state, visit: { ...found.state.visit, event: 'stack-overflow' } } }
+    },
+  },
+  'review-trial': {
+    title: 'The code review trial',
+    group: 'reached',
+    make: () => {
+      const found = reached((s) => s.visit?.kind === 'event')
+      if (!found || found.state.visit?.kind !== 'event') return null
+      return { ...found, state: { ...found.state, visit: { ...found.state.visit, event: 'review-trial' } } }
     },
   },
   fuse: {
@@ -408,6 +431,16 @@ export const MOCKUPS: Record<string, Entry> = {
       if (!found || found.state.visit?.kind !== 'event') return null
       return { ...found, state: { ...found.state, visit: { ...found.state.visit, event: 'toolbox' } } }
     },
+  },
+  'death-haunt': {
+    title: 'The Postmortem bringing back your death card',
+    group: 'reached',
+    make: () => reached((s) => haunted(s, 2), { death: SAMPLE_DEATH }),
+  },
+  'rival-haunt': {
+    title: "The Staging boss bringing another player's death card",
+    group: 'reached',
+    make: () => reached((s) => haunted(s, 1), { rival: { card: SAMPLE_RIVAL, by: 'ajimp' } }),
   },
   'boss-next': {
     title: 'The map, one step from the boss',

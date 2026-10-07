@@ -68,7 +68,7 @@ const runMoves = z.strictObject({ from: z.number().int().min(0), actions: z.arra
 const deathChoice = z.strictObject({
   cost: cardId,
   stats: cardId,
-  sigil: z.strictObject({ card: cardId, sigil: z.enum(Object.keys(SIGILS) as [SigilId, ...SigilId[]]) }).nullable(),
+  sigils: cardId,
   // Room for spaces the builder trims away.
   name: z.string().max(DEATH_NAME_LIMIT * 4),
 })
