@@ -34,6 +34,8 @@ function targetFor(action) {
   if (action.type === 'take') return `[data-action="take"][data-index="${action.index}"]`
   if (action.type === 'buff') return `[data-action="buff"][data-card="${action.card}"]`
   if (action.type === 'choose') return `[data-action="choose"][data-option="${action.option}"]`
+  if (action.type === 'start') return `[data-action="start"][data-deck="${action.deck}"]`
+  if (action.type === 'buy') return `[data-action="buy"][data-index="${action.index}"]`
   if (action.type === 'leave') return '[data-action="leave"]'
   if (action.type === 'play') return selectorFor(action.action)
   throw new Error(`No click for ${action.type}`)
@@ -98,7 +100,12 @@ await page.goto(`${BASE}/run`)
 const root = page.locator(ROOT)
 await root.waitFor()
 let mirror = { state: createRun({ seed: Number(await root.getAttribute('data-run-seed')) }), moves: 0 }
-check('a new run opens on the map', (await view(page)) === 'map' && (await root.getAttribute('data-run-moves')) === '0')
+check(
+  'a new run opens on a choice of starter decks',
+  (await view(page)) === 'start' && (await page.locator('[data-action="start"]').count()) === 3,
+)
+mirror = await playRun(page, mirror, { done: (state) => state.visit?.kind !== 'start' })
+check('and then the map', (await view(page)) === 'map')
 check('in the first stage', (await visibleText(page)).includes('Stage 1 of 3: Localhost'))
 check(
   'and only the first row can be chosen',
@@ -108,8 +115,12 @@ check(
 section('A card choice')
 mirror = await playRun(page, mirror, { done: (state) => state.visit?.kind === 'card' })
 check('a card node offers three cards', (await page.locator('[data-action="take"]').count()) === 3)
-mirror = await playRun(page, mirror, { done: (state) => state.deck.length === 5 })
-check('taking one adds it to the deck', (await page.getByRole('button', { name: 'Your deck, 5 cards' }).count()) === 1)
+const before = mirror.state.deck.length
+mirror = await playRun(page, mirror, { done: (state) => state.deck.length === before + 1 })
+check(
+  'taking one adds it to the deck',
+  (await page.getByRole('button', { name: `Your deck, ${before + 1} cards` }).count()) === 1,
+)
 check('and P03 says so', (await page.getByRole('status').filter({ hasText: 'joins your deck' }).count()) === 1)
 
 section('Resuming')
@@ -176,7 +187,7 @@ check(
 )
 await page.locator('[data-action="again"]').click()
 await page.waitForFunction(() => document.querySelector('[data-run-moves]')?.getAttribute('data-run-moves') === '0')
-check('starting another run opens a fresh map', (await view(page)) === 'map')
+check('starting another run opens on the starter deck choice', (await view(page)) === 'start')
 
 section('Abandoning')
 await page.getByRole('button', { name: 'Run menu' }).click()

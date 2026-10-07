@@ -6,9 +6,39 @@ import { deckCard } from '../engine/units.ts'
 import { Rng } from '../rng.ts'
 import { findNode, generateStage } from './map.ts'
 import { scene, type Effect } from './scenes.ts'
-import type { MapNode, RunAction, RunCard, RunEvent, RunResult, RunState, Visit } from './types.ts'
+import type { MapNode, Pick, RunAction, RunCard, RunEvent, RunResult, RunState, Visit } from './types.ts'
 
-export const STARTER_DECK = ['Watchdog', 'CronJob', 'SpamBot', 'MergeConflict']
+/** The decks a run can start with, chosen as its first action. */
+export const STARTER_DECKS: Record<string, { name: string; about: string; cards: string[] }> = {
+  'hello-world': {
+    name: 'Hello, World',
+    about:
+      "Three cards: one that hits every lane while they're empty, one that survives its sacrifice, one that guards.",
+    cards: ['HelloWorld', 'CronJob', 'MergeConflict'],
+  },
+  'legacy-stack': {
+    name: 'Legacy Stack',
+    about: 'Sacrifices: Refactor and Technical Debt pay for big cards early.',
+    cards: ['CronJob', 'OffCenterDiv', 'LegacyCode', 'SpamBot'],
+  },
+  'move-fast': {
+    name: 'Move Fast',
+    about: 'Three cards and little health: hit hard, and hope.',
+    cards: ['CopyPaste', 'SpamBot', 'CronJob'],
+  },
+}
+
+/** What a card costs at a shop, in bytes, by tier. */
+const PRICE: Record<string, number> = { E: 3, D: 5, C: 6, B: 12, A: 15 }
+
+/** The traits a face-down card choice can offer, each the commons that have it. */
+export const PICKS: Record<Pick, { label: string; fits: (id: string) => boolean }> = {
+  free: { label: 'Costs nothing', fits: (id) => card(id).cost === 0 },
+  costly: { label: 'Costs 1 or more', fits: (id) => card(id).cost >= 1 },
+  sigil: { label: 'Carries a sigil', fits: (id) => card(id).sigils.length > 0 },
+  sturdy: { label: '4 or more health', fits: (id) => card(id).health >= 4 },
+  sharp: { label: '3 or more attack', fits: (id) => card(id).attack >= 3 },
+}
 const OFFER_SIZE = 3
 const MAX_BUFFS = 2
 /** The chance that a second buff at the same campfire burns the card. */
@@ -16,7 +46,7 @@ const BURN_CHANCE = 0.5
 
 // Tiers A and B are rares, offered only after a boss.
 const isRare = (id: string) => ['A', 'B'].includes(card(id).tier)
-const COMMONS = PLAYER_DECK.filter((id) => !isRare(id))
+export const COMMONS = PLAYER_DECK.filter((id) => !isRare(id))
 const RARES = PLAYER_DECK.filter(isRare)
 
 const fail = (reason: string): RunResult => ({ ok: false, reason })
@@ -42,12 +72,13 @@ export function createRun({ seed }: { seed: number }): RunState {
     stage: 0,
     map: generateStage(0, rng),
     at: null,
-    visit: null,
+    // The run's first action chooses its starter deck.
+    visit: { kind: 'start' },
     deck: [],
     nextCard: 1,
     record: { battles: 0, bosses: 0, overkill: 0 },
+    bytes: 0,
   }
-  for (const id of STARTER_DECK) state.deck.push(newCard(state, id))
   state.rng = rng.state
   return state
 }
@@ -75,7 +106,17 @@ function enter(state: RunState, rng: Rng, node: MapNode): Visit {
         }),
       }
     case 'card':
+      if (node.blind) {
+        const picks = (Object.keys(PICKS) as Pick[]).filter((pick) => COMMONS.some(PICKS[pick].fits))
+        return { kind: 'blind', node: node.id, picks: rng.shuffle(picks).slice(0, OFFER_SIZE) }
+      }
       return { kind: 'card', node: node.id, offer: rng.shuffle(COMMONS).slice(0, OFFER_SIZE) }
+    case 'shop': {
+      // Two commons and a rare, priced by tier.
+      const cards = [...rng.shuffle(COMMONS).slice(0, 2), ...rng.shuffle(RARES).slice(0, 1)]
+      const offer = cards.map((id) => ({ card: id, price: PRICE[card(id).tier] ?? 10 }))
+      return { kind: 'shop', node: node.id, offer, sold: [] }
+    }
     case 'campfire':
       return { kind: 'campfire', node: node.id, boost: node.boost ?? 'health', card: null, buffs: 0 }
     case 'stones':
@@ -135,7 +176,9 @@ function end(state: RunState, outcome: 'win' | 'loss', events: RunEvent[]): void
 /** Counts a won battle; beating the last boss wins the run. */
 function won(state: RunState, visit: Extract<Visit, { kind: 'battle' }>, events: RunEvent[]): void {
   state.record.battles += 1
-  state.record.overkill += Math.max(0, visit.game.scale - TIP)
+  const overkill = Math.max(0, visit.game.scale - TIP)
+  state.record.overkill += overkill
+  state.bytes += overkill
   if (findNode(state.map, visit.node)?.kind !== 'boss') return
   state.record.bosses += 1
   events.push({ type: 'stageCleared', stage: state.stage })
@@ -166,7 +209,37 @@ function step(state: RunState, rng: Rng, action: RunAction, events: RunEvent[]):
       if (result.state.status === 'won') won(state, visit, events)
       return
     }
+    case 'start': {
+      if (visit?.kind !== 'start') return 'The run has already started'
+      const deck = STARTER_DECKS[action.deck]
+      if (!deck) return 'No such starter deck'
+      for (const id of deck.cards) state.deck.push(newCard(state, id))
+      state.visit = null
+      return
+    }
+    case 'buy': {
+      if (visit?.kind !== 'shop') return 'There is no shop here'
+      const item = Number.isInteger(action.index) ? visit.offer[action.index] : undefined
+      if (!item) return 'No such card for sale'
+      if (visit.sold.includes(action.index)) return 'That card is sold'
+      if (state.bytes < item.price) return 'Not enough bytes'
+      state.bytes -= item.price
+      visit.sold.push(action.index)
+      const bought = newCard(state, item.card)
+      state.deck.push(bought)
+      events.push({ type: 'bought', card: bought, price: item.price })
+      return
+    }
     case 'take': {
+      if (visit?.kind === 'blind') {
+        const pick = Number.isInteger(action.index) ? visit.picks[action.index] : undefined
+        if (!pick) return 'No such choice'
+        const added = newCard(state, rng.pick(COMMONS.filter(PICKS[pick].fits)))
+        state.deck.push(added)
+        events.push({ type: 'added', card: added })
+        state.visit = null
+        return
+      }
       if (visit?.kind !== 'card' && visit?.kind !== 'reward') return 'Nothing is on offer'
       const id = Number.isInteger(action.index) ? visit.offer[action.index] : undefined
       if (id === undefined) return 'No such card on offer'
@@ -234,7 +307,7 @@ function step(state: RunState, rng: Rng, action: RunAction, events: RunEvent[]):
       return
     }
     case 'leave': {
-      if (visit?.kind === 'campfire' || visit?.kind === 'stones' || visit?.kind === 'lint') {
+      if (visit?.kind === 'campfire' || visit?.kind === 'stones' || visit?.kind === 'lint' || visit?.kind === 'shop') {
         state.visit = null
         return
       }
@@ -276,6 +349,17 @@ export function legalRunActions(state: RunState): RunAction[] {
       return visit.offer.map((_, index) => ({ type: 'take', index }))
     case 'event':
       return scene(visit.event).options.map((_, option) => ({ type: 'choose', option }))
+    case 'start':
+      return Object.keys(STARTER_DECKS).map((deck) => ({ type: 'start', deck }))
+    case 'blind':
+      return visit.picks.map((_, index) => ({ type: 'take', index }))
+    case 'shop': {
+      const actions: RunAction[] = [{ type: 'leave' }]
+      visit.offer.forEach((item, index) => {
+        if (!visit.sold.includes(index) && item.price <= state.bytes) actions.push({ type: 'buy', index })
+      })
+      return actions
+    }
     case 'campfire': {
       const actions: RunAction[] = [{ type: 'leave' }]
       if (visit.buffs >= MAX_BUFFS || (visit.buffs > 0 && state.deck.length <= 1)) return actions

@@ -95,7 +95,7 @@ section('Into a battle from the map')
         ? (await battle.count())
           ? battle.first()
           : page.locator('[data-action="go"]').first()
-        : current === 'card' || current === 'reward'
+        : current === 'card' || current === 'reward' || current === 'blind'
           ? page.locator('[data-action="take"]').first()
           : current === 'event'
             ? page.locator('[data-action="choose"]').first()

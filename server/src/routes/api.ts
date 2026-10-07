@@ -1,6 +1,6 @@
 import express from 'express'
 import { rateLimit } from 'express-rate-limit'
-import { RUN_SAVE_LIMIT, SIGILS, type SigilId } from 'shared'
+import { RUN_SAVE_LIMIT, SIGILS, STARTER_DECKS, type SigilId } from 'shared'
 import { z } from 'zod'
 import { USERNAME_PATTERN } from '../auth/auth.ts'
 import { requireUser, type SignedIn } from '../auth/session.ts'
@@ -39,6 +39,13 @@ const runAction = z.discriminatedUnion('type', [
     sigil: z.enum(Object.keys(SIGILS) as [SigilId, ...SigilId[]]),
   }),
   z.strictObject({ type: z.literal('choose'), option: small }),
+  z.strictObject({
+    type: z.literal('strip'),
+    card: cardId,
+    sigil: z.enum(Object.keys(SIGILS) as [SigilId, ...SigilId[]]),
+  }),
+  z.strictObject({ type: z.literal('start'), deck: z.enum(Object.keys(STARTER_DECKS) as [string, ...string[]]) }),
+  z.strictObject({ type: z.literal('buy'), index: small }),
   z.strictObject({ type: z.literal('leave') }),
 ])
 

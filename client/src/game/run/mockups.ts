@@ -67,9 +67,12 @@ function worstRun(patch: Partial<RunState>): { state: RunState; path: string[] }
     stage: 2,
     map,
     at: path.at(-1) ?? null,
+    // Past the starter deck choice, which a fresh run opens on.
+    visit: null,
     deck: worstDeck(),
     nextCard: 41,
     record: { battles: 9999, bosses: 3, overkill: 99999 },
+    bytes: 99999,
     ...patch,
   }
   return { state, path }
@@ -181,7 +184,21 @@ export const MOCKUPS: Record<string, Entry> = {
     group: 'reached',
     make: () => reached((s) => s.at !== null && !s.visit),
   },
+  start: {
+    title: 'The starter deck choice',
+    group: 'reached',
+    make: () => ({ state: createRun({ seed: 1 }), path: [] }),
+  },
   card: { title: 'A card choice', group: 'reached', make: () => reached((s) => s.visit?.kind === 'card') },
+  blind: { title: 'A face-down card choice', group: 'reached', make: () => reached((s) => s.visit?.kind === 'blind') },
+  shop: {
+    title: 'The Package Registry, with bytes for one card',
+    group: 'reached',
+    make: () => {
+      const found = reached((s) => s.visit?.kind === 'shop')
+      return found && { ...found, state: { ...found.state, bytes: 7 } }
+    },
+  },
   campfire: {
     title: 'A campfire',
     group: 'reached',
