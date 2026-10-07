@@ -169,7 +169,13 @@ export function ReaderBody({ unit }: { unit: Shown }) {
         <Art id={unit.card} />
       </div>
       {/* Fixed height, so nothing moves between cards with and without sigils. */}
-      <div className="flex h-24 min-h-12 flex-col gap-2 overflow-y-auto">
+      {/* Focusable, since the type and three sigils can overflow it and a keyboard must be able to scroll it. */}
+      <div
+        role="group"
+        tabIndex={0}
+        aria-label={`${card(unit.card).name}'s type and sigils`}
+        className="flex h-24 min-h-12 flex-col gap-2 overflow-y-auto focus-visible:outline-2 focus-visible:outline-[#0b1f12]"
+      >
         <TypeLine id={unit.card} className="flex gap-2 text-xl leading-tight" icon={20} />
         {unit.sigils.map((sigil) => (
           <p key={sigil} className="flex gap-2 text-xl leading-tight">
@@ -198,7 +204,12 @@ export function FlatReaderBody({ unit }: { unit: Shown }) {
           <span className="min-w-0 [overflow-wrap:anywhere]">{card(unit.card).name}</span>
           <CostPips cost={card(unit.card).cost} pip="size-2.5 outline-1" className="gap-0.5 pt-0.5" />
         </p>
-        <div className="min-h-0 flex-1 overflow-y-auto text-base leading-tight">
+        <div
+          role="group"
+          tabIndex={0}
+          aria-label={`${card(unit.card).name}'s type and sigils`}
+          className="min-h-0 flex-1 overflow-y-auto text-base leading-tight focus-visible:outline-2 focus-visible:outline-[#0b1f12]"
+        >
           <TypeLine id={unit.card} className="flex gap-1" icon={14} />
           {unit.sigils.map((sigil) => (
             <p key={sigil}>
