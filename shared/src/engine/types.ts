@@ -2,7 +2,7 @@ import type { SigilId } from '../cards.ts'
 import type { ItemId } from '../items.ts'
 
 /** Bumped whenever a change would make an old game replay differently. */
-export const RULES_VERSION = 12
+export const RULES_VERSION = 13
 
 export const LANES = 4
 /** The most sigils a card carries. */
