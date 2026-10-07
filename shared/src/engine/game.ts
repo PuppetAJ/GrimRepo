@@ -33,6 +33,8 @@ export type GameOptions = {
   outOfMemory?: boolean
   /** A run's items, to use in this battle. */
   items?: ItemId[]
+  /** A death card a boss adds to its last phase, on top of its plan; `by` is its maker, or null for the player's own. */
+  haunt?: { card: string; by: string | null } | null
 }
 
 export function createGame({
@@ -43,6 +45,7 @@ export function createGame({
   fairHand = false,
   outOfMemory = false,
   items,
+  haunt = null,
 }: GameOptions): GameState {
   const rng = new Rng(seed >>> 0)
   const library = deck ? structuredClone(deck) : PLAYER_DECK.map(deckCard)
@@ -61,6 +64,7 @@ export function createGame({
   }
   if (outOfMemory) state.rebuilds = 0
   if (items) state.items = [...items]
+  if (haunt && encounter) state.opponent.haunt = { ...haunt, played: false }
   if (fairHand) dealFairly(state.player)
   const opening = state.player.deck.splice(0, 3)
   for (const source of opening) state.player.hand.push(drawUnit(state, source))

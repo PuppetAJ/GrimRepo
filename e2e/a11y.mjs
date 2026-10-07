@@ -102,6 +102,7 @@ if (runs('run')) {
     ['death-start', 'start'],
     ['death-offer', 'card'],
     ['death-build', 'summary'],
+    ['rival-haunt', 'battle'],
   ]
   for (const [layout, width, height] of [
     ['wide', 1440, 900],

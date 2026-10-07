@@ -206,6 +206,7 @@ check(
 section('A death card')
 await page.locator('[data-action="death-cost"]').first().click()
 await page.locator('[data-action="death-stats"]').first().click()
+await page.locator('[data-action="death-sigils"]').first().click()
 await page.locator('#death-name').fill('<b>')
 await page.locator('[data-action="build-death-card"]').click()
 check('a name it cannot print is refused before sending', await page.getByText('Letters, numbers').isVisible())

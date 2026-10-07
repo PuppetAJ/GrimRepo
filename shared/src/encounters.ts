@@ -1,7 +1,7 @@
 import { card } from './cards.ts'
 
-/** A fixed card, or one picked from a few for a little variation. */
-export type Queued = { lane: number; card: string } | { lane: number; pick: string[] }
+/** A fixed card, or one picked from a few for a little variation; `orRival` gives the place to another player's death card if one was dealt. */
+export type Queued = { lane: number; card: string; orRival?: boolean } | { lane: number; pick: string[] }
 
 /** What P03 queues on each turn of a phase; turn 0 is queued before the first draw. */
 export type Plan = Queued[][]
@@ -120,7 +120,8 @@ const list: Encounter[] = [
       [
         [
           { lane: 1, card: 'ForkBomb' },
-          { lane: 3, card: 'Firewall' },
+          // A stranger's death card, capped near a Firewall's threat, stands in for it, so the fight stays as hard.
+          { lane: 3, card: 'Firewall', orRival: true },
         ],
         [{ lane: 2, card: 'Sandbox' }],
         [{ lane: 0, pick: ['Crawler', 'ZeroDay'] }],

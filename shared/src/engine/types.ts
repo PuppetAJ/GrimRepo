@@ -49,7 +49,15 @@ export type GameState = {
   /** `spent` holds library cards refactored away, which never come back to the deck that battle. */
   player: { library: DeckCard[]; deck: number[]; hand: Unit[]; board: Slot[]; spent?: number[] }
   /** Without an encounter, P03 queues from its whole pool; `step` is the next turn of the plan. */
-  opponent: { front: Slot[]; back: Slot[]; encounter: string | null; phase: number; step: number }
+  /** `haunt` is a death card P03 adds to its last phase, once; `by` is its maker, or null for the player's own. */
+  opponent: {
+    front: Slot[]
+    back: Slot[]
+    encounter: string | null
+    phase: number
+    step: number
+    haunt?: { card: string; by: string | null; played: boolean }
+  }
   /** The card being summoned and the lanes marked to pay for it. */
   summon: { uid: number; marked: number[] } | null
   /** Times a run's battle has rebuilt its deck, each after the first costing an Out of Memory card; absent elsewhere. */
@@ -93,7 +101,8 @@ export type GameEvent =
   | { type: 'indebted'; uid: number; amount: number; scale: number }
   | { type: 'retired'; lane: number; uid: number }
   | { type: 'advanced'; lane: number; uid: number }
-  | { type: 'queued'; lane: number; unit: Unit }
+  /** `haunt` marks a death card P03 brings into its last phase; `by` names its maker, or null for the player's own. */
+  | { type: 'queued'; lane: number; unit: Unit; haunt?: { by: string | null } }
   | { type: 'healed'; uid: number; amount: number; health: number }
   | { type: 'shielded'; uid: number }
   | { type: 'buffed'; uid: number; attack: number; health: number; sigils?: SigilId[] }

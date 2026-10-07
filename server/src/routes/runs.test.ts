@@ -4,8 +4,12 @@ import {
   applyRun,
   card,
   createRun,
+  deathCardId,
+  deathHands,
+  deathSkipBonus,
   playRun,
   replayRun,
+  rivalAllowed,
   RUN_SAVE_LIMIT,
   scoreRun,
   type RunAction,
@@ -39,7 +43,14 @@ async function start(cookie: string) {
   const reply = await app.call('POST', '/api/runs', { cookie })
   return {
     status: reply.status,
-    ...(reply.body as { id: number; seed: number; actions: RunAction[]; resumed: boolean; death: string | null }),
+    ...(reply.body as {
+      id: number
+      seed: number
+      actions: RunAction[]
+      resumed: boolean
+      death: string | null
+      rival: { card: string; by: string } | null
+    }),
   }
 }
 
@@ -205,29 +216,34 @@ describe('the run actions the server takes', () => {
   })
 })
 
-/** Plays a few moves of a new run and forfeits it, returning the run and its final deck. */
+/** Plays a few moves of a new run and forfeits it, returning the run and the state it ended in. */
 async function lose(cookie: string, opening: RunAction = { type: 'start', deck: 'hello-world' }) {
   const run = await start(cookie)
-  const begun = step(createRun({ seed: run.seed, death: run.death }), opening)
+  const dealt = { death: run.death, rival: run.rival }
+  const begun = step(createRun({ seed: run.seed, ...dealt }), opening)
   const moves = [opening, ...playRun(begun, step).actions.slice(0, 15)]
   await submit(cookie, run.id, moves)
   const forfeit = await app.call('POST', `/api/runs/${run.id}/forfeit`, { cookie })
   assert.equal(forfeit.status, 200)
-  const replayed = replayRun(run.seed, moves, run.death)
+  const replayed = replayRun(run.seed, moves, dealt)
   assert.ok(replayed.ok)
-  return { run, deck: replayed.state.deck, score: forfeit.body.score as number, state: replayed.state }
+  return { run, score: forfeit.body.score as number, state: replayed.state }
+}
+
+/** The first card of each hand the lost run deals. */
+function firstOfEach(state: RunState, name: string) {
+  const [costs, stats, sigils] = deathHands(state)
+  return { cost: costs[0]?.id ?? -1, stats: stats[0]?.id ?? -1, sigils: sigils[0]?.id ?? -1, name }
 }
 
 const build = (cookie: string, id: number, body: object) =>
   app.call('POST', `/api/runs/${id}/death-card`, { cookie, body })
 
 describe('a death card', () => {
-  it('is built from the deck of a lost run, kept, shown on the profile and dealt into the next run', async () => {
+  it('is built from the hands a lost run deals, kept, shown on the profile and dealt into the next run', async () => {
     const player = await signedIn()
-    const { run, deck } = await lose(player.cookie)
-    const [first, second] = deck
-    assert.ok(first && second)
-    const reply = await build(player.cookie, run.id, { cost: first.id, stats: second.id, sigil: null, name: 'Ghost' })
+    const { run, state } = await lose(player.cookie)
+    const reply = await build(player.cookie, run.id, firstOfEach(state, 'Ghost'))
     assert.equal(reply.status, 200, JSON.stringify(reply.body))
     assert.equal(reply.body.saved, true)
     assert.equal(card(reply.body.card).name, 'Ghost')
@@ -239,9 +255,8 @@ describe('a death card', () => {
 
   it('is built once, from the latest run only, and only once that run is lost', async () => {
     const player = await signedIn()
-    const { run, deck } = await lose(player.cookie)
-    const part = deck[0]?.id as number
-    const choice = { cost: part, stats: part, sigil: null, name: 'Once' }
+    const { run, state } = await lose(player.cookie)
+    const choice = firstOfEach(state, 'Once')
     assert.equal((await build(player.cookie, run.id, choice)).status, 200)
     assert.equal((await build(player.cookie, run.id, choice)).status, 409)
     const open = await start(player.cookie)
@@ -250,34 +265,51 @@ describe('a death card', () => {
     assert.equal((await build(stranger.cookie, run.id, choice)).status, 404)
   })
 
-  it('refuses an offensive name and a card not in the deck', async () => {
+  it('refuses an offensive name and a card from outside its hand', async () => {
     const player = await signedIn()
-    const { run, deck } = await lose(player.cookie)
-    const part = deck[0]?.id as number
-    const named = (name: string, cost = part) => build(player.cookie, run.id, { cost, stats: part, sigil: null, name })
-    assert.equal((await named('fuck')).status, 400)
-    assert.equal((await named('Ok', 999)).status, 400)
-    assert.equal((await named('Ok')).status, 200)
+    const { run, state } = await lose(player.cookie)
+    const choice = firstOfEach(state, 'Ok')
+    assert.equal((await build(player.cookie, run.id, { ...choice, name: 'fuck' })).status, 400)
+    assert.equal((await build(player.cookie, run.id, { ...choice, cost: 999 })).status, 400)
+    assert.equal((await build(player.cookie, run.id, choice)).status, 200)
   })
 
-  it('left out of a run, multiplies its score', async () => {
+  it('left out of a run, multiplies its score by a bonus that grows with the card', async () => {
     const player = await signedIn()
     const first = await lose(player.cookie)
-    const part = first.deck[0]?.id as number
-    await build(player.cookie, first.run.id, { cost: part, stats: part, sigil: null, name: 'Skipped' })
+    await build(player.cookie, first.run.id, firstOfEach(first.state, 'Skipped'))
     const { score, state } = await lose(player.cookie, { type: 'start', deck: 'hello-world', skipDeath: true })
-    assert.equal(state.death?.skipped, true)
-    assert.equal(score, scoreRun(state.record, false, true))
+    assert.ok(state.death?.skipped)
+    assert.equal(score, scoreRun(state.record, false, deathSkipBonus(state.death.card)))
   })
 
   it('is shown to a guest but not kept', async () => {
     const visitor = await app.call('POST', '/api/auth/sign-in/anonymous')
-    const { run, deck } = await lose(visitor.cookie)
-    const part = deck[0]?.id as number
-    const reply = await build(visitor.cookie, run.id, { cost: part, stats: part, sigil: null, name: 'Guest' })
+    const { run, state } = await lose(visitor.cookie)
+    const reply = await build(visitor.cookie, run.id, firstOfEach(state, 'Guest'))
     assert.equal(reply.status, 200)
     assert.equal(reply.body.saved, false)
     assert.equal((await start(visitor.cookie)).death, null)
+  })
+})
+
+describe("another player's death card", () => {
+  it("is dealt into someone else's run with its maker's name, never into the maker's own", async () => {
+    const maker = await signedIn()
+    const small = deathCardId({ name: 'Haunt', cost: 1, attack: 3, health: 3, art: 'Watchdog', sigils: [] })
+    assert.ok(rivalAllowed(small))
+    await pool.query('UPDATE users SET death_card = $1 WHERE username = LOWER($2)', [small, maker.username])
+    const other = await signedIn()
+    assert.deepEqual((await start(other.cookie)).rival, { card: small, by: maker.username })
+    assert.equal((await start(maker.cookie)).rival, null)
+  })
+
+  it('is never one over the cap', async () => {
+    const maker = await signedIn()
+    const strong = deathCardId({ name: 'Too Big', cost: 2, attack: 15, health: 17, art: 'Mainframe', sigils: [] })
+    await pool.query('UPDATE users SET death_card = $1 WHERE username = LOWER($2)', [strong, maker.username])
+    const other = await signedIn()
+    assert.equal((await start(other.cookie)).rival, null)
   })
 })
 

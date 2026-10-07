@@ -52,6 +52,8 @@ export type OpenRun = {
   rulesChanged: boolean
   /** The player's death card as it was when the run began. */
   death: string | null
+  /** Another player's death card for the Staging boss, and its maker. */
+  rival: { card: string; by: string } | null
 }
 /** `saved` is false for a guest or the demo account, who see their card but don't keep it. */
 export type BuiltDeathCard = { card: string; saved: boolean }

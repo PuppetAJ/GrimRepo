@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { scoreRun, STAGES } from 'shared'
+import { deathSkipBonus, scoreRun, STAGES } from 'shared'
 import { number } from '../../../lib/format.ts'
 import { Panel } from '../../text/Panel.tsx'
 import type { RunReady } from '../useRun.ts'
@@ -12,7 +12,8 @@ export function Summary({ run }: { run: RunReady }) {
   const { state, over } = run
   const won = state.status === 'won'
   // The server's score once saved; the same formula locally until then.
-  const score = over?.score ?? scoreRun(state.record, won, state.death?.skipped ?? false)
+  const bonus = state.death?.skipped ? deathSkipBonus(state.death.card) : 1
+  const score = over?.score ?? scoreRun(state.record, won, bonus)
   const facts: [string, string][] = [
     ['Reached', `stage ${state.stage + 1} of ${STAGES.length}, ${STAGES[state.stage]}`],
     ['Battles won', String(state.record.battles)],

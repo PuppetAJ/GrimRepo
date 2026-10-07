@@ -1,10 +1,14 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { card, deathCardId, parseDeathCard } from '../cards.ts'
+import { card, deathCardId, parseDeathCard, type SigilId } from '../cards.ts'
+import { encounter } from '../encounters.ts'
 import { createGame } from '../engine/game.ts'
+import { queuePlan } from '../engine/opponent.ts'
+import type { GameEvent } from '../engine/types.ts'
 import { makeUnit, worthOf } from '../engine/units.ts'
-import { scoreRun } from '../scoring.ts'
-import { buildDeathCard, deathCost, deathParts } from './death.ts'
+import { Rng } from '../rng.ts'
+import { DEATH_SKIP_BONUS, scoreRun } from '../scoring.ts'
+import { buildDeathCard, deathCost, deathHands, deathParts, deathSkipBonus, rivalAllowed } from './death.ts'
 import { applyRun, createRun, legalRunActions, replayRun } from './run.ts'
 import type { RunAction, RunCard, RunState } from './types.ts'
 
@@ -20,6 +24,7 @@ const entry = (id: number, cardId: string, changes: Partial<RunCard> = {}): RunC
 }
 
 const DEATH = deathCardId({ name: 'Old Faithful', cost: 1, attack: 4, health: 4, art: 'Cookie', sigils: ['retry'] })
+const RIVAL = deathCardId({ name: 'Stranger', cost: 1, attack: 3, health: 3, art: 'Watchdog', sigils: [] })
 
 /** A run with a death card, its first node made a card choice and visited. */
 function firstCardChoice(state: RunState): RunState {
@@ -63,27 +68,54 @@ describe('building a death card', () => {
     entry(2, 'Mainframe', { attack: 15 }),
     entry(3, 'NullPointer'),
     entry(4, 'Firewall'),
+    entry(5, 'Cookie'),
   ]
+  const lost = (rng = 7, cards = deck): RunState => ({ ...createRun({ seed: 3 }), rng, deck: cards })
+  /** A lost run whose hands put these cards where asked, found by trying the run's random state. */
+  function dealing(want: (hands: RunCard[][]) => boolean, cards = deck): RunState {
+    for (let rng = 1; rng < 5000; rng++) if (want(deathHands(lost(rng, cards)))) return lost(rng, cards)
+    throw new Error('No deal matched')
+  }
+  const has = (hand: RunCard[] | undefined, id: number) => Boolean(hand?.some((part) => part.id === id))
 
-  it('takes the cost from one card, the stats from another and one sigil from a third', () => {
-    const built = buildDeathCard(deck, {
-      cost: 4,
-      stats: 3,
-      sigil: { card: 1, sigil: 'broadcast' },
-      name: 'Grim  Ping ',
-    })
+  it('deals three hands of three from the deck, the same every time the run is replayed', () => {
+    const hands = deathHands(lost())
+    assert.deepEqual(
+      hands.map((hand) => hand.length),
+      [3, 3, 3],
+    )
+    assert.deepEqual(deathHands(lost()), hands)
+  })
+
+  it('takes the cost from the first hand, the stats and art from the second, and every sigil from the third', () => {
+    const state = dealing((hands) => has(hands[0], 4) && has(hands[1], 3) && has(hands[2], 1))
+    const built = buildDeathCard(state, { cost: 4, stats: 3, sigils: 1, name: 'Grim  Ping ' })
     assert.ok(built.ok)
     const def = card(built.id)
     assert.deepEqual(
       [def.name, def.cost, def.attack, def.health, def.sigils, def.art],
       ['Grim Ping', 1, 4, 2, ['broadcast'], 'NullPointer'],
     )
+    const twoSigils = [...deck.slice(0, 4), entry(5, 'Cookie', { sigils: ['popup', 'retry'] })]
+    const both = dealing((hands) => has(hands[0], 4) && has(hands[1], 3) && has(hands[2], 5), twoSigils)
+    const built2 = buildDeathCard(both, { cost: 4, stats: 3, sigils: 5, name: 'Both' })
+    assert.ok(built2.ok)
+    assert.deepEqual(card(built2.id).sigils, ['popup', 'retry'])
   })
 
   it('keeps the buffs the stats card gained in the run', () => {
-    const built = buildDeathCard(deck, { cost: 2, stats: 2, sigil: null, name: 'Big Iron' })
+    const state = dealing((hands) => has(hands[0], 2) && has(hands[1], 2) && has(hands[2], 2))
+    const built = buildDeathCard(state, { cost: 2, stats: 2, sigils: 2, name: 'Big Iron' })
     assert.ok(built.ok)
     assert.equal(card(built.id).attack, 15)
+  })
+
+  it('refuses a card from outside its hand, and a bad name', () => {
+    const state = dealing((hands) => !has(hands[1], 2) && has(hands[0], 1) && has(hands[2], 1))
+    assert.ok(!buildDeathCard(state, { cost: 1, stats: 2, sigils: 1, name: 'Nope' }).ok)
+    const fine = dealing((hands) => has(hands[0], 1) && has(hands[1], 1) && has(hands[2], 1))
+    for (const name of ['', '   ', 'Seventeen chars!!', '<b>', ' -lead'])
+      assert.ok(!buildDeathCard(fine, { cost: 1, stats: 1, sigils: 1, name }).ok, name)
   })
 
   it('costs at most one less than the stats card, and something if that card did', () => {
@@ -95,22 +127,27 @@ describe('building a death card', () => {
     assert.equal(deathCost(entry(0, 'HelloWorld'), entry(0, 'Firewall')), 1)
   })
 
-  it('never uses a death card as a part, so costs cannot be shaved run after run', () => {
+  it('never deals a death card as a part, so costs cannot be shaved run after run', () => {
     const withDeath = [...deck, entry(9, DEATH)]
     assert.ok(!deathParts(withDeath).some((part) => part.id === 9))
-    for (const choice of [
-      { cost: 9, stats: 3, sigil: null },
-      { cost: 1, stats: 9, sigil: null },
-      { cost: 1, stats: 3, sigil: { card: 9, sigil: 'retry' as const } },
-    ])
-      assert.ok(!buildDeathCard(withDeath, { ...choice, name: 'Again' }).ok)
+    for (let rng = 1; rng < 300; rng++) assert.ok(!deathHands(lost(rng, withDeath)).some((hand) => has(hand, 9)))
+  })
+})
+
+describe('leaving a death card out', () => {
+  const made = (cost: number, attack: number, health: number, sigils: SigilId[] = []) =>
+    deathCardId({ name: 'Rated', cost, attack, health, art: 'Cookie', sigils })
+
+  it('earns more the stronger the card, so a weak one left out earns nothing', () => {
+    assert.equal(deathSkipBonus(made(0, 1, 1)), 1)
+    assert.equal(deathSkipBonus(made(2, 15, 17, ['retry'])), DEATH_SKIP_BONUS)
+    const middling = deathSkipBonus(made(1, 2, 6, ['retry']))
+    assert.ok(middling > 1 && middling < DEATH_SKIP_BONUS, String(middling))
   })
 
-  it('refuses a sigil the card lacks, a card not in the deck, and a bad name', () => {
-    assert.ok(!buildDeathCard(deck, { cost: 1, stats: 3, sigil: { card: 4, sigil: 'retry' }, name: 'Nope' }).ok)
-    assert.ok(!buildDeathCard(deck, { cost: 1, stats: 99, sigil: null, name: 'Nope' }).ok)
-    for (const name of ['', '   ', 'Seventeen chars!!', '<b>', ' -lead'])
-      assert.ok(!buildDeathCard(deck, { cost: 1, stats: 3, sigil: null, name }).ok, name)
+  it('multiplies the score by that bonus', () => {
+    const record = { battles: 4, bosses: 1, overkill: 5 }
+    assert.equal(scoreRun(record, false, 1.2), Math.round(scoreRun(record, false) * 1.2))
   })
 })
 
@@ -146,13 +183,14 @@ describe('a run with a death card', () => {
     assert.ok(at.visit?.kind === 'card' && !at.visit.offer.includes(DEATH))
   })
 
-  it('replays the same with the same death card', () => {
+  it('replays the same with the same cards dealt', () => {
     const actions: RunAction[] = [{ type: 'start', deck: 'hello-world' }]
-    const once = replayRun(5, actions, DEATH)
-    assert.ok(once.ok && once.state.death?.card === DEATH)
-    assert.deepEqual(replayRun(5, actions, DEATH), once)
+    const dealt = { death: DEATH, rival: { card: RIVAL, by: 'someone' } }
+    const once = replayRun(5, actions, dealt)
+    assert.ok(once.ok && once.state.death?.card === DEATH && once.state.rival?.by === 'someone')
+    assert.deepEqual(replayRun(5, actions, dealt), once)
     const without = replayRun(5, actions)
-    assert.ok(without.ok && without.state.death === null)
+    assert.ok(without.ok && without.state.death === null && without.state.rival === null)
   })
 
   it('ignores a malformed death card', () => {
@@ -169,9 +207,69 @@ describe('a death card in battle', () => {
   })
 })
 
-describe('the score without a death card', () => {
-  it('is worth a quarter more', () => {
-    const record = { battles: 4, bosses: 1, overkill: 5 }
-    assert.equal(scoreRun(record, false, true), Math.round(scoreRun(record, false) * 1.25))
+describe('a boss bringing a death card', () => {
+  const STRONG = deathCardId({ name: 'Too Big', cost: 2, attack: 15, health: 17, art: 'Mainframe', sigils: ['retry'] })
+
+  /** The boss's game, moved into its last phase with its queue cleared, as a phase change leaves it. */
+  function lastPhase(id: string, haunt: { card: string; by: string | null }) {
+    const game = createGame({ seed: 2, encounter: id, haunt })
+    game.opponent.back.fill(null)
+    game.opponent.front.fill(null)
+    game.opponent.phase = encounter(id).phases.length - 1
+    game.opponent.step = 0
+    const events: GameEvent[] = []
+    queuePlan(game, new Rng(1), events)
+    return { game, events }
+  }
+
+  it('brings it into the last phase on top of the plan, once', () => {
+    const plan = encounter('production-boss').phases[1]?.[0] ?? []
+    const { game, events } = lastPhase('production-boss', { card: DEATH, by: null })
+    const queued = events.flatMap((event) => (event.type === 'queued' ? [event] : []))
+    assert.equal(queued.length, plan.length + 1)
+    const haunt = queued.find((event) => event.unit.card === DEATH)
+    assert.deepEqual(haunt?.haunt, { by: null })
+    // Nothing from the plan is left out to make room.
+    for (const planned of plan) assert.ok(queued.some((event) => 'card' in planned && event.unit.card === planned.card))
+    const again: GameEvent[] = []
+    queuePlan(game, new Rng(2), again)
+    assert.ok(!again.some((event) => event.type === 'queued' && event.unit.card === DEATH))
+  })
+
+  it("gives a stranger's card the place the plan offers it, rather than adding it", () => {
+    const plan = encounter('staging-boss').phases[1]?.[0] ?? []
+    const { events } = lastPhase('staging-boss', { card: RIVAL, by: 'someone' })
+    const queued = events.flatMap((event) => (event.type === 'queued' ? [event] : []))
+    assert.equal(queued.length, plan.length)
+    assert.deepEqual(queued.find((event) => event.unit.card === RIVAL)?.haunt, { by: 'someone' })
+    assert.ok(!queued.some((event) => event.unit.card === 'Firewall'))
+  })
+
+  it('holds it back in the first phase', () => {
+    const game = createGame({ seed: 2, encounter: 'production-boss', haunt: { card: DEATH, by: null } })
+    assert.ok(![...game.opponent.back, ...game.opponent.front].some((unit) => unit?.card === DEATH))
+  })
+
+  it("is the Staging boss with a stranger's card, and the last boss with your own, left out or not", () => {
+    const run = createRun({ seed: 4, death: STRONG, rival: { card: RIVAL, by: 'someone' } })
+    const boss = (state: RunState, stage: number) => {
+      const node = state.map.rows[0]?.[0]
+      assert.ok(node)
+      node.kind = 'boss'
+      node.encounter = ['localhost-boss', 'staging-boss', 'production-boss'][stage] as string
+      const entered = step({ ...state, stage, visit: null }, { type: 'go', node: node.id })
+      assert.ok(entered.visit?.kind === 'battle')
+      return entered.visit.game.opponent.haunt ?? null
+    }
+    const started = step(run, { type: 'start', deck: 'hello-world', skipDeath: true })
+    assert.equal(boss(started, 0), null)
+    assert.deepEqual(boss(started, 1), { card: RIVAL, by: 'someone', played: false })
+    assert.deepEqual(boss(started, 2), { card: STRONG, by: null, played: false })
+  })
+
+  it("never deals a stranger's card over the cap", () => {
+    assert.ok(rivalAllowed(RIVAL))
+    assert.ok(!rivalAllowed(STRONG))
+    assert.equal(createRun({ seed: 4, rival: { card: STRONG, by: 'someone' } }).rival, null)
   })
 })

@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { useState } from 'react'
-import { buildDeathCard, card, DEATH_NAME_LIMIT, deathNameProblem, deathParts, SIGILS, type DeathChoice } from 'shared'
+import { buildDeathCard, card, DEATH_NAME_LIMIT, deathHands, deathNameProblem, type RunCard } from 'shared'
 import { api, ApiError, type BuiltDeathCard } from '../../../lib/api.ts'
 import { PixelCard } from '../../CardReader.tsx'
 import { Panel, SIDE_BUTTON } from '../../text/Panel.tsx'
@@ -8,34 +8,38 @@ import { asUnit } from '../nodes.ts'
 import type { RunReady } from '../useRun.ts'
 import { CardList } from './CardList.tsx'
 
-type Sigil = DeathChoice['sigil']
-
 /** What the preview is called before the player names it. */
 const UNNAMED = 'Death Card'
 
-/** After a lost run: one card built from three in the deck, kept for a later run's card choice. */
+/** Each hand's step: what its card gives the death card. */
+const STEPS = [
+  { key: 'cost', label: 'Its cost, from one of these', action: 'death-cost' },
+  { key: 'stats', label: 'Its attack, health and art, from one of these', action: 'death-stats' },
+  { key: 'sigils', label: 'Its sigils, every one this card has', action: 'death-sigils' },
+] as const
+
+type Part = (typeof STEPS)[number]['key']
+
+/** After a lost run: a card built from one pick in each of three hands the deck deals, kept for later runs. */
 export function DeathCardBuilder({ run }: { run: RunReady }) {
-  const [cost, setCost] = useState<number | null>(null)
-  const [stats, setStats] = useState<number | null>(null)
-  const [sigil, setSigil] = useState<Sigil>(null)
+  const [picked, setPicked] = useState<Record<Part, number | null>>({ cost: null, stats: null, sigils: null })
   const [name, setName] = useState('')
   const [touched, setTouched] = useState(false)
   const [sending, setSending] = useState(false)
   const [built, setBuilt] = useState<BuiltDeathCard | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const parts = deathParts(run.state.deck)
-  const units = parts.map((entry) => asUnit(entry))
-  const costCard = parts.find((entry) => entry.id === cost)
-  const statsCard = parts.find((entry) => entry.id === stats)
-  // Each sigil once, from the first card holding it, since which card gives it changes nothing.
-  const sigils: NonNullable<Sigil>[] = []
-  for (const entry of parts)
-    for (const id of entry.sigils)
-      if (!sigils.some((option) => option.sigil === id)) sigils.push({ card: entry.id, sigil: id })
+  const hands = deathHands(run.state)
   const problem = deathNameProblem(name)
-  const choice = (named: string) => ({ cost: cost ?? -1, stats: stats ?? -1, sigil, name: named })
-  const preview = costCard && statsCard ? buildDeathCard(parts, choice(problem ? UNNAMED : name)) : null
+  const complete = picked.cost !== null && picked.stats !== null && picked.sigils !== null
+  const choice = (named: string) => ({
+    cost: picked.cost ?? -1,
+    stats: picked.stats ?? -1,
+    sigils: picked.sigils ?? -1,
+    name: named,
+  })
+  const preview = complete ? buildDeathCard(run.state, choice(problem ? UNNAMED : name)) : null
+  const costCard = hands[0].find((entry) => entry.id === picked.cost)
   // The server's record must be saved before it can build from it; a mockup builds here and keeps nothing.
   const mockup = run.id === -1
   const ready = mockup || run.over !== null
@@ -64,64 +68,27 @@ export function DeathCardBuilder({ run }: { run: RunReady }) {
           Build a death card
         </h3>
         <p className="font-sans text-base">
-          One card comes back from this run: the cost of one card, the stats of another, and a sigil from a third. Your
-          next run offers it once, at its first card choice.
+          Your deck deals three hands. Pick one card from each: the first gives its cost, the second its attack, health
+          and art, the third its sigils. Your next run offers it once, at its first card choice, and P03 brings it to
+          the final boss either way, so build with care.
         </p>
       </div>
-      <section aria-labelledby="death-cost" className="flex flex-col gap-2">
-        <h4 id="death-cost" className="text-p03">
-          1. The card whose cost it takes
-        </h4>
-        <CardList
-          units={units}
-          onPick={(unit) => setCost(unit.uid === cost ? null : unit.uid)}
-          picked={cost}
-          data={(unit) => ({ 'data-action': 'death-cost', 'data-card': unit.uid })}
-          size="w-20 sm:w-24"
-        />
-      </section>
-      <section aria-labelledby="death-stats" className="flex flex-col gap-2">
-        <h4 id="death-stats" className="text-p03">
-          2. The card whose attack and health it takes, and its art
-        </h4>
-        <CardList
-          units={units}
-          onPick={(unit) => setStats(unit.uid === stats ? null : unit.uid)}
-          picked={stats}
-          data={(unit) => ({ 'data-action': 'death-stats', 'data-card': unit.uid })}
-          size="w-20 sm:w-24"
-        />
-      </section>
-      <fieldset className="flex flex-col gap-2">
-        <legend className="mb-2 text-p03">3. The sigil it takes, from any card in the deck</legend>
-        <label className="flex items-start gap-2">
-          <input
-            type="radio"
-            name="death-sigil"
-            checked={sigil === null}
-            onChange={() => setSigil(null)}
-            className="mt-1.5 accent-p03"
+      {STEPS.map((step, index) => (
+        <section key={step.key} aria-labelledby={`death-${step.key}`} className="flex flex-col gap-2">
+          <h4 id={`death-${step.key}`} className="text-p03">
+            {index + 1}. {step.label}
+          </h4>
+          <CardList
+            units={(hands[index] as RunCard[]).map((entry) => asUnit(entry))}
+            onPick={(unit) =>
+              setPicked((now) => ({ ...now, [step.key]: now[step.key] === unit.uid ? null : unit.uid }))
+            }
+            picked={picked[step.key]}
+            data={(unit) => ({ 'data-action': step.action, 'data-card': unit.uid })}
+            size="w-20 sm:w-24"
           />
-          <span>No sigil</span>
-        </label>
-        {sigils.map((option) => (
-          <label key={option.sigil} className="flex items-start gap-2">
-            <input
-              type="radio"
-              name="death-sigil"
-              data-action="death-sigil"
-              data-sigil={option.sigil}
-              checked={sigil?.sigil === option.sigil}
-              onChange={() => setSigil(option)}
-              className="mt-1.5 accent-p03"
-            />
-            <span>
-              <strong>{SIGILS[option.sigil].name}.</strong>{' '}
-              <span className="font-sans text-base">{SIGILS[option.sigil].text}</span>
-            </span>
-          </label>
-        ))}
-      </fieldset>
+        </section>
+      ))}
       <div className="flex flex-col gap-1">
         <label htmlFor="death-name" className="text-p03">
           4. Its name
@@ -141,7 +108,7 @@ export function DeathCardBuilder({ run }: { run: RunReady }) {
           {touched && problem ? problem : `Up to ${DEATH_NAME_LIMIT} characters.`}
         </p>
       </div>
-      {preview?.ok && costCard && statsCard ? (
+      {preview?.ok && costCard ? (
         <Panel>
           <div className="flex flex-wrap items-start gap-4">
             <div className="w-28 shrink-0">
@@ -164,7 +131,7 @@ export function DeathCardBuilder({ run }: { run: RunReady }) {
       <button
         type="button"
         data-action="build-death-card"
-        disabled={!costCard || !statsCard || sending || !ready}
+        disabled={!complete || sending || !ready}
         onClick={submit}
         className={`${SIDE_BUTTON} self-start border-p03 px-4 disabled:opacity-50`}
       >
