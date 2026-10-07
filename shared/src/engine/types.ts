@@ -1,7 +1,8 @@
 import type { SigilId } from '../cards.ts'
+import type { ItemId } from '../items.ts'
 
 /** Bumped whenever a change would make an old game replay differently. */
-export const RULES_VERSION = 11
+export const RULES_VERSION = 12
 
 export const LANES = 4
 /** The most sigils a card carries. */
@@ -53,6 +54,10 @@ export type GameState = {
   summon: { uid: number; marked: number[] } | null
   /** Times a run's battle has rebuilt its deck, each after the first costing an Out of Memory card; absent elsewhere. */
   rebuilds?: number
+  /** A run's items, carried into the battle and used up there; absent in a quick battle. */
+  items?: ItemId[]
+  /** Set by the Hourglass: P03 sits out its next turn. */
+  skipOpponent?: boolean
 }
 
 export type Action =
@@ -63,6 +68,8 @@ export type Action =
   | { type: 'cancel' }
   | { type: 'place'; lane: number }
   | { type: 'ringBell' }
+  /** Uses the item in that slot; `row` and `lane` aim it at a card when it needs one. */
+  | { type: 'use'; slot: number; row?: 'board' | 'front' | 'back'; lane?: number }
 
 export type Side = 'player' | 'opponent'
 
@@ -92,6 +99,13 @@ export type GameEvent =
   | { type: 'buffed'; uid: number; attack: number; health: number; sigils?: SigilId[] }
   /** A card left in a lane, as a Deprecated card leaves a Boilerplate. */
   | { type: 'leftBehind'; side: Side; lane: number; unit: Unit }
+  | { type: 'used'; item: ItemId }
+  /** P03's card pulled into the player's lane by the Hook. */
+  | { type: 'hooked'; uid: number; lane: number }
+  /** A card put into the hand, as the Bottled Boilerplate does, without drawing. */
+  | { type: 'gained'; unit: Unit }
+  /** P03 sat out its turn, after the Hourglass. */
+  | { type: 'skipped' }
   /** `heading` is set when a Load Balancer moves on, which way it will go next. */
   | { type: 'moved'; uid: number; side: Side; from: number; to: number; heading?: 1 | -1 }
   /** A Hot Reload card's copy: back in the player's hand (lane null) or in P03's queue, from the lane it left. */

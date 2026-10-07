@@ -52,6 +52,10 @@ const PACE: Record<GameEvent['type'], number> = {
   shielded: 180,
   buffed: 180,
   leftBehind: 240,
+  used: 200,
+  hooked: 380,
+  gained: 240,
+  skipped: 300,
   shipped: 300,
   moved: 380,
   reloaded: 270,
@@ -126,6 +130,12 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
         event.unit.uid,
         slot(event.side === 'player' ? 'board' : 'front', event.from, 0.4),
       )
+      break
+    case 'gained':
+      next.spawns = new Map(next.spawns).set(event.unit.uid, PILE)
+      break
+    case 'skipped':
+      popup('skipped', 'note', FACE.opponent, { face: 'opponent' })
       break
     case 'leftBehind':
       // The Boilerplate comes off the pile into the lane the Deprecated card left.

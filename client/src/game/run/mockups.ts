@@ -7,6 +7,7 @@ import {
   Rng,
   nextRunAction,
   SCENES,
+  type ItemId,
   type RunCard,
   type RunState,
   type SigilId,
@@ -279,6 +280,18 @@ export const MOCKUPS: Record<string, Entry> = {
     group: 'reached',
     make: () => reached((s) => s.visit?.kind === 'battle' && s.visit.game.turn > 2),
   },
+  'battle-items': {
+    title: 'A battle in a run, with three items to use',
+    group: 'reached',
+    make: () => {
+      const found = reached((s) => s.visit?.kind === 'battle' && s.visit.game.turn > 2 && s.visit.game.drawn)
+      if (!found || found.state.visit?.kind !== 'battle') return null
+      const items: ItemId[] = ['hammer', 'pliers', 'hourglass']
+      const game = { ...found.state.visit.game, items }
+      return { ...found, state: { ...found.state, items, visit: { ...found.state.visit, game } } }
+    },
+  },
+  item: { title: 'A tool rack', group: 'reached', make: () => reached((s) => s.visit?.kind === 'item') },
   'boss-phase': {
     title: "A boss's second phase",
     group: 'reached',

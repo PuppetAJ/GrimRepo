@@ -6,6 +6,7 @@ import { deckCard } from '../engine/units.ts'
 import { Rng } from '../rng.ts'
 import { findNode, generateStage } from './map.ts'
 import { scene, type Effect } from './scenes.ts'
+import { FOUND_ITEMS, ITEM_SLOTS, type ItemId } from '../items.ts'
 import type { MapNode, Pick, RunAction, RunCard, RunEvent, RunResult, RunState, Trial, Visit } from './types.ts'
 
 /** The decks a run can start with, chosen as its first action. */
@@ -30,6 +31,9 @@ export const STARTER_DECKS: Record<string, { name: string; about: string; cards:
 
 /** What a card costs at a shop, in bytes, by tier. */
 const PRICE: Record<string, number> = { E: 3, D: 5, C: 6, B: 12, A: 15 }
+
+/** How often a shop has an item for sale. */
+const SHOP_ITEM_SHARE = 0.3
 
 /** What removing a card at a shop costs, in bytes; once a visit. */
 export const UNINSTALL_PRICE = 4
@@ -92,6 +96,7 @@ export function createRun({ seed }: { seed: number }): RunState {
     nextCard: 1,
     record: { battles: 0, bosses: 0, overkill: 0 },
     bytes: 0,
+    items: [],
   }
   state.rng = rng.state
   return state
@@ -117,6 +122,7 @@ function enter(state: RunState, rng: Rng, node: MapNode): Visit {
           encounter: node.encounter ?? null,
           fairHand: true,
           outOfMemory: true,
+          items: state.items,
         }),
       }
     case 'card':
@@ -129,8 +135,13 @@ function enter(state: RunState, rng: Rng, node: MapNode): Visit {
       // Two commons and a rare, priced by tier.
       const cards = [...rng.shuffle(COMMONS).slice(0, 2), ...rng.shuffle(RARES).slice(0, 1)]
       const offer = cards.map((id) => ({ card: id, price: PRICE[card(id).tier] ?? 10 }))
-      return { kind: 'shop', node: node.id, offer, sold: [] }
+      // Now and then a tool too; Scissors are found nowhere else.
+      const tool = rng.float() < SHOP_ITEM_SHARE ? rng.pick<ItemId>(['scissors', ...FOUND_ITEMS]) : null
+      const item = tool ? { id: tool, price: tool === 'scissors' ? 10 : 6 } : undefined
+      return { kind: 'shop', node: node.id, offer, sold: [], ...(item ? { item } : {}) }
     }
+    case 'item':
+      return { kind: 'item', node: node.id, offer: rng.shuffle(FOUND_ITEMS).slice(0, OFFER_SIZE) }
     case 'campfire':
       return { kind: 'campfire', node: node.id, boost: node.boost ?? 'health', card: null, buffs: 0 }
     case 'stones':
@@ -164,6 +175,12 @@ function resolve(state: RunState, rng: Rng, effect: Effect, events: RunEvent[]):
     if (state.deck.length > 1) remove(state, rng.pick(state.deck), events)
   } else if (effect.type === 'lint' || effect.type === 'fuse') {
     // The caller opens the linter or the merge request, since it knows the node.
+  } else if (effect.type === 'item') {
+    if (state.items.length < ITEM_SLOTS) {
+      const found = rng.pick(FOUND_ITEMS)
+      state.items.push(found)
+      events.push({ type: 'gotItem', item: found })
+    }
   } else if (effect.type === 'trial') {
     const { bar, of } = TRIALS[effect.trial]
     const cards = rng.shuffle([...state.deck]).slice(0, 3)
@@ -340,6 +357,33 @@ function step(state: RunState, rng: Rng, action: RunAction, events: RunEvent[]):
       state.visit = null
       return
     }
+    case 'pickItem': {
+      if (visit?.kind !== 'item') return 'There are no items here'
+      const item = Number.isInteger(action.index) ? visit.offer[action.index] : undefined
+      if (!item) return 'No such item'
+      let dropped: ItemId | undefined
+      if (state.items.length >= ITEM_SLOTS) {
+        // A full kit gives up one item for the new one.
+        dropped = action.drop === undefined ? undefined : state.items[action.drop]
+        if (!dropped) return 'Choose an item to give up'
+        state.items = state.items.filter((_, index) => index !== action.drop)
+      }
+      state.items.push(item)
+      events.push({ type: 'gotItem', item, ...(dropped ? { dropped } : {}) })
+      state.visit = null
+      return
+    }
+    case 'buyItem': {
+      if (visit?.kind !== 'shop' || !visit.item) return 'No item for sale here'
+      if (visit.itemSold) return 'That item is sold'
+      if (state.bytes < visit.item.price) return 'Not enough bytes'
+      if (state.items.length >= ITEM_SLOTS) return 'No slot free'
+      state.bytes -= visit.item.price
+      visit.itemSold = true
+      state.items.push(visit.item.id)
+      events.push({ type: 'gotItem', item: visit.item.id })
+      return
+    }
     case 'uninstall': {
       if (visit?.kind !== 'shop') return 'There is no shop here'
       if (visit.uninstalled) return 'Only one uninstall a visit'
@@ -366,11 +410,13 @@ function step(state: RunState, rng: Rng, action: RunAction, events: RunEvent[]):
       return
     }
     case 'leave': {
-      if (['campfire', 'stones', 'lint', 'shop', 'fuse'].includes(visit?.kind ?? '')) {
+      if (['campfire', 'stones', 'lint', 'shop', 'fuse', 'item'].includes(visit?.kind ?? '')) {
         state.visit = null
         return
       }
       if (visit?.kind !== 'battle' || visit.game.status !== 'won') return 'There is nothing to leave'
+      // The items not used in the battle come back out of it.
+      state.items = [...(visit.game.items ?? [])]
       state.visit =
         findNode(state.map, visit.node)?.kind === 'boss'
           ? { kind: 'reward', offer: rng.shuffle(RARES).slice(0, OFFER_SIZE) }
@@ -417,8 +463,18 @@ export function legalRunActions(state: RunState): RunAction[] {
       visit.offer.forEach((item, index) => {
         if (!visit.sold.includes(index) && item.price <= state.bytes) actions.push({ type: 'buy', index })
       })
+      if (visit.item && !visit.itemSold && state.bytes >= visit.item.price && state.items.length < ITEM_SLOTS)
+        actions.push({ type: 'buyItem' })
       if (!visit.uninstalled && state.bytes >= UNINSTALL_PRICE && state.deck.length > 1)
         for (const entry of state.deck) actions.push({ type: 'uninstall', card: entry.id })
+      return actions
+    }
+    case 'item': {
+      const actions: RunAction[] = [{ type: 'leave' }]
+      visit.offer.forEach((_, index) => {
+        if (state.items.length < ITEM_SLOTS) actions.push({ type: 'pickItem', index })
+        else state.items.forEach((__, drop) => actions.push({ type: 'pickItem', index, drop }))
+      })
       return actions
     }
     case 'fuse': {

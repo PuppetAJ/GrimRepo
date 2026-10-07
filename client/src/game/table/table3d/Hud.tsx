@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
-import { legalActions, type Unit } from 'shared'
+import { ITEMS, legalActions, type ItemId, type Unit } from 'shared'
 import { Button } from '@/components/ui/button.tsx'
 import { FlatReaderBody } from '../../CardReader.tsx'
 import {
@@ -57,9 +57,14 @@ export function Hud({
   pinned,
   onUnpin,
   onMap,
+  aimed = null,
+  onPutBack,
 }: {
   /** In a run, glides back to look at the map on the projector. */
   onMap?: () => void
+  /** The item picked up to aim at a card, and how to put it back. */
+  aimed?: ItemId | null
+  onPutBack?: () => void
   lifted: Unit | null
   pinned: string[] | null
   onUnpin: () => void
@@ -214,18 +219,24 @@ export function Hud({
             >
               {busy
                 ? "P03's turn…"
-                : prompt(
-                    mustDraw,
-                    summoning,
-                    summoning ? owed(summoning, view.board, view.summon?.marked ?? []) : 0,
-                    overText(game),
-                    !busy && !finished && skippedDraw(state),
-                  )}
+                : aimed
+                  ? `Use the ${ITEMS[aimed].name} on which card? Esc to put it back.`
+                  : prompt(
+                      mustDraw,
+                      summoning,
+                      summoning ? owed(summoning, view.board, view.summon?.marked ?? []) : 0,
+                      overText(game),
+                      !busy && !finished && skippedDraw(state),
+                    )}
             </p>
           </div>
 
           <div className="absolute right-0 bottom-0 flex w-[26%] flex-col items-end gap-2 p-3 sm:p-4">
-            {busy ? (
+            {aimed ? (
+              <Button variant="outline" onClick={onPutBack} aria-keyshortcuts="Escape">
+                Put the {ITEMS[aimed].name} back
+              </Button>
+            ) : busy ? (
               <Button variant="outline" onClick={skip}>
                 Skip
               </Button>

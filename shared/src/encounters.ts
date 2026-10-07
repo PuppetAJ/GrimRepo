@@ -173,6 +173,7 @@ const list: Encounter[] = [
       [
         [
           { lane: 0, card: 'RubberDuck' },
+          { lane: 2, card: 'JSONFoorhees' },
           { lane: 3, card: 'Firewall' },
         ],
         [{ lane: 1, card: 'Cookie' }],

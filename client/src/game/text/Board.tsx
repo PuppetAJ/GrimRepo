@@ -131,7 +131,28 @@ export function Board() {
     showRefusal,
     refusalShake,
   } = useTable()
-  const { laneSize, setReading } = useTable()
+  const { laneSize, setReading, aiming, setAiming, aimAt } = useTable()
+  // Over each card the item in hand can reach, a button that uses it there.
+  const aim = (row: 'board' | 'front' | 'back', i: number) => {
+    const use = aiming === null ? null : aimAt(row, i)
+    if (!use) return null
+    return (
+      <button
+        type="button"
+        data-action="aim"
+        data-row={row}
+        data-lane={i}
+        aria-label={`Use it on ${row === 'board' ? 'your' : "P03's"} card in lane ${i + 1}`}
+        onClick={() => {
+          act(use)
+          setAiming(null)
+        }}
+        className="absolute inset-0 z-20 grid place-items-end rounded-md border-2 border-dashed border-[#ffb454] bg-[#ffb454]/10 p-1 text-base text-[#ffb454] hover:bg-[#ffb454]/25 focus-visible:outline-2 focus-visible:outline-[#ffb454]"
+      >
+        use here
+      </button>
+    )
+  }
   const faces = playback.popups.filter((popup) => 'face' in popup.spot)
   // A lane is a picture of its card, focusable so a keyboard can read it; on a phone, where a tap opens the card, a button.
   const lane = (label: string, unit: Slot, open: () => void) => {
@@ -168,7 +189,7 @@ export function Board() {
               setReading({ row: 'back', lane: i }),
             )}
             onClick={tapToRead && unit ? () => setReading({ row: 'back', lane: i }) : undefined}
-            className={`${CELL} border-p03-lane [&>*]:brightness-75`}
+            className={`${CELL} relative border-p03-lane [&>*]:brightness-75`}
             style={laneSize}
           >
             <Occupant
@@ -179,6 +200,7 @@ export function Board() {
               playback={playback}
               empty={<span className="grid size-full place-items-center text-5xl text-p03-edge">↓</span>}
             />
+            {aim('back', i)}
           </div>
         ))}
       </div>
@@ -193,10 +215,11 @@ export function Board() {
                 setReading({ row: 'front', lane: i }),
               )}
               onClick={tapToRead && unit ? () => setReading({ row: 'front', lane: i }) : undefined}
-              className={`${CELL} border-p03-lane`}
+              className={`${CELL} relative border-p03-lane`}
               style={laneSize}
             >
               <Occupant row="front" lane={i} unit={unit} playback={playback} isNew={isNew} />
+              {aim('front', i)}
             </div>
           ))}
       </div>
@@ -260,6 +283,7 @@ export function Board() {
                     ) : null
                   }
                 />
+                {aim('board', i)}
                 {paid ? (
                   <span className="absolute inset-x-1 bottom-1 z-10 rounded-sm bg-[#07130b]/90 py-0.5 text-center text-base text-p03">
                     ↓ play here
