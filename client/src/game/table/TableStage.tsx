@@ -144,6 +144,8 @@ export function TableStage({ children }: { children: ReactNode }) {
       <div
         ref={element}
         {...attributes}
+        // How far the effects have been cut to keep up, for tests and for seeing why the room looks flatter.
+        data-quality={quality}
         // Focusable, so a click anywhere on the table puts focus here and its shortcuts work.
         tabIndex={-1}
         className={fullScreen.on ? 'fixed inset-0 z-40 bg-[#050403]' : 'relative h-full w-full'}
@@ -180,8 +182,11 @@ export function TableStage({ children }: { children: ReactNode }) {
                 <FactoryP03 view={room.view} busy={room.busy} outcome={room.outcome} patient={room.patient} />
               </>
             ) : null}
-            <tunnel.Out />
-            <Loaded onLoad={setReady} />
+            {/* Its own boundary, so a scene still loading never hides the room for a few frames as it swaps in. */}
+            <Suspense fallback={null}>
+              <tunnel.Out />
+              <Loaded onLoad={setReady} />
+            </Suspense>
           </Suspense>
         </Canvas>
         <Boot stage={warmed ? 'done' : active ? 'assets' : 'warming'} progress={progress} files={files} />
