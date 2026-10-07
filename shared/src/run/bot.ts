@@ -1,7 +1,7 @@
 import { card, type SigilId } from '../cards.ts'
 import { nextBotAction, type Strategy } from '../engine/bot.ts'
 import { findNode } from './map.ts'
-import { legalRunActions } from './run.ts'
+import { COMMONS, legalRunActions, PICKS, STARTER_DECKS } from './run.ts'
 import { scene, type Effect } from './scenes.ts'
 import type { RunAction, RunCard, RunState } from './types.ts'
 
@@ -38,10 +38,10 @@ function effectWorth(state: RunState, effect: Effect): number {
 }
 
 // Nodes the bot heads for first, since they only ever strengthen the deck.
-const PREFERRED = ['card', 'campfire', 'event', 'stones', 'battle', 'boss']
+const PREFERRED = ['card', 'shop', 'campfire', 'event', 'stones', 'battle', 'boss']
 
 /** Deterministic: takes the best-value card, buffs its strongest card once, weighs event choices, moves a sigil up, and plays battles greedily. */
-export function nextRunAction(state: RunState, strategy: Strategy = 'greedy'): RunAction {
+export function nextRunAction(state: RunState, strategy: Strategy = 'greedy', deck?: string): RunAction {
   const legal = legalRunActions(state)
   const visit = state.visit
   if (!visit) {
@@ -49,7 +49,29 @@ export function nextRunAction(state: RunState, strategy: Strategy = 'greedy'): R
       action.type === 'go' ? PREFERRED.indexOf(findNode(state.map, action.node)?.kind ?? 'boss') : PREFERRED.length
     return [...legal].sort((a, b) => rank(a) - rank(b))[0] as RunAction
   }
+  const average = state.deck.reduce((sum, entry) => sum + cardValue(entry.card), 0) / Math.max(1, state.deck.length)
   switch (visit.kind) {
+    case 'start': {
+      // Each starter deck in turn by seed, unless one is asked for.
+      const ids = Object.keys(STARTER_DECKS)
+      return { type: 'start', deck: deck ?? (ids[state.seed % ids.length] as string) }
+    }
+    case 'blind': {
+      // The trait whose cards are worth most on average.
+      const worth = visit.picks.map((pick) => {
+        const pool = COMMONS.filter(PICKS[pick].fits)
+        return pool.reduce((sum, id) => sum + cardValue(id), 0) / Math.max(1, pool.length)
+      })
+      return { type: 'take', index: worth.indexOf(Math.max(...worth)) }
+    }
+    case 'shop': {
+      // The best card it can afford, if it beats the deck's average.
+      const buys = legal.filter((action): action is Extract<RunAction, { type: 'buy' }> => action.type === 'buy')
+      const best = [...buys].sort(
+        (a, b) => cardValue(visit.offer[b.index]?.card as string) - cardValue(visit.offer[a.index]?.card as string),
+      )[0]
+      return best && cardValue(visit.offer[best.index]?.card as string) > average ? best : { type: 'leave' }
+    }
     case 'battle':
       return visit.game.status === 'won'
         ? { type: 'leave' }

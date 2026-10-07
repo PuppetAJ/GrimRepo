@@ -96,7 +96,7 @@ function Between({
           title={title}
           caption={fading ? seen.caption : screen.caption}
           stack={body === 'map'}
-          deck={body !== 'summary'}
+          deck={body !== 'summary' && body !== 'start'}
           mode={projecting ? 'hologram' : 'floating'}
           pinTo={pin}
           onSwitch={{ label: 'Play on the text table', go: onText }}

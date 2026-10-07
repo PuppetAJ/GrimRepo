@@ -26,6 +26,8 @@ export function narrateRun(before: RunState, events: RunEvent[]): string[] {
               ? `${named(event.card.card)} was sacrificed to the stones.`
               : `${named(event.card.card)} is gone from your deck.`,
         ]
+      case 'bought':
+        return [`${named(event.card.card)} installed, for ${event.price} bytes. No refunds.`]
       case 'stripped':
         return [`The linter deleted ${SIGILS[event.sigil].name} from ${named(event.card.card)}. One warning down.`]
       case 'stageCleared':

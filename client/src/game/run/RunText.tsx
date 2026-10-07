@@ -28,7 +28,7 @@ export function RunText({ run, layout, seat, on3d }: { run: RunReady; layout: La
             title={title}
             caption={caption}
             stack={view === 'map'}
-            deck={view !== 'summary'}
+            deck={view !== 'summary' && view !== 'start'}
             onSwitch={{ label: 'Play on the 3D table', go: on3d }}
           >
             <ScreenBody run={run} view={view} layout={layout} />

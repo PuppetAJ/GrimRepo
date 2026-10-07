@@ -118,7 +118,10 @@ const list: Encounter[] = [
         [{ lane: 3, card: 'LegacyCode' }],
       ],
       [
-        [{ lane: 1, pick: ['ForkBomb', 'Crawler'] }],
+        [
+          { lane: 1, card: 'ForkBomb' },
+          { lane: 3, card: 'Firewall' },
+        ],
         [{ lane: 2, card: 'Sandbox' }],
         [{ lane: 0, pick: ['Crawler', 'ZeroDay'] }],
       ],

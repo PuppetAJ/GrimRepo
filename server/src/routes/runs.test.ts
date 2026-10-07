@@ -162,6 +162,33 @@ describe('a run', () => {
   })
 })
 
+describe('the run actions the server takes', () => {
+  it('include every kind the engine has, so a legal move is never refused as unknown', async () => {
+    const player = await signedIn()
+    const run = await start(player.cookie)
+    // One of each; most are illegal here, which the replay says, but none may be refused before it.
+    const kinds: RunAction[] = [
+      { type: 'start', deck: 'hello-world' },
+      { type: 'go', node: '0-0' },
+      { type: 'play', action: { type: 'ringBell' } },
+      { type: 'take', index: 0 },
+      { type: 'buff', card: 1 },
+      { type: 'transfer', from: 1, to: 2, sigil: 'bypass' },
+      { type: 'choose', option: 0 },
+      { type: 'strip', card: 1, sigil: 'bypass' },
+      { type: 'buy', index: 0 },
+      { type: 'leave' },
+    ]
+    for (const action of kinds) {
+      const reply = await app.call('POST', `/api/runs/${run.id}/moves`, {
+        cookie: player.cookie,
+        body: { from: 0, actions: [action] },
+      })
+      assert.notEqual(reply.body.error, 'Invalid moves', JSON.stringify(action))
+    }
+  })
+})
+
 describe('the runs leaderboard', () => {
   it('ranks players by their best finished run, counting the runs they cleared', async () => {
     const player = await signedIn()

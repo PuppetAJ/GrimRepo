@@ -5,6 +5,9 @@ import { BattleOver } from './BattleOver.tsx'
 import { Campfire } from './text/Campfire.tsx'
 import { EventScene } from './text/EventScene.tsx'
 import { Linter } from './text/Linter.tsx'
+import { BlindPick } from './text/BlindPick.tsx'
+import { Shop } from './text/Shop.tsx'
+import { StarterDeck } from './text/StarterDeck.tsx'
 import { Offer } from './text/Offer.tsx'
 import { RunMap } from './text/RunMap.tsx'
 import { Stones } from './text/Stones.tsx'
@@ -12,10 +15,25 @@ import { Summary } from './text/Summary.tsx'
 import type { RunReady } from './useRun.ts'
 import { useRunBattle } from './useRunBattle.ts'
 
-export type RunView = 'battle' | 'map' | 'card' | 'reward' | 'campfire' | 'stones' | 'event' | 'lint' | 'summary'
+export type RunView =
+  | 'battle'
+  | 'map'
+  | 'start'
+  | 'card'
+  | 'blind'
+  | 'shop'
+  | 'reward'
+  | 'campfire'
+  | 'stones'
+  | 'event'
+  | 'lint'
+  | 'summary'
 
 const TITLES: Record<Exclude<RunView, 'battle' | 'map'>, string> = {
+  start: 'Choose a starter deck',
   card: 'Card choice',
+  blind: 'Card choice, face down',
+  shop: 'Package Registry',
   reward: "The boss's reward",
   campfire: 'Campfire',
   stones: 'Sigil stones',
@@ -68,5 +86,8 @@ export function ScreenBody({ run, view, layout }: { run: RunReady; view: RunView
   if (view === 'stones') return <Stones run={run} />
   if (view === 'event') return <EventScene run={run} />
   if (view === 'lint') return <Linter run={run} />
+  if (view === 'start') return <StarterDeck run={run} />
+  if (view === 'shop') return <Shop run={run} />
+  if (view === 'blind') return <BlindPick run={run} />
   return <RunMap run={run} layout={layout} />
 }

@@ -5,7 +5,7 @@ import { Rng } from '../rng.ts'
 import { scoreRun } from '../scoring.ts'
 import { playRun } from './bot.ts'
 import { findNode } from './map.ts'
-import { applyRun, createRun, legalRunActions, reachable, replayRun, STARTER_DECK } from './run.ts'
+import { applyRun, createRun, legalRunActions, PICKS, reachable, replayRun, STARTER_DECKS } from './run.ts'
 import type { NodeKind, RunAction, RunState, Visit } from './types.ts'
 
 const step = (state: RunState, action: RunAction) => {
@@ -20,9 +20,14 @@ const refused = (state: RunState, action: RunAction) => {
   return result.reason
 }
 
+const STARTER = STARTER_DECKS['hello-world']?.cards as string[]
+
+/** A fresh run past its first choice, on the Hello, World deck. */
+const started = ({ seed }: { seed: number }) => step(createRun({ seed }), { type: 'start', deck: 'hello-world' })
+
 /** A fresh run standing on a node of the given kind, whatever the map says. */
 function at(kind: NodeKind, visit: Visit, seed = 1): RunState {
-  const state = createRun({ seed })
+  const state = started({ seed })
   const node = state.map.rows.flat()[0] as NonNullable<ReturnType<typeof findNode>>
   node.kind = kind
   state.at = node.id
@@ -31,11 +36,15 @@ function at(kind: NodeKind, visit: Visit, seed = 1): RunState {
 }
 
 describe('a new run', () => {
-  it('starts on stage one with the starter deck and nothing visited', () => {
-    const state = createRun({ seed: 9 })
+  it('starts by choosing a starter deck, then stands on stage one with nothing visited', () => {
+    const fresh = createRun({ seed: 9 })
+    assert.equal(fresh.visit?.kind, 'start')
+    assert.deepEqual(reachable(fresh), [], 'the map waits for the deck')
+    assert.equal(refused(fresh, { type: 'start', deck: 'nope' }), 'No such starter deck')
+    const state = started({ seed: 9 })
     assert.deepEqual(
       state.deck.map((entry) => entry.card),
-      STARTER_DECK,
+      STARTER,
     )
     assert.equal(state.stage, 0)
     assert.deepEqual(
@@ -45,7 +54,7 @@ describe('a new run', () => {
   })
 
   it('moves only along the map', () => {
-    const state = createRun({ seed: 9 })
+    const state = started({ seed: 9 })
     assert.equal(refused(state, { type: 'go', node: '7-0' }), 'That node is not reachable from here')
     const first = reachable(state)[0] as string
     const moved = step(state, { type: 'go', node: first })
@@ -65,7 +74,7 @@ describe('a card choice', () => {
 
   it('never offers a rare', () => {
     for (let seed = 0; seed < 100; seed++) {
-      let state = createRun({ seed })
+      let state = started({ seed })
       const cardNode = reachable(state).find((id) => findNode(state.map, id)?.kind === 'card')
       if (!cardNode) continue
       state = step(state, { type: 'go', node: cardNode })
@@ -102,10 +111,7 @@ describe('a campfire', () => {
         burned += 1
         continue
       }
-      assert.equal(
-        twice.deck.find((entry) => entry.id === 1)?.attack,
-        (card(STARTER_DECK[0] as string).attack ?? 0) + 2,
-      )
+      assert.equal(twice.deck.find((entry) => entry.id === 1)?.attack, (card(STARTER[0] as string).attack ?? 0) + 2)
       assert.equal(refused(twice, { type: 'buff', card: 1 }), 'The campfire has gone out')
     }
     assert.ok(burned > 30 && burned < 70, `burned ${burned} of 100`)
@@ -187,6 +193,54 @@ describe('an event', () => {
   })
 })
 
+describe('a shop', () => {
+  const shopAt = (bytes: number) => {
+    const state = at('shop', {
+      kind: 'shop',
+      node: '0-0',
+      offer: [
+        { card: 'CopyPaste', price: 3 },
+        { card: 'Firewall', price: 4 },
+        { card: 'Mainframe', price: 10 },
+      ],
+      sold: [],
+    })
+    return { ...state, bytes }
+  }
+
+  it('sells cards for bytes, several in one visit, each only once', () => {
+    const state = shopAt(7)
+    const once = step(state, { type: 'buy', index: 0 })
+    assert.equal(once.bytes, 4)
+    assert.equal(once.deck.at(-1)?.card, 'CopyPaste')
+    assert.equal(refused(once, { type: 'buy', index: 0 }), 'That card is sold')
+    const twice = step(once, { type: 'buy', index: 1 })
+    assert.equal(twice.bytes, 0)
+    assert.equal(refused(twice, { type: 'buy', index: 2 }), 'Not enough bytes')
+    assert.equal(step(twice, { type: 'leave' }).visit, null)
+  })
+
+  it('appears once on every stage', () => {
+    for (let seed = 1; seed <= 50; seed++) {
+      const shops = createRun({ seed })
+        .map.rows.flat()
+        .filter((node) => node.kind === 'shop')
+      assert.equal(shops.length, 1, `seed ${seed}`)
+    }
+  })
+})
+
+describe('a face-down card choice', () => {
+  it('gives a random card with the trait picked', () => {
+    const state = at('card', { kind: 'blind', node: '0-0', picks: ['free', 'sigil', 'sturdy'] })
+    const after = step(state, { type: 'take', index: 2 })
+    const gained = after.deck.at(-1)
+    assert.ok(gained && PICKS.sturdy.fits(gained.card), gained?.card ?? 'nothing')
+    assert.equal(after.visit, null)
+    assert.equal(refused(state, { type: 'take', index: 3 }), 'No such choice')
+  })
+})
+
 describe('battles', () => {
   const battleAt = (state: RunState, kind: 'battle' | 'boss') => {
     const node = state.map.rows.flat().find((candidate) => candidate.kind === kind) as NonNullable<
@@ -209,9 +263,9 @@ describe('battles', () => {
   }
 
   it('deal the run’s deck, and a won one waits for the player to leave', () => {
-    const state = battleAt(createRun({ seed: 4 }), 'battle')
+    const state = battleAt(started({ seed: 4 }), 'battle')
     assert.ok(state.visit?.kind === 'battle')
-    assert.equal(state.visit.game.player.library.length, STARTER_DECK.length)
+    assert.equal(state.visit.game.player.library.length, STARTER.length)
     const won = win(state)
     assert.equal(won.record.battles, 1)
     assert.equal(won.record.overkill, 13 + 23 - 24)
@@ -220,7 +274,7 @@ describe('battles', () => {
   })
 
   it('end the run when one is lost', () => {
-    const state = battleAt(createRun({ seed: 4 }), 'battle')
+    const state = battleAt(started({ seed: 4 }), 'battle')
     assert.ok(state.visit?.kind === 'battle')
     state.visit.game.drawn = true
     state.visit.game.scale = -23
@@ -239,7 +293,7 @@ describe('battles', () => {
   })
 
   it('a beaten boss offers a rare, then the next stage', () => {
-    const won = step(win(battleAt(createRun({ seed: 4 }), 'boss')), { type: 'leave' })
+    const won = step(win(battleAt(started({ seed: 4 }), 'boss')), { type: 'leave' })
     assert.equal(won.record.bosses, 1)
     assert.ok(won.visit?.kind === 'reward')
     assert.ok(won.visit.offer.every((id) => ['A', 'B'].includes(card(id).tier)))
@@ -250,7 +304,7 @@ describe('battles', () => {
   })
 
   it('beating the last boss wins the run', () => {
-    const state = createRun({ seed: 4 })
+    const state = started({ seed: 4 })
     state.stage = 2
     const won = win(battleAt(state, 'boss'))
     assert.equal(won.status, 'won')
