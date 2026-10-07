@@ -10,7 +10,15 @@ export function scoreBattle(outcome: Outcome, turns: number): number {
   return 1000 + Math.max(0, SCORE_TURN_BASELINE - turns) * 250
 }
 
+/** What a run played without the player's death card multiplies its score by. */
+export const DEATH_SKIP_BONUS = 1.25
+
 /** A run's score: 100 a battle, 1,500 a boss (the stage and the boss), 2,000 for the clear, and 20 per point of overkill. */
-export function scoreRun(record: { battles: number; bosses: number; overkill: number }, cleared: boolean): number {
-  return record.battles * 100 + record.bosses * 1500 + (cleared ? 2000 : 0) + record.overkill * 20
+export function scoreRun(
+  record: { battles: number; bosses: number; overkill: number },
+  cleared: boolean,
+  skippedDeath = false,
+): number {
+  const base = record.battles * 100 + record.bosses * 1500 + (cleared ? 2000 : 0) + record.overkill * 20
+  return skippedDeath ? Math.round(base * DEATH_SKIP_BONUS) : base
 }

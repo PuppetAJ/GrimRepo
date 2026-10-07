@@ -38,6 +38,8 @@ export type PlayerStats = {
   rank: number | null
   // Boilerplate is not counted.
   favoriteCard: string | null
+  // Built from a lost run's deck; never kept for a guest or the demo account.
+  deathCard: string | null
 }
 
 export type OpenGame = { id: number; seed: number; actions: Action[]; resumed: boolean; rulesChanged: boolean }
@@ -286,8 +288,9 @@ export async function playerStats(username: string): Promise<PlayerStats | null>
     bestScore: number
     bestWinTurns: number | null
     averageTurns: number | null
+    deathCard: string | null
   }>(
-    `SELECT u.id, u.display_username AS username, u.created_at AS "joinedAt",
+    `SELECT u.id, u.display_username AS username, u.created_at AS "joinedAt", u.death_card AS "deathCard",
             COUNT(g.id)::int AS games,
             COUNT(g.id) FILTER (WHERE g.outcome = 'win')::int AS wins,
             COUNT(g.id) FILTER (WHERE g.forfeited)::int AS forfeits,
@@ -296,7 +299,7 @@ export async function playerStats(username: string): Promise<PlayerStats | null>
             ROUND(AVG(g.turns), 1)::float AS "averageTurns"
      FROM users u LEFT JOIN games g ON g.user_id = u.id AND g.status = 'finished'
      WHERE u.username = LOWER($1)
-     GROUP BY u.id`,
+     GROUP BY u.id, u.death_card`,
     [username],
   )
   const player = rows[0]
@@ -362,5 +365,6 @@ export async function playerStats(username: string): Promise<PlayerStats | null>
     best: best.rows[0] ? finished(best.rows[0]) : null,
     rank: rank.rows[0]?.rank ?? null,
     favoriteCard: favorite.rows[0]?.card ?? null,
+    deathCard: player.deathCard,
   }
 }

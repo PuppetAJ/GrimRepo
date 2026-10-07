@@ -1,20 +1,10 @@
 import { Pin, Star } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
-import { card, SIGILS, type Unit } from 'shared'
+import { parseDeathCard, SIGILS } from 'shared'
 import { PixelCard } from '../game/CardReader.tsx'
+import { asUnit } from '../game/run/nodes.ts'
 import type { PlayerStats } from '../lib/api.ts'
 import { ago, number } from '../lib/format.ts'
-
-// A mockup until runs exist; each part comes from a different card in the final deck.
-const PARTS = { cost: 'Crawler', stats: 'ForkBomb', sigil: 'try_catch' } as const
-const DEATH_CARD: Unit = {
-  uid: 0,
-  card: PARTS.cost,
-  attack: card(PARTS.stats).attack,
-  health: card(PARTS.stats).health,
-  maxHealth: card(PARTS.stats).health,
-  sigils: [PARTS.sigil],
-}
 
 // The most the card's height may exceed the text beside it, as a ratio.
 const CARD_OVER_TEXT = 1.12
@@ -69,24 +59,35 @@ function PinText({
   )
 }
 
-function DeathCardPin() {
+function DeathCardPin({ id }: { id: string | null }) {
   const [text, height] = useHeight()
+  const def = id ? parseDeathCard(id) : null
+  if (!id || !def)
+    return (
+      <PinBox>
+        <PinText
+          name="Death card"
+          about="None yet. Losing a run builds one, for a later run's card choice."
+          details={[]}
+        />
+      </PinBox>
+    )
   return (
     <PinBox>
       <div
         className="w-[clamp(3.5rem,20cqi,6rem)] shrink-0 font-terminal"
         style={height ? { maxWidth: (height * CARD_OVER_TEXT * 5) / 7 } : undefined}
       >
-        <PixelCard unit={DEATH_CARD} />
+        <PixelCard unit={asUnit(id)} />
       </div>
       <PinText
         ref={text}
-        name="final_FINAL_v2"
-        about="Death Card built when a run ends."
+        name={def.name}
+        about="Death card, built when a run was lost."
         details={[
-          ['cost', card(PARTS.cost).name],
-          ['stats', card(PARTS.stats).name],
-          ['sigil', SIGILS[PARTS.sigil].name],
+          ['cost', String(def.cost)],
+          ['stats', `${def.attack}/${def.health}`],
+          ['sigil', def.sigils[0] ? SIGILS[def.sigils[0]].name : 'none'],
         ]}
       />
     </PinBox>
@@ -104,7 +105,7 @@ export function Pinned({ player, className = '' }: { player: PlayerStats; classN
       </h2>
       {/* 3:2 because the best game's few lines need less room than the card. */}
       <div className="grid gap-4 @[30rem]:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <DeathCardPin />
+        <DeathCardPin id={player.deathCard} />
         <PinBox>
           <PinText
             name={

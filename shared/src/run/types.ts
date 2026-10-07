@@ -3,7 +3,7 @@ import type { ItemId } from '../items.ts'
 import type { Action, DeckCard, GameEvent, GameState } from '../engine/types.ts'
 
 /** Bumped whenever a change would make an old run replay differently. */
-export const RUN_RULES_VERSION = 12
+export const RUN_RULES_VERSION = 13
 
 /** The most actions one save may send; 200 of the largest kind fit the server's 16 KB body limit. */
 export const RUN_SAVE_LIMIT = 200
@@ -85,6 +85,8 @@ export type RunState = {
   bytes: number
   /** Tools carried between battles, three at most. */
   items: ItemId[]
+  /** The player's death card from a lost run: offered once, at the first card choice, unless left out for more score. */
+  death: { card: string; skipped: boolean; offered: boolean } | null
 }
 
 export type RunAction =
@@ -95,7 +97,8 @@ export type RunAction =
   | { type: 'transfer'; from: number; to: number; sigil: SigilId }
   | { type: 'choose'; option: number }
   | { type: 'strip'; card: number; sigil: SigilId }
-  | { type: 'start'; deck: string }
+  /** `skipDeath` leaves the player's death card out of the run, for a higher score. */
+  | { type: 'start'; deck: string; skipDeath?: boolean }
   | { type: 'buy'; index: number }
   | { type: 'buyItem' }
   /** At an item node, the item in that place; at a full kit, the slot to give up for it. */

@@ -1,9 +1,29 @@
 import { randomInt } from 'node:crypto'
-import { replayRun, RULES_VERSION, RUN_RULES_VERSION, scoreRun, type RunAction, type RunState } from 'shared'
+import {
+  buildDeathCard,
+  replayRun,
+  RULES_VERSION,
+  RUN_RULES_VERSION,
+  scoreRun,
+  tidyDeathName,
+  type DeathChoice,
+  type RunAction,
+  type RunState,
+} from 'shared'
+import { demoAccount } from '../auth/demo.ts'
+import { isOffensive, NAME_REFUSED } from '../auth/names.ts'
 import { pool } from '../config/db.ts'
 import { BOARD_PAGE, GameError, type BoardPage, type LeaderboardRow } from './games.ts'
 
-export type OpenRun = { id: number; seed: number; actions: RunAction[]; resumed: boolean; rulesChanged: boolean }
+export type OpenRun = {
+  id: number
+  seed: number
+  actions: RunAction[]
+  resumed: boolean
+  rulesChanged: boolean
+  /** The player's death card as it was when the run began. */
+  death: string | null
+}
 
 export type RunMovesResult =
   | { status: 'playing'; saved: number }
@@ -12,13 +32,20 @@ export type RunMovesResult =
 // A full run is a few hundred actions, and every save replays the whole record, so this stays low.
 const MAX_ACTIONS = 6_000
 
-type Row = { id: number; seed: string; actions: RunAction[]; rules_version: number; run_version: number }
+type Row = {
+  id: number
+  seed: string
+  actions: RunAction[]
+  rules_version: number
+  run_version: number
+  death_card: string | null
+}
 const current = (row: Row) => row.rules_version === RULES_VERSION && row.run_version === RUN_RULES_VERSION
 
 /** Resumes the open run or starts a new one on a seed the server picks. */
 export async function startRun(userId: string, rulesChanged = false): Promise<OpenRun> {
   const open = await pool.query<Row>(
-    `SELECT id, seed, actions, rules_version, run_version FROM runs WHERE user_id = $1 AND status = 'playing'`,
+    `SELECT id, seed, actions, rules_version, run_version, death_card FROM runs WHERE user_id = $1 AND status = 'playing'`,
     [userId],
   )
   const existing = open.rows[0]
@@ -28,17 +55,27 @@ export async function startRun(userId: string, rulesChanged = false): Promise<Op
     return startRun(userId, true)
   }
   if (existing)
-    return { id: existing.id, seed: Number(existing.seed), actions: existing.actions, resumed: true, rulesChanged }
+    return {
+      id: existing.id,
+      seed: Number(existing.seed),
+      actions: existing.actions,
+      resumed: true,
+      rulesChanged,
+      death: existing.death_card,
+    }
 
   const seed = randomInt(0, 2 ** 32)
-  const created = await pool.query<{ id: number }>(
-    `INSERT INTO runs (user_id, seed, rules_version, run_version) VALUES ($1, $2, $3, $4)
-     ON CONFLICT (user_id) WHERE status = 'playing' DO NOTHING RETURNING id`,
+  // The run keeps the death card it began with, so it replays the same after the player builds a new one.
+  const created = await pool.query<{ id: number; death_card: string | null }>(
+    `INSERT INTO runs (user_id, seed, rules_version, run_version, death_card)
+     SELECT $1, $2, $3, $4, death_card FROM users WHERE id = $1
+     ON CONFLICT (user_id) WHERE status = 'playing' DO NOTHING RETURNING id, death_card`,
     [userId, seed, RULES_VERSION, RUN_RULES_VERSION],
   )
   // The one-open-run index rejected a concurrent start, so resume that run.
-  if (!created.rows[0]) return startRun(userId, rulesChanged)
-  return { id: created.rows[0].id, seed, actions: [], resumed: false, rulesChanged }
+  const row = created.rows[0]
+  if (!row) return startRun(userId, rulesChanged)
+  return { id: row.id, seed, actions: [], resumed: false, rulesChanged, death: row.death_card }
 }
 
 async function withOpenRun<T>(
@@ -50,7 +87,7 @@ async function withOpenRun<T>(
   try {
     await client.query('BEGIN')
     const found = await client.query<Row>(
-      `SELECT id, seed, actions, rules_version, run_version FROM runs
+      `SELECT id, seed, actions, rules_version, run_version, death_card FROM runs
        WHERE id = $1 AND user_id = $2 AND status = 'playing' FOR UPDATE`,
       [runId, userId],
     )
@@ -80,7 +117,7 @@ export async function recordRunMoves(
     if (from !== run.actions.length) throw new GameError(409, { error: 'Out of step', expected: run.actions.length })
     const all = [...run.actions, ...moves]
     if (all.length > MAX_ACTIONS) throw new GameError(400, { error: 'Too many moves' })
-    const replayed = replayRun(Number(run.seed), all)
+    const replayed = replayRun(Number(run.seed), all, run.death_card)
     if (!replayed.ok)
       throw new GameError(400, { error: 'Illegal move', index: replayed.index, reason: replayed.reason })
 
@@ -100,7 +137,7 @@ export async function recordRunMoves(
 /** Ends the run as lost, scored on how far it got. */
 export async function forfeitRun(userId: string, runId: number): Promise<RunMovesResult> {
   return withOpenRun(userId, runId, async (client, run) => {
-    const replayed = replayRun(Number(run.seed), run.actions)
+    const replayed = replayRun(Number(run.seed), run.actions, run.death_card)
     if (!replayed.ok) throw new GameError(409, { error: 'The run no longer replays', rulesChanged: true })
     return finish(client, run.id, run.actions, { ...replayed.state, status: 'lost' }, true)
   })
@@ -114,7 +151,7 @@ async function finish(
   forfeited: boolean,
 ): Promise<RunMovesResult> {
   const status = state.status === 'won' ? 'won' : 'lost'
-  const score = scoreRun(state.record, status === 'won')
+  const score = scoreRun(state.record, status === 'won', state.death?.skipped ?? false)
   await client.query(
     `UPDATE runs SET status = $1, actions = $2, stage = $3, battles = $4, bosses = $5, score = $6, forfeited = $7,
        finished_at = now()
@@ -122,6 +159,46 @@ async function finish(
     [status, JSON.stringify(actions), state.stage, state.record.battles, state.record.bosses, score, forfeited, runId],
   )
   return { status, score, stage: state.stage, bosses: state.record.bosses, forfeited }
+}
+
+export type BuiltDeathCard = { card: string; saved: boolean }
+
+/**
+ * Builds a death card from the deck a lost run ended with: the player's latest run, once.
+ * Guests and the shared demo account see their card but don't keep it.
+ */
+export async function buildRunDeathCard(userId: string, runId: number, choice: DeathChoice): Promise<BuiltDeathCard> {
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    const found = await client.query<Row & { status: string; death_built: boolean; latest: boolean; keeps: boolean }>(
+      `SELECT r.id, r.seed, r.actions, r.rules_version, r.run_version, r.death_card, r.status, r.death_built,
+              NOT EXISTS (SELECT 1 FROM runs later WHERE later.user_id = r.user_id AND later.id > r.id) AS latest,
+              NOT u.is_anonymous AND u.username <> $3 AS keeps
+       FROM runs r JOIN users u ON u.id = r.user_id
+       WHERE r.id = $1 AND r.user_id = $2 FOR UPDATE OF r`,
+      [runId, userId, demoAccount.username],
+    )
+    const run = found.rows[0]
+    if (!run || run.status !== 'lost') throw new GameError(404, { error: 'No such lost run' })
+    if (!run.latest || run.death_built) throw new GameError(409, { error: 'This run has already had its death card' })
+    const replayed = replayRun(Number(run.seed), run.actions, run.death_card)
+    if (!replayed.ok) throw new GameError(409, { error: 'The run no longer replays' })
+    if (isOffensive(tidyDeathName(choice.name))) throw new GameError(400, { error: NAME_REFUSED })
+    const built = buildDeathCard(replayed.state.deck, choice)
+    if (!built.ok) throw new GameError(400, { error: built.reason })
+    if (run.keeps) {
+      await client.query(`UPDATE users SET death_card = $1 WHERE id = $2`, [built.id, userId])
+      await client.query(`UPDATE runs SET death_built = true WHERE id = $1`, [run.id])
+    }
+    await client.query('COMMIT')
+    return { card: built.id, saved: run.keeps }
+  } catch (error) {
+    await client.query('ROLLBACK')
+    throw error
+  } finally {
+    client.release()
+  }
 }
 
 /** Ranks players by their best run as leaderboard() ranks games; `wins` counts runs cleared, and guests are left off. */

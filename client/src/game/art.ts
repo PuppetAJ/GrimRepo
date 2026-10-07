@@ -1,4 +1,4 @@
-import type { ItemId, SigilId } from 'shared'
+import { parseDeathCard, type ItemId, type SigilId } from 'shared'
 
 // Black-on-transparent PNGs, keyed by file name.
 const byName = (files: Record<string, string>) =>
@@ -11,9 +11,12 @@ export type IconId = SigilId | ItemId | 'attack' | 'health'
 
 /** Whether a card or icon has art of its own yet, rather than the stand-in. */
 export const hasArt = (kind: 'cards' | 'icons', id: string): boolean =>
-  (kind === 'cards' ? CARDS : ICONS)[id] !== undefined
+  (kind === 'cards' ? CARDS[artId(id)] : ICONS[id]) !== undefined
 
-export const cardArt = (id: string): string => CARDS[id] ?? (CARDS['placeholder'] as string)
+// A death card wears the art of the card its stats came from.
+const artId = (id: string): string => parseDeathCard(id)?.art ?? id
+
+export const cardArt = (id: string): string => CARDS[artId(id)] ?? (CARDS['placeholder'] as string)
 // A sigil without its own icon yet shows the stand-in until one is drawn.
 export const iconArt = (id: IconId): string => ICONS[id] ?? (ICONS['placeholder'] as string)
 

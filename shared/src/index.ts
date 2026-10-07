@@ -8,6 +8,11 @@ export {
   SHIPS_AS,
   SIGILS,
   card,
+  DEATH_NAME_LIMIT,
+  deathCardId,
+  isDeathCard,
+  parseDeathCard,
+  type DeathCardDef,
   type CardDef,
   type SigilId,
   type Tier,
@@ -44,7 +49,15 @@ export { attackIn } from './engine/combat.ts'
 export { FOUND_ITEMS, ITEM_SLOTS, ITEMS, type ItemId, type ItemTarget } from './items.ts'
 export { canOwe, costOf, deckCard, indebted, worthOf } from './engine/units.ts'
 export { Rng } from './rng.ts'
-export { SCORE_TURN_BASELINE, scoreBattle, scoreRun, type Outcome } from './scoring.ts'
+export { DEATH_SKIP_BONUS, SCORE_TURN_BASELINE, scoreBattle, scoreRun, type Outcome } from './scoring.ts'
+export {
+  buildDeathCard,
+  deathCost,
+  deathNameProblem,
+  deathParts,
+  tidyDeathName,
+  type DeathChoice,
+} from './run/death.ts'
 export { cardsIn, ENCOUNTERS, encounter, STAGES, type Encounter, type Plan, type Queued } from './encounters.ts'
 export { nextRunAction, playRun } from './run/bot.ts'
 export { findNode, generateStage, MAP_COLUMNS } from './run/map.ts'

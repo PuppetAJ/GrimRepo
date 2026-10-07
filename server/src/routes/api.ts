@@ -1,11 +1,11 @@
 import express from 'express'
 import { rateLimit } from 'express-rate-limit'
-import { RUN_SAVE_LIMIT, SIGILS, STARTER_DECKS, type SigilId } from 'shared'
+import { DEATH_NAME_LIMIT, RUN_SAVE_LIMIT, SIGILS, STARTER_DECKS, type SigilId } from 'shared'
 import { z } from 'zod'
 import { USERNAME_PATTERN } from '../auth/auth.ts'
 import { requireUser, type SignedIn } from '../auth/session.ts'
 import { forfeitGame, GameError, leaderboard, playerGames, playerStats, recordMoves, startGame } from '../db/games.ts'
-import { forfeitRun, recordRunMoves, runLeaderboard, startRun } from '../db/runs.ts'
+import { buildRunDeathCard, forfeitRun, recordRunMoves, runLeaderboard, startRun } from '../db/runs.ts'
 
 export const api = express.Router()
 
@@ -50,7 +50,11 @@ const runAction = z.discriminatedUnion('type', [
     card: cardId,
     sigil: z.enum(Object.keys(SIGILS) as [SigilId, ...SigilId[]]),
   }),
-  z.strictObject({ type: z.literal('start'), deck: z.enum(Object.keys(STARTER_DECKS) as [string, ...string[]]) }),
+  z.strictObject({
+    type: z.literal('start'),
+    deck: z.enum(Object.keys(STARTER_DECKS) as [string, ...string[]]),
+    skipDeath: z.boolean().optional(),
+  }),
   z.strictObject({ type: z.literal('buy'), index: small }),
   z.strictObject({ type: z.literal('uninstall'), card: cardId }),
   z.strictObject({ type: z.literal('buyItem') }),
@@ -60,6 +64,14 @@ const runAction = z.discriminatedUnion('type', [
 ])
 
 const runMoves = z.strictObject({ from: z.number().int().min(0), actions: z.array(runAction).max(RUN_SAVE_LIMIT) })
+
+const deathChoice = z.strictObject({
+  cost: cardId,
+  stats: cardId,
+  sigil: z.strictObject({ card: cardId, sigil: z.enum(Object.keys(SIGILS) as [SigilId, ...SigilId[]]) }).nullable(),
+  // Room for spaces the builder trims away.
+  name: z.string().max(DEATH_NAME_LIMIT * 4),
+})
 
 // Keyed per player, since only signed-in players reach these routes.
 const perPlayer = (limit: number) =>
@@ -159,6 +171,23 @@ api.post('/runs/:id/forfeit', requireUser, movesLimiter, async (req, res) => {
   }
   try {
     res.json(await forfeitRun((res.locals['user'] as SignedIn).id, id))
+  } catch (error) {
+    if (!(error instanceof GameError)) throw error
+    res.status(error.status).json(error.body)
+  }
+})
+
+api.post('/runs/:id/death-card', requireUser, movesLimiter, async (req, res) => {
+  const id = idOf(req.params['id'])
+  const parsed = deathChoice.safeParse(req.body)
+  if (!id || !parsed.success) {
+    res
+      .status(400)
+      .json({ error: 'Invalid death card', issues: parsed.error?.issues.map((issue) => issue.message) ?? [] })
+    return
+  }
+  try {
+    res.json(await buildRunDeathCard((res.locals['user'] as SignedIn).id, id, parsed.data))
   } catch (error) {
     if (!(error instanceof GameError)) throw error
     res.status(error.status).json(error.body)

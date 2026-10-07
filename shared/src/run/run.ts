@@ -1,4 +1,4 @@
-import { PLAYER_DECK, card, type SigilId } from '../cards.ts'
+import { PLAYER_DECK, card, parseDeathCard, type SigilId } from '../cards.ts'
 import { STAGES } from '../encounters.ts'
 import { apply, createGame, legalActions } from '../engine/game.ts'
 import { MAX_SIGILS, TIP, type DeckCard } from '../engine/types.ts'
@@ -80,7 +80,8 @@ const toDeckCard = ({ card: id, attack, health, sigils }: RunCard): DeckCard => 
   sigils: [...sigils],
 })
 
-export function createRun({ seed }: { seed: number }): RunState {
+/** `death` is the player's death card id, if they have one; a malformed one is ignored. */
+export function createRun({ seed, death = null }: { seed: number; death?: string | null }): RunState {
   const rng = new Rng(seed >>> 0)
   const state: RunState = {
     seed: seed >>> 0,
@@ -96,6 +97,7 @@ export function createRun({ seed }: { seed: number }): RunState {
     record: { battles: 0, bosses: 0, overkill: 0 },
     bytes: 0,
     items: [],
+    death: death && parseDeathCard(death) ? { card: death, skipped: false, offered: false } : null,
   }
   state.rng = rng.state
   return state
@@ -128,6 +130,12 @@ function enter(state: RunState, rng: Rng, node: MapNode): Visit {
       if (node.blind) {
         const picks = (Object.keys(PICKS) as Pick[]).filter((pick) => COMMONS.some(PICKS[pick].fits))
         return { kind: 'blind', node: node.id, picks: rng.shuffle(picks).slice(0, OFFER_SIZE) }
+      }
+      // The death card takes one of the three places at the run's first card choice.
+      if (state.death && !state.death.skipped && !state.death.offered) {
+        state.death.offered = true
+        const offer = [state.death.card, ...rng.shuffle(COMMONS).slice(0, OFFER_SIZE - 1)]
+        return { kind: 'card', node: node.id, offer: rng.shuffle(offer) }
       }
       return { kind: 'card', node: node.id, offer: rng.shuffle(COMMONS).slice(0, OFFER_SIZE) }
     case 'shop': {
@@ -254,6 +262,10 @@ function step(state: RunState, rng: Rng, action: RunAction, events: RunEvent[]):
       if (visit?.kind !== 'start') return 'The run has already started'
       const deck = STARTER_DECKS[action.deck]
       if (!deck) return 'No such starter deck'
+      if (action.skipDeath) {
+        if (!state.death) return 'There is no death card to leave out'
+        state.death.skipped = true
+      }
       for (const id of deck.cards) state.deck.push(newCard(state, id))
       state.visit = null
       return
@@ -454,7 +466,14 @@ export function legalRunActions(state: RunState): RunAction[] {
     case 'event':
       return scene(visit.event).options.map((_, option) => ({ type: 'choose', option }))
     case 'start':
-      return Object.keys(STARTER_DECKS).map((deck) => ({ type: 'start', deck }))
+      return Object.keys(STARTER_DECKS).flatMap((deck): RunAction[] =>
+        state.death
+          ? [
+              { type: 'start', deck },
+              { type: 'start', deck, skipDeath: true },
+            ]
+          : [{ type: 'start', deck }],
+      )
     case 'blind':
       return visit.picks.map((_, index) => ({ type: 'take', index }))
     case 'shop': {
@@ -511,8 +530,8 @@ export function legalRunActions(state: RunState): RunAction[] {
 export type RunReplay = { ok: true; state: RunState; events: RunEvent[] } | { ok: false; index: number; reason: string }
 
 /** Any illegal action invalidates the whole record. */
-export function replayRun(seed: number, actions: readonly RunAction[]): RunReplay {
-  let state = createRun({ seed })
+export function replayRun(seed: number, actions: readonly RunAction[], death: string | null = null): RunReplay {
+  let state = createRun({ seed, death })
   const events: RunEvent[] = []
   for (const [index, action] of actions.entries()) {
     const result = applyRun(state, action)

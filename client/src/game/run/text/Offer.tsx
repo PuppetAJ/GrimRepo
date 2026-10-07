@@ -1,3 +1,4 @@
+import { card, isDeathCard } from 'shared'
 import { asUnit } from '../nodes.ts'
 import type { RunReady } from '../useRun.ts'
 import { CardList } from './CardList.tsx'
@@ -7,6 +8,7 @@ import { ScreenBar } from './Screen.tsx'
 export function Offer({ run }: { run: RunReady }) {
   const visit = run.state.visit
   if (visit?.kind !== 'card' && visit?.kind !== 'reward') return null
+  const death = visit.offer.find(isDeathCard)
   return (
     <div data-center className="flex flex-col gap-4">
       <ScreenBar>
@@ -14,6 +16,7 @@ export function Offer({ run }: { run: RunReady }) {
           {visit.kind === 'reward'
             ? 'P03 grudgingly offers a rare card for beating the boss. Take one.'
             : 'Take one of these three into your deck.'}
+          {death ? ` ${card(death).name} is your death card, back from a lost run.` : null}
         </p>
       </ScreenBar>
       <CardList
