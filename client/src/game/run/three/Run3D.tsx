@@ -11,7 +11,7 @@ import { mapTitle, ScreenBody, useRunScreen, type RunView } from '../screens.tsx
 import { Screen, ScreenActions } from '../text/Screen.tsx'
 import type { RunReady } from '../useRun.ts'
 import { BetweenBattles, warp, windowHeight } from './RunStage.tsx'
-import { preloadItems } from '../../table/table3d/ItemTray.tsx'
+import { preloadItems } from '../../table/table3d/ItemRack.tsx'
 
 /** How long a projected screen takes to fade out before the next one comes in, in milliseconds. */
 const FADE_MS = 160

@@ -10,7 +10,7 @@ export const Say = ({ children }: { children: ReactNode }) => <p className="text
 export function Cost({ cost }: { cost: number }) {
   if (!cost) return <Dim>free</Dim>
   return (
-    <span aria-label={`costs ${cost}`} className="text-[#ff9a2e]">
+    <span role="img" aria-label={`costs ${cost}`} className="text-[#ff9a2e]">
       {'◆'.repeat(cost)}
     </span>
   )

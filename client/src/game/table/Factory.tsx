@@ -112,14 +112,7 @@ const Fixtures = memo(function Fixtures() {
 })
 
 // Preload on import so the models arrive with the card art, not on first render.
-for (const url of [
-  '/models/p03.glb',
-  '/models/battery.glb',
-  '/models/hammer.glb',
-  '/models/pliers.glb',
-  '/models/light.glb',
-  '/models/button.glb',
-])
+for (const url of ['/models/p03.glb', '/models/battery.glb', '/models/light.glb', '/models/button.glb'])
   useGLTF.preload(url, false, false)
 for (const name of ['table', 'floor', 'wall']) useTexture.preload(Object.values(surfaces(name)))
 useTexture.preload([BOARD, GRIMY_TABLE])

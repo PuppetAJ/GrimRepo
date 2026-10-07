@@ -197,10 +197,12 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
     scroller.scrollTop += offset - scroller.clientHeight / 2
   }, [])
 
-  // A nudge never brings two nodes closer than this many pixels.
-  const gap = 8
+  // Neighbors never come closer than this many pixels, so the path between them always shows.
+  const gap = 22
   const cell = { x: size.width / MAP_COLUMNS, y: size.height / mapRows(state.map) }
-  const room = (span: number) => (span ? Math.max(0, (span - NODE - gap) / 2 / span) : 0)
+  // Nodes shrink on a short map rather than crowd, down to what still reads.
+  const nodeSize = Math.round(Math.max(28, Math.min(NODE, cell.y - gap, cell.x - gap)))
+  const room = (span: number) => (span ? Math.max(0, (span - nodeSize - gap) / 2 / span) : 0)
   const placed = spots(state.map, state.seed, { x: room(cell.x), y: room(cell.y) })
   const open = reachable(state)
   const row = state.at === null ? -1 : (findNode(state.map, state.at)?.row ?? -1)
@@ -238,7 +240,7 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
   const inked = new Set<string>()
   for (const node of state.map.rows.flat()) {
     const center = at(placed.get(node.id) as Spot)
-    const reach = (node.kind === 'boss' ? NODE * 0.75 : NODE / 2) + 4
+    const reach = (node.kind === 'boss' ? nodeSize * 0.75 : nodeSize / 2) + 4
     const hit = plan.strokes.some((stroke) => {
       for (let index = 0; index < stroke.length; index += 2) {
         const dx = (stroke[index] as number) * size.width - center.x
@@ -365,10 +367,12 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
                     const style = {
                       left: `${spot.x * 100}%`,
                       top: `${spot.y * 100}%`,
-                      width: boss ? NODE * 1.5 : NODE,
-                      height: boss ? NODE * 1.5 : NODE,
+                      width: boss ? nodeSize * 1.5 : nodeSize,
+                      height: boss ? nodeSize * 1.5 : nodeSize,
                     }
-                    const face = <Icon aria-hidden className={boss ? 'size-9' : 'size-6'} />
+                    // The icon keeps its share of the node, so a small node keeps its padding.
+                    const icon = Math.round(nodeSize * (boss ? 0.8 : 0.55))
+                    const face = <Icon aria-hidden style={{ width: icon, height: icon }} />
                     const reading =
                       held === node.id ? (
                         <span

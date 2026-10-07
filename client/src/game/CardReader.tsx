@@ -51,6 +51,8 @@ function CostPips({
   return (
     <span
       className={`flex shrink-0 ${className}`}
+      // An image to assistive tech, since a label on a plain span isn't read.
+      role={announce ? 'img' : undefined}
       aria-label={announce ? `Costs ${cost}` : undefined}
       aria-hidden={announce ? undefined : true}
     >
@@ -69,6 +71,7 @@ function Stats({ unit, icon, className }: { unit: Shown; icon: number; className
   return (
     <p className={`flex shrink-0 justify-between border-t-2 border-[#0b1f12]/40 ${className}`}>
       <span
+        role="img"
         aria-label={`Attack ${unit.attack}${unit.aura ? `, ${unit.aura > 0 ? 'raised' : 'lowered'} ${Math.abs(unit.aura)} by the cards around it` : ''}`}
         className={`flex items-center gap-1 ${auraColor(unit)}`}
       >
@@ -77,6 +80,7 @@ function Stats({ unit, icon, className }: { unit: Shown; icon: number; className
         {unit.aura ? <span className="text-[0.6em]">({unit.aura > 0 ? `+${unit.aura}` : unit.aura})</span> : null}
       </span>
       <span
+        role="img"
         aria-label={`Health ${unit.health}`}
         className={`flex items-center gap-1 ${unit.health < unit.maxHealth ? 'text-[#a3172b]' : ''}`}
       >
