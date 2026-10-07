@@ -442,6 +442,26 @@ export const MOCKUPS: Record<string, Entry> = {
     group: 'reached',
     make: () => reached((s) => haunted(s, 1), { rival: { card: SAMPLE_RIVAL, by: 'ajimp' } }),
   },
+  'card-types': {
+    title: 'Card types: Botnet scaling with its Bots, Monolith beside its Legacy',
+    group: 'reached',
+    make: () =>
+      itemBattle([], {
+        board: ['Botnet', 'SpamBot', 'Crawler', 'Heisenbug'],
+        front: ['Monolith', 'LegacyCode', 'ExploitChain', 'PairProgramming'],
+        back: [null, 'Mainframe', null, 'Cookie'],
+      }),
+  },
+  'type-cards': {
+    title: 'A card choice of the new type cards',
+    group: 'reached',
+    make: () => {
+      const found = reached((s) => s.visit?.kind === 'card')
+      if (!found || found.state.visit?.kind !== 'card') return null
+      const offer = ['Botnet', 'Monolith', 'PairProgramming']
+      return { ...found, state: { ...found.state, visit: { ...found.state.visit, offer } } }
+    },
+  },
   'boss-next': {
     title: 'The map, one step from the boss',
     group: 'reached',

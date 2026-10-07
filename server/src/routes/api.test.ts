@@ -208,12 +208,14 @@ describe('a game', () => {
     const player = await signedIn()
     const game = await start(player.cookie)
     const { turns } = botGame(game.seed)
-    await submit(player.cookie, game.id, turns.slice(0, 2))
+    // Never the game's last turn: now and then the bot wins on its second.
+    const played = Math.min(2, turns.length - 1)
+    await submit(player.cookie, game.id, turns.slice(0, played))
 
     const forfeited = await app.call('POST', `/api/games/${game.id}/forfeit`, { cookie: player.cookie })
     assert.equal(forfeited.status, 200)
     assert.equal(forfeited.body.outcome, 'loss')
-    assert.equal(forfeited.body.turns, 3)
+    assert.equal(forfeited.body.turns, played + 1)
 
     const stats = await app.call('GET', `/api/players/${player.username}/stats`)
     assert.equal(stats.body.recent[0].forfeited, true)

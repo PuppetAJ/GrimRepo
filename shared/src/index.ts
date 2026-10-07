@@ -8,6 +8,8 @@ export {
   SHIPS_AS,
   SIGILS,
   card,
+  CARD_TYPES,
+  type CardType,
   DEATH_NAME_LIMIT,
   deathCardId,
   isDeathCard,
@@ -45,7 +47,7 @@ export {
   type Slot,
   type Unit,
 } from './engine/types.ts'
-export { attackIn } from './engine/combat.ts'
+export { attackIn, kin } from './engine/combat.ts'
 export { FOUND_ITEMS, ITEM_SLOTS, ITEMS, type ItemId, type ItemTarget } from './items.ts'
 export { canOwe, costOf, deckCard, indebted, worthOf } from './engine/units.ts'
 export { Rng } from './rng.ts'

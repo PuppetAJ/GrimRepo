@@ -1,4 +1,4 @@
-import { SIGILS, type CardDef, type Unit } from 'shared'
+import { CARD_TYPES, SIGILS, type CardDef, type Unit } from 'shared'
 import { DECK } from '../../game/deck.ts'
 
 export const unitOf = (def: CardDef): Unit => ({
@@ -21,6 +21,7 @@ export function matches(def: CardDef, query: string): boolean {
     ...def.sigils.map((sigil) => SIGILS[sigil].name),
     def.sigils.length ? 'sigils' : '',
     def.cost ? `cost ${def.cost}` : 'free',
+    def.type ? CARD_TYPES[def.type].name : '',
   ].filter(Boolean)
   return words.some((word) => squash(word).includes(wanted))
 }

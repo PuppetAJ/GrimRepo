@@ -22,6 +22,19 @@ export type SigilId =
   | 'beta'
   | 'load_balancer'
   | 'failover'
+  | 'scale_out'
+  | 'redundancy'
+
+/** What a card is, for the sigils that count cards of their own type. */
+export type CardType = 'bot' | 'exploit' | 'bug' | 'legacy' | 'dev'
+
+export const CARD_TYPES: Record<CardType, { name: string; about: string }> = {
+  bot: { name: 'Bot', about: 'Runs on its own.' },
+  exploit: { name: 'Exploit', about: 'Attacks the system.' },
+  bug: { name: 'Bug', about: 'A defect.' },
+  legacy: { name: 'Legacy', about: 'Old code nobody dares touch.' },
+  dev: { name: 'Dev', about: "The developer's own tools." },
+}
 
 export type CardDef = {
   id: string
@@ -33,6 +46,8 @@ export type CardDef = {
   sigils: SigilId[]
   /** The card whose art it wears, for a death card; others wear their own. */
   art?: string
+  /** None for Boilerplate, Out of Memory and the debug card. */
+  type?: CardType
 }
 
 export const SIGILS: Record<SigilId, { name: string; text: string }> = {
@@ -60,6 +75,11 @@ export const SIGILS: Record<SigilId, { name: string; text: string }> = {
   beta: { name: 'Beta', text: 'After a round on the table, it ships as a stronger card.' },
   load_balancer: { name: 'Load Balancer', text: 'After it attacks, it moves to the next free lane.' },
   failover: { name: 'Failover', text: 'Moves to take an attack aimed at an empty lane.' },
+  scale_out: { name: 'Scale Out', text: 'Gets +1 attack for each other card of its type on its side of the table.' },
+  redundancy: {
+    name: 'Redundancy',
+    text: 'When it lands on the table, gains 1 health for each other card of its type on its side.',
+  },
 }
 
 // Order matters: reordering changes what every seed deals.
@@ -102,12 +122,56 @@ const table: [string, string, Tier, number, number, number, SigilId[]?][] = [
   ['Regex', 'Regex', 'C', 1, 1, 1, ['fatal_error']],
   ['SeniorDev', 'Senior Dev', 'B', 3, 4, 2, ['tech_lead']],
   ['Daemon', 'Daemon', 'C', 2, 2, 1, ['hot_reload']],
+  // One for each type, each growing with the cards of its type beside it.
+  ['Botnet', 'Botnet', 'C', 1, 2, 1, ['scale_out']],
+  ['Heisenbug', 'Heisenbug', 'D', 1, 1, 0, ['scale_out']],
+  ['Monolith', 'Monolith', 'C', 2, 2, 1, ['redundancy']],
+  ['ExploitChain', 'Exploit Chain', 'C', 2, 1, 1, ['scale_out']],
+  ['PairProgramming', 'Pair Programming', 'C', 2, 3, 1, ['redundancy']],
 ]
+
+const TYPE_OF: Record<string, CardType> = {
+  SpamBot: 'bot',
+  Crawler: 'bot',
+  CronJob: 'bot',
+  Watchdog: 'bot',
+  Daemon: 'bot',
+  Botnet: 'bot',
+  SQLInjection: 'exploit',
+  ZeroDay: 'exploit',
+  ForkBomb: 'exploit',
+  DestroyEnemyYou: 'exploit',
+  GrimRepo: 'exploit',
+  ExploitChain: 'exploit',
+  Bug: 'bug',
+  InfiniteLoop: 'bug',
+  NullPointer: 'bug',
+  OffCenterDiv: 'bug',
+  MergeConflict: 'bug',
+  FourOhFour: 'bug',
+  Regex: 'bug',
+  Heisenbug: 'bug',
+  LegacyCode: 'legacy',
+  Mainframe: 'legacy',
+  Documentation: 'legacy',
+  JSONFoorhees: 'legacy',
+  Prototype: 'legacy',
+  Monolith: 'legacy',
+  HelloWorld: 'dev',
+  Cookie: 'dev',
+  RubberDuck: 'dev',
+  SeniorDev: 'dev',
+  CopyPaste: 'dev',
+  ShippedFeature: 'dev',
+  Firewall: 'dev',
+  Sandbox: 'dev',
+  PairProgramming: 'dev',
+}
 
 export const CARDS: Record<string, CardDef> = Object.fromEntries(
   table.map(([id, name, tier, attack, health, cost, sigils = []]) => [
     id,
-    { id, name, tier, attack, health, cost, sigils },
+    { id, name, tier, attack, health, cost, sigils, ...(TYPE_OF[id] ? { type: TYPE_OF[id] } : {}) },
   ]),
 )
 
@@ -190,6 +254,8 @@ export function parseDeathCard(id: string): CardDef | null {
         cost: cost as number,
         sigils,
         art,
+        // A death card is the type of the card whose stats and art it took.
+        ...(base.type ? { type: base.type } : {}),
       }
     : null
   parsed.set(id, def)

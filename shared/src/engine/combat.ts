@@ -1,4 +1,4 @@
-import { BOILERPLATE } from '../cards.ts'
+import { BOILERPLATE, card } from '../cards.ts'
 import { HAND_LIMIT, LANES, type GameEvent, type GameState, type Side, type Slot, type Unit } from './types.ts'
 import { drawUnit, makeUnit } from './units.ts'
 
@@ -67,7 +67,26 @@ export function attackIn(row: Slot[], facing: Slot[], lane: number): number {
   const opposite = facing[lane]
   const loss = opposite?.sigils.includes('packet_loss') ? 1 : 0
   const popup = opposite?.sigils.includes('popup') ? 1 : 0
-  return Math.max(0, unit.attack + leads - loss + popup)
+  const scale = unit.sigils.includes('scale_out') ? kin(row, lane) : 0
+  return Math.max(0, unit.attack + leads - loss + popup + scale)
+}
+
+/** How many other cards on this row share the card's type. */
+export function kin(row: Slot[], lane: number): number {
+  const type = card((row[lane] as Unit).card).type
+  if (!type) return 0
+  return row.filter((other, index) => index !== lane && other && card(other.card).type === type).length
+}
+
+/** A Redundancy card landing on the table gains 1 health for each card of its type already on its side. */
+export function reinforce(row: Slot[], lane: number, events: GameEvent[]): void {
+  const unit = row[lane]
+  if (!unit?.sigils.includes('redundancy')) return
+  const gain = kin(row, lane)
+  if (!gain) return
+  unit.health += gain
+  unit.maxHealth += gain
+  events.push({ type: 'buffed', uid: unit.uid, attack: unit.attack, health: unit.health, sigils: [...unit.sigils] })
 }
 
 /** Deals damage to a card: a Rollback card shrugs off the first, and Fatal Error makes any damage deadly. */

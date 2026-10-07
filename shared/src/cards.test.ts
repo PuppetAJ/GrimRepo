@@ -11,14 +11,14 @@ describe('the cards', () => {
   })
 
   it("make a deck of 26: everything but the debug card, Boilerplate, a Beta card's shipped form and the event-only cards", () => {
-    assert.equal(PLAYER_DECK.length, 26)
+    assert.equal(PLAYER_DECK.length, 31)
     assert.ok(!PLAYER_DECK.includes(DEBUG_CARD) && !PLAYER_DECK.includes(BOILERPLATE))
     assert.ok(!PLAYER_DECK.includes('ShippedFeature'))
-    assert.equal(new Set(PLAYER_DECK).size, 26)
+    assert.equal(new Set(PLAYER_DECK).size, 31)
   })
 
   it('give the opponent every deck card but the board wipe', () => {
-    assert.equal(OPPONENT_POOL.length, 25)
+    assert.equal(OPPONENT_POOL.length, 30)
     assert.ok(!OPPONENT_POOL.includes('FourOhFour'))
   })
 
