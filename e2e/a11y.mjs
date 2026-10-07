@@ -87,6 +87,7 @@ if (runs('run')) {
     ['stones', 'stones'],
     ['event', 'event'],
     ['lint', 'lint'],
+    ['fuse', 'fuse'],
     ['boss-phase', 'battle'],
     ['worst-map', 'map'],
     ['worst-reward', 'reward'],

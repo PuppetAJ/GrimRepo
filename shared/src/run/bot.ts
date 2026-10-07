@@ -1,9 +1,9 @@
 import { card, type SigilId } from '../cards.ts'
 import { nextBotAction, type Strategy } from '../engine/bot.ts'
 import { findNode } from './map.ts'
-import { COMMONS, legalRunActions, PICKS, STARTER_DECKS } from './run.ts'
+import { COMMONS, legalRunActions, PICKS, STARTER_DECKS, TRIALS } from './run.ts'
 import { scene, type Effect } from './scenes.ts'
-import type { RunAction, RunCard, RunState } from './types.ts'
+import type { RunAction, RunCard, RunState, Trial } from './types.ts'
 
 const value = (entry: { attack: number; health: number }) => entry.attack * 2 + entry.health
 const cardValue = (id: string) => value(card(id)) / (card(id).cost + 1)
@@ -15,6 +15,24 @@ const drawback = (deck: RunCard[]) =>
   deck.flatMap((entry) =>
     DRAWBACKS.filter((sigil) => entry.sigils.includes(sigil)).map((sigil) => ({ entry, sigil })),
   )[0]
+
+/** The chance three cards drawn from the deck pass a code review's trial, counted over every draw. */
+function passChance(deck: RunCard[], trial: Trial): number {
+  const { bar, of } = TRIALS[trial]
+  if (deck.length <= 3) return deck.reduce((sum, entry) => sum + of(entry), 0) >= bar ? 1 : 0
+  let passed = 0
+  let draws = 0
+  for (let a = 0; a < deck.length; a++)
+    for (let b = a + 1; b < deck.length; b++)
+      for (let c = b + 1; c < deck.length; c++) {
+        draws += 1
+        if (of(deck[a] as RunCard) + of(deck[b] as RunCard) + of(deck[c] as RunCard) >= bar) passed += 1
+      }
+  return passed / draws
+}
+
+const twins = (deck: RunCard[]) =>
+  deck.filter((entry) => deck.some((other) => other.id !== entry.id && other.card === entry.card))
 
 /** Roughly what an event's effect is worth, against the deck's average card. */
 function effectWorth(state: RunState, effect: Effect): number {
@@ -34,6 +52,11 @@ function effectWorth(state: RunState, effect: Effect): number {
       return 1
     case 'lint':
       return drawback(state.deck) ? 2 : 0
+    case 'fuse':
+      return twins(state.deck).length ? 3 : 0
+    case 'trial':
+      // A rare is worth about two average cards.
+      return passChance(state.deck, effect.trial) * 6
   }
 }
 
@@ -70,7 +93,18 @@ export function nextRunAction(state: RunState, strategy: Strategy = 'greedy', de
       const best = [...buys].sort(
         (a, b) => cardValue(visit.offer[b.index]?.card as string) - cardValue(visit.offer[a.index]?.card as string),
       )[0]
-      return best && cardValue(visit.offer[best.index]?.card as string) > average ? best : { type: 'leave' }
+      if (best && cardValue(visit.offer[best.index]?.card as string) > average) return best
+      // With bytes left, a big deck sheds its weakest card, by value for its cost.
+      const worth = (entry: RunCard) => value(entry) / (card(entry.card).cost + 1)
+      const weakest = [...state.deck].sort((x, y) => worth(x) - worth(y))[0]
+      const shed = weakest && legal.some((action) => action.type === 'uninstall' && action.card === weakest.id)
+      return shed && state.deck.length > 6 && worth(weakest) < average * 0.6
+        ? { type: 'uninstall', card: weakest.id }
+        : { type: 'leave' }
+    }
+    case 'fuse': {
+      const best = [...twins(state.deck)].sort((a, b) => value(b) - value(a))[0]
+      return best ? { type: 'fuse', card: best.id } : { type: 'leave' }
     }
     case 'battle':
       return visit.game.status === 'won'

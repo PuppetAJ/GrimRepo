@@ -46,6 +46,8 @@ const runAction = z.discriminatedUnion('type', [
   }),
   z.strictObject({ type: z.literal('start'), deck: z.enum(Object.keys(STARTER_DECKS) as [string, ...string[]]) }),
   z.strictObject({ type: z.literal('buy'), index: small }),
+  z.strictObject({ type: z.literal('uninstall'), card: cardId }),
+  z.strictObject({ type: z.literal('fuse'), card: cardId }),
   z.strictObject({ type: z.literal('leave') }),
 ])
 

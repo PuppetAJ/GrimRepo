@@ -61,6 +61,12 @@ async function playRun(page, mirror, { pick = nextRunAction, done }) {
         if (await sigil.count()) await sigil.check()
         await page.locator(`[data-action="take-sigil"][data-card="${action.to}"]`).click()
         await clickMove(page, '[data-action="transfer"]', expected)
+      } else if (action.type === 'fuse') {
+        await page.locator(`[data-action="fuse-card"][data-card="${action.card}"]`).click()
+        await clickMove(page, '[data-action="fuse"]', expected)
+      } else if (action.type === 'uninstall') {
+        await page.locator(`[data-action="uninstall-card"][data-card="${action.card}"]`).click()
+        await clickMove(page, '[data-action="uninstall"]', expected)
       } else if (action.type === 'strip') {
         // The card, its sigil when it has more than one, then the linter's button.
         await page.locator(`[data-action="lint-card"][data-card="${action.card}"]`).click()

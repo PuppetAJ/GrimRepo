@@ -1,4 +1,5 @@
 import type { SigilId } from '../cards.ts'
+import type { Trial } from './types.ts'
 
 /** Effects that need a card pick one at random, so an event is a single choice. */
 export type Effect =
@@ -9,6 +10,10 @@ export type Effect =
   | { type: 'duplicate' }
   /** Opens the linter, where the player deletes one sigil from one card. */
   | { type: 'lint' }
+  /** Opens the merge request, where two copies of a card become one. */
+  | { type: 'fuse' }
+  /** Draws three cards from the deck; a rare if their total meets the trial's bar. */
+  | { type: 'trial'; trial: Trial }
 
 /** An event node's text and its choices. */
 export type Scene = { id: string; title: string; text: string; options: { label: string; effects: Effect[] }[] }
@@ -156,6 +161,25 @@ const list: Scene[] = [
     options: [
       { label: 'Fix one warning', effects: [{ type: 'lint' }] },
       { label: 'Suppress them all', effects: [{ type: 'boost', attack: 0, health: 1 }] },
+    ],
+  },
+  {
+    id: 'merge-request',
+    title: 'A merge request',
+    text: 'Two branches of the same card, drifted apart. Someone could merge them, if anyone ever reviewed anything.',
+    options: [
+      { label: 'Approve the merge', effects: [{ type: 'fuse' }] },
+      { label: 'Close it as stale', effects: [{ type: 'boost', attack: 0, health: 1 }] },
+    ],
+  },
+  {
+    id: 'review-trial',
+    title: 'A code review',
+    text: 'P03 will review three random cards from your deck. Pick what it judges them on. Pass, and it grudgingly hands over a rare.',
+    options: [
+      { label: 'Throughput: 6 or more attack between them', effects: [{ type: 'trial', trial: 'attack' }] },
+      { label: 'Uptime: 10 or more health between them', effects: [{ type: 'trial', trial: 'health' }] },
+      { label: 'Coverage: 2 or more sigils between them', effects: [{ type: 'trial', trial: 'sigils' }] },
     ],
   },
 ]

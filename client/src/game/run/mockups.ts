@@ -242,6 +242,23 @@ export const MOCKUPS: Record<string, Entry> = {
       return { ...found, state: { ...found.state, visit: { ...found.state.visit, event: 'stack-overflow' } } }
     },
   },
+  fuse: {
+    title: 'The merge request, with two copies to merge',
+    group: 'reached',
+    make: () => {
+      const found = reached((s) => s.visit?.kind === 'event')
+      if (!found || found.state.visit?.kind !== 'event') return null
+      const { state } = found
+      const node = found.state.visit.node
+      // A second copy of the first card, so there is something to merge.
+      const copy = { ...(state.deck[0] as RunCard), id: state.nextCard }
+      const deck = [...state.deck, copy]
+      return {
+        ...found,
+        state: { ...state, deck, nextCard: state.nextCard + 1, visit: { kind: 'fuse', node } },
+      }
+    },
+  },
   lint: {
     title: 'The linter, after its event',
     group: 'reached',
