@@ -39,6 +39,11 @@ const runAction = z.discriminatedUnion('type', [
     sigil: z.enum(Object.keys(SIGILS) as [SigilId, ...SigilId[]]),
   }),
   z.strictObject({ type: z.literal('choose'), option: small }),
+  z.strictObject({
+    type: z.literal('strip'),
+    card: cardId,
+    sigil: z.enum(Object.keys(SIGILS) as [SigilId, ...SigilId[]]),
+  }),
   z.strictObject({ type: z.literal('leave') }),
 ])
 
