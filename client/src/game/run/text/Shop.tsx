@@ -1,14 +1,20 @@
-import { card } from 'shared'
+import { useState } from 'react'
+import { card, UNINSTALL_PRICE } from 'shared'
+import { SIDE_BUTTON } from '../../text/Panel.tsx'
 import { PixelCard } from '../../CardReader.tsx'
 import { asUnit } from '../nodes.ts'
 import type { RunReady } from '../useRun.ts'
+import { CardList } from './CardList.tsx'
 import { LeaveButton, ScreenBar } from './Screen.tsx'
 
 /** The Package Registry: cards for bytes, as many as the player can afford, each once. */
 export function Shop({ run }: { run: RunReady }) {
+  const [removing, setRemoving] = useState<number | null>(null)
   const visit = run.state.visit
   if (visit?.kind !== 'shop') return null
   const bytes = run.state.bytes
+  const canUninstall = !visit.uninstalled && bytes >= UNINSTALL_PRICE && run.state.deck.length > 1
+  const target = run.state.deck.find((entry) => entry.id === removing)
   return (
     <div data-center className="flex flex-col gap-4">
       <LeaveButton label="Leave the registry" onLeave={() => run.act({ type: 'leave' })} />
@@ -45,6 +51,37 @@ export function Shop({ run }: { run: RunReady }) {
           )
         })}
       </ul>
+      <section aria-labelledby="uninstall" className="flex flex-col gap-2 border-t-2 border-p03-edge pt-4">
+        <h3 id="uninstall" className="text-p03">
+          Uninstall a package <span className="text-p03-dim">· {UNINSTALL_PRICE} bytes, once a visit</span>
+        </h3>
+        <p className="font-sans text-base text-[#b8f5c4]">
+          {visit.uninstalled
+            ? 'One uninstall a visit. Come back to the next registry.'
+            : 'Pick a card to delete from your deck for good.'}
+        </p>
+        {target && canUninstall ? (
+          <button
+            type="button"
+            data-action="uninstall"
+            onClick={() => {
+              run.act({ type: 'uninstall', card: target.id })
+              setRemoving(null)
+            }}
+            className={`${SIDE_BUTTON} self-start border-p03 px-4 text-lg`}
+          >
+            Uninstall {card(target.card).name} for {UNINSTALL_PRICE} bytes
+          </button>
+        ) : null}
+        <CardList
+          units={run.state.deck.map((entry) => asUnit(entry))}
+          onPick={(unit) => setRemoving(unit.uid === removing ? null : unit.uid)}
+          can={() => canUninstall}
+          picked={removing}
+          data={(unit) => ({ 'data-action': 'uninstall-card', 'data-card': unit.uid })}
+          size="w-24 sm:w-28"
+        />
+      </section>
     </div>
   )
 }

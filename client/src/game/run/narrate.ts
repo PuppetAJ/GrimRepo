@@ -26,6 +26,20 @@ export function narrateRun(before: RunState, events: RunEvent[]): string[] {
               ? `${named(event.card.card)} was sacrificed to the stones.`
               : `${named(event.card.card)} is gone from your deck.`,
         ]
+      case 'fused':
+        return [
+          `Merged. One ${named(event.card.card)}, ${event.card.attack} attack, ${event.card.health} health. The conflicts were mostly yours.`,
+        ]
+      case 'uninstalled':
+        return [`${named(event.card.card)} uninstalled, for ${event.price} bytes. It won't be missed.`]
+      case 'trialled': {
+        const drawn = event.cards.map((entry) => named(entry.card)).join(', ')
+        const measure = event.trial === 'sigils' ? 'sigils' : event.trial
+        return [
+          `I drew ${drawn}: ${event.total} ${measure}, against a bar of ${event.bar}.`,
+          event.passed ? 'It passes. Somehow. Here, take a rare.' : 'Rejected. Changes requested.',
+        ]
+      }
       case 'bought':
         return [`${named(event.card.card)} installed, for ${event.price} bytes. No refunds.`]
       case 'stripped':

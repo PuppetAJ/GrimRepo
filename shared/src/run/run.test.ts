@@ -5,8 +5,17 @@ import { Rng } from '../rng.ts'
 import { scoreRun } from '../scoring.ts'
 import { playRun } from './bot.ts'
 import { findNode } from './map.ts'
-import { applyRun, createRun, legalRunActions, PICKS, reachable, replayRun, STARTER_DECKS } from './run.ts'
-import type { NodeKind, RunAction, RunState, Visit } from './types.ts'
+import {
+  applyRun,
+  createRun,
+  legalRunActions,
+  PICKS,
+  reachable,
+  replayRun,
+  STARTER_DECKS,
+  UNINSTALL_PRICE,
+} from './run.ts'
+import type { NodeKind, RunAction, RunCard, RunState, Visit } from './types.ts'
 
 const step = (state: RunState, action: RunAction) => {
   const result = applyRun(state, action)
@@ -227,6 +236,75 @@ describe('a shop', () => {
         .filter((node) => node.kind === 'shop')
       assert.equal(shops.length, 1, `seed ${seed}`)
     }
+  })
+})
+
+describe('the merge request', () => {
+  it('folds two copies of a card into one, adding their stats at the same cost', () => {
+    const state = at('event', { kind: 'event', node: '0-0', event: 'merge-request' })
+    const copy = { ...(state.deck[0] as RunCard), id: 99, attack: 1, sigils: ['bypass' as const] }
+    state.deck.push(copy)
+    const opened = step(state, { type: 'choose', option: 0 })
+    assert.equal(opened.visit?.kind, 'fuse')
+    const kept = opened.deck[0] as RunCard
+    const merged = step(opened, { type: 'fuse', card: kept.id })
+    const result = merged.deck.find((entry) => entry.id === kept.id)
+    assert.equal(merged.deck.length, opened.deck.length - 1)
+    assert.equal(result?.attack, kept.attack + 1)
+    assert.equal(result?.health, kept.health + copy.health)
+    assert.ok(result?.sigils.includes('bypass'), "the copy's sigil joins")
+    assert.equal(merged.visit, null)
+  })
+
+  it('opens only when the deck holds a duplicate', () => {
+    const state = at('event', { kind: 'event', node: '0-0', event: 'merge-request' })
+    assert.equal(step(state, { type: 'choose', option: 0 }).visit, null)
+  })
+})
+
+describe('the code review', () => {
+  // The starter deck's three cards have 7 health and a sigil each: uptime always fails, coverage always passes.
+  const review = (option: number) => {
+    const result = applyRun(at('event', { kind: 'event', node: '0-0', event: 'review-trial' }), {
+      type: 'choose',
+      option,
+    })
+    assert.ok(result.ok)
+    const trial = result.events.find((event) => event.type === 'trialled')
+    const rare = result.events.some(
+      (event) => event.type === 'added' && ['A', 'B'].includes(card(event.card.card).tier),
+    )
+    return { trial, rare }
+  }
+
+  it('draws three cards and judges their total against the bar', () => {
+    const { trial, rare } = review(1)
+    assert.ok(trial?.type === 'trialled' && trial.cards.length === 3)
+    assert.equal(trial.total, 7)
+    assert.equal(trial.passed, false)
+    assert.equal(rare, false, 'a failed review gives nothing')
+  })
+
+  it('hands over a rare when they meet it', () => {
+    const { trial, rare } = review(2)
+    assert.ok(trial?.type === 'trialled' && trial.passed)
+    assert.equal(rare, true)
+  })
+})
+
+describe('uninstalling at a shop', () => {
+  it('removes a chosen card for bytes, once a visit', () => {
+    const state = { ...at('shop', { kind: 'shop', node: '0-0', offer: [], sold: [] }), bytes: 9 }
+    const target = state.deck[1] as RunCard
+    const after = step(state, { type: 'uninstall', card: target.id })
+    assert.ok(!after.deck.some((entry) => entry.id === target.id))
+    assert.equal(after.bytes, 9 - UNINSTALL_PRICE)
+    assert.equal(
+      refused(after, { type: 'uninstall', card: (after.deck[0] as RunCard).id }),
+      'Only one uninstall a visit',
+    )
+    const poor = { ...state, bytes: UNINSTALL_PRICE - 1 }
+    assert.equal(refused(poor, { type: 'uninstall', card: target.id }), 'Not enough bytes')
   })
 })
 

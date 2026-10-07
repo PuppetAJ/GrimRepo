@@ -55,6 +55,8 @@ export {
   replayRun,
   PICKS,
   STARTER_DECKS,
+  TRIALS,
+  UNINSTALL_PRICE,
   type RunReplay,
 } from './run/run.ts'
 export { SCENES, scene, type Effect, type Scene } from './run/scenes.ts'
@@ -69,6 +71,7 @@ export {
   type RunResult,
   type RunState,
   type Pick,
+  type Trial,
   type StageMap,
   type Visit,
 } from './run/types.ts'

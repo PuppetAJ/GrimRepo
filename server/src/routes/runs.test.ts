@@ -177,6 +177,8 @@ describe('the run actions the server takes', () => {
       { type: 'choose', option: 0 },
       { type: 'strip', card: 1, sigil: 'bypass' },
       { type: 'buy', index: 0 },
+      { type: 'uninstall', card: 1 },
+      { type: 'fuse', card: 1 },
       { type: 'leave' },
     ]
     for (const action of kinds) {
