@@ -3,6 +3,7 @@ import {
   createRun,
   deckCard,
   findNode,
+  reachable,
   generateStage,
   Rng,
   nextRunAction,
@@ -363,6 +364,12 @@ export const MOCKUPS: Record<string, Entry> = {
       if (!found || found.state.visit?.kind !== 'event') return null
       return { ...found, state: { ...found.state, visit: { ...found.state.visit, event: 'toolbox' } } }
     },
+  },
+  'boss-next': {
+    title: 'The map, one step from the boss',
+    group: 'reached',
+    make: () =>
+      reached((s) => !s.visit && s.at !== null && reachable(s).some((id) => findNode(s.map, id)?.kind === 'boss')),
   },
   'boss-phase': {
     title: "A boss's second phase",
