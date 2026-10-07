@@ -99,6 +99,9 @@ if (runs('run')) {
     ['worst-stones', 'stones'],
     ['worst-event', 'event'],
     ['worst-summary', 'summary'],
+    ['death-start', 'start'],
+    ['death-offer', 'card'],
+    ['death-build', 'summary'],
   ]
   for (const [layout, width, height] of [
     ['wide', 1440, 900],
@@ -134,6 +137,7 @@ if (runs('tables')) {
     ['worst-campfire', 'campfire'],
     ['worst-event', 'event'],
     ['worst-summary', 'summary'],
+    ['death-build', 'summary'],
   ])
     await audit(`the run's ${name} on the projector`, `/run/mockups/${name}?table=3d`, projected(view))
   await page.setViewportSize({ width: 1280, height: 800 })

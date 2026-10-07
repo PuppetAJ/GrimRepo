@@ -1,13 +1,16 @@
 import {
   applyRun,
   createRun,
+  deathCardId,
   deckCard,
+  isDeathCard,
   findNode,
   reachable,
   generateStage,
   Rng,
   nextRunAction,
   SCENES,
+  scoreRun,
   type ItemId,
   type RunCard,
   type RunState,
@@ -119,10 +122,20 @@ function itemBattle(
   return { ...found, state: { ...found.state, items, visit: { ...found.state.visit, game } } }
 }
 
+/** A death card with the longest name, as the profile pin's mockup had it. */
+const SAMPLE_DEATH = deathCardId({
+  name: 'final_FINAL_v2',
+  cost: 1,
+  attack: 7,
+  health: 3,
+  art: 'ForkBomb',
+  sigils: ['try_catch'],
+})
+
 /** Stops a seeded bot run at the first state that matches, so these follow the rules. */
-function reached(stop: (state: RunState) => boolean): Mockup | null {
+function reached(stop: (state: RunState) => boolean, death: string | null = null): Mockup | null {
   for (let seed = 1; seed <= 120; seed++) {
-    let state = createRun({ seed })
+    let state = createRun({ seed, death })
     let path: string[] = []
     while (state.status === 'playing' && !stop(state)) {
       const result = applyRun(state, nextRunAction(state))
@@ -216,6 +229,37 @@ export const MOCKUPS: Record<string, Entry> = {
     make: () => ({ state: createRun({ seed: 1 }), path: [] }),
   },
   card: { title: 'A card choice', group: 'reached', make: () => reached((s) => s.visit?.kind === 'card') },
+  'death-start': {
+    title: 'The starter deck choice, with a death card to leave out',
+    group: 'reached',
+    make: () => ({ state: createRun({ seed: 1, death: SAMPLE_DEATH }), path: [] }),
+  },
+  'death-offer': {
+    title: 'The first card choice, offering the death card',
+    group: 'reached',
+    make: () => reached((s) => s.visit?.kind === 'card' && s.visit.offer.some(isDeathCard), SAMPLE_DEATH),
+  },
+  'death-build': {
+    title: 'A lost run, building a death card',
+    group: 'reached',
+    make: () => {
+      const found = reached((s) => s.status === 'lost' && s.deck.length >= 5)
+      return (
+        found && {
+          ...found,
+          // Straight to the summary, past the lost battle.
+          state: { ...found.state, visit: null },
+          over: {
+            status: 'lost',
+            score: scoreRun(found.state.record, false),
+            stage: found.state.stage,
+            bosses: found.state.record.bosses,
+            forfeited: false,
+          },
+        }
+      )
+    },
+  },
   blind: { title: 'A face-down card choice', group: 'reached', make: () => reached((s) => s.visit?.kind === 'blind') },
   shop: {
     title: 'The Package Registry, with bytes for one card',

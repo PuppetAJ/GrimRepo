@@ -3,6 +3,7 @@ import { scoreRun, STAGES } from 'shared'
 import { number } from '../../../lib/format.ts'
 import { Panel } from '../../text/Panel.tsx'
 import type { RunReady } from '../useRun.ts'
+import { DeathCardBuilder } from './DeathCardBuilder.tsx'
 import { DeckTable } from './DeckTable.tsx'
 import { HEADER_BUTTON, ScreenActions } from './Screen.tsx'
 
@@ -11,7 +12,7 @@ export function Summary({ run }: { run: RunReady }) {
   const { state, over } = run
   const won = state.status === 'won'
   // The server's score once saved; the same formula locally until then.
-  const score = over?.score ?? scoreRun(state.record, won)
+  const score = over?.score ?? scoreRun(state.record, won, state.death?.skipped ?? false)
   const facts: [string, string][] = [
     ['Reached', `stage ${state.stage + 1} of ${STAGES.length}, ${STAGES[state.stage]}`],
     ['Battles won', String(state.record.battles)],
@@ -49,6 +50,7 @@ export function Summary({ run }: { run: RunReady }) {
         </dl>
         {run.id !== -1 && !over ? <p className="mt-2 text-lg text-p03-dim">Saving the result…</p> : null}
       </Panel>
+      {won ? null : <DeathCardBuilder run={run} />}
       <section aria-labelledby="final-deck" className="flex flex-col gap-3">
         <h3 id="final-deck" className="text-p03">
           The deck it ended with ({state.deck.length})

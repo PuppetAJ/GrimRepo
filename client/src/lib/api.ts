@@ -1,4 +1,4 @@
-import type { Action, Outcome, RunAction } from 'shared'
+import type { Action, DeathChoice, Outcome, RunAction } from 'shared'
 
 export type LeaderboardRow = { rank: number; username: string; bestScore: number; games: number; wins: number }
 /** `top` is first place's score, for scaling the bars. */
@@ -24,6 +24,8 @@ export type PlayerStats = {
   rank: number | null
   // Id of the card played most, excluding Boilerplate.
   favoriteCard: string | null
+  // Built from a lost run's deck; never kept for a guest or the demo account.
+  deathCard: string | null
 }
 
 export type FinishedGame = { outcome: Outcome; turns: number; score: number; forfeited: boolean; playedAt: string }
@@ -42,7 +44,17 @@ export type Finished = {
 }
 export type Saved = { status: 'playing'; saved: number } | Finished
 
-export type OpenRun = { id: number; seed: number; actions: RunAction[]; resumed: boolean; rulesChanged: boolean }
+export type OpenRun = {
+  id: number
+  seed: number
+  actions: RunAction[]
+  resumed: boolean
+  rulesChanged: boolean
+  /** The player's death card as it was when the run began. */
+  death: string | null
+}
+/** `saved` is false for a guest or the demo account, who see their card but don't keep it. */
+export type BuiltDeathCard = { card: string; saved: boolean }
 export type RunOver = { status: 'won' | 'lost'; score: number; stage: number; bosses: number; forfeited: boolean }
 export type RunSaved = { status: 'playing'; saved: number } | RunOver
 
@@ -81,4 +93,6 @@ export const api = {
   saveRunMoves: (id: number, from: number, actions: RunAction[]) =>
     request<RunSaved>(`/api/runs/${id}/moves`, { method: 'POST', body: JSON.stringify({ from, actions }) }),
   forfeitRun: (id: number) => request<RunOver>(`/api/runs/${id}/forfeit`, { method: 'POST' }),
+  buildDeathCard: (id: number, choice: DeathChoice) =>
+    request<BuiltDeathCard>(`/api/runs/${id}/death-card`, { method: 'POST', body: JSON.stringify(choice) }),
 }

@@ -202,9 +202,32 @@ check(
       .filter({ hasText: score.toLocaleString('en-US') })
       .count()) > 0,
 )
+
+section('A death card')
+await page.locator('[data-action="death-cost"]').first().click()
+await page.locator('[data-action="death-stats"]').first().click()
+await page.locator('#death-name').fill('<b>')
+await page.locator('[data-action="build-death-card"]').click()
+check('a name it cannot print is refused before sending', await page.getByText('Letters, numbers').isVisible())
+await page.locator('#death-name').fill('E2E Ghost')
+await page.locator('[data-action="build-death-card"]').click()
+check(
+  'the lost run builds a death card, kept for the player',
+  await page
+    .getByText('Saved, and pinned to your profile')
+    .waitFor()
+    .then(
+      () => true,
+      () => false,
+    ),
+)
 await page.locator('[data-action="again"]').click()
 await page.waitForFunction(() => document.querySelector('[data-run-moves]')?.getAttribute('data-run-moves') === '0')
 check('starting another run opens on the starter deck choice', (await view(page)) === 'start')
+check(
+  'which offers to leave the death card out for more score',
+  (await page.locator('[data-action="skip-death"]').count()) === 1 && (await visibleText(page)).includes('E2E Ghost'),
+)
 
 section('Abandoning')
 await page.getByRole('button', { name: 'Run menu' }).click()
