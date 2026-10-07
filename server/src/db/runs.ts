@@ -1,7 +1,9 @@
 import { randomInt } from 'node:crypto'
 import {
   buildDeathCard,
+  deathSkipBonus,
   replayRun,
+  rivalAllowed,
   RULES_VERSION,
   RUN_RULES_VERSION,
   scoreRun,
@@ -23,6 +25,8 @@ export type OpenRun = {
   rulesChanged: boolean
   /** The player's death card as it was when the run began. */
   death: string | null
+  /** Another player's death card for the Staging boss, and its maker. */
+  rival: { card: string; by: string } | null
 }
 
 export type RunMovesResult =
@@ -39,15 +43,18 @@ type Row = {
   rules_version: number
   run_version: number
   death_card: string | null
+  rival_card: string | null
+  rival_by: string | null
 }
+const COLUMNS = 'id, seed, actions, rules_version, run_version, death_card, rival_card, rival_by'
+const rivalOf = (row: Pick<Row, 'rival_card' | 'rival_by'>) =>
+  row.rival_card && row.rival_by ? { card: row.rival_card, by: row.rival_by } : null
+const dealtOf = (row: Row) => ({ death: row.death_card, rival: rivalOf(row) })
 const current = (row: Row) => row.rules_version === RULES_VERSION && row.run_version === RUN_RULES_VERSION
 
 /** Resumes the open run or starts a new one on a seed the server picks. */
 export async function startRun(userId: string, rulesChanged = false): Promise<OpenRun> {
-  const open = await pool.query<Row>(
-    `SELECT id, seed, actions, rules_version, run_version, death_card FROM runs WHERE user_id = $1 AND status = 'playing'`,
-    [userId],
-  )
+  const open = await pool.query<Row>(`SELECT ${COLUMNS} FROM runs WHERE user_id = $1 AND status = 'playing'`, [userId])
   const existing = open.rows[0]
   if (existing && !current(existing)) {
     // A run from other rules may not replay, so it is dropped unscored.
@@ -62,20 +69,36 @@ export async function startRun(userId: string, rulesChanged = false): Promise<Op
       resumed: true,
       rulesChanged,
       death: existing.death_card,
+      rival: rivalOf(existing),
     }
 
   const seed = randomInt(0, 2 ** 32)
-  // The run keeps the death card it began with, so it replays the same after the player builds a new one.
+  const rival = await pickRival(userId)
+  // The run keeps the cards it was dealt, so it replays the same after anyone builds a new one.
   const created = await pool.query<{ id: number; death_card: string | null }>(
-    `INSERT INTO runs (user_id, seed, rules_version, run_version, death_card)
-     SELECT $1, $2, $3, $4, death_card FROM users WHERE id = $1
+    `INSERT INTO runs (user_id, seed, rules_version, run_version, death_card, rival_card, rival_by)
+     SELECT $1, $2, $3, $4, death_card, $5, $6 FROM users WHERE id = $1
      ON CONFLICT (user_id) WHERE status = 'playing' DO NOTHING RETURNING id, death_card`,
-    [userId, seed, RULES_VERSION, RUN_RULES_VERSION],
+    [userId, seed, RULES_VERSION, RUN_RULES_VERSION, rival?.card ?? null, rival?.by ?? null],
   )
   // The one-open-run index rejected a concurrent start, so resume that run.
   const row = created.rows[0]
   if (!row) return startRun(userId, rulesChanged)
-  return { id: row.id, seed, actions: [], resumed: false, rulesChanged, death: row.death_card }
+  return { id: row.id, seed, actions: [], resumed: false, rulesChanged, death: row.death_card, rival }
+}
+
+// Enough to find one under the cap, since most death cards are.
+const RIVAL_SAMPLE = 25
+
+/** Another signed-up player's death card, under the cap, at random; never the player's own. */
+async function pickRival(userId: string): Promise<{ card: string; by: string } | null> {
+  const { rows } = await pool.query<{ card: string; by: string }>(
+    `SELECT death_card AS card, display_username AS by FROM users
+     WHERE death_card IS NOT NULL AND id <> $1 AND NOT is_anonymous AND username <> $2
+     ORDER BY random() LIMIT $3`,
+    [userId, demoAccount.username, RIVAL_SAMPLE],
+  )
+  return rows.find((row) => rivalAllowed(row.card)) ?? null
 }
 
 async function withOpenRun<T>(
@@ -87,7 +110,7 @@ async function withOpenRun<T>(
   try {
     await client.query('BEGIN')
     const found = await client.query<Row>(
-      `SELECT id, seed, actions, rules_version, run_version, death_card FROM runs
+      `SELECT ${COLUMNS} FROM runs
        WHERE id = $1 AND user_id = $2 AND status = 'playing' FOR UPDATE`,
       [runId, userId],
     )
@@ -117,7 +140,7 @@ export async function recordRunMoves(
     if (from !== run.actions.length) throw new GameError(409, { error: 'Out of step', expected: run.actions.length })
     const all = [...run.actions, ...moves]
     if (all.length > MAX_ACTIONS) throw new GameError(400, { error: 'Too many moves' })
-    const replayed = replayRun(Number(run.seed), all, run.death_card)
+    const replayed = replayRun(Number(run.seed), all, dealtOf(run))
     if (!replayed.ok)
       throw new GameError(400, { error: 'Illegal move', index: replayed.index, reason: replayed.reason })
 
@@ -137,7 +160,7 @@ export async function recordRunMoves(
 /** Ends the run as lost, scored on how far it got. */
 export async function forfeitRun(userId: string, runId: number): Promise<RunMovesResult> {
   return withOpenRun(userId, runId, async (client, run) => {
-    const replayed = replayRun(Number(run.seed), run.actions, run.death_card)
+    const replayed = replayRun(Number(run.seed), run.actions, dealtOf(run))
     if (!replayed.ok) throw new GameError(409, { error: 'The run no longer replays', rulesChanged: true })
     return finish(client, run.id, run.actions, { ...replayed.state, status: 'lost' }, true)
   })
@@ -151,7 +174,8 @@ async function finish(
   forfeited: boolean,
 ): Promise<RunMovesResult> {
   const status = state.status === 'won' ? 'won' : 'lost'
-  const score = scoreRun(state.record, status === 'won', state.death?.skipped ?? false)
+  const bonus = state.death?.skipped ? deathSkipBonus(state.death.card) : 1
+  const score = scoreRun(state.record, status === 'won', bonus)
   await client.query(
     `UPDATE runs SET status = $1, actions = $2, stage = $3, battles = $4, bosses = $5, score = $6, forfeited = $7,
        finished_at = now()
@@ -172,7 +196,8 @@ export async function buildRunDeathCard(userId: string, runId: number, choice: D
   try {
     await client.query('BEGIN')
     const found = await client.query<Row & { status: string; death_built: boolean; latest: boolean; keeps: boolean }>(
-      `SELECT r.id, r.seed, r.actions, r.rules_version, r.run_version, r.death_card, r.status, r.death_built,
+      `SELECT r.id, r.seed, r.actions, r.rules_version, r.run_version, r.death_card, r.rival_card, r.rival_by,
+              r.status, r.death_built,
               NOT EXISTS (SELECT 1 FROM runs later WHERE later.user_id = r.user_id AND later.id > r.id) AS latest,
               NOT u.is_anonymous AND u.username <> $3 AS keeps
        FROM runs r JOIN users u ON u.id = r.user_id
@@ -182,10 +207,10 @@ export async function buildRunDeathCard(userId: string, runId: number, choice: D
     const run = found.rows[0]
     if (!run || run.status !== 'lost') throw new GameError(404, { error: 'No such lost run' })
     if (!run.latest || run.death_built) throw new GameError(409, { error: 'This run has already had its death card' })
-    const replayed = replayRun(Number(run.seed), run.actions, run.death_card)
+    const replayed = replayRun(Number(run.seed), run.actions, dealtOf(run))
     if (!replayed.ok) throw new GameError(409, { error: 'The run no longer replays' })
     if (isOffensive(tidyDeathName(choice.name))) throw new GameError(400, { error: NAME_REFUSED })
-    const built = buildDeathCard(replayed.state.deck, choice)
+    const built = buildDeathCard(replayed.state, choice)
     if (!built.ok) throw new GameError(400, { error: built.reason })
     if (run.keeps) {
       await client.query(`UPDATE users SET death_card = $1 WHERE id = $2`, [built.id, userId])

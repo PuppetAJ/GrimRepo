@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { card, DEATH_SKIP_BONUS, STARTER_DECKS } from 'shared'
+import { card, deathSkipBonus, STARTER_DECKS } from 'shared'
 import { PixelCard } from '../../CardReader.tsx'
 import { asUnit } from '../nodes.ts'
 import type { RunReady } from '../useRun.ts'
@@ -30,9 +30,11 @@ export function StarterDeck({ run }: { run: RunReady }) {
               className="mt-1.5 accent-p03"
             />
             <span>
-              Leave your death card, {card(death.card).name}, out of this run for &times;{DEATH_SKIP_BONUS} score.{' '}
+              Leave your death card, {card(death.card).name}, out of this run for &times;{deathSkipBonus(death.card)}{' '}
+              score.{' '}
               <span className="font-sans text-base text-p03-dim">
-                Otherwise it&apos;s offered at the first card choice.
+                Otherwise it&apos;s offered at the first card choice. The final boss brings it either way; the more
+                dangerous it is, the more leaving it out pays.
               </span>
             </span>
           </label>

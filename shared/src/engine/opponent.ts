@@ -92,12 +92,41 @@ export function queuePlan(state: GameState, rng: Rng, events: GameEvent[]): void
   const plan = encounter(state.opponent.encounter as string).phases[state.opponent.phase] ?? []
   const turn = plan[state.opponent.step]
   state.opponent.step += 1
-  if (!turn) return queue(state, rng, queueCountFor(state.turn, rng), state.turn, events)
+  if (!turn) {
+    queue(state, rng, queueCountFor(state.turn, rng), state.turn, events)
+    return queueHaunt(state, events)
+  }
   for (const queued of turn) {
     const lane = nearestFree(state, queued.lane)
-    if (lane === undefined) return
+    if (lane === undefined) break
+    const haunt = state.opponent.haunt
+    if ('orRival' in queued && queued.orRival && haunt && haunt.by !== null && !haunt.played) {
+      haunt.played = true
+      const unit = makeUnit(state, haunt.card)
+      state.opponent.back[lane] = unit
+      events.push({ type: 'queued', lane, unit, haunt: { by: haunt.by } })
+      continue
+    }
     const unit = makeUnit(state, 'card' in queued ? queued.card : rng.pick(queued.pick))
     state.opponent.back[lane] = unit
     events.push({ type: 'queued', lane, unit })
   }
+  queueHaunt(state, events)
 }
+
+/** In a boss's last phase, the player's own death card joins the plan in the first free queue slot, once. */
+function queueHaunt(state: GameState, events: GameEvent[]): void {
+  const haunt = state.opponent.haunt
+  // Another player's card only ever takes a place the plan offers it.
+  if (!haunt || haunt.played || haunt.by !== null) return
+  if (state.opponent.phase + 1 < encounter(state.opponent.encounter as string).phases.length) return
+  const lane = nearestFree(state, HAUNT_LANE)
+  if (lane === undefined) return
+  haunt.played = true
+  const unit = makeUnit(state, haunt.card)
+  state.opponent.back[lane] = unit
+  events.push({ type: 'queued', lane, unit, haunt: { by: haunt.by } })
+}
+
+/** Where a death card goes when it can: opposite the player's middle. */
+const HAUNT_LANE = 1

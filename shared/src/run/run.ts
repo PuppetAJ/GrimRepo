@@ -6,6 +6,7 @@ import { deckCard } from '../engine/units.ts'
 import { Rng } from '../rng.ts'
 import { findNode, generateStage } from './map.ts'
 import { scene, type Effect } from './scenes.ts'
+import { rivalAllowed } from './death.ts'
 import { FOUND_ITEMS, ITEM_SLOTS, type ItemId } from '../items.ts'
 import type { MapNode, Pick, RunAction, RunCard, RunEvent, RunResult, RunState, Trial, Visit } from './types.ts'
 
@@ -80,8 +81,11 @@ const toDeckCard = ({ card: id, attack, health, sigils }: RunCard): DeckCard => 
   sigils: [...sigils],
 })
 
-/** `death` is the player's death card id, if they have one; a malformed one is ignored. */
-export function createRun({ seed, death = null }: { seed: number; death?: string | null }): RunState {
+/** What the server deals a run as it starts: the player's own death card and another player's. */
+export type RunDealt = { death?: string | null; rival?: { card: string; by: string } | null }
+
+/** A malformed death card, or another player's over the cap, is ignored. */
+export function createRun({ seed, death = null, rival = null }: { seed: number } & RunDealt): RunState {
   const rng = new Rng(seed >>> 0)
   const state: RunState = {
     seed: seed >>> 0,
@@ -98,6 +102,7 @@ export function createRun({ seed, death = null }: { seed: number; death?: string
     bytes: 0,
     items: [],
     death: death && parseDeathCard(death) ? { card: death, skipped: false, offered: false } : null,
+    rival: rival && rivalAllowed(rival.card) ? { card: rival.card, by: rival.by } : null,
   }
   state.rng = rng.state
   return state
@@ -124,6 +129,7 @@ function enter(state: RunState, rng: Rng, node: MapNode): Visit {
           fairHand: true,
           outOfMemory: true,
           items: state.items,
+          haunt: node.kind === 'boss' ? haunting(state) : null,
         }),
       }
     case 'card':
@@ -156,6 +162,13 @@ function enter(state: RunState, rng: Rng, node: MapNode): Visit {
     case 'event':
       return { kind: 'event', node: node.id, event: node.event as string }
   }
+}
+
+/** The Staging boss brings another player's death card; the last boss brings the player's own, left out or not. */
+function haunting(state: RunState): { card: string; by: string | null } | null {
+  if (state.stage === 1 && state.rival) return { card: state.rival.card, by: state.rival.by }
+  if (state.stage === STAGES.length - 1 && state.death) return { card: state.death.card, by: null }
+  return null
 }
 
 function remove(state: RunState, target: RunCard, events: RunEvent[]): void {
@@ -530,8 +543,8 @@ export function legalRunActions(state: RunState): RunAction[] {
 export type RunReplay = { ok: true; state: RunState; events: RunEvent[] } | { ok: false; index: number; reason: string }
 
 /** Any illegal action invalidates the whole record. */
-export function replayRun(seed: number, actions: readonly RunAction[], death: string | null = null): RunReplay {
-  let state = createRun({ seed, death })
+export function replayRun(seed: number, actions: readonly RunAction[], dealt: RunDealt = {}): RunReplay {
+  let state = createRun({ seed, ...dealt })
   const events: RunEvent[] = []
   for (const [index, action] of actions.entries()) {
     const result = applyRun(state, action)
