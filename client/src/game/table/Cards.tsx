@@ -19,7 +19,7 @@ export { Popup } from './Popup.tsx'
 
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
 
-export type Place = { at: 'hand'; index: number; count: number } | { at: Row; lane: number }
+export type Place = { at: 'hand'; index: number; count: number; lowered?: boolean } | { at: Row; lane: number }
 
 export type Look = 'plain' | 'selected' | 'marked' | 'markable' | 'dim'
 
@@ -148,6 +148,7 @@ export function Card({
         selected: look === 'selected',
         hovered,
         summoning: summoning ?? false,
+        lowered: place.lowered ?? false,
       })
       position.set(...local)
       camera.localToWorld(position)

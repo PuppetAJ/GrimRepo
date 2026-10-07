@@ -1,4 +1,15 @@
-import { Flag, LayoutGrid, LogOut, Map as MapIcon, Maximize, Minimize, MoveUp, Type } from 'lucide-react'
+import {
+  Flag,
+  LayoutGrid,
+  ListEnd,
+  LogOut,
+  Map as MapIcon,
+  Maximize,
+  Minimize,
+  MoveDown,
+  MoveUp,
+  Type,
+} from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
 import { legalActions, type Unit } from 'shared'
@@ -106,12 +117,24 @@ export function Hud({
       <div className="absolute top-0 right-0 z-10 flex flex-col items-end gap-1 p-3 sm:p-4">
         {/* Icons only on a sideways phone or a narrow screen, so the row stays off P03's face and the scale. */}
         <div className="flex flex-wrap justify-end">
+          {camera === 'table' ? null : (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setCamera(camera === 'queue' ? 'board' : 'queue')}
+              aria-keyshortcuts={camera === 'queue' ? 'S' : 'W'}
+              title={camera === 'queue' ? 'Back to the board' : "Look at P03's queue"}
+            >
+              {camera === 'queue' ? <MoveDown aria-hidden /> : <ListEnd aria-hidden />}
+              <Label>{camera === 'queue' ? 'Back to the board' : "Look at P03's queue"}</Label>
+            </Button>
+          )}
           <Button
             size="sm"
             variant="ghost"
-            disabled={Boolean(view.summon)}
+            disabled={Boolean(view.summon) && camera !== 'queue'}
             onClick={() => setCamera(camera === 'table' ? 'board' : 'table')}
-            aria-keyshortcuts={camera === 'table' ? 'W' : 'S'}
+            aria-keyshortcuts={camera === 'table' ? 'W' : 'D'}
             title={camera === 'table' ? 'Look at the board' : 'Look up'}
           >
             {camera === 'table' ? <LayoutGrid aria-hidden /> : <MoveUp aria-hidden />}

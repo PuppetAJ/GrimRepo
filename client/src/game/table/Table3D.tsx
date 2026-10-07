@@ -45,7 +45,8 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
   const stage = useStage()
   const { playback, busy, skip } = usePlayback(game)
   const [chosen, setCamera] = useState<CameraView>('table')
-  const camera: CameraView = playback.view.summon ? 'board' : chosen
+  // Summoning looks down at the board, unless the player is already looking further back at the queue.
+  const camera: CameraView = playback.view.summon && chosen === 'table' ? 'board' : chosen
   const [rung, setRung] = useState(0)
   // Bumped when a card is tried before drawing, so the piles and prompt can point at the draw.
   const [hint, setHint] = useState(0)
@@ -64,8 +65,10 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
     const onKey = (event: KeyboardEvent) => {
       if (!forTable(event)) return
       const key = event.key.toLowerCase()
-      if (key === 'w') setCamera('board')
-      else if (key === 'd' || key === 's') setCamera('table')
+      // W looks further down the table, a step at a time, as does holding it; S steps back up.
+      if (key === 'w') setCamera((now) => (now === 'table' ? 'board' : 'queue'))
+      else if (key === 's') setCamera((now) => (now === 'queue' ? 'board' : 'table'))
+      else if (key === 'd') setCamera('table')
       else if (key === 'e' && !event.repeat) ringKey.current()
       else if (key === 'm') mapKey.current()
     }

@@ -153,7 +153,7 @@ export function Scene({
             <Card
               key={unit.uid}
               unit={unit}
-              place={{ at: 'hand', index, count }}
+              place={{ at: 'hand', index, count, lowered: camera !== 'table' }}
               spawn={playback.spawns.get(unit.uid) ?? (dealing ? DECK : undefined)}
               look={handLook(unit.uid)}
               // Stowed below the view as the table is packed away.
