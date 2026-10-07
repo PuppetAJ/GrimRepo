@@ -1,11 +1,8 @@
 import { useGLTF } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
-import { Selection } from '@react-three/postprocessing'
 import { useEffect, useLayoutEffect, useMemo, useRef, type RefObject } from 'react'
 import { LANES, type RunState } from 'shared'
 import * as THREE from 'three'
-import { EndTurnButton, FactoryEffects } from '../../table/Factory.tsx'
-import { ItemRack } from '../../table/table3d/ItemRack.tsx'
 import { STILL } from '../../table/factory/constants.ts'
 import { CAMERA, CENTER_X, FOV, TABLE_Y, type CameraView, type Vec3 } from '../../table/layout.ts'
 import { TINT } from '../../table/palette.ts'
@@ -353,6 +350,8 @@ export function BetweenBattles({
   // P03 gloats over a lost run and gives up over a cleared one, and never grows impatient off the board.
   const outcome = state.status === 'won' ? 'win' : state.status === 'lost' ? 'loss' : undefined
   useLayoutEffect(() => stage.room({ view, log: lines, busy: false, outcome, patient: true }))
+  // Between battles the button is locked and the run's items hang out of reach.
+  useLayoutEffect(() => stage.bench({ items: state.items, usable: [], aiming: null, active: false, rung: 0 }))
   // When the projector may start: once the loading screen has faded, or the camera has nearly glided back.
   const ready = useRef(Infinity)
   useEffect(() => {
@@ -362,16 +361,9 @@ export function BetweenBattles({
     <stage.Scene>
       {/* Across the table at the window, gliding back from the seat after a battle. */}
       <CameraRig view="map" from={from} fit={FIT} />
-      <Selection>
-        {/* Bolted to the table, so it stays between battles, locked. */}
-        <EndTurnButton active={false} rung={0} onClick={() => {}} />
-        {/* The run's items stay on the rack between battles, out of reach. */}
-        <ItemRack items={state.items} />
-        <FactoryEffects quality={stage.quality} />
-        {projecting ? (
-          <Projector corners={corners} ready={ready} closing={closing} onClosed={onClosed} onPin={onPin} />
-        ) : null}
-      </Selection>
+      {projecting ? (
+        <Projector corners={corners} ready={ready} closing={closing} onClosed={onClosed} onPin={onPin} />
+      ) : null}
       <WarmUp onWarm={stage.warm} />
     </stage.Scene>
   )

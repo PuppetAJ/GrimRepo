@@ -170,7 +170,6 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
           from={from}
           hint={hint}
           hinted={hinted}
-          quality={stage.quality}
           reader={reader}
           onWarm={stage.warm}
           leaving={leaving}

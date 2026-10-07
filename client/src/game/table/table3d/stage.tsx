@@ -60,6 +60,8 @@ export function CameraRig({
       shown.current = view
     }
     const [x, y, z] = goal.position
+    // The camera leans with the pointer; looking down at the board only a little, so the lanes stay nearly square.
+    const sway = view === 'board' || view === 'queue' ? 0.25 : 1
     const now = gliding.current
     const t = now && now.length > 0 ? Math.min(1, (clock.elapsedTime - now.at) / now.length) : 1
     // With reduced motion the camera jumps between views and doesn't follow the pointer.
@@ -69,13 +71,13 @@ export function CameraRig({
       lens.fov = fov
     } else if (now && t < 1) {
       const k = easeInOut(t)
-      seat.set(x + pointer.x * 0.12, y + pointer.y * 0.06, z)
+      seat.set(x + pointer.x * 0.12 * sway, y + pointer.y * 0.06 * sway, z)
       camera.position.lerpVectors(now.position, seat, k)
       target.current.lerpVectors(now.target, aim.set(...goal.target), k)
       lens.fov = THREE.MathUtils.lerp(now.fov, fov, k)
     } else {
       gliding.current = null
-      seat.set(x + pointer.x * 0.12, y + pointer.y * 0.06, z)
+      seat.set(x + pointer.x * 0.12 * sway, y + pointer.y * 0.06 * sway, z)
       easing.damp3(camera.position, seat, 0.18, delta)
       easing.damp3(target.current, goal.target, 0.18, delta)
       lens.fov = fov
