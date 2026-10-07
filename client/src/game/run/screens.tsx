@@ -5,6 +5,7 @@ import { BattleOver } from './BattleOver.tsx'
 import { Campfire } from './text/Campfire.tsx'
 import { EventScene } from './text/EventScene.tsx'
 import { Linter } from './text/Linter.tsx'
+import { MergeRequest } from './text/MergeRequest.tsx'
 import { BlindPick } from './text/BlindPick.tsx'
 import { Shop } from './text/Shop.tsx'
 import { StarterDeck } from './text/StarterDeck.tsx'
@@ -27,6 +28,7 @@ export type RunView =
   | 'stones'
   | 'event'
   | 'lint'
+  | 'fuse'
   | 'summary'
 
 const TITLES: Record<Exclude<RunView, 'battle' | 'map'>, string> = {
@@ -39,6 +41,7 @@ const TITLES: Record<Exclude<RunView, 'battle' | 'map'>, string> = {
   stones: 'Sigil stones',
   event: 'Event',
   lint: 'The linter',
+  fuse: 'A merge request',
   summary: 'The run is over',
 }
 
@@ -86,6 +89,7 @@ export function ScreenBody({ run, view, layout }: { run: RunReady; view: RunView
   if (view === 'stones') return <Stones run={run} />
   if (view === 'event') return <EventScene run={run} />
   if (view === 'lint') return <Linter run={run} />
+  if (view === 'fuse') return <MergeRequest run={run} />
   if (view === 'start') return <StarterDeck run={run} />
   if (view === 'shop') return <Shop run={run} />
   if (view === 'blind') return <BlindPick run={run} />

@@ -6,7 +6,7 @@ import { deckCard } from '../engine/units.ts'
 import { Rng } from '../rng.ts'
 import { findNode, generateStage } from './map.ts'
 import { scene, type Effect } from './scenes.ts'
-import type { MapNode, Pick, RunAction, RunCard, RunEvent, RunResult, RunState, Visit } from './types.ts'
+import type { MapNode, Pick, RunAction, RunCard, RunEvent, RunResult, RunState, Trial, Visit } from './types.ts'
 
 /** The decks a run can start with, chosen as its first action. */
 export const STARTER_DECKS: Record<string, { name: string; about: string; cards: string[] }> = {
@@ -30,6 +30,20 @@ export const STARTER_DECKS: Record<string, { name: string; about: string; cards:
 
 /** What a card costs at a shop, in bytes, by tier. */
 const PRICE: Record<string, number> = { E: 3, D: 5, C: 6, B: 12, A: 15 }
+
+/** What removing a card at a shop costs, in bytes; once a visit. */
+export const UNINSTALL_PRICE = 4
+
+/** A code review's bar for each trial, over three cards drawn from the deck. */
+export const TRIALS: Record<Trial, { bar: number; of: (entry: RunCard) => number }> = {
+  attack: { bar: 6, of: (entry) => entry.attack },
+  health: { bar: 10, of: (entry) => entry.health },
+  sigils: { bar: 2, of: (entry) => entry.sigils.length },
+}
+
+/** Cards held twice or more, which a merge request can fold together. */
+const duplicated = (state: RunState, entry: RunCard) =>
+  state.deck.some((other) => other.id !== entry.id && other.card === entry.card)
 
 /** The traits a face-down card choice can offer, each the commons that have it. */
 export const PICKS: Record<Pick, { label: string; fits: (id: string) => boolean }> = {
@@ -148,8 +162,19 @@ function resolve(state: RunState, rng: Rng, effect: Effect, events: RunEvent[]):
   } else if (effect.type === 'removeCard') {
     // A run never loses its last card.
     if (state.deck.length > 1) remove(state, rng.pick(state.deck), events)
-  } else if (effect.type === 'lint') {
-    // The caller opens the linter, since it knows the node.
+  } else if (effect.type === 'lint' || effect.type === 'fuse') {
+    // The caller opens the linter or the merge request, since it knows the node.
+  } else if (effect.type === 'trial') {
+    const { bar, of } = TRIALS[effect.trial]
+    const cards = rng.shuffle([...state.deck]).slice(0, 3)
+    const total = cards.reduce((sum, entry) => sum + of(entry), 0)
+    const passed = total >= bar
+    events.push({ type: 'trialled', trial: effect.trial, cards, total, bar, passed })
+    if (passed) {
+      const added = newCard(state, rng.pick(RARES))
+      state.deck.push(added)
+      events.push({ type: 'added', card: added })
+    }
   } else if (effect.type === 'duplicate') {
     // A copy keeps the card's buffs and sigils, as a fork would.
     const source = rng.pick(state.deck)
@@ -291,8 +316,42 @@ function step(state: RunState, rng: Rng, action: RunAction, events: RunEvent[]):
       const option = Number.isInteger(action.option) ? scene(visit.event).options[action.option] : undefined
       if (!option) return 'No such choice'
       for (const effect of option.effects) resolve(state, rng, effect, events)
-      const lints = option.effects.some((effect) => effect.type === 'lint')
-      state.visit = lints && state.deck.some((entry) => entry.sigils.length) ? { kind: 'lint', node: visit.node } : null
+      const opens = (type: Effect['type']) => option.effects.some((effect) => effect.type === type)
+      state.visit =
+        opens('lint') && state.deck.some((entry) => entry.sigils.length)
+          ? { kind: 'lint', node: visit.node }
+          : opens('fuse') && state.deck.some((entry) => duplicated(state, entry))
+            ? { kind: 'fuse', node: visit.node }
+            : null
+      return
+    }
+    case 'fuse': {
+      if (visit?.kind !== 'fuse') return 'There is no merge request here'
+      const kept = inDeck(action.card)
+      const other = kept && state.deck.find((entry) => entry.id !== kept.id && entry.card === kept.card)
+      if (!kept || !other) return 'That card has no copy to merge with'
+      // Stats add up and sigils join, three at most; the cost stays the card's own.
+      kept.attack += other.attack
+      kept.health += other.health
+      kept.sigils = [...new Set([...kept.sigils, ...other.sigils])].slice(0, MAX_SIGILS)
+      kept.added ??= other.added
+      state.deck = state.deck.filter((entry) => entry.id !== other.id)
+      events.push({ type: 'fused', card: kept, into: other })
+      state.visit = null
+      return
+    }
+    case 'uninstall': {
+      if (visit?.kind !== 'shop') return 'There is no shop here'
+      if (visit.uninstalled) return 'Only one uninstall a visit'
+      if (state.bytes < UNINSTALL_PRICE) return 'Not enough bytes'
+      const target = inDeck(action.card)
+      if (!target) return 'That card is not in the deck'
+      // A run never loses its last card.
+      if (state.deck.length <= 1) return 'The deck needs at least one card'
+      state.bytes -= UNINSTALL_PRICE
+      visit.uninstalled = true
+      state.deck = state.deck.filter((entry) => entry.id !== target.id)
+      events.push({ type: 'uninstalled', card: target, price: UNINSTALL_PRICE })
       return
     }
     case 'strip': {
@@ -307,7 +366,7 @@ function step(state: RunState, rng: Rng, action: RunAction, events: RunEvent[]):
       return
     }
     case 'leave': {
-      if (visit?.kind === 'campfire' || visit?.kind === 'stones' || visit?.kind === 'lint' || visit?.kind === 'shop') {
+      if (['campfire', 'stones', 'lint', 'shop', 'fuse'].includes(visit?.kind ?? '')) {
         state.visit = null
         return
       }
@@ -358,6 +417,13 @@ export function legalRunActions(state: RunState): RunAction[] {
       visit.offer.forEach((item, index) => {
         if (!visit.sold.includes(index) && item.price <= state.bytes) actions.push({ type: 'buy', index })
       })
+      if (!visit.uninstalled && state.bytes >= UNINSTALL_PRICE && state.deck.length > 1)
+        for (const entry of state.deck) actions.push({ type: 'uninstall', card: entry.id })
+      return actions
+    }
+    case 'fuse': {
+      const actions: RunAction[] = [{ type: 'leave' }]
+      for (const entry of state.deck) if (duplicated(state, entry)) actions.push({ type: 'fuse', card: entry.id })
       return actions
     }
     case 'campfire': {

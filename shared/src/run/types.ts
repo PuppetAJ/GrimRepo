@@ -2,7 +2,7 @@ import type { SigilId } from '../cards.ts'
 import type { Action, DeckCard, GameEvent, GameState } from '../engine/types.ts'
 
 /** Bumped whenever a change would make an old run replay differently. */
-export const RUN_RULES_VERSION = 10
+export const RUN_RULES_VERSION = 11
 
 /** The most actions one save may send; 200 of the largest kind fit the server's 16 KB body limit. */
 export const RUN_SAVE_LIMIT = 200
@@ -18,6 +18,9 @@ export type NodeKind = 'battle' | 'card' | 'campfire' | 'stones' | 'event' | 'sh
 
 /** What a face-down card choice offers in place of cards: a random card with that trait. */
 export type Pick = 'free' | 'costly' | 'sigil' | 'sturdy' | 'sharp'
+
+/** A code review's trials: the total attack, health or sigils of three cards drawn from the deck. */
+export type Trial = 'attack' | 'health' | 'sigils'
 
 export type MapNode = {
   id: string
@@ -48,7 +51,10 @@ export type Visit =
   /** A run's first choice: which starter deck to take. */
   | { kind: 'start' }
   /** Cards for bytes; several may be bought before leaving. */
-  | { kind: 'shop'; node: string; offer: { card: string; price: number }[]; sold: number[] }
+  /** `uninstalled` once a card has been removed for bytes, which a visit allows once. */
+  | { kind: 'shop'; node: string; offer: { card: string; price: number }[]; sold: number[]; uninstalled?: boolean }
+  /** The merge request, after its event: two copies of a card may become one. */
+  | { kind: 'fuse'; node: string }
   | { kind: 'blind'; node: string; picks: Pick[] }
 
 export type RunState = {
@@ -77,6 +83,8 @@ export type RunAction =
   | { type: 'strip'; card: number; sigil: SigilId }
   | { type: 'start'; deck: string }
   | { type: 'buy'; index: number }
+  | { type: 'uninstall'; card: number }
+  | { type: 'fuse'; card: number }
   | { type: 'leave' }
 
 /** In order, for the client to show what a run action did. */
@@ -88,6 +96,11 @@ export type RunEvent =
   | { type: 'removed'; card: RunCard }
   | { type: 'stripped'; card: RunCard; sigil: SigilId }
   | { type: 'bought'; card: RunCard; price: number }
+  | { type: 'uninstalled'; card: RunCard; price: number }
+  /** `card` is the copy kept, with both copies' stats; `into` was folded into it. */
+  | { type: 'fused'; card: RunCard; into: RunCard }
+  /** A code review: the cards drawn, the trial's total and the bar, and whether it passed. */
+  | { type: 'trialled'; trial: Trial; cards: RunCard[]; total: number; bar: number; passed: boolean }
   | { type: 'stageCleared'; stage: number }
   | { type: 'runOver'; outcome: 'win' | 'loss' }
 
