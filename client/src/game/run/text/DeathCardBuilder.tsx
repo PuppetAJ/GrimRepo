@@ -1,14 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { useState } from 'react'
-import {
-  buildDeathCard,
-  card,
-  DEATH_NAME_LIMIT,
-  deathNameProblem,
-  deathParts,
-  SIGILS,
-  type DeathChoice,
-} from 'shared'
+import { buildDeathCard, card, DEATH_NAME_LIMIT, deathNameProblem, deathParts, SIGILS, type DeathChoice } from 'shared'
 import { api, ApiError, type BuiltDeathCard } from '../../../lib/api.ts'
 import { PixelCard } from '../../CardReader.tsx'
 import { Panel, SIDE_BUTTON } from '../../text/Panel.tsx'
