@@ -10,7 +10,7 @@ import {
 } from 'react'
 import { findNode, MAP_COLUMNS, reachable, type MapNode, type NodeKind, type StageMap } from 'shared'
 import { mapRows, sideOf, spots, type Spot } from '../layout.ts'
-import { NODE_ICONS, nodeName } from '../nodes.ts'
+import { NODE_ICONS, nodeIcon, nodeName } from '../nodes.ts'
 import { usePlan } from '../plan.ts'
 import type { Layout } from '../../text/useTextTable.ts'
 import type { RunReady } from '../useRun.ts'
@@ -64,7 +64,7 @@ const describeNext = (map: StageMap, node: MapNode) =>
         .join('; ')}`
     : ''
 
-const KINDS = ['battle', 'card', 'campfire', 'stones', 'event', 'boss'] as const
+const KINDS = ['battle', 'card', 'campfire', 'stones', 'event', 'shop', 'boss'] as const
 
 /** What each icon means; pointing at one lights every node of its kind, and choosing one keeps them lit. */
 function Legend({
@@ -299,7 +299,13 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
         </div>
       </ScreenActions>
       <ScreenBar>
-        <div className="pb-1">{legend}</div>
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 pb-1">
+          {legend}
+          {/* Overkill banked for the Package Registry. */}
+          <p className="shrink-0 text-base text-p03-dim">
+            <span className="text-p03">{state.bytes}</span> {state.bytes === 1 ? 'byte' : 'bytes'}
+          </p>
+        </div>
       </ScreenBar>
       {/* Padded, so the boss and the first row are never cut off at the top or bottom of the scroll. */}
       <div className={hologram ? 'py-5' : 'py-8'}>
@@ -343,7 +349,7 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
                     const mark = markOf(node)
                     const planned = inked.has(node.id) || plan.marks.includes(node.id)
                     const spot = placed.get(node.id) as Spot
-                    const Icon = NODE_ICONS[node.kind]
+                    const Icon = nodeIcon(node)
                     const name = `${nodeName(node)}${node.kind === 'boss' ? '' : `, ${sideOf(node)}`}`
                     const words = [WORDS[mark], planned ? 'planned' : '', describeNext(state.map, node)].filter(Boolean)
                     const label = `${name}${words.length ? `, ${words.join(', ')}` : ''}`

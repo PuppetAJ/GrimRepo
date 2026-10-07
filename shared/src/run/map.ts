@@ -18,6 +18,7 @@ const MOST_BATTLES = 4
 // crowds into one corner.
 const FEWEST_NODES = 17
 const ROWS_EACH_SIDE = 3
+const BLIND_SHARE = 1 / 3
 
 type Cell = { row: number; col: number }
 const key = ({ row, col }: Cell) => `${row}-${col}`
@@ -129,7 +130,15 @@ export function generateStage(stage: number, rng: Rng): StageMap {
     const { fewest, most } = battles(rows)
     if (fallback || (clean && fewest >= FEWEST_BATTLES && most <= MOST_BATTLES)) break
   }
+  // One shop a stage, a little past the middle, in place of a node that isn't a battle.
+  const spots = rows
+    .slice(3, ROWS - 1)
+    .flat()
+    .filter((node) => node.kind !== 'battle')
+  if (spots.length) rng.pick(spots).kind = 'shop'
   for (const node of rows.flat()) {
+    // A third of the card choices past the first row show only traits.
+    if (node.kind === 'card' && node.row > 0 && rng.float() < BLIND_SHARE) node.blind = true
     if (node.kind === 'battle') node.encounter = rng.pick(fights).id
     if (node.kind === 'campfire') node.boost = rng.pick(['attack', 'health'] as const)
     if (node.kind === 'event') node.event = rng.pick(scenes)

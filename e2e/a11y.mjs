@@ -78,8 +78,11 @@ if (runs('run')) {
   // From mockups, so every screen is checked whatever a real run's seed would deal, and at its worst.
   const screen = (name) => () => page.locator(`[data-run-view="${name}"]`).waitFor({ timeout: 30_000 })
   const MOCKED = [
+    ['start', 'start'],
     ['map', 'map'],
     ['card', 'card'],
+    ['blind', 'blind'],
+    ['shop', 'shop'],
     ['campfire', 'campfire'],
     ['stones', 'stones'],
     ['event', 'event'],

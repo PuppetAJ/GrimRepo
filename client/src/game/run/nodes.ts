@@ -1,4 +1,4 @@
-import { Flame, Gem, Layers, type LucideIcon, MessageSquareText, Skull, Swords } from 'lucide-react'
+import { CircleHelp, Flame, Gem, Layers, type LucideIcon, MessageSquareText, Skull, Store, Swords } from 'lucide-react'
 import { card, encounter, type MapNode, type NodeKind, type RunCard, type Unit } from 'shared'
 
 // Placeholders until Adrian's pixel icons replace them.
@@ -8,8 +8,13 @@ export const NODE_ICONS: Record<NodeKind, LucideIcon> = {
   campfire: Flame,
   stones: Gem,
   event: MessageSquareText,
+  shop: Store,
   boss: Skull,
 }
+
+/** A node's icon: a face-down card choice shows a question mark. */
+export const nodeIcon = (node: Pick<MapNode, 'kind'> & Partial<Pick<MapNode, 'blind'>>): LucideIcon =>
+  node.kind === 'card' && node.blind ? CircleHelp : NODE_ICONS[node.kind]
 
 const NAMES: Record<NodeKind, string> = {
   battle: 'Battle',
@@ -17,12 +22,16 @@ const NAMES: Record<NodeKind, string> = {
   campfire: 'Campfire',
   stones: 'Sigil stones',
   event: 'Event',
+  shop: 'Package Registry',
   boss: 'Boss',
 }
 
 export const boostText = (boost: 'attack' | 'health' | undefined) => (boost === 'attack' ? '+1 attack' : '+2 health')
 
-export function nodeName(node: Pick<MapNode, 'kind'> & Partial<Pick<MapNode, 'boost' | 'encounter'>>): string {
+export function nodeName(
+  node: Pick<MapNode, 'kind'> & Partial<Pick<MapNode, 'boost' | 'encounter' | 'blind'>>,
+): string {
+  if (node.kind === 'card' && node.blind) return `${NAMES.card}, face down`
   if (node.kind === 'campfire' && node.boost) return `${NAMES.campfire}: ${boostText(node.boost)}`
   if (node.kind === 'boss' && node.encounter) {
     const boss = encounter(node.encounter)
