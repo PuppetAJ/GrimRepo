@@ -94,6 +94,30 @@ function withWorstScene(): string {
   return WORST_SCENE
 }
 
+/** A battle in a run carrying these items, its board set so each has something to aim at. */
+function itemBattle(
+  items: ItemId[],
+  rows: { board?: (string | null)[]; front?: (string | null)[]; back?: (string | null)[] },
+): { state: RunState; path: string[] } | null {
+  const found = reached((s) => s.visit?.kind === 'battle' && s.visit.game.turn > 1 && s.visit.game.drawn)
+  if (!found || found.state.visit?.kind !== 'battle') return null
+  const game = structuredClone(found.state.visit.game)
+  const row = (ids: (string | null)[] = []) =>
+    [0, 1, 2, 3].map((lane) => {
+      const id = ids[lane]
+      if (!id) return null
+      game.nextUid += 1
+      const card = deckCard(id)
+      return { uid: game.nextUid, ...card, maxHealth: card.health }
+    })
+  game.player.board = row(rows.board)
+  game.opponent.front = row(rows.front)
+  game.opponent.back = row(rows.back)
+  game.summon = null
+  game.items = items
+  return { ...found, state: { ...found.state, items, visit: { ...found.state.visit, game } } }
+}
+
 /** Stops a seeded bot run at the first state that matches, so these follow the rules. */
 function reached(stop: (state: RunState) => boolean): Mockup | null {
   for (let seed = 1; seed <= 120; seed++) {
@@ -292,6 +316,54 @@ export const MOCKUPS: Record<string, Entry> = {
     },
   },
   item: { title: 'A tool rack', group: 'reached', make: () => reached((s) => s.visit?.kind === 'item') },
+  'item-full': {
+    title: 'A tool rack, with every slot already full',
+    group: 'reached',
+    make: () => {
+      const found = reached((s) => s.visit?.kind === 'item')
+      const items: ItemId[] = ['hammer', 'hook', 'scissors']
+      return found && { ...found, state: { ...found.state, items } }
+    },
+  },
+  'items-own': {
+    title: 'Items: the Hammer on your Bug, the Pliers on a sigil, the Hourglass',
+    group: 'reached',
+    make: () =>
+      itemBattle(['hammer', 'pliers', 'hourglass'], {
+        board: ['Bug', 'CopyPaste'],
+        front: [null, null, 'JSONFoorhees', 'NullPointer'],
+        back: ['Mainframe'],
+      }),
+  },
+  'items-steal': {
+    title: 'Items: the Hook on a Mainframe, the Bottled Boilerplate, the Scissors on the queue',
+    group: 'reached',
+    make: () =>
+      itemBattle(['hook', 'bottle', 'scissors'], {
+        board: [null, null, 'Watchdog'],
+        front: ['Mainframe', 'Firewall'],
+        back: [null, null, 'DestroyEnemyYou'],
+      }),
+  },
+  'shop-item': {
+    title: 'The Package Registry with a tool for sale',
+    group: 'reached',
+    make: () => {
+      const found = reached((s) => s.visit?.kind === 'shop')
+      if (!found || found.state.visit?.kind !== 'shop') return null
+      const visit = { ...found.state.visit, item: { id: 'scissors' as ItemId, price: 10 }, itemSold: false }
+      return { ...found, state: { ...found.state, bytes: 14, visit } }
+    },
+  },
+  toolbox: {
+    title: 'The toolbox event',
+    group: 'reached',
+    make: () => {
+      const found = reached((s) => s.visit?.kind === 'event')
+      if (!found || found.state.visit?.kind !== 'event') return null
+      return { ...found, state: { ...found.state, visit: { ...found.state.visit, event: 'toolbox' } } }
+    },
+  },
   'boss-phase': {
     title: "A boss's second phase",
     group: 'reached',

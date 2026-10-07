@@ -5,6 +5,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, type RefObject } from 'rea
 import { LANES, type RunState } from 'shared'
 import * as THREE from 'three'
 import { EndTurnButton, FactoryEffects } from '../../table/Factory.tsx'
+import { ItemRack } from '../../table/table3d/ItemRack.tsx'
 import { STILL } from '../../table/factory/constants.ts'
 import { CAMERA, CENTER_X, FOV, TABLE_Y, type CameraView, type Vec3 } from '../../table/layout.ts'
 import { TINT } from '../../table/palette.ts'
@@ -364,6 +365,8 @@ export function BetweenBattles({
       <Selection>
         {/* Bolted to the table, so it stays between battles, locked. */}
         <EndTurnButton active={false} rung={0} onClick={() => {}} />
+        {/* The run's items stay on the rack between battles, out of reach. */}
+        <ItemRack items={state.items} />
         <FactoryEffects quality={stage.quality} />
         {projecting ? (
           <Projector corners={corners} ready={ready} closing={closing} onClosed={onClosed} onPin={onPin} />

@@ -6,6 +6,7 @@ import { CENTER_X, TABLE_Y } from '../layout.ts'
 import { MOOD } from '../mood.ts'
 import { TINT } from '../palette.ts'
 import { GLOW, lamp } from './constants.ts'
+import { PEG_Y, PEGS, RACK } from '../table3d/ItemRack.tsx'
 
 export function GemModule() {
   const { scene } = useGLTF('/models/gems.glb', false, false)
@@ -100,23 +101,20 @@ export function DrumRack() {
 
 export function Props() {
   const steel = { color: '#20262c', metalness: 0.85, roughness: 0.45 }
-  const hammer = useGLTF('/models/hammer.glb', false, false).scene
-  const pliers = useGLTF('/models/pliers.glb', false, false).scene
   return (
     <>
-      <group position={[CENTER_X + 7.7, 8.5, -14.4]} rotation={[0, -0.3, 0]}>
+      {/* The tool rack: empty pegs, which a run's items hang from. */}
+      <group position={[...RACK.position]} rotation={[0, RACK.turn, 0]}>
         <mesh>
           <boxGeometry args={[2.2, 2.6, 0.12]} />
           <meshStandardMaterial color="#171c21" metalness={0.8} roughness={0.5} />
         </mesh>
-        {[-0.5, 0.5].map((x) => (
-          <mesh key={x} position={[x, 0.95, 0.18]} rotation={[Math.PI / 2, 0, 0]}>
+        {PEGS.map((x) => (
+          <mesh key={x} position={[x, PEG_Y, 0.18]} rotation={[Math.PI / 2, 0, 0]}>
             <cylinderGeometry args={[0.035, 0.035, 0.36, 8]} />
             <meshStandardMaterial {...steel} />
           </mesh>
         ))}
-        <primitive object={hammer} position={[-0.5, 0.2, 0.26]} rotation={[0, 0, Math.PI / 2]} scale={0.7} />
-        <primitive object={pliers} position={[0.5, 0.2, 0.26]} rotation={[0, Math.PI / 2, 0]} scale={0.7} />
         <pointLight color={TINT.light} position={[0, 0.4, 1.2]} intensity={MOOD.rackLight} distance={4} decay={2} />
       </group>
       {[

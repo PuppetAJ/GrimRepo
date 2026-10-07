@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { SIGILS, type SigilId } from 'shared'
+import { ITEMS, SIGILS, type ItemId, type SigilId } from 'shared'
 import { api } from '../../lib/api.ts'
 import { number } from '../../lib/format.ts'
 import { Sigil } from '../../game/CardReader.tsx'
@@ -118,6 +118,21 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
           {(Object.keys(SIGILS) as SigilId[]).map((id) => (
             <SigilLine key={id} id={id} />
           ))}
+        </div>
+      )
+    case 'items':
+    case 'tools':
+      return (
+        <div className="flex flex-col">
+          {(Object.keys(ITEMS) as ItemId[]).map((id) => (
+            <p key={id}>
+              <span className="mr-2 inline-block align-[-0.1em]">
+                <Sigil id={id} size="1em" color="var(--p03)" />
+              </span>
+              <span className="text-p03">{ITEMS[id].name}</span>: {ITEMS[id].text}
+            </p>
+          ))}
+          <Dim>// runs only: tool racks, the toolbox, the Package Registry. Scissors are sold, never found.</Dim>
         </div>
       )
     case 'top': {

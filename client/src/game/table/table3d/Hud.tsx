@@ -15,6 +15,7 @@ import { Link } from '@tanstack/react-router'
 import { ITEMS, legalActions, type ItemId, type Unit } from 'shared'
 import { Button } from '@/components/ui/button.tsx'
 import { FlatReaderBody } from '../../CardReader.tsx'
+import { ItemButton } from '../../ItemButton.tsx'
 import {
   Ending,
   Forfeit,
@@ -59,7 +60,12 @@ export function Hud({
   onMap,
   aimed = null,
   onPutBack,
+  aiming = null,
+  onAim,
 }: {
+  /** The item slot picked up to aim, and how to pick one up or put it back. */
+  aiming?: number | null
+  onAim?: (slot: number | null) => void
   /** In a run, glides back to look at the map on the projector. */
   onMap?: () => void
   /** The item picked up to aim at a card, and how to put it back. */
@@ -99,6 +105,29 @@ export function Hud({
           {reshuffle ? ` · draw reshuffles ${reshuffle.cards}` : null}
           {phaseText(state, view.phase) ? ` · ${phaseText(state, view.phase)}` : null}
         </span>
+        {/* The rack is far off and out of view from the board, so the items are here too. */}
+        {state.items?.length ? (
+          <div role="group" aria-label="Your items" className="pointer-events-auto mt-1 flex gap-1.5">
+            {state.items.map((item, slot) => {
+              const def = ITEMS[item]
+              const usable = !busy && legal.some((action) => action.type === 'use' && action.slot === slot)
+              return (
+                <ItemButton
+                  key={`${item}-${slot}`}
+                  item={item}
+                  slot={slot}
+                  usable={usable}
+                  held={aiming === slot}
+                  size={40}
+                  className="bg-p03-ground/80"
+                  onUse={() =>
+                    def.target === 'none' ? game.act({ type: 'use', slot }) : onAim?.(aiming === slot ? null : slot)
+                  }
+                />
+              )
+            })}
+          </div>
+        ) : null}
         {pinned ? (
           // Takes the pointer so it can be scrolled.
           <ScreenReadout

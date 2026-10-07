@@ -21,6 +21,7 @@ export const HELP: [string, string][] = [
   ['cards', 'Every card in your deck. Weak, all of them'],
   ['card <name>', 'One card up close'],
   ['sigils', 'What the sigils do'],
+  ['items', 'The tools a run can find, one use each'],
   ['rules', 'All of the rules in one command'],
   ['top', 'The five who got lucky'],
   ['whoami', 'Who you are. Nobody, probably'],
