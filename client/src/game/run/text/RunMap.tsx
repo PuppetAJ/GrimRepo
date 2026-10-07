@@ -8,7 +8,8 @@ import {
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react'
-import { findNode, MAP_COLUMNS, reachable, type MapNode, type NodeKind, type StageMap } from 'shared'
+import { findNode, ITEMS, MAP_COLUMNS, reachable, type MapNode, type NodeKind, type StageMap } from 'shared'
+import { Sigil } from '../../CardReader.tsx'
 import { mapRows, sideOf, spots, type Spot } from '../layout.ts'
 import { NODE_ICONS, nodeIcon, nodeName } from '../nodes.ts'
 import { usePlan } from '../plan.ts'
@@ -64,7 +65,7 @@ const describeNext = (map: StageMap, node: MapNode) =>
         .join('; ')}`
     : ''
 
-const KINDS = ['battle', 'card', 'campfire', 'stones', 'event', 'shop', 'boss'] as const
+const KINDS = ['battle', 'card', 'campfire', 'stones', 'event', 'shop', 'item', 'boss'] as const
 
 /** What each icon means; pointing at one lights every node of its kind, and choosing one keeps them lit. */
 function Legend({
@@ -301,8 +302,14 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
       <ScreenBar>
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 pb-1">
           {legend}
-          {/* Overkill banked for the Package Registry. */}
-          <p className="shrink-0 text-base text-p03-dim">
+          {/* The items carried, and overkill banked for the Package Registry. */}
+          <p className="flex shrink-0 items-center gap-2 text-base text-p03-dim">
+            {state.items.map((item, slot) => (
+              <span key={`${item}-${slot}`} title={ITEMS[item].name}>
+                <Sigil id={item} size={18} color="var(--p03)" />
+                <span className="sr-only">{ITEMS[item].name}, </span>
+              </span>
+            ))}
             <span className="text-p03">{state.bytes}</span> {state.bytes === 1 ? 'byte' : 'bytes'}
           </p>
         </div>

@@ -11,6 +11,7 @@ import { mapTitle, ScreenBody, useRunScreen, type RunView } from '../screens.tsx
 import { Screen, ScreenActions } from '../text/Screen.tsx'
 import type { RunReady } from '../useRun.ts'
 import { BetweenBattles, warp, windowHeight } from './RunStage.tsx'
+import { preloadItems } from '../../table/table3d/ItemTray.tsx'
 
 /** How long a projected screen takes to fade out before the next one comes in, in milliseconds. */
 const FADE_MS = 160
@@ -42,8 +43,9 @@ function Between({
 }) {
   const stage = useStage()
   const screen = useRunScreen(run)
-  // Loaded while the map is up, so a battle starts with its cards ready instead of a blank table.
+  // Loaded while the map is up, so a battle starts with its cards and items ready instead of a blank table.
   useEffect(() => void loadCardAssets(), [])
+  useEffect(() => preloadItems(run.state.items), [run.state.items])
   const pin = useRef<HTMLDivElement>(null)
   // Every screen goes on the projector, unless the stage is too small to read its window; then they float.
   const readable = windowHeight(stage.size.width, stage.size.height) >= READABLE

@@ -2,6 +2,7 @@ import { BOILERPLATE, card, DEBUG_CARD, OUT_OF_MEMORY, PLAYER_DECK, SHIPS_AS } f
 import { encounter } from '../encounters.ts'
 import { Rng } from '../rng.ts'
 import { attack, perish } from './combat.ts'
+import { ITEMS, type ItemId } from '../items.ts'
 import { queue, queueCountFor, queuePlan, retireDeadCode } from './opponent.ts'
 import {
   HAND_LIMIT,
@@ -30,6 +31,8 @@ export type GameOptions = {
   fairHand?: boolean
   /** Each rebuild of an empty deck after the first gives P03 an Out of Memory card, one bigger every time. */
   outOfMemory?: boolean
+  /** A run's items, to use in this battle. */
+  items?: ItemId[]
 }
 
 export function createGame({
@@ -39,6 +42,7 @@ export function createGame({
   encounter = null,
   fairHand = false,
   outOfMemory = false,
+  items,
 }: GameOptions): GameState {
   const rng = new Rng(seed >>> 0)
   const library = deck ? structuredClone(deck) : PLAYER_DECK.map(deckCard)
@@ -56,6 +60,7 @@ export function createGame({
     summon: null,
   }
   if (outOfMemory) state.rebuilds = 0
+  if (items) state.items = [...items]
   if (fairHand) dealFairly(state.player)
   const opening = state.player.deck.splice(0, 3)
   for (const source of opening) state.player.hand.push(drawUnit(state, source))
@@ -221,6 +226,9 @@ export function apply(current: GameState, action: Action): Result {
       state.opponent.back.fill(null)
       events.push({ type: 'wiped', uids: wiped })
     }
+  } else if (action.type === 'use') {
+    const refused = useItem(state, action, events)
+    if (refused) return fail(refused)
   } else if (action.type === 'ringBell') {
     if (state.summon) {
       state.summon = null
@@ -233,6 +241,69 @@ export function apply(current: GameState, action: Action): Result {
 
   state.rng = rng.state
   return { ok: true, state, events }
+}
+
+/** The card an item is aimed at, if the aim fits what the item needs. */
+function itemTarget(state: GameState, action: Extract<Action, { type: 'use' }>): Unit | null {
+  const item = state.items?.[action.slot]
+  if (!item || action.lane === undefined || !validLane(action.lane)) return null
+  const target = ITEMS[item].target
+  if (target === 'own') return action.row === 'board' ? (state.player.board[action.lane] ?? null) : null
+  if (target !== 'opponent') return null
+  // The Hook and the Pliers reach P03's front row; the Scissors reach its queue too.
+  if (action.row === 'front') return state.opponent.front[action.lane] ?? null
+  if (action.row === 'back' && item === 'scissors') return state.opponent.back[action.lane] ?? null
+  return null
+}
+
+/** Uses an item; a reason when it can't be. */
+function useItem(state: GameState, action: Extract<Action, { type: 'use' }>, events: GameEvent[]): string | null {
+  if (mustDraw(state)) return 'Draw first'
+  const item = state.items?.[action.slot]
+  if (!item) return 'No item in that slot'
+  const needs = ITEMS[item].target
+  const target = needs === 'none' ? null : itemTarget(state, action)
+  if (needs !== 'none' && !target) return 'Aim it at a card it can reach'
+  if (item === 'hook' && state.player.board[action.lane as number]) return 'The lane opposite must be empty'
+  if (item === 'bottle' && state.player.hand.length >= HAND_LIMIT) return 'The hand is full'
+  if (state.summon) {
+    state.summon = null
+    events.push({ type: 'cancelled' })
+  }
+  state.items = state.items?.filter((_, index) => index !== action.slot)
+  events.push({ type: 'used', item })
+  const lane = action.lane as number
+  if (item === 'hammer' && target) {
+    state.player.board[lane] = null
+    events.push({ type: 'killed', uid: target.uid, side: 'player', lane, row: 'front' })
+    perish(state, 'player', target, lane, events)
+  } else if (item === 'scissors' && target) {
+    const row = action.row === 'back' ? state.opponent.back : state.opponent.front
+    row[lane] = null
+    events.push({
+      type: 'killed',
+      uid: target.uid,
+      side: 'opponent',
+      lane,
+      row: action.row === 'back' ? 'back' : 'front',
+    })
+  } else if (item === 'pliers' && target) {
+    target.sigils = []
+    events.push({ type: 'buffed', uid: target.uid, attack: target.attack, health: target.health, sigils: [] })
+  } else if (item === 'hook' && target) {
+    state.opponent.front[lane] = null
+    state.player.board[lane] = target
+    events.push({ type: 'hooked', uid: target.uid, lane })
+  } else if (item === 'hourglass') {
+    state.skipOpponent = true
+  } else if (item === 'bottle') {
+    for (let i = 0; i < 2 && state.player.hand.length < HAND_LIMIT; i++) {
+      const unit = makeUnit(state, BOILERPLATE)
+      state.player.hand.push(unit)
+      events.push({ type: 'gained', unit })
+    }
+  }
+  return null
 }
 
 function playTurn(state: GameState, rng: Rng, events: GameEvent[]): void {
@@ -250,11 +321,17 @@ function playTurn(state: GameState, rng: Rng, events: GameEvent[]): void {
       }
     }
 
-    attack(state, 'opponent', events)
-    if (state.scale <= -TIP) return finish(state, 'loss', events)
+    if (state.skipOpponent) {
+      // The Hourglass: P03 neither attacks nor queues this turn.
+      state.skipOpponent = false
+      events.push({ type: 'skipped' })
+    } else {
+      attack(state, 'opponent', events)
+      if (state.scale <= -TIP) return finish(state, 'loss', events)
 
-    if (state.opponent.encounter) queuePlan(state, rng, events)
-    else queue(state, rng, queueCountFor(state.turn, rng), state.turn, events)
+      if (state.opponent.encounter) queuePlan(state, rng, events)
+      else queue(state, rng, queueCountFor(state.turn, rng), state.turn, events)
+    }
   }
 
   // A Beta card that has been through a round on the table ships: as its stronger form, or else with +3/+3.
@@ -353,6 +430,21 @@ export function legalActions(state: GameState): Action[] {
       }
     }
   }
+  // Each item, aimed at every card it can reach.
+  ;(state.items ?? []).forEach((item, slot) => {
+    const needs = ITEMS[item].target
+    if (needs === 'none') {
+      if (item !== 'bottle' || state.player.hand.length < HAND_LIMIT) actions.push({ type: 'use', slot })
+      return
+    }
+    for (let lane = 0; lane < LANES; lane++) {
+      if (needs === 'own' && state.player.board[lane]) actions.push({ type: 'use', slot, row: 'board', lane })
+      if (needs !== 'opponent') continue
+      if (state.opponent.front[lane] && (item !== 'hook' || !state.player.board[lane]))
+        actions.push({ type: 'use', slot, row: 'front', lane })
+      if (item === 'scissors' && state.opponent.back[lane]) actions.push({ type: 'use', slot, row: 'back', lane })
+    }
+  })
   return actions
 }
 

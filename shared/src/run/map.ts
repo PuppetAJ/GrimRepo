@@ -10,7 +10,18 @@ const ROWS = 7
 const PATHS = 4
 const UTILITIES: NodeKind[] = ['campfire', 'stones', 'event']
 // The middle rows draw from this, battles most often.
-const MIXED: NodeKind[] = ['battle', 'battle', 'battle', 'battle', 'card', 'card', 'campfire', 'event', 'stones']
+const MIXED: NodeKind[] = [
+  'battle',
+  'battle',
+  'battle',
+  'battle',
+  'card',
+  'card',
+  'campfire',
+  'event',
+  'stones',
+  'item',
+]
 // Every route meets this many battles before the boss, so routes differ but a run's length barely does.
 const FEWEST_BATTLES = 2
 const MOST_BATTLES = 4

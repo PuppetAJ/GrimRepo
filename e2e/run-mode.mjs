@@ -36,6 +36,8 @@ function targetFor(action) {
   if (action.type === 'choose') return `[data-action="choose"][data-option="${action.option}"]`
   if (action.type === 'start') return `[data-action="start"][data-deck="${action.deck}"]`
   if (action.type === 'buy') return `[data-action="buy"][data-index="${action.index}"]`
+  if (action.type === 'buyItem') return '[data-action="buy-item"]'
+  if (action.type === 'pickItem') return `[data-action="pick-item"][data-index="${action.index}"]`
   if (action.type === 'leave') return '[data-action="leave"]'
   if (action.type === 'play') return selectorFor(action.action)
   throw new Error(`No click for ${action.type}`)
@@ -61,6 +63,15 @@ async function playRun(page, mirror, { pick = nextRunAction, done }) {
         if (await sigil.count()) await sigil.check()
         await page.locator(`[data-action="take-sigil"][data-card="${action.to}"]`).click()
         await clickMove(page, '[data-action="transfer"]', expected)
+      } else if (action.type === 'play' && action.action.type === 'use') {
+        // The item, then the card it's aimed at when it needs one.
+        const { slot, row, lane } = action.action
+        const item = `[data-action="use"][data-slot="${slot}"]`
+        if (row === undefined) await clickMove(page, item, expected)
+        else {
+          await page.locator(item).click()
+          await clickMove(page, `[data-action="aim"][data-row="${row}"][data-lane="${lane}"]`, expected)
+        }
       } else if (action.type === 'fuse') {
         await page.locator(`[data-action="fuse-card"][data-card="${action.card}"]`).click()
         await clickMove(page, '[data-action="fuse"]', expected)
@@ -250,6 +261,32 @@ section('The sigil stones, from a mockup')
     'and P03 names the card that gained it',
     (await page.getByRole('status').filter({ hasText: 'gains' }).count()) === 1,
   )
+  await context.close()
+}
+
+section('Items, from a mockup')
+{
+  const { context, page } = await freshPage(browser, { width: 1440, height: 900, table: 'text' })
+  await page.goto(`${BASE}/run/mockups/battle-items`, MOCKUP)
+  const used = page.locator('[data-action="use"]')
+  await used.first().waitFor({ timeout: 30_000 })
+  check('a battle shows the items the run carries', (await used.count()) === 3)
+  const moves = async () => Number(await page.locator(ROOT).getAttribute('data-run-moves'))
+  const start = await moves()
+  // The Hourglass needs no target.
+  await page.locator('[data-action="use"][data-slot="2"]').click()
+  await page.locator(`${ROOT}[data-run-moves="${start + 1}"]`).waitFor()
+  check('an item without a target is used at once', (await used.count()) === 2)
+  // The Pliers are picked up, then aimed at one of P03's cards.
+  await page.locator('[data-action="use"][data-slot="1"]').click()
+  const aims = page.locator('[data-action="aim"]')
+  check('one that needs a target offers the cards it can reach', (await aims.count()) > 0)
+  await page.keyboard.press('Escape')
+  check('and Escape puts it back', (await aims.count()) === 0)
+  await page.locator('[data-action="use"][data-slot="1"]').click()
+  await aims.first().click()
+  await page.locator(`${ROOT}[data-run-moves="${start + 2}"]`).waitFor()
+  check('aimed at a card, it is used there', (await used.count()) === 1)
   await context.close()
 }
 

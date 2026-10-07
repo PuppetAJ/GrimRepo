@@ -178,6 +178,9 @@ describe('the run actions the server takes', () => {
       { type: 'strip', card: 1, sigil: 'bypass' },
       { type: 'buy', index: 0 },
       { type: 'uninstall', card: 1 },
+      { type: 'buyItem' },
+      { type: 'pickItem', index: 0, drop: 1 },
+      { type: 'play', action: { type: 'use', slot: 0, row: 'front', lane: 1 } },
       { type: 'fuse', card: 1 },
       { type: 'leave' },
     ]

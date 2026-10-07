@@ -20,6 +20,12 @@ const action = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('cancel') }),
   z.strictObject({ type: z.literal('place'), lane }),
   z.strictObject({ type: z.literal('ringBell') }),
+  z.strictObject({
+    type: z.literal('use'),
+    slot: z.number().int().min(0).max(2),
+    row: z.enum(['board', 'front', 'back']).optional(),
+    lane: lane.optional(),
+  }),
 ])
 
 const moves = z.strictObject({ from: z.number().int().min(0), actions: z.array(action).max(1_000) })
@@ -47,6 +53,8 @@ const runAction = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('start'), deck: z.enum(Object.keys(STARTER_DECKS) as [string, ...string[]]) }),
   z.strictObject({ type: z.literal('buy'), index: small }),
   z.strictObject({ type: z.literal('uninstall'), card: cardId }),
+  z.strictObject({ type: z.literal('buyItem') }),
+  z.strictObject({ type: z.literal('pickItem'), index: small, drop: z.number().int().min(0).max(2).optional() }),
   z.strictObject({ type: z.literal('fuse'), card: cardId }),
   z.strictObject({ type: z.literal('leave') }),
 ])

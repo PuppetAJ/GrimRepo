@@ -1,4 +1,15 @@
-import { CircleHelp, Flame, Gem, Layers, type LucideIcon, MessageSquareText, Skull, Store, Swords } from 'lucide-react'
+import {
+  CircleHelp,
+  Flame,
+  Gem,
+  Layers,
+  type LucideIcon,
+  MessageSquareText,
+  Skull,
+  Store,
+  Swords,
+  Wrench,
+} from 'lucide-react'
 import { card, encounter, type MapNode, type NodeKind, type RunCard, type Unit } from 'shared'
 
 // Placeholders until Adrian's pixel icons replace them.
@@ -9,6 +20,7 @@ export const NODE_ICONS: Record<NodeKind, LucideIcon> = {
   stones: Gem,
   event: MessageSquareText,
   shop: Store,
+  item: Wrench,
   boss: Skull,
 }
 
@@ -23,6 +35,7 @@ const NAMES: Record<NodeKind, string> = {
   stones: 'Sigil stones',
   event: 'Event',
   shop: 'Package Registry',
+  item: 'Tool rack',
   boss: 'Boss',
 }
 

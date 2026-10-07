@@ -14,6 +14,8 @@ export type Effect =
   | { type: 'fuse' }
   /** Draws three cards from the deck; a rare if their total meets the trial's bar. */
   | { type: 'trial'; trial: Trial }
+  /** A random item, if there's a slot free. */
+  | { type: 'item' }
 
 /** An event node's text and its choices. */
 export type Scene = { id: string; title: string; text: string; options: { label: string; effects: Effect[] }[] }
@@ -180,6 +182,15 @@ const list: Scene[] = [
       { label: 'Throughput: 6 or more attack between them', effects: [{ type: 'trial', trial: 'attack' }] },
       { label: 'Uptime: 10 or more health between them', effects: [{ type: 'trial', trial: 'health' }] },
       { label: 'Coverage: 2 or more sigils between them', effects: [{ type: 'trial', trial: 'sigils' }] },
+    ],
+  },
+  {
+    id: 'toolbox',
+    title: 'An unattended toolbox',
+    text: 'Someone left their toolbox open by the conveyor. P03 is pretending not to have seen it.',
+    options: [
+      { label: 'Borrow something', effects: [{ type: 'item' }] },
+      { label: 'Leave it be', effects: [{ type: 'boost', attack: 0, health: 1 }] },
     ],
   },
 ]

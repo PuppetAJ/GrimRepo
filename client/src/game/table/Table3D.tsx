@@ -45,6 +45,14 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
   const stage = useStage()
   const { playback, busy, skip } = usePlayback(game)
   const [chosen, setCamera] = useState<CameraView>('table')
+  // The item slot picked up to aim at a card; Escape puts it back.
+  const [aiming, setAiming] = useState<number | null>(null)
+  useEffect(() => {
+    if (aiming === null) return
+    const onKey = (event: KeyboardEvent) => event.key === 'Escape' && setAiming(null)
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [aiming])
   // Summoning looks down at the board, unless the player is already looking further back at the queue.
   const camera: CameraView = playback.view.summon && chosen === 'table' ? 'board' : chosen
   const [rung, setRung] = useState(0)
@@ -167,6 +175,8 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
           onWarm={stage.warm}
           leaving={leaving}
           onLeft={onLeft}
+          aiming={busy ? null : aiming}
+          onAim={setAiming}
           onHint={(uid) => {
             setHinted(uid)
             setHint((n) => n + 1)
@@ -190,6 +200,8 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
           lifted={lifted}
           pinned={pin && 'lines' in pin ? pin.lines : null}
           onUnpin={() => setPinned(null)}
+          aimed={busy || aiming === null ? null : (game.state.items?.[aiming] ?? null)}
+          onPutBack={() => setAiming(null)}
         />
       ) : null}
       {magnifiedRead && magnified ? (
