@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { card, UNINSTALL_PRICE } from 'shared'
+import { card, ITEM_SLOTS, ITEMS, UNINSTALL_PRICE } from 'shared'
 import { SIDE_BUTTON } from '../../text/Panel.tsx'
-import { PixelCard } from '../../CardReader.tsx'
+import { PixelCard, Sigil } from '../../CardReader.tsx'
 import { asUnit } from '../nodes.ts'
 import type { RunReady } from '../useRun.ts'
 import { CardList } from './CardList.tsx'
@@ -51,6 +51,33 @@ export function Shop({ run }: { run: RunReady }) {
           )
         })}
       </ul>
+      {visit.item ? (
+        <section aria-labelledby="tool" className="flex flex-col gap-2 border-t-2 border-p03-edge pt-4">
+          <h3 id="tool" className="text-p03">
+            A tool, for one use
+          </h3>
+          <div className="flex flex-wrap items-center gap-4">
+            <Sigil id={visit.item.id} size={48} color="var(--p03)" />
+            <p className="min-w-0 flex-1 font-sans text-base text-[#b8f5c4]">
+              <strong className="font-terminal text-xl text-p03">{ITEMS[visit.item.id].name}.</strong>{' '}
+              {ITEMS[visit.item.id].text}
+            </p>
+            <button
+              type="button"
+              data-action="buy-item"
+              disabled={visit.itemSold || bytes < visit.item.price || run.state.items.length >= ITEM_SLOTS}
+              onClick={() => run.act({ type: 'buyItem' })}
+              className="rounded-md border-2 border-p03-edge bg-[#07130b] px-3 py-1.5 text-lg text-p03 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03 enabled:hover:border-p03 enabled:hover:bg-[#13261a] disabled:opacity-50"
+            >
+              {visit.itemSold
+                ? 'Bought'
+                : run.state.items.length >= ITEM_SLOTS
+                  ? 'Your hands are full'
+                  : `Buy for ${visit.item.price} bytes`}
+            </button>
+          </div>
+        </section>
+      ) : null}
       <section aria-labelledby="uninstall" className="flex flex-col gap-2 border-t-2 border-p03-edge pt-4">
         <h3 id="uninstall" className="text-p03">
           Uninstall a package <span className="text-p03-dim">· {UNINSTALL_PRICE} bytes, once a visit</span>

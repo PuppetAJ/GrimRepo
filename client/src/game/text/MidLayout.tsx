@@ -5,6 +5,7 @@ import { CancelButton, Controls, ExecuteButton, SaveStatus } from './Buttons.tsx
 import { useTable } from './context.ts'
 import { TurnLabel } from './TurnLabel.tsx'
 import { Hand, Piles } from './Hand.tsx'
+import { Items } from './Items.tsx'
 import { ConsolePanel } from './Log.tsx'
 import { Magnifier, PromptLine, ReaderPanel } from './Reading.tsx'
 
@@ -52,6 +53,7 @@ export function MidLayout() {
         </div>
         <CancelButton />
         <Hand />
+        <Items className="flex-col self-center" />
         <Piles />
       </section>
       <div className="relative z-10">

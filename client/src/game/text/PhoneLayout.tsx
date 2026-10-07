@@ -8,6 +8,7 @@ import { CancelButton, ExecuteButton, SaveStatus } from './Buttons.tsx'
 import { useTable } from './context.ts'
 import { TurnLabel } from './TurnLabel.tsx'
 import { Hand, Piles } from './Hand.tsx'
+import { Items } from './Items.tsx'
 import { LogBox, LogDialog, TerminalDialog } from './Log.tsx'
 import { MENU_BUTTON, Panel } from './Panel.tsx'
 import { Inspector, Magnifier } from './Reading.tsx'
@@ -129,6 +130,7 @@ export function PhoneLayout() {
                 <ExecuteButton />
               </div>
             </div>
+            <Items />
             <LogBox className="min-h-0 flex-1" />
             <CancelButton />
           </aside>
@@ -146,6 +148,7 @@ export function PhoneLayout() {
           <section ref={setHandSection} aria-label="Your hand" className="relative z-10 flex shrink-0">
             <Hand />
           </section>
+          <Items className="relative z-10 shrink-0 justify-center" />
           <div className="relative z-10 flex shrink-0 items-stretch gap-2">
             <Piles />
             <div className="flex min-w-0 flex-1 flex-col">

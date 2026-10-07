@@ -308,6 +308,28 @@ describe('uninstalling at a shop', () => {
   })
 })
 
+describe('items in a run', () => {
+  it('an item node gives one of three, and a full kit gives one up for it', () => {
+    const state = at('item', { kind: 'item', node: '0-0', offer: ['hammer', 'pliers', 'hourglass'] })
+    const one = step(state, { type: 'pickItem', index: 2 })
+    assert.deepEqual(one.items, ['hourglass'])
+    const full = { ...state, items: ['hook', 'bottle', 'pliers'] as RunState['items'] }
+    assert.equal(refused(full, { type: 'pickItem', index: 0 }), 'Choose an item to give up')
+    assert.deepEqual(step(full, { type: 'pickItem', index: 0, drop: 1 }).items, ['hook', 'pliers', 'hammer'])
+  })
+
+  it('go into a battle, and the ones not used come back out', () => {
+    const state = { ...started({ seed: 4 }), items: ['hourglass', 'hook'] as RunState['items'] }
+    const node = reachable(state).find((id) => findNode(state.map, id)) as string
+    const target = findNode(state.map, node) as NonNullable<ReturnType<typeof findNode>>
+    target.kind = 'battle'
+    target.encounter = 'localhost-hello'
+    const inBattle = step(state, { type: 'go', node })
+    assert.ok(inBattle.visit?.kind === 'battle')
+    assert.deepEqual(inBattle.visit.game.items, ['hourglass', 'hook'])
+  })
+})
+
 describe('a face-down card choice', () => {
   it('gives a random card with the trait picked', () => {
     const state = at('card', { kind: 'blind', node: '0-0', picks: ['free', 'sigil', 'sturdy'] })

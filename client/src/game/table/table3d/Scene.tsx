@@ -1,6 +1,6 @@
 import { Selection } from '@react-three/postprocessing'
 import { useEffect, useState } from 'react'
-import { legalActions, PLAYER_DECK, type Action } from 'shared'
+import { ITEMS, legalActions, PLAYER_DECK, type Action } from 'shared'
 import { has, hasEnded, laneAction, skippedDraw } from '../../controls.tsx'
 import type { Ready } from '../../useGame.ts'
 import type { View } from '../../view.ts'
@@ -18,6 +18,7 @@ import { COARSE, type Reader } from './reader.ts'
 import { Arrive } from './Arrive.tsx'
 import { CameraRig, WarmUp } from './stage.tsx'
 import { TestHandle } from './TestHandle.tsx'
+import { ItemTray } from './ItemTray.tsx'
 import { shown } from '../../shown.ts'
 
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
@@ -59,7 +60,12 @@ export function Scene({
   reader,
   leaving = false,
   onLeft,
+  aiming = null,
+  onAim,
 }: {
+  /** The item slot picked up to aim; a card it can reach takes the click. */
+  aiming?: number | null
+  onAim?: (slot: number | null) => void
   /** Packs the table away: cards slide off to their owners, the piles lift, the board rolls back; then `onLeft`. */
   leaving?: boolean
   onLeft?: () => void
@@ -89,6 +95,20 @@ export function Scene({
   const count = view.hand.length
 
   const [aimed, setAimed] = useState<number | null>(null)
+  // The item in hand, used on whichever card the player clicks that it can reach.
+  const aimAt = (row: 'board' | 'front' | 'back', lane: number) =>
+    aiming === null
+      ? null
+      : (legal.find(
+          (action) => action.type === 'use' && action.slot === aiming && action.row === row && action.lane === lane,
+        ) ?? null)
+  const items = state.items ?? []
+  const pickItem = (slot: number) => {
+    const item = items[slot]
+    if (!item) return
+    if (ITEMS[item].target === 'none') act({ type: 'use', slot })
+    else onAim?.(aiming === slot ? null : slot)
+  }
   const handLook = (uid: number): Look =>
     view.summon?.uid === uid ? 'selected' : can({ type: 'select', uid } as Partial<Action>) ? 'plain' : 'dim'
 
@@ -138,6 +158,12 @@ export function Scene({
             full={handFull}
           />
         </Arrive>
+        <ItemTray
+          items={items}
+          usable={(slot) => legal.some((action) => action.type === 'use' && action.slot === slot)}
+          aiming={aiming}
+          onPick={pickItem}
+        />
         {/* Bolted to the table, so it's there between battles too, and locked until the table is set. */}
         <EndTurnButton
           active={!dealing && can({ type: 'ringBell' })}
@@ -183,7 +209,8 @@ export function Scene({
             const unit = shown(view, row, lane)
             // P03's opening cards come down with the first card dealt.
             if (!unit || dealt === 0) return null
-            const action = row === 'board' ? laneAction(legal, lane) : null
+            const aim = aimAt(row, lane)
+            const action = aim ?? (row === 'board' ? laneAction(legal, lane) : null)
             const marked = row === 'board' && (view.summon?.marked.includes(lane) ?? false)
             const place: Place = { at: row, lane }
             return (
@@ -194,9 +221,16 @@ export function Scene({
                 spawn={playback.spawns.get(unit.uid) ?? (dealing ? P03_HAND : undefined)}
                 lunge={playback.lunges.get(unit.uid)}
                 slide={playback.slides.get(unit.uid)}
-                look={marked ? 'marked' : action?.type === 'mark' ? 'markable' : 'plain'}
+                look={marked ? 'marked' : action?.type === 'mark' || aim ? 'markable' : 'plain'}
                 assets={assets}
-                onClick={action ? () => act(action) : undefined}
+                onClick={
+                  action
+                    ? () => {
+                        act(action)
+                        if (aim) onAim?.(null)
+                      }
+                    : undefined
+                }
                 cursor={action?.type === 'mark' || action?.type === 'unmark' ? 'mark' : 'point'}
                 leavingAt={leftAt}
                 // A board card covers its lane, so it passes the hover on to it.

@@ -1,4 +1,4 @@
-import type { SigilId } from 'shared'
+import type { ItemId, SigilId } from 'shared'
 
 // Black-on-transparent PNGs, keyed by file name.
 const byName = (files: Record<string, string>) =>
@@ -7,7 +7,7 @@ const byName = (files: Record<string, string>) =>
 const CARDS = byName(import.meta.glob<string>('./art/cards/*.png', { eager: true, import: 'default' }))
 const ICONS = byName(import.meta.glob<string>('./art/icons/*.png', { eager: true, import: 'default' }))
 
-export type IconId = SigilId | 'attack' | 'health'
+export type IconId = SigilId | ItemId | 'attack' | 'health'
 
 /** Whether a card or icon has art of its own yet, rather than the stand-in. */
 export const hasArt = (kind: 'cards' | 'icons', id: string): boolean =>

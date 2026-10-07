@@ -6,6 +6,7 @@ import { CancelButton, Controls, ExecuteButton, SaveStatus } from './Buttons.tsx
 import { useTable } from './context.ts'
 import { TurnLabel } from './TurnLabel.tsx'
 import { Hand, Piles } from './Hand.tsx'
+import { Items } from './Items.tsx'
 import { ConsolePanel } from './Log.tsx'
 import { Panel } from './Panel.tsx'
 import { Processes } from './Processes.tsx'
@@ -34,6 +35,7 @@ export function WideLayout() {
             <Balance scale={view.scale} />
           </Panel>
           <ExecuteButton />
+          <Items className="justify-center" />
           <Processes />
         </aside>
         <section aria-label="The table" className="relative z-10 flex min-h-0 flex-col items-center gap-2">

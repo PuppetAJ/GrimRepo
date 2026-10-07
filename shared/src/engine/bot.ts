@@ -1,4 +1,4 @@
-import { BOILERPLATE } from '../cards.ts'
+import { BOILERPLATE, type SigilId } from '../cards.ts'
 import { legalActions } from './game.ts'
 import { LANES, type Action, type GameState, type Unit } from './types.ts'
 import { canOwe, costOf, indebted, units, worthOf } from './units.ts'
@@ -24,6 +24,44 @@ function bestLane(state: GameState, allowed: number[], strategy: Strategy): numb
   return threatened[0] ?? allowed[0]
 }
 
+// P03's sigils worth pulling with the Pliers.
+const DANGEROUS: SigilId[] = [
+  'fatal_error',
+  'rollback',
+  'rate_limiter',
+  'fork',
+  'broadcast',
+  'retry',
+  'bypass',
+  'hot_reload',
+]
+
+/** An item worth using now, if any: each only when it clearly pays. */
+function itemMove(state: GameState, legal: Action[]): Action | undefined {
+  const uses = legal.filter((action): action is Extract<Action, { type: 'use' }> => action.type === 'use')
+  const itemOf = (action: Extract<Action, { type: 'use' }>) => state.items?.[action.slot]
+  const at = (action: Extract<Action, { type: 'use' }>) =>
+    action.lane === undefined ? null : (action.row === 'back' ? state.opponent.back : state.opponent.front)[action.lane]
+  const threat = units(state.opponent.front).reduce((sum, unit) => sum + unit.attack, 0)
+  const best = (item: string, fits: (unit: Unit) => boolean) =>
+    uses
+      .filter((action) => itemOf(action) === item && at(action) && fits(at(action) as Unit))
+      .sort((a, b) => value(at(b) as Unit) - value(at(a) as Unit))[0]
+  const free = state.player.board.filter((slot) => !slot).length
+  return (
+    uses.find((action) => itemOf(action) === 'hourglass' && threat >= 5) ??
+    best('scissors', (unit) => value(unit) >= 10) ??
+    best('pliers', (unit) => unit.sigils.some((sigil) => DANGEROUS.includes(sigil))) ??
+    best('hook', (unit) => value(unit) >= 8) ??
+    uses.find(
+      (action) =>
+        itemOf(action) === 'bottle' &&
+        free > 0 &&
+        state.player.hand.some((unit) => costOf(unit) > units(state.player.board).length),
+    )
+  )
+}
+
 /** Deterministic, so a seed and strategy always make the same game. */
 export function nextBotAction(state: GameState, strategy: Strategy = 'greedy'): Action {
   const legal = legalActions(state)
@@ -38,6 +76,8 @@ export function nextBotAction(state: GameState, strategy: Strategy = 'greedy'): 
   }
 
   const summon = state.summon
+  const tool = summon ? undefined : itemMove(state, legal)
+  if (tool) return tool
   if (summon) {
     const places = allowed('place') as { type: 'place'; lane: number }[]
     if (places.length)

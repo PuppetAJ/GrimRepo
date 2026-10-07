@@ -128,6 +128,15 @@ export function step(view: View, event: GameEvent): View {
     }
     case 'queued':
       return { ...view, back: setAt(view.back, event.lane, event.unit) }
+    case 'hooked': {
+      const unit = view.front[event.lane] ?? null
+      return { ...view, front: setAt(view.front, event.lane, null), board: setAt(view.board, event.lane, unit) }
+    }
+    case 'gained':
+      return { ...view, hand: [...view.hand, event.unit] }
+    case 'used':
+    case 'skipped':
+      return view
     case 'leftBehind':
       return event.side === 'player'
         ? { ...view, board: setAt(view.board, event.lane, event.unit) }

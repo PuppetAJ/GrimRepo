@@ -1,8 +1,9 @@
 import type { SigilId } from '../cards.ts'
+import type { ItemId } from '../items.ts'
 import type { Action, DeckCard, GameEvent, GameState } from '../engine/types.ts'
 
 /** Bumped whenever a change would make an old run replay differently. */
-export const RUN_RULES_VERSION = 11
+export const RUN_RULES_VERSION = 12
 
 /** The most actions one save may send; 200 of the largest kind fit the server's 16 KB body limit. */
 export const RUN_SAVE_LIMIT = 200
@@ -14,7 +15,7 @@ export type RunCard = DeckCard & {
   added: SigilId | null
 }
 
-export type NodeKind = 'battle' | 'card' | 'campfire' | 'stones' | 'event' | 'shop' | 'boss'
+export type NodeKind = 'battle' | 'card' | 'campfire' | 'stones' | 'event' | 'shop' | 'item' | 'boss'
 
 /** What a face-down card choice offers in place of cards: a random card with that trait. */
 export type Pick = 'free' | 'costly' | 'sigil' | 'sturdy' | 'sharp'
@@ -52,7 +53,18 @@ export type Visit =
   | { kind: 'start' }
   /** Cards for bytes; several may be bought before leaving. */
   /** `uninstalled` once a card has been removed for bytes, which a visit allows once. */
-  | { kind: 'shop'; node: string; offer: { card: string; price: number }[]; sold: number[]; uninstalled?: boolean }
+  /** `item` is the one tool for sale this visit, with its price; `itemSold` once bought. */
+  | {
+      kind: 'shop'
+      node: string
+      offer: { card: string; price: number }[]
+      sold: number[]
+      uninstalled?: boolean
+      item?: { id: ItemId; price: number }
+      itemSold?: boolean
+    }
+  /** Three items to choose one from, when there's a slot free. */
+  | { kind: 'item'; node: string; offer: ItemId[] }
   /** The merge request, after its event: two copies of a card may become one. */
   | { kind: 'fuse'; node: string }
   | { kind: 'blind'; node: string; picks: Pick[] }
@@ -71,6 +83,8 @@ export type RunState = {
   record: { battles: number; bosses: number; overkill: number }
   /** Overkill banked to spend at shops; spending never lowers the score, which counts its own overkill. */
   bytes: number
+  /** Tools carried between battles, three at most. */
+  items: ItemId[]
 }
 
 export type RunAction =
@@ -83,6 +97,9 @@ export type RunAction =
   | { type: 'strip'; card: number; sigil: SigilId }
   | { type: 'start'; deck: string }
   | { type: 'buy'; index: number }
+  | { type: 'buyItem' }
+  /** At an item node, the item in that place; at a full kit, the slot to give up for it. */
+  | { type: 'pickItem'; index: number; drop?: number }
   | { type: 'uninstall'; card: number }
   | { type: 'fuse'; card: number }
   | { type: 'leave' }
@@ -96,6 +113,7 @@ export type RunEvent =
   | { type: 'removed'; card: RunCard }
   | { type: 'stripped'; card: RunCard; sigil: SigilId }
   | { type: 'bought'; card: RunCard; price: number }
+  | { type: 'gotItem'; item: ItemId; dropped?: ItemId }
   | { type: 'uninstalled'; card: RunCard; price: number }
   /** `card` is the copy kept, with both copies' stats; `into` was folded into it. */
   | { type: 'fused'; card: RunCard; into: RunCard }

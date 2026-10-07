@@ -1,5 +1,5 @@
-import { useState, type CSSProperties } from 'react'
-import { legalActions, type Slot, type Unit } from 'shared'
+import { useEffect, useState, type CSSProperties } from 'react'
+import { ITEMS, legalActions, type Action, type Slot, type Unit } from 'shared'
 import { has, hasEnded, overText, owed, prompt, skippedDraw, type Seat } from '../controls.tsx'
 import { usePlayback } from '../table/usePlayback.ts'
 import type { Ready } from '../useGame.ts'
@@ -76,6 +76,23 @@ export function useTextTable({
     ...holdProps(unit, () => setLooking(place)),
   })
 
+  // The item slot being aimed, after picking an item that needs a card to use it on.
+  const [aimSlot, setAiming] = useState<number | null>(null)
+  const aimUses = legal.filter(
+    (action): action is Extract<Action, { type: 'use' }> => action.type === 'use' && action.slot === aimSlot,
+  )
+  // Dropped once nothing can be aimed at, as when the turn moves on.
+  const aiming = aimSlot !== null && aimUses.length && !busy ? aimSlot : null
+  const aimAt = (row: 'board' | 'front' | 'back', lane: number) =>
+    aimUses.find((action) => action.row === row && action.lane === lane) ?? null
+  useEffect(() => {
+    if (aiming === null) return
+    const onKey = (event: KeyboardEvent) => event.key === 'Escape' && setAiming(null)
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [aiming])
+  const aimedItem = aiming === null ? null : state.items?.[aiming]
+
   const [menu, setMenu] = useState(false)
   const [logOpen, setLogOpen] = useState(false)
   const [terminalOpen, setTerminalOpen] = useState(false)
@@ -105,13 +122,15 @@ export function useTextTable({
 
   const promptText = busy
     ? "P03's turn…"
-    : prompt(
-        mustDraw,
-        summoning,
-        summoning ? owed(summoning, state.player.board, state.summon?.marked ?? []) : 0,
-        overText(game),
-        handFull,
-      )
+    : aimedItem
+      ? `Use the ${ITEMS[aimedItem].name} on which card? Esc to put it back.`
+      : prompt(
+          mustDraw,
+          summoning,
+          summoning ? owed(summoning, state.player.board, state.summon?.marked ?? []) : 0,
+          overText(game),
+          handFull,
+        )
 
   const frameProps = {
     'data-game-id': game.id,
@@ -157,6 +176,9 @@ export function useTextTable({
     refusalShake,
     canPress,
     promptText,
+    aiming,
+    setAiming,
+    aimAt,
     gameOver: ended && !busy,
     frameProps,
   }

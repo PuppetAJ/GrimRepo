@@ -1,4 +1,5 @@
 import { card, type SigilId } from '../cards.ts'
+import { ITEM_SLOTS, type ItemId } from '../items.ts'
 import { nextBotAction, type Strategy } from '../engine/bot.ts'
 import { findNode } from './map.ts'
 import { COMMONS, legalRunActions, PICKS, STARTER_DECKS, TRIALS } from './run.ts'
@@ -8,6 +9,9 @@ import type { RunAction, RunCard, RunState, Trial } from './types.ts'
 const value = (entry: { attack: number; health: number }) => entry.attack * 2 + entry.health
 const cardValue = (id: string) => value(card(id)) / (card(id).cost + 1)
 const best = (deck: RunCard[]) => [...deck].sort((a, b) => value(b) - value(a))[0]
+
+// The order the bot prefers tools in.
+const TOOLS: ItemId[] = ['hourglass', 'scissors', 'hook', 'pliers', 'bottle', 'hammer']
 
 // Sigils with a drawback, which the linter is worth visiting to delete.
 const DRAWBACKS: SigilId[] = ['technical_debt', 'deprecated']
@@ -54,6 +58,8 @@ function effectWorth(state: RunState, effect: Effect): number {
       return drawback(state.deck) ? 2 : 0
     case 'fuse':
       return twins(state.deck).length ? 3 : 0
+    case 'item':
+      return state.items.length < ITEM_SLOTS ? 2 : 0
     case 'trial':
       // A rare is worth about two average cards.
       return passChance(state.deck, effect.trial) * 6
@@ -94,6 +100,7 @@ export function nextRunAction(state: RunState, strategy: Strategy = 'greedy', de
         (a, b) => cardValue(visit.offer[b.index]?.card as string) - cardValue(visit.offer[a.index]?.card as string),
       )[0]
       if (best && cardValue(visit.offer[best.index]?.card as string) > average) return best
+      if (legal.some((action) => action.type === 'buyItem')) return { type: 'buyItem' }
       // With bytes left, a big deck sheds its weakest card, by value for its cost.
       const worth = (entry: RunCard) => value(entry) / (card(entry.card).cost + 1)
       const weakest = [...state.deck].sort((x, y) => worth(x) - worth(y))[0]
@@ -101,6 +108,12 @@ export function nextRunAction(state: RunState, strategy: Strategy = 'greedy', de
       return shed && state.deck.length > 6 && worth(weakest) < average * 0.6
         ? { type: 'uninstall', card: weakest.id }
         : { type: 'leave' }
+    }
+    case 'item': {
+      // The tools it gets most from, first; a full kit keeps what it has.
+      const best = [...visit.offer].sort((a, b) => TOOLS.indexOf(a) - TOOLS.indexOf(b))[0]
+      const index = best ? visit.offer.indexOf(best) : -1
+      return index >= 0 && state.items.length < ITEM_SLOTS ? { type: 'pickItem', index } : { type: 'leave' }
     }
     case 'fuse': {
       const best = [...twins(state.deck)].sort((a, b) => value(b) - value(a))[0]

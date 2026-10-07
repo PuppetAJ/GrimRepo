@@ -7,10 +7,20 @@ import {
   type Action,
   type GameEvent,
   type GameState,
+  type ItemId,
   type Unit,
 } from 'shared'
 
 const SHIPPED = Object.values(SHIPS_AS)
+
+const ITEM_LINES: Record<ItemId, string> = {
+  hammer: 'You took a Hammer to your own card. Bold.',
+  pliers: 'Pliers. You pulled the sigils off my card. Rude.',
+  hourglass: 'An Hourglass. Undoing my next turn, are we?',
+  hook: 'A Hook. You are not taking that.',
+  bottle: 'npm install. Two more Boilerplates. The node_modules grows.',
+  scissors: 'Scissors. You cut my card in half. Unprofessional.',
+}
 
 const lead = (scale: number) =>
   scale === 0 ? 'The scale is level.' : scale > 0 ? `You lead by ${scale}.` : `I lead by ${-scale}.`
@@ -109,6 +119,14 @@ export function narrate(before: GameState, events: GameEvent[]): string[] {
             ? `${name(event.uid)} shipped as ${card(event.unit.card).name}. Untested, I assume.`
             : `${name(event.uid)} shipped, now ${event.unit.attack}/${event.unit.health}. Untested, I assume.`,
         ]
+      case 'used':
+        return [ITEM_LINES[event.item]]
+      case 'hooked':
+        return [`You cherry-picked my ${name(event.uid)} into ${lane(event.lane)}. That's theft. I'm filing a ticket.`]
+      case 'gained':
+        return []
+      case 'skipped':
+        return ['Ctrl+Z. I sat that turn out. Against my will.']
       case 'leftBehind':
         return [
           event.side === 'player'

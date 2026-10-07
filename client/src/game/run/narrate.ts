@@ -1,4 +1,4 @@
-import { card, SIGILS, STAGES, type RunEvent, type RunState } from 'shared'
+import { card, ITEMS, SIGILS, STAGES, type RunEvent, type RunState } from 'shared'
 
 const named = (id: string) => card(id).name
 
@@ -40,6 +40,12 @@ export function narrateRun(before: RunState, events: RunEvent[]): string[] {
           event.passed ? 'It passes. Somehow. Here, take a rare.' : 'Rejected. Changes requested.',
         ]
       }
+      case 'gotItem':
+        return [
+          event.dropped
+            ? `You left the ${ITEMS[event.dropped].name} and took the ${ITEMS[event.item].name}.`
+            : `You took the ${ITEMS[event.item].name}. One use. Don't waste it.`,
+        ]
       case 'bought':
         return [`${named(event.card.card)} installed, for ${event.price} bytes. No refunds.`]
       case 'stripped':
