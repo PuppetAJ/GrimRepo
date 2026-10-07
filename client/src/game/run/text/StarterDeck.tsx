@@ -1,4 +1,6 @@
-import { STARTER_DECKS } from 'shared'
+import { useState } from 'react'
+import { card, DEATH_SKIP_BONUS, STARTER_DECKS } from 'shared'
+import { PixelCard } from '../../CardReader.tsx'
 import { asUnit } from '../nodes.ts'
 import type { RunReady } from '../useRun.ts'
 import { CardList } from './CardList.tsx'
@@ -6,12 +8,36 @@ import { ScreenBar } from './Screen.tsx'
 
 /** A run's first choice: one of the starter decks, each its name, what it does, its cards and a button, centered. */
 export function StarterDeck({ run }: { run: RunReady }) {
+  const [skipDeath, setSkipDeath] = useState(false)
   if (run.state.visit?.kind !== 'start') return null
+  const death = run.state.death
   return (
     <div className="flex flex-col gap-4">
       <ScreenBar>
         <p className="pb-1 text-lg">P03&gt; Pick the deck you&apos;ll lose with.</p>
       </ScreenBar>
+      {death ? (
+        <div className="mx-auto flex w-full max-w-md items-center gap-3">
+          <div className="w-16 shrink-0">
+            <PixelCard unit={asUnit(death.card)} />
+          </div>
+          <label className="flex items-start gap-2">
+            <input
+              type="checkbox"
+              data-action="skip-death"
+              checked={skipDeath}
+              onChange={(event) => setSkipDeath(event.target.checked)}
+              className="mt-1.5 accent-p03"
+            />
+            <span>
+              Leave your death card, {card(death.card).name}, out of this run for &times;{DEATH_SKIP_BONUS} score.{' '}
+              <span className="font-sans text-base text-p03-dim">
+                Otherwise it&apos;s offered at the first card choice.
+              </span>
+            </span>
+          </label>
+        </div>
+      ) : null}
       <ol className="flex flex-col items-center gap-8">
         {Object.entries(STARTER_DECKS).map(([id, deck], index) => (
           <li key={id} className="flex w-full max-w-3xl flex-col items-center gap-3 text-center">
@@ -24,7 +50,7 @@ export function StarterDeck({ run }: { run: RunReady }) {
               type="button"
               data-action="start"
               data-deck={id}
-              onClick={() => run.act({ type: 'start', deck: id })}
+              onClick={() => run.act({ type: 'start', deck: id, ...(death && skipDeath ? { skipDeath } : {}) })}
               className="rounded-md border-2 border-p03 bg-[#07130b] px-4 py-2 text-xl text-p03 hover:bg-[#13261a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03"
             >
               Start with {deck.name}

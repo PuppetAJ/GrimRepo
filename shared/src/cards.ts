@@ -31,6 +31,8 @@ export type CardDef = {
   health: number
   cost: number
   sigils: SigilId[]
+  /** The card whose art it wears, for a death card; others wear their own. */
+  art?: string
 }
 
 export const SIGILS: Record<SigilId, { name: string; text: string }> = {
@@ -131,8 +133,71 @@ export const PLAYER_DECK: string[] = Object.keys(CARDS).filter(
 /** No board wipe, or P03 could clear the player's side on a whim. */
 export const OPPONENT_POOL: string[] = PLAYER_DECK.filter((id) => !CARDS[id]?.sigils.includes('segfault'))
 
+/** A death card's id carries the whole card, so battles, offers and replays need no catalog entry for it. */
+export const DEATH_PREFIX = 'death:'
+export const isDeathCard = (id: string): boolean => id.startsWith(DEATH_PREFIX)
+/** At most this long, so the name fits on one line on the card and on the profile. */
+export const DEATH_NAME_LIMIT = 16
+export const DEATH_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9 ._'!?-]*$/
+
+export type DeathCardDef = {
+  name: string
+  cost: number
+  attack: number
+  health: number
+  art: string
+  sigils: SigilId[]
+}
+
+export const deathCardId = ({ name, cost, attack, health, art, sigils }: DeathCardDef): string =>
+  `${DEATH_PREFIX}${[cost, attack, health, art, sigils.join(','), encodeURIComponent(name)].join(':')}`
+
+const parsed = new Map<string, CardDef | null>()
+
+/** The card a death card's id describes, or null if it isn't a well-formed one. */
+export function parseDeathCard(id: string): CardDef | null {
+  if (!isDeathCard(id)) return null
+  if (parsed.has(id)) return parsed.get(id) ?? null
+  const parts = id.slice(DEATH_PREFIX.length).split(':')
+  const [cost, attack, health] = parts.slice(0, 3).map((part) => (/^\d{1,3}$/.test(part ?? '') ? Number(part) : NaN))
+  const [, , , art = '', sigilList = '', encoded = ''] = parts
+  let name = ''
+  try {
+    name = decodeURIComponent(encoded)
+  } catch {
+    // A malformed name falls through to null below.
+  }
+  const sigils = sigilList ? (sigilList.split(',') as SigilId[]) : []
+  const base = CARDS[art]
+  const valid =
+    parts.length === 6 &&
+    [cost, attack, health].every((value) => Number.isInteger(value)) &&
+    base !== undefined &&
+    sigils.length <= 3 &&
+    sigils.every((sigil) => sigil in SIGILS) &&
+    new Set(sigils).size === sigils.length &&
+    name.length > 0 &&
+    name.length <= DEATH_NAME_LIMIT &&
+    DEATH_NAME_PATTERN.test(name) &&
+    deathCardId({ name, cost: cost as number, attack: attack as number, health: health as number, art, sigils }) === id
+  const def: CardDef | null = valid
+    ? {
+        id,
+        name,
+        tier: base.tier,
+        attack: attack as number,
+        health: health as number,
+        cost: cost as number,
+        sigils,
+        art,
+      }
+    : null
+  parsed.set(id, def)
+  return def
+}
+
 export function card(id: string): CardDef {
-  const found = CARDS[id]
+  const found = CARDS[id] ?? parseDeathCard(id)
   if (!found) throw new Error(`No such card: ${id}`)
   return found
 }
