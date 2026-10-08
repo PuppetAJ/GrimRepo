@@ -2,9 +2,9 @@ import { useEffect } from 'react'
 import { ITEMS, type RunCard, type RunEvent } from 'shared'
 import { PixelCard, Sigil } from '../../CardReader.tsx'
 import { forTable } from '../../shortcuts.ts'
-import { Sprite } from '../../Sprite.tsx'
 import { asUnit } from '../nodes.ts'
 import { ReadableCard } from './CardList.tsx'
+import { FireOnLogs } from './Fire.tsx'
 import type { RunReady } from '../useRun.ts'
 import { LeaveButton } from './Screen.tsx'
 import { Sentences } from '../../text/Sentences.tsx'
@@ -44,16 +44,23 @@ export function NodeResult({ run }: { run: RunReady }) {
       {shown.length || items.length ? (
         <ul className="flex flex-wrap justify-center gap-6 pt-3">
           {shown.map(({ card, how, into }) => (
-            <li key={card.id} className={`relative w-32 shrink-0 sm:w-36 ${LEAVES[how] ?? ''}`}>
+            <li
+              key={card.id}
+              // A burning card is taller than its fire, so the fire keeps room for it above and below.
+              className={`relative w-32 shrink-0 sm:w-36 ${how === 'burned' ? 'py-7' : (LEAVES[how] ?? '')}`}
+            >
               {how === 'burned' ? (
                 <>
-                  <div className="motion-safe:animate-[burn-fall_0.8s_ease-in_0.2s_forwards] motion-reduce:invisible">
-                    <PixelCard unit={asUnit(card)} />
-                  </div>
-                  {/* The fire that took it, and stays lit. */}
-                  <span className="absolute inset-x-0 bottom-0 flex origin-bottom justify-center motion-safe:animate-[kindle_0.6s_ease-out_0.1s_both]">
-                    <Sprite id="fire" size={112} color="#ffb454" />
+                  {/* The fire that took it holds the place, and stays lit. */}
+                  <span className="flex origin-bottom justify-center motion-safe:animate-[kindle_0.6s_ease-out_0.1s_both]">
+                    <FireOnLogs />
                   </span>
+                  {/* The card falls over and burns away on top of the fire, so its going moves nothing; once gone, it can't catch a click. */}
+                  <div className="pointer-events-none absolute inset-x-0 top-1/2 z-10 -translate-y-1/2">
+                    <div className="motion-safe:animate-[burn-fall_0.8s_ease-in_0.2s_forwards] motion-reduce:invisible">
+                      <PixelCard unit={asUnit(card)} />
+                    </div>
+                  </div>
                 </>
               ) : how === 'merged' && into ? (
                 <>
@@ -112,7 +119,7 @@ type Part = { card: RunCard; how: 'burned' | 'sacrificed' | 'merged' | 'changed'
 /** How a card leaves the row: a sacrifice falls and folds away, a merged copy slides into its twin; either way, what's left centers. */
 const LEAVES: Partial<Record<Part['how'], string>> = {
   sacrificed:
-    'motion-safe:animate-[burn-fall_0.7s_ease-in_0.2s_forwards,collapse-away_300ms_ease-in-out_0.9s_forwards] motion-reduce:hidden',
+    'pointer-events-none motion-safe:animate-[burn-fall_0.7s_ease-in_0.2s_forwards,collapse-away_300ms_ease-in-out_0.9s_forwards] motion-reduce:hidden',
 }
 
 /** A merged card as it was before taking in its copy, near enough to show the two side by side. */

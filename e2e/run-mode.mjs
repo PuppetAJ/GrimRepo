@@ -1,4 +1,4 @@
-import { applyRun, createRun, legalActions, nextRunAction, scoreRun, SIGILS } from '../shared/src/index.ts'
+import { applyRun, createRun, legalActions, nextRunAction, scoreRun } from '../shared/src/index.ts'
 import {
   BASE,
   clickMove,
@@ -52,10 +52,13 @@ async function playRun(page, mirror, { pick = nextRunAction, done }) {
     if (!result.ok) throw new Error(`the mirror refused ${JSON.stringify(action)}: ${result.reason}`)
     const expected = { scope: ROOT, attribute: 'data-run-moves', expected: moves + 1 }
     try {
-      // A second boost at the campfire asks first.
+      // The campfire's card is chosen in its slot's searchable list; a second boost asks first.
       if (action.type === 'buff' && state.visit.buffs > 0) {
-        await page.locator(targetFor(action)).click()
+        await page.locator('[data-action="warm-again"]').click()
         await clickMove(page, '[data-action="risk"]', expected)
+      } else if (action.type === 'buff') {
+        await page.locator('[data-slot-for="campfire"]').click()
+        await clickMove(page, targetFor(action), expected)
       } else if (action.type === 'transfer') {
         // The giver, its sigil when it has more than one, the receiver, then the stones' button.
         // Each card is chosen in a slot's searchable list.
@@ -82,17 +85,20 @@ async function playRun(page, mirror, { pick = nextRunAction, done }) {
         // Both copies, the engine's pick of the second when the bot names none, then the button.
         const kept = state.deck.find((entry) => entry.id === action.card)
         const other = action.with ?? state.deck.find((entry) => entry.id !== kept.id && entry.card === kept.card).id
+        await page.locator('[data-slot-for="fuse"]').click()
         await page.locator(`[data-action="fuse-card"][data-card="${action.card}"]`).click()
-        await page.locator(`[data-action="fuse-card"][data-card="${other}"]`).click()
+        await page.locator('[data-slot-for="fuse-copy"]').click()
+        await page.locator(`[data-action="fuse-copy"][data-card="${other}"]`).click()
         await clickMove(page, '[data-action="fuse"]', expected)
       } else if (action.type === 'uninstall') {
+        await page.locator('[data-slot-for="uninstall"]').click()
         await page.locator(`[data-action="uninstall-card"][data-card="${action.card}"]`).click()
         await clickMove(page, '[data-action="uninstall"]', expected)
       } else if (action.type === 'strip') {
-        // The card, its sigil when it has more than one, then the linter's button.
+        // The card, chosen in its slot's searchable list, its sigil, then the linter's button.
+        await page.locator('[data-slot-for="lint"]').click()
         await page.locator(`[data-action="lint-card"][data-card="${action.card}"]`).click()
-        const sigil = page.getByRole('radio', { name: new RegExp(`^${SIGILS[action.sigil].name}\\.`) })
-        if (!(await sigil.isChecked())) await sigil.check()
+        await page.locator(`[data-action="lint-sigil"][data-sigil="${action.sigil}"]`).click()
         await clickMove(page, '[data-action="strip"]', expected)
       } else await clickMove(page, targetFor(action), expected)
       // An event's result, or a node's work once done, stays up until the player moves on.
@@ -256,16 +262,17 @@ section('The campfire, from a mockup')
 {
   const { context, page } = await freshPage(browser, { width: 1440, height: 900, table: 'text' })
   await page.goto(`${BASE}/run/mockups/campfire`, MOCKUP)
-  check('a campfire offers every card in the deck', await shows(page, 'campfire', 30_000))
-  const first = page.locator('[data-action="buff"]').first()
-  const id = await first.getAttribute('data-card')
-  await first.click()
+  await shows(page, 'campfire', 30_000)
+  await page.locator('[data-slot-for="campfire"]').click()
+  check('its slot offers every card in the deck', (await page.locator('[data-action="buff"]').count()) > 4)
+  await page.locator('[data-action="buff"]').first().click()
   check('one boost takes', (await visibleText(page)).includes('Warm it again for more'))
   check(
-    'then only that card can go back in',
-    (await page.locator('[data-action="buff"]:not([disabled])').count()) === 1,
+    'then the warmed card sits by the fire, and no other can be chosen',
+    (await page.locator('[data-slot-for="campfire"]').count()) === 0 &&
+      (await page.getByRole('button', { name: /^Read / }).count()) >= 1,
   )
-  await page.locator(`[data-action="buff"][data-card="${id}"]`).click()
+  await page.locator('[data-action="warm-again"]').click()
   const dialog = page.getByRole('alertdialog')
   check(
     'a second boost asks first, since it may burn the card',
@@ -278,6 +285,14 @@ section('The campfire, from a mockup')
   check('and keeping it safe changes nothing', (await view(page)) === 'campfire')
   await page.locator('[data-action="leave"]').click()
   check('leaving goes back to the map', await shows(page, 'map'))
+  // A burned card falls onto the Leave button below it, gone from sight, and must not catch its clicks.
+  await page.goto(`${BASE}/run/mockups/burned`, MOCKUP)
+  const leave = page.locator('[data-action="continue"]')
+  await leave.waitFor({ timeout: 30_000 })
+  await page.waitForTimeout(1500)
+  const corner = await leave.boundingBox()
+  await page.mouse.click(corner.x + corner.width - 4, corner.y + 4)
+  check('after a card burns, the corner of Leave still leaves', await shows(page, 'map'))
   await context.close()
 }
 
@@ -411,18 +426,17 @@ section('Planning a route, from a mockup')
 section('A big deck, from a mockup')
 {
   const { context, page } = await freshPage(browser, { width: 1440, height: 900, table: 'text' })
-  await page.goto(`${BASE}/run/mockups/worst-campfire`, MOCKUP)
-  await shows(page, 'campfire', 30_000)
+  await page.goto(`${BASE}/run/mockups/worst-lint`, MOCKUP)
+  await shows(page, 'lint', 30_000)
   const docked = page.getByRole('complementary', { name: 'Your inventory' })
   check('with room, the deck sits open beside the screen', (await docked.count()) === 1)
-  check(
-    'and its search is the only one, so the campfire has none of its own',
-    (await page.getByRole('searchbox').count()) === 1,
-  )
+  check('and its search is the only one on the page', (await page.getByRole('searchbox').count()) === 1)
+  const listed = () => docked.locator('tbody tr').count()
+  const all = await listed()
   await docked.getByRole('searchbox').fill('everything')
-  const shown = await page.locator('[data-action="buff"]').count()
-  check("the deck's search narrows the campfire's cards too", shown > 0 && shown < 40)
-  await page.getByRole('button', { name: 'Read destroyEverything(everyone)' }).first().click()
+  const shown = await listed()
+  check("the deck's search narrows its list", shown > 0 && shown < all, `${shown} of ${all}`)
+  await docked.getByRole('button', { name: 'destroyEverything(everyone)' }).first().click()
   check('a name cut short opens the whole card', (await page.getByRole('dialog').count()) === 1)
   await page.keyboard.press('Escape')
   // The rest of the page is hidden from assistive tech until the reader has closed.
@@ -441,10 +455,6 @@ section('A big deck, from a mockup')
       () => true,
       () => false,
     ),
-  )
-  check(
-    'and then the campfire offers the search itself',
-    (await page.getByRole('searchbox', { name: 'Search the deck for a card to warm' }).count()) === 1,
   )
   await page.setViewportSize({ width: 390, height: 844 })
   await page.getByRole('button', { name: /^Run menu/ }).click()
