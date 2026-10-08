@@ -1,5 +1,7 @@
-# The browser suites against a production build, on pull requests only. They build and boot the app, so this is slower
-# than ci.yml and is not a required check: main is gated by ci.yml alone.
+# The browser suites against a production build. They build and boot the app, so this is slower than ci.yml and is not a
+# required check: main is gated by ci.yml alone.
+# A pull request runs the suites that cover the seams, on Chromium. Every night, and on demand, main gets the full set on
+# Chromium and Firefox, so a Gecko-only regression still shows within a day without slowing every pull request.
 name: Browser suites
 
 on:
@@ -8,13 +10,45 @@ on:
     paths-ignore:
       - '**/*.png'
       - '**/*.md'
+  schedule:
+    - cron: '0 9 * * *'
+  workflow_dispatch:
 
 concurrency:
   group: browser-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  # A pull request: Chromium only, without the leaderboard, whose seeded players rarely change.
+  PULL_REQUEST: >-
+    [{"suite":"smoke","engine":"chromium"},{"suite":"auth","engine":"chromium"},{"suite":"game","engine":"chromium"},
+    {"suite":"run-mode","engine":"chromium"},{"suite":"run-3d","engine":"chromium"},{"suite":"table","engine":"chromium"},
+    {"suite":"a11y","part":"pages","engine":"chromium"},{"suite":"a11y","part":"run","engine":"chromium"},
+    {"suite":"a11y","part":"tables","engine":"chromium"}]
+  # Nightly and on demand: every suite on both engines.
+  FULL: >-
+    [{"suite":"smoke","engine":"chromium"},{"suite":"auth","engine":"chromium"},
+    {"suite":"leaderboard","engine":"chromium"},{"suite":"game","engine":"chromium"},
+    {"suite":"run-mode","engine":"chromium"},{"suite":"run-3d","engine":"chromium"},{"suite":"table","engine":"chromium"},
+    {"suite":"a11y","part":"pages","engine":"chromium"},{"suite":"a11y","part":"run","engine":"chromium"},
+    {"suite":"a11y","part":"tables","engine":"chromium"},
+    {"suite":"smoke","engine":"firefox"},{"suite":"auth","engine":"firefox"},{"suite":"leaderboard","engine":"firefox"},
+    {"suite":"game","engine":"firefox"},{"suite":"run-mode","engine":"firefox"},{"suite":"run-3d","engine":"firefox"},
+    {"suite":"table","engine":"firefox"},{"suite":"a11y","part":"pages","engine":"firefox"},
+    {"suite":"a11y","part":"run","engine":"firefox"},{"suite":"a11y","part":"tables","engine":"firefox"}]
+
 jobs:
+  # Which suites to run: the matrix can't read env, so a step hands it on.
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.pick.outputs.matrix }}
+    steps:
+      - id: pick
+        run: echo "matrix=${{ github.event_name == 'pull_request' && env.PULL_REQUEST || env.FULL }}" >> "$GITHUB_OUTPUT"
+
   browser:
+    needs: plan
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -23,15 +57,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [smoke, auth, leaderboard, game, run-mode, run-3d, table]
-        engine: [chromium, firefox]
-        include:
-          - { suite: a11y, part: pages, engine: chromium }
-          - { suite: a11y, part: pages, engine: firefox }
-          - { suite: a11y, part: run, engine: chromium }
-          - { suite: a11y, part: run, engine: firefox }
-          - { suite: a11y, part: tables, engine: chromium }
-          - { suite: a11y, part: tables, engine: firefox }
+        include: ${{ fromJSON(needs.plan.outputs.matrix) }}
 
     services:
       postgres:
