@@ -28,6 +28,7 @@ export function DeathCardBuilder({ run }: { run: RunReady }) {
   const [sending, setSending] = useState(false)
   const [built, setBuilt] = useState<BuiltDeathCard | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [skipped, setSkipped] = useState(false)
 
   const hands = deathHands(run.state)
   const problem = deathNameProblem(name)
@@ -45,6 +46,12 @@ export function DeathCardBuilder({ run }: { run: RunReady }) {
   const ready = mockup || run.over !== null
 
   if (built) return <Built built={built} mockup={mockup} />
+  if (skipped)
+    return (
+      <p role="status" className="text-center text-lg text-p03-dim">
+        No death card this time.{run.state.death ? ` ${card(run.state.death.card).name} is still yours.` : ''}
+      </p>
+    )
 
   const submit = async () => {
     setTouched(true)
@@ -128,15 +135,26 @@ export function DeathCardBuilder({ run }: { run: RunReady }) {
           {error}
         </p>
       ) : null}
-      <button
-        type="button"
-        data-action="build-death-card"
-        disabled={!complete || sending || !ready}
-        onClick={submit}
-        className={`${SIDE_BUTTON} self-start border-p03 px-4 disabled:opacity-50`}
-      >
-        {sending ? 'Building…' : ready ? 'Build it' : 'Saving the run first…'}
-      </button>
+      <div className="flex flex-wrap gap-3">
+        <button
+          type="button"
+          data-action="build-death-card"
+          disabled={!complete || sending || !ready}
+          onClick={submit}
+          className={`${SIDE_BUTTON} border-p03 px-4 disabled:opacity-50`}
+        >
+          {sending ? 'Building…' : ready ? 'Build it' : 'Saving the run first…'}
+        </button>
+        <button
+          type="button"
+          data-action="skip-death-card"
+          disabled={sending}
+          onClick={() => setSkipped(true)}
+          className={`${SIDE_BUTTON} px-4 disabled:opacity-50`}
+        >
+          Skip
+        </button>
+      </div>
     </section>
   )
 }

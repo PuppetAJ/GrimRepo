@@ -3,7 +3,7 @@ import type { ItemId } from '../items.ts'
 import type { Action, DeckCard, GameEvent, GameState } from '../engine/types.ts'
 
 /** Bumped whenever a change would make an old run replay differently. */
-export const RUN_RULES_VERSION = 15
+export const RUN_RULES_VERSION = 16
 
 /** The most actions one save may send; 200 of the largest kind fit the server's 16 KB body limit. */
 export const RUN_SAVE_LIMIT = 200
@@ -67,7 +67,8 @@ export type Visit =
   | { kind: 'item'; node: string; offer: ItemId[] }
   /** The merge request, after its event: two copies of a card may become one. */
   | { kind: 'fuse'; node: string }
-  | { kind: 'blind'; node: string; picks: Pick[] }
+  /** Three traits face down; picking one turns over three cards with it, and one of those is taken. */
+  | { kind: 'blind'; node: string; picks: Pick[]; revealed?: { pick: number; offer: string[] } }
 
 export type RunState = {
   seed: number
@@ -106,7 +107,8 @@ export type RunAction =
   /** At an item node, the item in that place; at a full kit, the slot to give up for it. */
   | { type: 'pickItem'; index: number; drop?: number }
   | { type: 'uninstall'; card: number }
-  | { type: 'fuse'; card: number }
+  /** `with` names the copy to merge into `card`; without it, the first other copy. */
+  | { type: 'fuse'; card: number; with?: number }
   | { type: 'leave' }
 
 /** In order, for the client to show what a run action did. */

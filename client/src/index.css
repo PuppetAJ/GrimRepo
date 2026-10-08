@@ -178,6 +178,35 @@
   }
 }
 
+/* A face-down card turning over to show what it is. */
+@keyframes flip-in {
+  from {
+    transform: perspective(600px) rotateY(90deg);
+    filter: brightness(0.4);
+  }
+  to {
+    transform: none;
+    filter: none;
+  }
+}
+
+/* A card the fire takes: it tips over sideways and falls out of sight. */
+@keyframes burn-fall {
+  0% {
+    transform: none;
+    filter: none;
+  }
+  30% {
+    transform: rotate(-6deg);
+    filter: brightness(1.4) sepia(1) hue-rotate(-30deg) saturate(3);
+  }
+  100% {
+    transform: translate(40%, 60%) rotate(80deg);
+    filter: brightness(0.3) sepia(1) hue-rotate(-30deg) saturate(3);
+    opacity: 0;
+  }
+}
+
 @keyframes fade-in {
   from {
     opacity: 0;

@@ -8,8 +8,17 @@ import { narrateRun } from './narrate.ts'
 
 type Listener = (events: RunEvent[]) => void
 
-/** An event just decided: the scene, the choice, and what it did, kept on screen until the player moves on. */
-export type Aftermath = { event: string; option: number; lines: string[] }
+/** Screens whose work can end the visit, and then stay up showing what happened until the player leaves. */
+export const NODE_RESULTS = ['campfire', 'stones', 'lint', 'fuse', 'item'] as const
+export type NodeResultView = (typeof NODE_RESULTS)[number]
+
+/**
+ * What just happened, kept on screen until the player moves on: an event's choice and what it did, or a node's work,
+ * such as a card burned at the campfire, with the events that show it.
+ */
+export type Aftermath =
+  | { kind: 'event'; event: string; option: number; lines: string[] }
+  | { kind: 'node'; view: NodeResultView; events: RunEvent[]; lines: string[] }
 
 export type Run =
   | { status: 'loading' }
@@ -139,7 +148,7 @@ export function useRun(mockup: Mockup | null = null): Run {
           log: ['P03> A mockup: played here and never saved.'],
           news: mockup.news ?? [],
           path: mockup.path,
-          aftermath: null,
+          aftermath: mockup.aftermath ?? null,
         })
         setOver(mockup.over ?? null)
       })
@@ -228,11 +237,14 @@ export function useRun(mockup: Mockup | null = null): Run {
       for (const listener of listeners.current) listener(outcome.events)
       const story = told(table, outcome.state, outcome.events)
       const visit = table.state.visit
-      const aftermath =
+      const ended = visit && !outcome.state.visit && action.type !== 'leave'
+      const aftermath: Aftermath | null =
         // An event that opens a screen of its own, as the linter does, goes straight there.
         action.type === 'choose' && visit?.kind === 'event' && !outcome.state.visit
-          ? { event: visit.event, option: action.option, lines: story.news }
-          : null
+          ? { kind: 'event', event: visit.event, option: action.option, lines: story.news }
+          : ended && (NODE_RESULTS as readonly string[]).includes(visit.kind)
+            ? { kind: 'node', view: visit.kind as NodeResultView, events: outcome.events, lines: story.news }
+            : null
       setTable({ ...table, moves: table.moves + 1, ...story, aftermath })
       // On the board, saves wait for a draw or the bell, as a quick battle's do, or a reload could peek at a draw.
       const quiet = action.type === 'play' && action.action.type !== 'draw' && action.action.type !== 'ringBell'

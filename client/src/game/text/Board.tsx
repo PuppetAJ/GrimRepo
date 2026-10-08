@@ -143,7 +143,9 @@ export function Board() {
         data-row={row}
         data-lane={i}
         aria-label={`Use it on ${row === 'board' ? 'your' : "P03's"} card in lane ${i + 1}`}
-        onClick={() => {
+        onClick={(event) => {
+          // The lane under it would otherwise take the click too, and refuse it.
+          event.stopPropagation()
           act(use)
           setAiming(null)
         }}

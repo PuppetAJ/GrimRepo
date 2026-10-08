@@ -204,6 +204,7 @@ describe('the run actions the server takes', () => {
       { type: 'pickItem', index: 0, drop: 1 },
       { type: 'play', action: { type: 'use', slot: 0, row: 'front', lane: 1 } },
       { type: 'fuse', card: 1 },
+      { type: 'fuse', card: 1, with: 2 },
       { type: 'leave' },
     ]
     for (const action of kinds) {

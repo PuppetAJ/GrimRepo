@@ -1,11 +1,30 @@
 import { PICKS } from 'shared'
+import { asUnit } from '../nodes.ts'
 import type { RunReady } from '../useRun.ts'
+import { CardList } from './CardList.tsx'
 import { ScreenBar } from './Screen.tsx'
 
-/** A face-down card choice: three traits, each a random card that has it. */
+/** A face-down card choice: three traits; picking one turns over three cards with it, to take one. */
 export function BlindPick({ run }: { run: RunReady }) {
   const visit = run.state.visit
   if (visit?.kind !== 'blind') return null
+  const revealed = visit.revealed
+  // Turned over: the three cards with the trait picked, one to take.
+  if (revealed)
+    return (
+      <div data-center className="flex flex-col gap-4">
+        <ScreenBar>
+          <p className="pb-1 text-lg">{PICKS[visit.picks[revealed.pick] ?? 'free'].label}. Take one.</p>
+        </ScreenBar>
+        <CardList
+          units={revealed.offer.map((id, index) => asUnit(id, index + 1))}
+          onPick={(unit) => run.act({ type: 'take', index: unit.uid - 1 })}
+          data={(unit) => ({ 'data-action': 'take', 'data-index': unit.uid - 1 })}
+          size="w-36 sm:w-44"
+          itemClass="motion-safe:animate-[flip-in_450ms_ease-out_both] [&:nth-child(2)]:[animation-delay:120ms] [&:nth-child(3)]:[animation-delay:240ms]"
+        />
+      </div>
+    )
   return (
     <div data-center className="flex flex-col gap-4">
       <ScreenBar>

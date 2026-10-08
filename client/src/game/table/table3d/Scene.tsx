@@ -218,7 +218,7 @@ export function Scene({
                 spawn={playback.spawns.get(unit.uid) ?? (dealing ? P03_HAND : undefined)}
                 lunge={playback.lunges.get(unit.uid)}
                 slide={playback.slides.get(unit.uid)}
-                look={marked ? 'marked' : action?.type === 'mark' || aim ? 'markable' : 'plain'}
+                look={marked ? 'marked' : aim ? 'aimable' : action?.type === 'mark' ? 'markable' : 'plain'}
                 assets={assets}
                 onClick={
                   action

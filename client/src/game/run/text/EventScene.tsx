@@ -6,7 +6,7 @@ import type { RunReady } from '../useRun.ts'
 /** An event's scene and its choices; what each choice does shows once it's made, until the player moves on. */
 export function EventScene({ run }: { run: RunReady }) {
   const visit = run.state.visit
-  const after = run.aftermath
+  const after = run.aftermath?.kind === 'event' ? run.aftermath : null
   const found = after ? scene(after.event) : visit?.kind === 'event' ? scene(visit.event) : null
   const { act, dismiss } = run
   // Number keys pick a choice, and Enter or Space moves on from the result, while focus is in the game.

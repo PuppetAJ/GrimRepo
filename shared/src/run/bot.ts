@@ -86,6 +86,10 @@ export function nextRunAction(state: RunState, strategy: Strategy = 'greedy', de
       return { type: 'start', deck: deck ?? (ids[state.seed % ids.length] as string) }
     }
     case 'blind': {
+      if (visit.revealed) {
+        const values = visit.revealed.offer.map(cardValue)
+        return { type: 'take', index: values.indexOf(Math.max(...values)) }
+      }
       // The trait whose cards are worth most on average.
       const worth = visit.picks.map((pick) => {
         const pool = COMMONS.filter(PICKS[pick].fits)

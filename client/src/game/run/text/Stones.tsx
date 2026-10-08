@@ -59,15 +59,17 @@ export function Stones({ run }: { run: RunReady }) {
             <h3 id="stones-give" className="text-p03">
               1. The card to sacrifice
             </h3>
+            {/* Once one is picked, the rest fold away, so the next step is in reach without scrolling. */}
             <CardList
-              units={deck}
+              units={giver ? [giver] : deck}
               onPick={(unit) => pickFrom(unit.uid)}
               can={(unit) => moves.some((move) => move.from === unit.uid)}
               picked={from}
               data={(unit) => ({ 'data-action': 'give', 'data-card': unit.uid })}
               size="w-24 sm:w-28"
-              filtered
+              filtered={!giver}
             />
+            {giver ? <Another onClick={() => pickFrom(giver.uid)} /> : null}
           </section>
           {giver && sigils.length > 1 ? (
             <fieldset className="flex flex-col gap-2">
@@ -97,14 +99,15 @@ export function Stones({ run }: { run: RunReady }) {
                 {sigils.length > 1 ? '3.' : '2.'} The card that gains {SIGILS[chosen].name}
               </h3>
               <CardList
-                units={deck.filter((unit) => unit.uid !== from)}
-                onPick={(unit) => setTo(unit.uid)}
+                units={receiver ? [receiver] : deck.filter((unit) => unit.uid !== from)}
+                onPick={(unit) => setTo(unit.uid === to ? null : unit.uid)}
                 can={(unit) => fits(unit.uid)}
                 picked={to}
                 data={(unit) => ({ 'data-action': 'take-sigil', 'data-card': unit.uid })}
                 size="w-24 sm:w-28"
-                filtered
+                filtered={!receiver}
               />
+              {receiver ? <Another onClick={() => setTo(null)} /> : null}
             </section>
           ) : null}
         </>
@@ -112,5 +115,14 @@ export function Stones({ run }: { run: RunReady }) {
         <NothingHere>No card has a sigil to give.</NothingHere>
       )}
     </div>
+  )
+}
+
+/** Brings the folded-away cards back, to choose again. */
+function Another({ onClick }: { onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className={`${SIDE_BUTTON} self-center px-4 text-lg`}>
+      Pick another
+    </button>
   )
 }
