@@ -356,7 +356,6 @@ function step(state: RunState, rng: Rng, action: RunAction, events: RunEvent[]):
       const from = inDeck(action.from)
       const to = inDeck(action.to)
       if (!from || !to || from.id === to.id) return 'Choose two different cards from the deck'
-      if (from.added) return 'A card that already gained a sigil cannot give one'
       if (!from.sigils.includes(action.sigil)) return 'That card does not have that sigil'
       if (!canGain(to, action.sigil)) return 'That card cannot take this sigil'
       remove(state, from, events)
@@ -548,8 +547,8 @@ export function legalRunActions(state: RunState): RunAction[] {
     }
     case 'stones': {
       const actions: RunAction[] = [{ type: 'leave' }]
+      // Any card may give, a gained sigil included: it is sacrificed, so nothing stacks. Only the taker is limited.
       for (const from of state.deck) {
-        if (from.added) continue
         for (const sigil of from.sigils)
           for (const to of state.deck)
             if (to.id !== from.id && canGain(to, sigil))

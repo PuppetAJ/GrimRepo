@@ -55,8 +55,8 @@ export type OpenRun = {
   /** Another player's death card for the Staging boss, and its maker. */
   rival: { card: string; by: string } | null
 }
-/** `saved` is false for a guest or the demo account, who see their card but don't keep it. */
-export type BuiltDeathCard = { card: string; saved: boolean }
+/** `saved` is false for the demo account, which sees its card but doesn't keep it; a guest's is kept until they sign up. */
+export type BuiltDeathCard = { card: string; saved: boolean; guest?: boolean }
 export type RunOver = { status: 'won' | 'lost'; score: number; stage: number; bosses: number; forfeited: boolean }
 export type RunSaved = { status: 'playing'; saved: number } | RunOver
 

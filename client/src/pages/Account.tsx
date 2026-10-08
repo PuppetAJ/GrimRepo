@@ -66,7 +66,7 @@ export function Account() {
   if ((user as { isAnonymous?: boolean } | undefined)?.isAnonymous) return <GuestNotice name={user?.username ?? ''} />
 
   return (
-    <div className="mx-auto flex w-full max-w-lg flex-col gap-10">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-10">
       <div className="flex flex-col gap-3">
         <h1 className="font-display text-5xl">Account</h1>
         <P03Line>
@@ -148,7 +148,7 @@ export function Account() {
 /** Replaces the forms, which the server would refuse for the demo account anyway. */
 function DemoNotice() {
   return (
-    <div className="mx-auto flex w-full max-w-lg flex-col gap-4">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
       <h1 className="font-display text-5xl">Account</h1>
       <P03Line>Everyone shares this one. I can&apos;t tell any of you apart. Not that I try.</P03Line>
       <section className="flex flex-col gap-3 rounded-lg border bg-card p-6">
@@ -166,13 +166,14 @@ function DemoNotice() {
 
 function GuestNotice({ name }: { name: string }) {
   return (
-    <div className="mx-auto flex w-full max-w-lg flex-col gap-4">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
       <h1 className="font-display text-5xl">Account</h1>
       <P03Line>A guest. You&apos;ll be gone in a week, and so will your record. Unless you sign up.</P03Line>
       <section className="flex flex-col gap-3 rounded-lg border bg-card p-6">
         <h2 className="text-xl font-semibold">You are playing as a guest, {name}</h2>
         <p className="text-muted-foreground">
-          Guest accounts last a week and stay off the leaderboard. Sign up to keep your games; they come with you.
+          Guest accounts last a week and stay off the leaderboard. Sign up to keep your games, runs and death card; they
+          come with you.
         </p>
         <div className="flex flex-wrap gap-3">
           <Button asChild>

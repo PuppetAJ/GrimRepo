@@ -4,7 +4,7 @@ import { anonymous, username } from 'better-auth/plugins'
 import { pool } from '../config/db.ts'
 import { env } from '../config/env.ts'
 import { demoAccount } from './demo.ts'
-import { claimGuestGames, guestName } from './guests.ts'
+import { claimGuest, guestName } from './guests.ts'
 import { isOffensive, isReserved, NAME_REFUSED } from './names.ts'
 
 export const USERNAME_PATTERN = /^[A-Za-z0-9_]{3,20}$/
@@ -47,7 +47,7 @@ export const authOptions = {
     anonymous({
       emailDomainName: 'guest.grimrepo.invalid',
       generateName: guestName,
-      onLinkAccount: ({ anonymousUser, newUser }) => claimGuestGames(anonymousUser.user.id, newUser.user),
+      onLinkAccount: ({ anonymousUser, newUser }) => claimGuest(anonymousUser.user.id, newUser.user),
       schema: { user: { fields: { isAnonymous: 'is_anonymous' } } },
     }),
   ],

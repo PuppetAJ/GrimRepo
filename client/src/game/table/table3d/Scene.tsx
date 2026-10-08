@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useState } from 'react'
-import { ITEMS, legalActions, PLAYER_DECK, type Action } from 'shared'
+import { ITEMS, legalActions, PLAYER_DECK, reshuffleSize, type Action } from 'shared'
 import { has, hasEnded, laneAction, skippedDraw } from '../../controls.tsx'
 import type { Ready } from '../../useGame.ts'
 import type { View } from '../../view.ts'
@@ -152,6 +152,7 @@ export function Scene({
           <Deck
             count={view.deck}
             total={PLAYER_DECK.length}
+            reshuffle={view.deck ? 0 : reshuffleSize(state)}
             active={can({ type: 'draw', from: 'deck' } as Partial<Action>)}
             onClick={() => act({ type: 'draw', from: 'deck' })}
             hint={hint}

@@ -1,9 +1,10 @@
+import { Map as MapIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import type { Seat } from '../controls.tsx'
 import { forTable } from '../shortcuts.ts'
 import { TerminalTable } from '../TerminalTable.tsx'
 import type { Layout } from '../text/useTextTable.ts'
-import { mapTitle, ScreenBody, useRunScreen } from './screens.tsx'
+import { BACK_TO, mapTitle, ScreenBody, useRunScreen } from './screens.tsx'
 import { BattleMenu } from './text/BattleMenu.tsx'
 import { InventoryDialog } from './text/InventoryDialog.tsx'
 import { HEADER_BUTTON, Screen, ScreenActions } from './text/Screen.tsx'
@@ -13,17 +14,20 @@ import type { RunReady } from './useRun.ts'
 export function RunText({ run, layout, seat, on3d }: { run: RunReady; layout: Layout; seat: Seat; on3d: () => void }) {
   const { view, battle, title, caption } = useRunScreen(run)
   const fighting = Boolean(battle) && view === 'battle'
-  // In a battle, the deck and tools open over the table, and the map can be looked at without leaving it.
+  // In a battle, the deck and tools open over the table.
   const [inventory, setInventory] = useState(false)
-  // Which battle the map was looked at from, so the next battle starts on its table.
+  // The map can be looked at from a battle or a node's screen without leaving it; the look belongs to that screen,
+  // so the next one starts on itself.
   const battleKey = `${run.generation}:${run.state.stage}:${run.state.at}`
+  const here = `${battleKey}:${view}`
   const [lookingFrom, setLookingFrom] = useState<string | null>(null)
-  const lookingAtMap = fighting && lookingFrom === battleKey
-  const look = (on: boolean) => setLookingFrom(on ? battleKey : null)
-  // M looks at the map from the battle and back again, as on the 3D table.
+  const canLook = view in BACK_TO
+  const lookingAtMap = canLook && lookingFrom === here
+  const look = (on: boolean) => setLookingFrom(on ? here : null)
+  // M looks at the map and back again, as on the 3D table.
   const toggle = useRef(() => {})
   useEffect(() => {
-    toggle.current = () => fighting && look(!lookingAtMap)
+    toggle.current = () => canLook && look(!lookingAtMap)
   })
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -64,7 +68,20 @@ export function RunText({ run, layout, seat, on3d }: { run: RunReady; layout: La
             {lookingAtMap ? (
               <ScreenActions>
                 <button type="button" onClick={() => look(false)} aria-keyshortcuts="M" className={HEADER_BUTTON}>
-                  Back to the battle
+                  Back to {BACK_TO[view]}
+                </button>
+              </ScreenActions>
+            ) : canLook ? (
+              <ScreenActions>
+                <button
+                  type="button"
+                  onClick={() => look(true)}
+                  aria-keyshortcuts="M"
+                  title="Look at the map"
+                  className={`${HEADER_BUTTON} gap-2`}
+                >
+                  <MapIcon aria-hidden className="size-5" />
+                  Map
                 </button>
               </ScreenActions>
             ) : null}

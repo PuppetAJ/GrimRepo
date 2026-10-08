@@ -297,13 +297,21 @@ function Built({ built, mockup, from }: { built: BuiltDeathCard; mockup: boolean
       </div>
       {uploaded ? (
         <p className="max-w-sm font-sans text-base" role="status">
-          {built.saved ? (
+          {built.saved && built.guest ? (
+            <>
+              Saved to this guest account, and offered at your next run's first card choice.{' '}
+              <Link to="/signup" className="text-p03 underline">
+                Sign up
+              </Link>{' '}
+              within a week to keep it, with your runs and scores.
+            </>
+          ) : built.saved ? (
             'Saved, and pinned to your profile. Your next run offers it at its first card choice.'
           ) : mockup ? (
             'A mockup: built here and never saved.'
           ) : (
             <>
-              Guests and the demo account don't keep death cards.{' '}
+              The demo account doesn't keep death cards.{' '}
               <Link to="/signup" className="text-p03 underline">
                 Sign up
               </Link>{' '}

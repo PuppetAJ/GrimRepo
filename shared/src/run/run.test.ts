@@ -137,7 +137,7 @@ describe('sigil stones', () => {
     assert.ok(gained?.sigils.includes('bypass') && gained.added === 'bypass')
   })
 
-  it('refuse a card that already gained a sigil, on either side', () => {
+  it('let a card that gained a sigil, from the stones or an event, give one, but never take a second', () => {
     const state = at('stones', { kind: 'stones', node: '0-0' })
     state.deck[0]?.sigils.push('bypass')
     state.deck[1]?.sigils.push('hotfix')
@@ -146,10 +146,9 @@ describe('sigil stones', () => {
       refused(state, { type: 'transfer', from: 1, to: 2, sigil: 'bypass' }),
       'That card cannot take this sigil',
     )
-    assert.equal(
-      refused(state, { type: 'transfer', from: 2, to: 1, sigil: 'hotfix' }),
-      'A card that already gained a sigil cannot give one',
-    )
+    const after = step(state, { type: 'transfer', from: 2, to: 1, sigil: 'hotfix' })
+    assert.ok(!after.deck.some((entry) => entry.id === 2), 'the giver is used up')
+    assert.equal(after.deck.find((entry) => entry.id === 1)?.added, 'hotfix')
   })
 })
 

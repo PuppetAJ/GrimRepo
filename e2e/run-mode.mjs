@@ -328,6 +328,21 @@ section("A run's battle menu, from a mockup")
   await context.close()
 }
 
+section('The map from a node, from a mockup')
+{
+  const { context, page } = await freshPage(browser, { width: 1440, height: 900, table: 'text' })
+  await page.goto(`${BASE}/run/mockups/shop?table=text`, MOCKUP)
+  await shows(page, 'shop', 30_000)
+  await page.getByRole('button', { name: 'Map', exact: true }).click()
+  check('the map can be looked at from the registry', await shows(page, 'map'))
+  await page.getByRole('button', { name: 'Back to the registry' }).click()
+  check('and the registry is still there to go back to', await shows(page, 'shop'))
+  await page.locator('[data-table]').first().focus()
+  await page.keyboard.press('m')
+  check('M looks at it too', await shows(page, 'map'))
+  await context.close()
+}
+
 section('The sigil stones, from a mockup')
 {
   const { context, page } = await freshPage(browser, { width: 1440, height: 900, table: 'text' })

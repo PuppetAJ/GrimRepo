@@ -5,7 +5,9 @@ import * as THREE from 'three'
 import { faceContent, faceLights, faceTexture, type loadCardAssets } from './faces.ts'
 import { BACK_RELIEF, bakedDisk, Disk, diskMaterials } from './Disk.tsx'
 import { claimCursor, releaseCursor } from './cursor.ts'
+import { STILL } from './factory/constants.ts'
 import { CARD, DECK, DISK, PILE, type Vec3 } from './layout.ts'
+import { TINT } from './palette.ts'
 
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
 type Click = (event: ThreeEvent<MouseEvent>) => void
@@ -169,6 +171,7 @@ function Stack({
 export function Deck({
   count,
   total,
+  reshuffle = 0,
   onClick,
   active,
   hint,
@@ -176,6 +179,8 @@ export function Deck({
 }: {
   count: number
   total: number
+  /** With the deck empty, how many cards a draw shuffles back in. */
+  reshuffle?: number
   onClick: Click
   active: boolean
   hint?: number
@@ -194,9 +199,67 @@ export function Deck({
         cursor="draw"
         blocked={full ? 'full' : undefined}
       >
-        <Stack layers={layers} />
+        {layers ? <Stack layers={layers} /> : reshuffle ? <EmptyDeck cards={reshuffle} active={active} /> : null}
       </Nudge>
     </group>
+  )
+}
+
+/** Where the empty deck was: an outline that says a draw reshuffles, pulsing while drawing is the player's move. */
+function EmptyDeck({ cards, active }: { cards: number; active: boolean }) {
+  const depth = CARD.height * DISK.compact
+  const material = useMemo(() => {
+    const element = document.createElement('canvas')
+    element.width = 300
+    element.height = Math.round((300 * depth) / CARD.width)
+    const context = element.getContext('2d') as CanvasRenderingContext2D
+    const { width, height } = element
+    // Drawn white and tinted by the material's bright green, so it glows as the board's lit parts do.
+    context.strokeStyle = '#ffffff'
+    context.fillStyle = '#ffffff'
+    context.lineWidth = 8
+    context.setLineDash([22, 14])
+    context.strokeRect(10, 10, width - 20, height - 20)
+    context.setLineDash([])
+    // A circling arrow, for the cards going back in.
+    const middle = { x: width / 2, y: height * 0.36 }
+    context.lineWidth = 12
+    context.beginPath()
+    context.arc(middle.x, middle.y, 46, Math.PI * 0.15, Math.PI * 1.75)
+    context.stroke()
+    const tip = { x: middle.x + 46 * Math.cos(Math.PI * 1.75), y: middle.y + 46 * Math.sin(Math.PI * 1.75) }
+    context.beginPath()
+    context.moveTo(tip.x + 24, tip.y - 2)
+    context.lineTo(tip.x - 6, tip.y - 20)
+    context.lineTo(tip.x - 4, tip.y + 18)
+    context.closePath()
+    context.fill()
+    context.textAlign = 'center'
+    context.textBaseline = 'middle'
+    context.font = '58px VT323'
+    context.fillText('RESHUFFLE', middle.x, height * 0.68)
+    context.font = '44px VT323'
+    context.fillText(`${cards} ${cards === 1 ? 'card' : 'cards'}`, middle.x, height * 0.84)
+    const map = new THREE.CanvasTexture(element)
+    map.colorSpace = THREE.SRGBColorSpace
+    // A little under the board's glow, so the words stay readable through the bloom.
+    const color = new THREE.Color(...TINT.glowHdr).multiplyScalar(0.65)
+    return new THREE.MeshBasicMaterial({ map, color, transparent: true, depthWrite: false, toneMapped: false })
+  }, [cards, depth])
+  useEffect(
+    () => () => {
+      material.map?.dispose()
+      material.dispose()
+    },
+    [material],
+  )
+  useFrame(({ clock }) => {
+    material.opacity = active && !STILL ? 0.65 + 0.35 * Math.sin(clock.elapsedTime * 4) : active ? 1 : 0.45
+  })
+  return (
+    <mesh rotation-x={-Math.PI / 2} position-y={0.003} material={material}>
+      <planeGeometry args={[CARD.width, depth]} />
+    </mesh>
   )
 }
 

@@ -1,13 +1,14 @@
-import { Swords } from 'lucide-react'
+import { Map as MapIcon, Swords } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button.tsx'
 import { prefersReducedMotion } from '../../../lib/motion.ts'
 import type { Seat } from '../../controls.tsx'
+import { forTable } from '../../shortcuts.ts'
 import { loadCardAssets } from '../../table/faces.ts'
 import { Battle3D } from '../../table/Table3D.tsx'
 import { TableStage, useStage } from '../../table/TableStage.tsx'
 import type { Layout } from '../../text/useTextTable.ts'
-import { mapTitle, ScreenBody, useRunScreen, type RunView } from '../screens.tsx'
+import { BACK_TO, mapTitle, ScreenBody, useRunScreen, type RunView } from '../screens.tsx'
 import { Screen, ScreenActions } from '../text/Screen.tsx'
 import type { RunReady } from '../useRun.ts'
 import { BetweenBattles, warp, windowHeight } from './RunStage.tsx'
@@ -29,6 +30,8 @@ function Between({
   leaving,
   onLeft,
   onBack,
+  back = 'the battle',
+  onMap,
   onText,
 }: {
   run: RunReady
@@ -38,8 +41,12 @@ function Between({
   glide: boolean
   leaving: boolean
   onLeft: () => void
-  /** Set while looking at the map from a battle, to go back to the table. */
+  /** Set while looking at the map from a battle or a node's screen, to go back to it. */
   onBack?: () => void
+  /** Where `onBack` returns to, as its button says. */
+  back?: string
+  /** Set on a node's screen, to look at the map without leaving it. */
+  onMap?: () => void
   onText: () => void
 }) {
   const stage = useStage()
@@ -110,9 +117,22 @@ function Between({
         >
           {onBack ? (
             <ScreenActions>
-              <Button variant="outline" onClick={onBack} disabled={leaving}>
-                <Swords aria-hidden />
-                Back to the table
+              <Button variant="outline" onClick={onBack} disabled={leaving} aria-keyshortcuts="M">
+                {back === 'the battle' ? <Swords aria-hidden /> : null}
+                Back to {back}
+              </Button>
+            </ScreenActions>
+          ) : onMap && !fading ? (
+            <ScreenActions>
+              <Button
+                variant="outline"
+                onClick={onMap}
+                disabled={leaving}
+                aria-keyshortcuts="M"
+                title="Look at the map"
+              >
+                <MapIcon aria-hidden />
+                Map
               </Button>
             </ScreenActions>
           ) : null}
@@ -165,15 +185,30 @@ export default function Run3D({
   replay?: boolean
 }) {
   const { view, battle } = useRunScreen(run)
-  // Looking back at the map from a battle shows the room's map, with the battle packed away until the player returns.
-  const [look, setLook] = useState(false)
   const [inventory, setInventory] = useState(false)
-  if (look && view !== 'battle') setLook(false)
-  const looking = look && view === 'battle'
+  // Looking at the map from a battle or a node's screen shows the room's map, with the battle packed away until the
+  // player returns; the look belongs to that screen, so the next one starts on itself.
+  const key = `${run.generation}:${run.state.stage}:${run.state.at}`
+  const here = `${key}:${view}`
+  const [lookingFrom, setLookingFrom] = useState<string | null>(null)
+  const canLook = view in BACK_TO
+  const looking = canLook && lookingFrom === here
+  const setLook = (on: boolean) => setLookingFrom(on ? here : null)
+  // M looks at the map from a node's screen and back; a battle's own M is the table's.
+  const toggle = useRef(() => {})
+  useEffect(() => {
+    toggle.current = () => canLook && (view !== 'battle' || looking) && setLook(!looking)
+  })
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() === 'm' && !event.repeat && forTable(event)) toggle.current()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
   const wanted: Scene = view === 'battle' && !looking ? 'battle' : 'between'
   const roomView: RunView = looking ? 'map' : view
   // The last battle, so its table can be packed away after the run has moved on.
-  const key = `${run.generation}:${run.state.stage}:${run.state.at}`
   const [kept, setKept] = useState(battle && { game: battle, key })
   if (battle && (kept?.game.state !== battle.state || kept.key !== key)) setKept({ game: battle, key })
   // A scene leaves before the next one comes in; the camera glides only after one has shown the other.
@@ -225,6 +260,8 @@ export default function Run3D({
             leaving={shown.leaving}
             onLeft={left}
             onBack={looking ? () => setLook(false) : undefined}
+            back={BACK_TO[view]}
+            onMap={canLook && view !== 'battle' && !looking ? () => setLook(true) : undefined}
             onText={onText}
           />
         )}

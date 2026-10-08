@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { card, type RunCard, type Unit } from 'shared'
+import { card, type CardType, type RunCard, type Unit } from 'shared'
 import { Sigil } from '../../CardReader.tsx'
 import { asUnit } from '../nodes.ts'
 
 const LIGHT = '#b8f5c4'
-import { CardReader, CardSearch, SEARCH_FROM, SigilIcons, useCardSearch } from './CardBits.tsx'
+import { CardReader, CardSearch, SEARCH_FROM, SigilIcons, TypeIcon, useCardSearch } from './CardBits.tsx'
 
 /** The deck as rows of name, sigils and stats; a long name is cut short and opens the whole card. */
 export function DeckTable({ deck, caption }: { deck: RunCard[]; caption: string }) {
@@ -49,8 +49,9 @@ export function DeckTable({ deck, caption }: { deck: RunCard[]; caption: string 
                 >
                   {card(entry.card).name}
                 </button>
-                {/* Every row keeps a line for sigils, so rows with and without them are the same height. */}
-                <span className="mt-1 flex h-7 items-center">
+                {/* Every row keeps a line for its type and sigils, so rows with and without them are the same height. */}
+                <span className="mt-1 flex h-7 items-center gap-1">
+                  {card(entry.card).type ? <TypeIcon type={card(entry.card).type as CardType} size={14} /> : null}
                   <SigilIcons sigils={entry.sigils} size={14} />
                 </span>
               </th>
