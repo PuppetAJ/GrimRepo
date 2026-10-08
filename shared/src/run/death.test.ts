@@ -13,7 +13,7 @@ import {
   deathCost,
   deathCostHand,
   deathParts,
-  deathSigilCard,
+  deathSigilHand,
   deathSkipBonus,
   deathStatsHand,
   rivalAllowed,
@@ -82,14 +82,21 @@ describe('building a death card', () => {
   ]
   const lost = (rng = 7, cards = deck): RunState => ({ ...createRun({ seed: 3 }), rng, deck: cards })
   const has = (hand: RunCard[], id: number) => hand.some((part) => part.id === id)
-  /** A lost run that deals this cost card, and then this stats card for it, found by trying the run's random state. */
-  function dealing(cost: number, stats: number, cards = deck): RunState {
-    for (let rng = 1; rng < 20_000; rng++) {
+  /** A lost run that deals this cost card, this stats card for it, and this sigil card, found by trying its random state. */
+  function dealing(cost: number, stats: number, sigils?: number, cards = deck): RunState {
+    for (let rng = 1; rng < 50_000; rng++) {
       const state = lost(rng, cards)
-      if (has(deathCostHand(state), cost) && has(deathStatsHand(state, cost), stats)) return state
+      if (
+        has(deathCostHand(state), cost) &&
+        has(deathStatsHand(state, cost), stats) &&
+        (sigils === undefined || has(deathSigilHand(state, cost, stats), sigils))
+      )
+        return state
     }
     throw new Error('No deal matched')
   }
+  const firstSigils = (state: RunState, cost: number, stats: number) =>
+    (deathSigilHand(state, cost, stats)[0] as RunCard).id
 
   it('deals the cost hand first, then a stats hand for the cost picked, the same every replay', () => {
     const state = lost()
@@ -110,32 +117,35 @@ describe('building a death card', () => {
     }
   })
 
-  it('takes the cost from one, the stats and art from another, and every sigil of a card chance picks', () => {
-    const state = dealing(4, 3)
-    const built = buildDeathCard(state, { cost: 4, stats: 3, name: 'Grim  Ping ' })
+  it('takes the cost from one, the stats and art from another, and every sigil of a third', () => {
+    const state = dealing(4, 3, 1)
+    const built = buildDeathCard(state, { cost: 4, stats: 3, sigils: 1, name: 'Grim  Ping ' })
     assert.ok(built.ok)
     const def = card(built.id)
-    const chance = deathSigilCard(state, 4, 3)
     assert.deepEqual(
       [def.name, def.cost, def.attack, def.health, def.art, def.sigils],
-      ['Grim Ping', 1, 4, 2, 'NullPointer', chance?.sigils ?? []],
+      ['Grim Ping', 1, 4, 2, 'NullPointer', ['broadcast']],
     )
-    assert.deepEqual(deathSigilCard(state, 4, 3), chance, 'the same chance card every replay')
+    assert.equal(deathSigilHand(state, 4, 3).length, 3)
+    assert.deepEqual(deathSigilHand(lost(state.rng), 4, 3), deathSigilHand(state, 4, 3), 'the same hand every replay')
   })
 
   it('keeps the buffs the stats card gained in the run', () => {
     const state = dealing(2, 2)
-    const built = buildDeathCard(state, { cost: 2, stats: 2, name: 'Big Iron' })
+    const built = buildDeathCard(state, { cost: 2, stats: 2, sigils: firstSigils(state, 2, 2), name: 'Big Iron' })
     assert.ok(built.ok)
     assert.equal(card(built.id).attack, 15)
   })
 
   it('refuses a card from outside its hand, and a bad name', () => {
     const state = dealing(4, 3)
+    const sigils = firstSigils(state, 4, 3)
     const outside = deck.find((part) => !has(deathStatsHand(state, 4), part.id)) as RunCard
-    assert.ok(!buildDeathCard(state, { cost: 4, stats: outside.id, name: 'Nope' }).ok)
+    assert.ok(!buildDeathCard(state, { cost: 4, stats: outside.id, sigils, name: 'Nope' }).ok)
+    const notDealt = deck.find((part) => !has(deathSigilHand(state, 4, 3), part.id)) as RunCard
+    assert.ok(!buildDeathCard(state, { cost: 4, stats: 3, sigils: notDealt.id, name: 'Nope' }).ok)
     for (const name of ['', '   ', 'Seventeen chars!!', '<b>', ' -lead'])
-      assert.ok(!buildDeathCard(state, { cost: 4, stats: 3, name }).ok, name)
+      assert.ok(!buildDeathCard(state, { cost: 4, stats: 3, sigils, name }).ok, name)
   })
 
   it('costs at most one less than the stats card, and something if that card did', () => {
@@ -156,7 +166,8 @@ describe('building a death card', () => {
       assert.ok(!has(costs, 9))
       for (const costCard of costs) {
         assert.ok(!has(deathStatsHand(state, costCard.id), 9))
-        assert.notEqual(deathSigilCard(state, costCard.id, 1)?.id, 9)
+        for (const statsCard of deathStatsHand(state, costCard.id))
+          assert.ok(!has(deathSigilHand(state, costCard.id, statsCard.id), 9))
       }
     }
   })

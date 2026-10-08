@@ -5,21 +5,16 @@ import { asUnit } from '../nodes.ts'
 
 const LIGHT = '#b8f5c4'
 import { CardReader, CardSearch, SEARCH_FROM, SigilIcons, useCardSearch } from './CardBits.tsx'
-import { useScreenMode } from './slots.ts'
 
 /** The deck as rows of name, sigils and stats; a long name is cut short and opens the whole card. */
 export function DeckTable({ deck, caption }: { deck: RunCard[]; caption: string }) {
   const [reading, setReading] = useState<Unit | null>(null)
   const { query, setQuery, matches } = useCardSearch()
-  const terminal = useScreenMode() === 'terminal'
   const rows = [...deck].sort((a, b) => card(a.card).name.localeCompare(card(b.card).name)).filter(matches)
   return (
     <div className="flex min-w-0 flex-col gap-2">
       {deck.length >= SEARCH_FROM ? (
-        // Pinned while the deck scrolls under it, on a band of the terminal's ground; over the 3D table, on nothing.
-        <div className={`sticky top-0 z-10 pb-1 ${terminal ? 'bg-p03-ground' : ''}`}>
-          <CardSearch query={query} onChange={setQuery} label={`Search ${caption.toLowerCase()}`} />
-        </div>
+        <CardSearch query={query} onChange={setQuery} label={`Search ${caption.toLowerCase()}`} />
       ) : null}
       <table className="w-full table-fixed text-left text-lg leading-tight">
         <caption className="sr-only">{caption}</caption>
@@ -29,7 +24,8 @@ export function DeckTable({ deck, caption }: { deck: RunCard[]; caption: string 
           <col className="w-[4.5rem]" />
         </colgroup>
         <thead className="text-base text-p03-dim">
-          <tr>
+          {/* A line under the headings always, even when the search leaves no rows under it. */}
+          <tr className="border-b border-p03-edge/60">
             <th scope="col" className="pb-1 font-normal">
               Card
             </th>
@@ -43,7 +39,7 @@ export function DeckTable({ deck, caption }: { deck: RunCard[]; caption: string 
         </thead>
         <tbody>
           {rows.map((entry) => (
-            <tr key={entry.id} className="border-t border-p03-edge/60 align-top">
+            <tr key={entry.id} className="border-b border-p03-edge/60 align-top last:border-b-0">
               <th scope="row" className="py-1 pr-2 font-normal">
                 <button
                   type="button"

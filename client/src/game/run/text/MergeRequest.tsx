@@ -28,16 +28,6 @@ export function MergeRequest({ run }: { run: RunReady }) {
           <p className="text-lg">
             {first ? `Now its copy: pick another ${card(first.card).name}.` : 'Pick a card you hold twice.'}
           </p>
-          {first && second ? (
-            <button
-              type="button"
-              data-action="fuse"
-              onClick={() => run.act({ type: 'fuse', card: first.id, with: second.id })}
-              className={`${SIDE_BUTTON} self-start border-p03 px-4 text-lg`}
-            >
-              Merge into one {card(first.card).name}, {first.attack + second.attack}/{first.health + second.health}
-            </button>
-          ) : null}
         </div>
       </ScreenBar>
       <CardList
@@ -49,6 +39,18 @@ export function MergeRequest({ run }: { run: RunReady }) {
         data={(unit) => ({ 'data-action': 'fuse-card', 'data-card': unit.uid })}
         size="w-24 sm:w-28"
       />
+      {/* Below the cards, grayed out until both copies are picked. */}
+      <button
+        type="button"
+        data-action="fuse"
+        disabled={!(first && second)}
+        onClick={() => first && second && run.act({ type: 'fuse', card: first.id, with: second.id })}
+        className={`${SIDE_BUTTON} self-center border-p03 px-4 text-lg disabled:opacity-40`}
+      >
+        {first && second
+          ? `Merge into one ${card(first.card).name}, ${first.attack + second.attack}/${first.health + second.health}`
+          : 'Merge the two copies'}
+      </button>
     </div>
   )
 }

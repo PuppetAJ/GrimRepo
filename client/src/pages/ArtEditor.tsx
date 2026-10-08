@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState, type PointerEvent } from 'react'
 import { CARD_TYPES, CARDS, ITEMS as TOOLS, SIGILS, type CardType } from 'shared'
-import { cardArt, hasArt, iconArt, type IconId } from '../game/art.ts'
+import { cardArt, hasArt, iconArt, SPRITE_FPS, type IconId } from '../game/art.ts'
 import { NotFound } from './NotFound.tsx'
 
 type Kind = 'cards' | 'icons'
-/** `size` overrides the kind's, for an icon drawn larger, as the campfire's fire is. */
-type Item = { kind: Kind; id: string; name: string; size?: number }
+/** `size` overrides the kind's, for an icon drawn larger; `frames` marks an animation, saved as a strip of frames. */
+type Item = { kind: Kind; id: string; name: string; size?: number; frames?: boolean }
+
+/** The most frames an animation holds. */
+const MOST_FRAMES = 16
 
 const SIZE: Record<Kind, number> = { cards: 24, icons: 8 }
 const CELL: Record<Kind, number> = { cards: 18, icons: 44 }
@@ -21,7 +24,7 @@ const ITEMS: Item[] = [
   })),
   { kind: 'icons', id: 'attack', name: 'Attack' },
   { kind: 'icons', id: 'health', name: 'Health' },
-  { kind: 'icons', id: 'fire', name: 'Fire (16 × 16)', size: 16 },
+  { kind: 'icons', id: 'fire', name: 'Fire (16 × 16, animated)', size: 16, frames: true },
 ]
 
 const sizeOf = (item: Item) => item.size ?? SIZE[item.kind]
@@ -60,13 +63,39 @@ async function pixelsOf(url: string, size: number): Promise<boolean[]> {
   return Array.from({ length: size * size }, (_, index) => (data[index * 4 + 3] as number) > 127)
 }
 
-/** The pixels as a black-on-transparent PNG, base64. */
-function pngOf(pixels: boolean[], size: number): string {
+/** An animation's frames, read from its strip: frames side by side, each as wide as the art is tall. */
+async function framesOf(url: string, size: number): Promise<boolean[][]> {
+  const image = new Image()
+  image.src = url
+  await image.decode()
+  const count = Math.max(1, Math.min(MOST_FRAMES, Math.round(image.naturalWidth / image.naturalHeight)))
   const canvas = document.createElement('canvas')
-  canvas.width = canvas.height = size
+  canvas.width = size * count
+  canvas.height = size
+  const context = canvas.getContext('2d') as CanvasRenderingContext2D
+  context.drawImage(image, 0, 0, size * count, size)
+  const { data } = context.getImageData(0, 0, size * count, size)
+  return Array.from({ length: count }, (_, frame) =>
+    Array.from({ length: size * size }, (__, index) => {
+      const x = frame * size + (index % size)
+      const y = Math.floor(index / size)
+      return (data[(y * size * count + x) * 4 + 3] as number) > 127
+    }),
+  )
+}
+
+/** The frames as a black-on-transparent PNG strip, base64; a single frame is just the image. */
+function pngOf(frames: boolean[][], size: number): string {
+  const canvas = document.createElement('canvas')
+  canvas.width = size * frames.length
+  canvas.height = size
   const context = canvas.getContext('2d') as CanvasRenderingContext2D
   context.fillStyle = '#000'
-  pixels.forEach((on, index) => on && context.fillRect(index % size, Math.floor(index / size), 1, 1))
+  frames.forEach((pixels, frame) =>
+    pixels.forEach(
+      (on, index) => on && context.fillRect(frame * size + (index % size), Math.floor(index / size), 1, 1),
+    ),
+  )
   return canvas.toDataURL('image/png').split(',')[1] as string
 }
 
@@ -76,19 +105,30 @@ export function ArtEditor() {
     () => ITEMS.find((item) => keyOf(item) === location.hash.slice(1)) ?? ITEMS[0]!,
   )
   const size = sizeOf(selected)
-  const [pixels, setPixels] = useState<boolean[]>([])
-  const [loaded, setLoaded] = useState<boolean[]>([])
+  // Every drawing is frames; most have one.
+  const [frames, setFrames] = useState<boolean[][]>([[]])
+  const [loaded, setLoaded] = useState<boolean[][]>([[]])
+  const [frame, setFrame] = useState(0)
+  const pixels = frames[frame] ?? []
+  const setPixels = (next: boolean[] | ((now: boolean[]) => boolean[])) =>
+    setFrames((all) =>
+      all.map((current, at) => (at === frame ? (typeof next === 'function' ? next(current) : next) : current)),
+    )
   const [status, setStatus] = useState('')
   const painting = useRef<boolean | null>(null)
 
   useEffect(() => {
     let live = true
-    void pixelsOf(urlOf(selected), sizeOf(selected)).then((read) => {
+    const read = selected.frames
+      ? framesOf(urlOf(selected), sizeOf(selected))
+      : pixelsOf(urlOf(selected), sizeOf(selected)).then((one) => [one])
+    void read.then((read) => {
       if (!live) return
       // A stand-in starts blank, so the new drawing doesn't begin as a question mark.
-      const start = hasArt(selected.kind, selected.id) ? read : read.map(() => false)
-      setPixels(start)
+      const start = hasArt(selected.kind, selected.id) ? read : read.map((one) => one.map(() => false))
+      setFrames(start)
       setLoaded(start)
+      setFrame(0)
       setStatus('')
     })
     history.replaceState(null, '', `#${keyOf(selected)}`)
@@ -112,12 +152,26 @@ export function ArtEditor() {
     const response = await fetch('/__art/save', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ kind: selected.kind, id: selected.id, png: pngOf(pixels, size) }),
+      body: JSON.stringify({ kind: selected.kind, id: selected.id, png: pngOf(frames, size) }),
     })
     setStatus(response.ok ? 'Saved' : `Not saved: ${await response.text()}`)
-    if (response.ok) setLoaded(pixels)
+    if (response.ok) setLoaded(frames)
   }
-  const changed = pixels.some((pixel, index) => pixel !== loaded[index])
+  const changed =
+    frames.length !== loaded.length ||
+    frames.some((one, at) => one.some((pixel, index) => pixel !== loaded[at]?.[index]))
+  // The frame before, faint under this one, to draw the next pose against.
+  const onion = selected.frames && frames.length > 1 ? frames[(frame + frames.length - 1) % frames.length] : null
+  const addFrame = () => {
+    if (frames.length >= MOST_FRAMES) return
+    setFrames((all) => [...all.slice(0, frame + 1), [...pixels], ...all.slice(frame + 1)])
+    setFrame(frame + 1)
+  }
+  const deleteFrame = () => {
+    if (frames.length <= 1) return
+    setFrames((all) => all.filter((_, at) => at !== frame))
+    setFrame(Math.max(0, frame - 1))
+  }
   const button = 'rounded border border-border px-3 py-1 text-sm hover:bg-accent disabled:opacity-40'
 
   return (
@@ -181,7 +235,15 @@ export function ArtEditor() {
             {pixels.map((on, index) => (
               <span
                 key={index}
-                className={on ? 'bg-black' : (index + Math.floor(index / size)) % 2 ? 'bg-neutral-100' : 'bg-white'}
+                className={
+                  on
+                    ? 'bg-black'
+                    : onion?.[index]
+                      ? 'bg-neutral-300'
+                      : (index + Math.floor(index / size)) % 2
+                        ? 'bg-neutral-100'
+                        : 'bg-white'
+                }
                 style={{ height: cellOf(selected) }}
               />
             ))}
@@ -201,13 +263,61 @@ export function ArtEditor() {
               className="bg-[#07130b] [image-rendering:pixelated]"
               style={{ width: size * 4, height: size * 4 }}
             />
+            {selected.frames && frames.length > 1 ? (
+              <>
+                <span className="text-muted-foreground">Playing, {SPRITE_FPS} frames a second</span>
+                <Playing frames={frames} size={size} />
+              </>
+            ) : null}
           </div>
         </div>
+        {selected.frames ? (
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span>
+              Frame {frame + 1} of {frames.length}
+            </span>
+            <button
+              type="button"
+              aria-label="Previous frame"
+              className={button}
+              disabled={frames.length < 2}
+              onClick={() => setFrame((frame + frames.length - 1) % frames.length)}
+            >
+              ◀
+            </button>
+            <button
+              type="button"
+              aria-label="Next frame"
+              className={button}
+              disabled={frames.length < 2}
+              onClick={() => setFrame((frame + 1) % frames.length)}
+            >
+              ▶
+            </button>
+            <button type="button" className={button} disabled={frames.length >= MOST_FRAMES} onClick={addFrame}>
+              Copy to a new frame
+            </button>
+            <button type="button" className={button} disabled={frames.length <= 1} onClick={deleteFrame}>
+              Delete frame
+            </button>
+            <span className="text-muted-foreground">
+              Up to {MOST_FRAMES}; the frame before shows faintly behind this one.
+            </span>
+          </div>
+        ) : null}
         <div className="flex flex-wrap gap-2">
           <button type="button" className={button} disabled={!changed} onClick={() => void save()}>
             Save
           </button>
-          <button type="button" className={button} disabled={!changed} onClick={() => setPixels(loaded)}>
+          <button
+            type="button"
+            className={button}
+            disabled={!changed}
+            onClick={() => {
+              setFrames(loaded)
+              setFrame(Math.min(frame, loaded.length - 1))
+            }}
+          >
             Undo changes
           </button>
           <button type="button" className={button} onClick={() => setPixels(pixels.map(() => false))}>
@@ -242,5 +352,30 @@ export function ArtEditor() {
         </div>
       </section>
     </div>
+  )
+}
+
+/** The frames playing in a loop at size, as the game shows them. */
+function Playing({ frames, size }: { frames: boolean[][]; size: number }) {
+  const [at, setAt] = useState(0)
+  useEffect(() => {
+    const tick = setInterval(() => setAt((now) => now + 1), 1000 / SPRITE_FPS)
+    return () => clearInterval(tick)
+  }, [])
+  const pixels = frames[at % frames.length] ?? []
+  return (
+    <canvas
+      ref={(canvas) => {
+        const context = canvas?.getContext('2d')
+        if (!canvas || !context) return
+        context.clearRect(0, 0, size, size)
+        context.fillStyle = '#ffb454'
+        pixels.forEach((on, index) => on && context.fillRect(index % size, Math.floor(index / size), 1, 1))
+      }}
+      width={size}
+      height={size}
+      className="bg-[#07130b] [image-rendering:pixelated]"
+      style={{ width: size * 4, height: size * 4 }}
+    />
   )
 }

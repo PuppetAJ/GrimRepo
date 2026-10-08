@@ -86,7 +86,7 @@ export function CardList({
           const chosen = picked === unit.uid || Boolean(several?.includes(unit.uid))
           const flashed = flash?.uid === unit.uid ? flash : undefined
           const face = flashed ? (
-            <span key={flashed.key} className="relative block motion-safe:animate-[warm-pop_650ms_ease-out]">
+            <span key={flashed.key} className="relative block motion-safe:animate-[warm-pop_450ms_ease-out]">
               <PixelCard unit={unit} />
               {/* The rise animation centers the text on this point itself. */}
               <Rising text={flashed.text} tone="note" className="top-1/3 left-1/2 text-2xl" />
@@ -110,9 +110,17 @@ export function CardList({
                   {face}
                 </button>
               ) : (
-                <div className="touch-none p-1 select-none" {...hold.props(unit)}>
+                // Only shown, not chosen: a click or a hold opens it to read.
+                <button
+                  type="button"
+                  data-read
+                  aria-label={`Read ${describe(unit)}`}
+                  {...hold.props(unit)}
+                  onClick={() => !hold.read() && setReading(unit)}
+                  className="touch-none rounded-md p-1 select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03"
+                >
                   {face}
-                </div>
+                </button>
               )}
               <Caption unit={unit} detail={detail} onRead={() => setReading(unit)} />
             </li>
@@ -175,6 +183,7 @@ export function ReadableCard({
     <>
       <button
         type="button"
+        data-read
         aria-label={label ?? `Read ${card(unit.card).name}`}
         {...hold.props(unit)}
         onClick={() => !hold.read() && setReading(unit)}

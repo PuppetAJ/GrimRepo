@@ -1,8 +1,10 @@
 import { Link } from '@tanstack/react-router'
+import { House, RotateCcw } from 'lucide-react'
 import { deathSkipBonus, scoreRun, STAGES } from 'shared'
 import { number } from '../../../lib/format.ts'
 import { Panel } from '../../text/Panel.tsx'
 import type { RunReady } from '../useRun.ts'
+import { Box } from './Box.tsx'
 import { DeathCardBuilder } from './DeathCardBuilder.tsx'
 import { DeckTable } from './DeckTable.tsx'
 import { HEADER_BUTTON, ScreenActions } from './Screen.tsx'
@@ -26,11 +28,20 @@ export function Summary({ run }: { run: RunReady }) {
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 pb-6">
       {/* In the header, so they're in reach without scrolling past the deck. */}
       <ScreenActions>
-        <button type="button" data-action="again" onClick={run.again} className={`${HEADER_BUTTON} border-p03`}>
-          Start another run
+        {/* Short on a phone, so the title keeps room beside them. */}
+        <button
+          type="button"
+          data-action="again"
+          aria-label="Start another run"
+          onClick={run.again}
+          className={`${HEADER_BUTTON} border-p03`}
+        >
+          <RotateCcw aria-hidden className="size-5 sm:hidden" />
+          <span className="hidden sm:inline">Start another run</span>
         </button>
-        <Link to="/" className={HEADER_BUTTON}>
-          Home
+        <Link to="/" aria-label="Home" className={HEADER_BUTTON}>
+          <House aria-hidden className="size-5 sm:hidden" />
+          <span className="hidden sm:inline">Home</span>
         </Link>
       </ScreenActions>
       <p className="text-3xl text-p03">
@@ -51,15 +62,20 @@ export function Summary({ run }: { run: RunReady }) {
         </dl>
         {run.id !== -1 && !over ? <p className="mt-2 text-lg text-p03-dim">Saving the result…</p> : null}
       </Panel>
-      {won ? null : <DeathCardBuilder run={run} />}
-      <section aria-labelledby="final-deck" className="flex flex-col gap-3">
-        <h3 id="final-deck" className="text-p03">
-          The deck it ended with ({state.deck.length})
-        </h3>
-        <div className="max-w-xl">
-          <DeckTable deck={state.deck} caption="The deck it ended with" />
-        </div>
-      </section>
+      {/* Each part in a box of its own, like the facts above. */}
+      {won ? null : (
+        <Box>
+          <DeathCardBuilder run={run} />
+        </Box>
+      )}
+      <Box>
+        <section aria-labelledby="final-deck" className="flex flex-col gap-3">
+          <h3 id="final-deck" className="text-p03">
+            The deck the run ended with ({state.deck.length})
+          </h3>
+          <DeckTable deck={state.deck} caption="The deck the run ended with" />
+        </section>
+      </Box>
     </div>
   )
 }

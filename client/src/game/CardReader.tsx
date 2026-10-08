@@ -94,7 +94,7 @@ function Stats({ unit, icon, className }: { unit: Shown; icon: number; className
 /** Parts left blank, as on a death card being built: each fills in, with a pop, once it's chosen. */
 type Blank = { cost?: boolean; art?: boolean; stats?: boolean; sigils?: boolean }
 
-const POP = 'motion-safe:animate-[warm-pop_650ms_ease-out]'
+const POP = 'motion-safe:animate-[warm-pop_400ms_ease-out]'
 
 export function PixelCard({ unit, blank }: { unit: Shown; blank?: Blank }) {
   const def = card(unit.card)
@@ -236,8 +236,13 @@ export function FlatReaderBody({ unit }: { unit: Shown }) {
         >
           <TypeLine id={unit.card} className="flex gap-1" icon={14} />
           {unit.sigils.map((sigil) => (
-            <p key={sigil}>
-              <strong>{SIGILS[sigil].name}.</strong> {SIGILS[sigil].text}
+            <p key={sigil} className="flex gap-1">
+              <span className="shrink-0 pt-0.5">
+                <Sigil id={sigil} size={14} />
+              </span>
+              <span>
+                <strong>{SIGILS[sigil].name}.</strong> {SIGILS[sigil].text}
+              </span>
             </p>
           ))}
         </div>

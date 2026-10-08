@@ -28,6 +28,7 @@ type Props = {
   onLeft?: () => void
   /** In a run, looks back at the map. */
   onMap?: () => void
+  onInventory?: () => void
 }
 
 /** A quick battle's own table: the stage and the battle on it, loaded with the page. */
@@ -40,7 +41,7 @@ export default function Table3D(props: Props) {
 }
 
 /** A battle on whichever stage it's put on: its cards and controls come and go, the stage stays. */
-export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, onMap }: Props) {
+export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, onMap, onInventory }: Props) {
   const assets = use(loadCardAssets())
   const stage = useStage()
   const { playback, busy, skip } = usePlayback(game)
@@ -185,6 +186,7 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
       {stage.ready && !leaving ? (
         <Hud
           onMap={onMap}
+          onInventory={onInventory}
           game={playing}
           view={playback.view}
           busy={busy}

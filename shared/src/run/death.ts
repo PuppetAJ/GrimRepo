@@ -4,11 +4,12 @@ import { Rng } from '../rng.ts'
 import { DEATH_SKIP_BONUS } from '../scoring.ts'
 import type { RunCard, RunState } from './types.ts'
 
-/** One card from each of a lost run's two hands, whose cost and whose stats and art, and a name; chance picks the sigils. */
-export type DeathChoice = { cost: number; stats: number; name: string }
+/** One card from each of a lost run's three hands, whose cost, whose stats and art, and whose sigils, and a name. */
+export type DeathChoice = { cost: number; stats: number; sigils: number; name: string }
 
 /** The highest a stat can be written into the card's id. */
-const MOST = 999
+export const DEATH_STAT_MOST = 999
+const MOST = DEATH_STAT_MOST
 
 /** Cards that can be parts: any but a death card, so a cost can't be shaved a little more each run. */
 export const deathParts = (deck: RunCard[]): RunCard[] => deck.filter((entry) => !isDeathCard(entry.card))
@@ -54,10 +55,12 @@ export function deathStatsHand(state: RunState, cost: number): RunCard[] {
     .slice(0, HAND_SIZE)
 }
 
-/** The card whose sigils the death card takes: chance's pick, not the player's. */
-export function deathSigilCard(state: RunState, cost: number, stats: number): RunCard | null {
-  const parts = deathParts(state.deck)
-  return parts.length ? stream(state, SIGIL_SALT ^ Math.imul(cost, 31) ^ stats).pick(parts) : null
+/** The third hand, once the stats are picked: three cards from the deck, one to give every sigil it has. */
+export function deathSigilHand(state: RunState, cost: number, stats: number): RunCard[] {
+  if (!deathStatsHand(state, cost).some((entry) => entry.id === stats)) return []
+  return stream(state, SIGIL_SALT ^ Math.imul(cost, 31) ^ stats)
+    .shuffle(deathParts(state.deck))
+    .slice(0, HAND_SIZE)
 }
 
 export function buildDeathCard(
@@ -66,18 +69,18 @@ export function buildDeathCard(
 ): { ok: true; id: string } | { ok: false; reason: string } {
   const costCard = deathCostHand(state).find((entry) => entry.id === choice.cost)
   const statsCard = deathStatsHand(state, choice.cost).find((entry) => entry.id === choice.stats)
-  if (!costCard || !statsCard) return { ok: false, reason: 'Choose one card from each hand' }
+  const sigilCard = deathSigilHand(state, choice.cost, choice.stats).find((entry) => entry.id === choice.sigils)
+  if (!costCard || !statsCard || !sigilCard) return { ok: false, reason: 'Choose one card from each hand' }
   const problem = deathNameProblem(choice.name)
   if (problem) return { ok: false, reason: problem }
-  const sigilCard = deathSigilCard(state, choice.cost, choice.stats)
   const id = deathCardId({
     name: tidyDeathName(choice.name),
     cost: deathCost(costCard, statsCard),
     attack: Math.min(statsCard.attack, MOST),
     health: Math.min(statsCard.health, MOST),
     art: statsCard.card,
-    // Every sigil the chance card carries, as Inscryption's Act I has it.
-    sigils: [...new Set(sigilCard?.sigils ?? [])].slice(0, MAX_SIGILS),
+    // Every sigil the third card carries, as Inscryption's Act I has it.
+    sigils: [...new Set(sigilCard.sigils)].slice(0, MAX_SIGILS),
   })
   return parseDeathCard(id) ? { ok: true, id } : { ok: false, reason: 'That card cannot be built' }
 }

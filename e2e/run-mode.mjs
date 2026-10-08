@@ -58,8 +58,11 @@ async function playRun(page, mirror, { pick = nextRunAction, done }) {
         await clickMove(page, '[data-action="risk"]', expected)
       } else if (action.type === 'transfer') {
         // The giver, its sigil when it has more than one, the receiver, then the stones' button.
+        // Each card is chosen in a slot's searchable list.
+        await page.locator('[data-slot-for="give"]').click()
         await page.locator(`[data-action="give"][data-card="${action.from}"]`).click()
         await page.locator(`[data-action="stone-sigil"][data-sigil="${action.sigil}"]`).click()
+        await page.locator('[data-slot-for="take-sigil"]').click()
         await page.locator(`[data-action="take-sigil"][data-card="${action.to}"]`).click()
         await clickMove(page, '[data-action="transfer"]', expected)
       } else if (action.type === 'play' && action.action.type === 'use') {
@@ -145,7 +148,7 @@ const before = mirror.state.deck.length
 mirror = await playRun(page, mirror, { done: (state) => state.deck.length === before + 1 })
 check(
   'taking one adds it to the deck',
-  (await page.getByRole('button', { name: `Your deck, ${before + 1} cards` }).count()) === 1,
+  (await page.getByRole('button', { name: new RegExp(`^Your inventory, ${before + 1} cards`) }).count()) === 1,
 )
 check('and P03 says so', (await page.getByRole('status').filter({ hasText: 'joins your deck' }).count()) === 1)
 
@@ -215,6 +218,7 @@ check(
 section('A death card')
 await page.locator('[data-action="death-cost"]').first().click()
 await page.locator('[data-action="death-stats"]').first().click()
+await page.locator('[data-action="death-sigils"]').first().click()
 await page.locator('#death-name').fill('<b>')
 await page.locator('[data-action="build-death-card"]').click()
 check('a name it cannot print is refused before sending', await page.getByText('Letters, numbers').isVisible())
@@ -235,7 +239,7 @@ await page.waitForFunction(() => document.querySelector('[data-run-moves]')?.get
 check('starting another run opens on the starter deck choice', (await view(page)) === 'start')
 check(
   'which offers to leave the death card out for more score',
-  (await page.locator('[data-action="include-death"]').count()) === 1 &&
+  (await page.locator('[data-action="include-death"]').filter({ visible: true }).count()) === 1 &&
     (await visibleText(page)).includes('E2E Ghost'),
 )
 
@@ -284,9 +288,12 @@ section('The sigil stones, from a mockup')
   check('the stones open', await shows(page, 'stones', 30_000))
   check(
     'nothing can be sacrificed until a giver is picked',
-    (await page.locator('[data-action="transfer"]').count()) === 0,
+    await page.locator('[data-action="transfer"]').isDisabled(),
   )
+  await page.locator('[data-slot-for="give"]').click()
   await page.locator('[data-action="give"]:not([disabled])').first().click()
+  await page.locator('[data-action="stone-sigil"]').first().click()
+  await page.locator('[data-slot-for="take-sigil"]').click()
   await page.locator('[data-action="take-sigil"]:not([disabled])').first().click()
   await page.locator('[data-action="transfer"]').click()
   check(
@@ -406,7 +413,7 @@ section('A big deck, from a mockup')
   const { context, page } = await freshPage(browser, { width: 1440, height: 900, table: 'text' })
   await page.goto(`${BASE}/run/mockups/worst-campfire`, MOCKUP)
   await shows(page, 'campfire', 30_000)
-  const docked = page.getByRole('complementary', { name: 'Your deck' })
+  const docked = page.getByRole('complementary', { name: 'Your inventory' })
   check('with room, the deck sits open beside the screen', (await docked.count()) === 1)
   check(
     'and its search is the only one, so the campfire has none of its own',
@@ -427,16 +434,22 @@ section('A big deck, from a mockup')
   check('a sigil icon says what the sigil does', (await page.getByRole('dialog').filter({ hasText: '.' }).count()) >= 1)
   await page.keyboard.press('Escape')
   await page.getByRole('dialog').waitFor({ state: 'detached' })
-  await page.getByRole('button', { name: /^Your deck, 40 cards/ }).click()
-  check('the deck button folds it away', (await docked.count()) === 0)
+  await page.getByRole('button', { name: /^Your inventory, 40 cards/ }).click()
+  check(
+    'the inventory button folds it away, once it has slid out',
+    await docked.waitFor({ state: 'detached', timeout: 3_000 }).then(
+      () => true,
+      () => false,
+    ),
+  )
   check(
     'and then the campfire offers the search itself',
     (await page.getByRole('searchbox', { name: 'Search the deck for a card to warm' }).count()) === 1,
   )
   await page.setViewportSize({ width: 390, height: 844 })
   await page.getByRole('button', { name: /^Run menu/ }).click()
-  await page.getByRole('menuitem', { name: /Your deck/ }).click()
-  const drawer = page.getByRole('dialog', { name: /Your deck/ })
+  await page.getByRole('menuitem', { name: /Inventory/ }).click()
+  const drawer = page.getByRole('dialog', { name: /Inventory/ })
   await drawer.waitFor()
   const frame = await page.locator('[data-table="run"]').boundingBox()
   const inside = await drawer.boundingBox()

@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { ITEMS, type RunCard, type RunEvent } from 'shared'
 import { PixelCard, Sigil } from '../../CardReader.tsx'
 import { forTable } from '../../shortcuts.ts'
+import { Sprite } from '../../Sprite.tsx'
 import { asUnit } from '../nodes.ts'
 import { ReadableCard } from './CardList.tsx'
 import type { RunReady } from '../useRun.ts'
@@ -29,41 +30,46 @@ export function NodeResult({ run }: { run: RunReady }) {
     event.type === 'removed'
       ? [{ card: event.card, how: after.view === 'campfire' ? 'burned' : 'sacrificed' }]
       : event.type === 'fused'
-        ? [
-            { card: event.into, how: 'merged' },
-            { card: event.card, how: 'changed' },
-          ]
+        ? [{ card: event.card, how: 'merged', into: event.into }]
         : event.type === 'changed' || event.type === 'stripped'
           ? [{ card: event.card, how: 'changed' }]
           : [],
   )
   // A card changed twice, as the stones' receiver is, shows once, as it ended up.
   const shown = parts.filter((part, index) => parts.findIndex((other) => other.card.id === part.card.id) === index)
-  const merging = shown.some((part) => part.how === 'merged')
   const items = after.events.flatMap((event) => (event.type === 'gotItem' ? [event.item] : []))
   return (
     <div data-center className="flex flex-col items-center gap-5 text-center">
       <LeaveButton label="Back to the map" onLeave={dismiss} />
       {shown.length || items.length ? (
         <ul className="flex flex-wrap justify-center gap-6 pt-3">
-          {shown.map(({ card, how }) => (
+          {shown.map(({ card, how, into }) => (
             <li key={card.id} className={`relative w-32 shrink-0 sm:w-36 ${LEAVES[how] ?? ''}`}>
               {how === 'burned' ? (
                 <>
-                  <div className="motion-safe:animate-[consumed_1.8s_ease-in_0.3s_forwards] motion-reduce:invisible">
+                  <div className="motion-safe:animate-[burn-fall_0.8s_ease-in_0.2s_forwards] motion-reduce:invisible">
                     <PixelCard unit={asUnit(card)} />
                   </div>
                   {/* The fire that took it, and stays lit. */}
-                  <span className="absolute inset-x-0 bottom-0 flex origin-bottom justify-center motion-safe:animate-[kindle_1.2s_ease-out_0.2s_both]">
-                    <span className="origin-bottom motion-safe:animate-[flicker_0.9s_ease-in-out_1.4s_infinite]">
-                      <Sigil id="fire" size={112} color="#ffb454" />
-                    </span>
+                  <span className="absolute inset-x-0 bottom-0 flex origin-bottom justify-center motion-safe:animate-[kindle_0.6s_ease-out_0.1s_both]">
+                    <Sprite id="fire" size={112} color="#ffb454" />
                   </span>
                 </>
+              ) : how === 'merged' && into ? (
+                <>
+                  {/* The two copies slide together and shrink away; the one they made takes their place. */}
+                  <div className="absolute inset-0 motion-safe:animate-[merge-left_0.6s_ease-in-out_0.15s_both] motion-reduce:hidden">
+                    <PixelCard unit={asUnit(into)} />
+                  </div>
+                  <div className="absolute inset-0 motion-safe:animate-[merge-right_0.6s_ease-in-out_0.15s_both] motion-reduce:hidden">
+                    <PixelCard unit={asUnit(before(card, into))} />
+                  </div>
+                  <div className="motion-safe:animate-[merge-out_300ms_ease-out_0.7s_both]">
+                    <ReadableCard unit={asUnit(card)} />
+                  </div>
+                </>
               ) : how === 'changed' ? (
-                <div
-                  className={`motion-safe:animate-[warm-pop_650ms_ease-out_both] ${merging ? 'motion-safe:[animation-delay:1.1s]' : ''}`}
-                >
+                <div className="motion-safe:animate-[warm-pop_450ms_ease-out_both]">
                   <ReadableCard unit={asUnit(last(after.events, card))} />
                 </div>
               ) : (
@@ -100,15 +106,21 @@ export function NodeResult({ run }: { run: RunReady }) {
   )
 }
 
-type Part = { card: RunCard; how: 'burned' | 'sacrificed' | 'merged' | 'changed' }
+/** `into` is the copy a merged card took in. */
+type Part = { card: RunCard; how: 'burned' | 'sacrificed' | 'merged' | 'changed'; into?: RunCard }
 
 /** How a card leaves the row: a sacrifice falls and folds away, a merged copy slides into its twin; either way, what's left centers. */
 const LEAVES: Partial<Record<Part['how'], string>> = {
   sacrificed:
-    'motion-safe:animate-[burn-fall_1s_ease-in_0.3s_forwards,fold-away_400ms_ease-in-out_1.3s_forwards] motion-reduce:hidden',
-  merged:
-    'motion-safe:animate-[merge-in_700ms_ease-in_0.4s_forwards,fold-away_300ms_ease-in-out_1.1s_forwards] motion-reduce:hidden',
+    'motion-safe:animate-[burn-fall_0.7s_ease-in_0.2s_forwards,collapse-away_300ms_ease-in-out_0.9s_forwards] motion-reduce:hidden',
 }
+
+/** A merged card as it was before taking in its copy, near enough to show the two side by side. */
+const before = (card: RunCard, into: RunCard): RunCard => ({
+  ...card,
+  attack: card.attack - into.attack,
+  health: card.health - into.health,
+})
 
 /** The card as the last event left it. */
 function last(events: RunEvent[], card: RunCard): RunCard {
