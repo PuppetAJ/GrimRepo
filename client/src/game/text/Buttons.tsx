@@ -60,9 +60,10 @@ export function CancelButton() {
 
 /** Wide and mid layouts only; the phone layout puts these in its menu. */
 export function Controls() {
-  const { fullScreen, game, on3d, compact } = useTable()
+  const { fullScreen, game, on3d, compact, run } = useTable()
   return (
     <div className={`flex shrink-0 flex-col justify-end gap-2 ${compact ? '' : 'w-[17rem] self-stretch'}`}>
+      {run?.menu}
       <div className="flex gap-2">
         {fullScreen.supported ? (
           <button type="button" onClick={fullScreen.toggle} className={`${SIDE_BUTTON} flex-1 whitespace-nowrap`}>

@@ -186,7 +186,7 @@ function DeckDrawer({
 /** The menu's way to the other table. */
 export type Switch = { label: string; go: () => void }
 
-function saveWords(run: RunReady): string {
+export function saveWords(run: RunReady): string {
   if (run.id === -1) return 'mockup, never saved'
   return run.saving ? 'saving…' : run.unsaved ? `${run.unsaved} unsaved` : 'saved'
 }
