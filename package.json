@@ -54,12 +54,12 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
-    "oxlint": "^1.85.0",
-    "pg": "^8.23.0",
+    "oxlint": "^1.86.0",
+    "pg": "^8.23.1",
     "playwright": "^1.63.0",
     "prettier": "^3.9.9",
     "prettier-plugin-organize-imports": "^4.3.0",
     "prettier-plugin-tailwindcss": "^0.8.1",
-    "railway": "^3.11.0"
+    "railway": "^3.12.0"
   }
 }
