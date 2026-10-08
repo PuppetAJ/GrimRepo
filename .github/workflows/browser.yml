@@ -44,8 +44,11 @@ jobs:
     outputs:
       matrix: ${{ steps.pick.outputs.matrix }}
     steps:
+      # Passed through the environment, since the JSON's quotes would end a quoted shell string.
       - id: pick
-        run: echo "matrix=${{ github.event_name == 'pull_request' && env.PULL_REQUEST || env.FULL }}" >> "$GITHUB_OUTPUT"
+        env:
+          MATRIX: ${{ github.event_name == 'pull_request' && env.PULL_REQUEST || env.FULL }}
+        run: echo "matrix=$(jq -c . <<< "$MATRIX")" >> "$GITHUB_OUTPUT"
 
   browser:
     needs: plan
