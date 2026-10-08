@@ -222,17 +222,19 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
       SURVEYED.add(key)
       frame = requestAnimationFrame(step)
     }, 350)
-    // The player's own scroll takes over.
+    // The player's own scroll takes over, as does a press, so a stroke or a click never lands on a moving map.
     const stop = () => {
       clearTimeout(delay)
       cancelAnimationFrame(frame)
     }
     scroller.addEventListener('wheel', stop, { passive: true })
     scroller.addEventListener('touchstart', stop, { passive: true })
+    scroller.addEventListener('pointerdown', stop)
     return () => {
       stop()
       scroller.removeEventListener('wheel', stop)
       scroller.removeEventListener('touchstart', stop)
+      scroller.removeEventListener('pointerdown', stop)
     }
   }, [state.seed, state.stage])
 
