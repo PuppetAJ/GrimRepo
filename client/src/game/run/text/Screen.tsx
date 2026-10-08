@@ -294,10 +294,13 @@ export function Screen({
   onSwitch,
   pinTo,
   fading = false,
+  waiting = false,
   children,
 }: {
   /** Fades the projected content out, before the next screen takes the window. */
   fading?: boolean
+  /** Over the 3D table, while the projector is still opening: the screen holds back its content, so its entrances play once seen. */
+  waiting?: boolean
   run: RunReady
   layout: Layout
   title: string
@@ -413,7 +416,7 @@ export function Screen({
                 <div ref={setBar} className="shrink-0 empty:hidden" />
                 {/* Only the content scrolls; a screen marked data-center, such as a card choice, sits in the middle. */}
                 <div data-scroller className="flex min-h-0 flex-1 flex-col overflow-y-auto px-1">
-                  <div className="has-[[data-center]]:my-auto">{children}</div>
+                  <div className="has-[[data-center]]:my-auto">{waiting ? null : children}</div>
                 </div>
               </Hologram>
             </div>

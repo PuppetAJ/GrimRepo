@@ -32,6 +32,7 @@ function Occupant({
 }) {
   const lunge = unit ? playback.lunges.get(unit.uid) : undefined
   const slide = unit ? playback.slides.get(unit.uid) : undefined
+  const stepped = unit && row === 'front' ? playback.advances.get(unit.uid) : undefined
   // Keyed by start time below, so each lunge plays its animation once.
   const striking = lunge
   const leaving = playback.leaving.filter((gone) => gone.row === row && gone.lane === lane)
@@ -61,14 +62,29 @@ function Occupant({
       element.style.transform = ''
     }
   }, [slide, still])
+  // One of P03's cards stepping up from its queue glides down from the row above, as it does on the 3D table.
+  useLayoutEffect(() => {
+    const element = sliding.current
+    const front = element?.closest('[role="group"]')
+    const back = front?.previousElementSibling
+    if (stepped === undefined || !element || !front || !back) return
+    const from = back.getBoundingClientRect().top - front.getBoundingClientRect().top
+    const step = still
+      ? animate(element, { opacity: [0.4, 1] }, { duration: 0.27 })
+      : animate(element, { y: [from, 0] }, { duration: 0.27, ease: 'easeOut' })
+    return () => {
+      step.stop()
+      element.style.transform = ''
+    }
+  }, [stepped, still])
   return (
     <span className="relative block size-full">
       {unit ? (
         <m.span
           ref={sliding}
           // Keyed by its move too, so a card that changes lanes slides in from the one it left.
-          key={`${unit.uid}:${slide?.at ?? 0}`}
-          {...(!slide && isNew(unit.uid) ? arrive(row) : {})}
+          key={`${unit.uid}:${slide?.at ?? 0}:${stepped ?? 0}`}
+          {...(!slide && stepped === undefined && isNew(unit.uid) ? arrive(row) : {})}
           className="block size-full"
         >
           {/* Tilted while marked for sacrifice; a plain CSS transition, as hovers are. */}
