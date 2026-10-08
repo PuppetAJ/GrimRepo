@@ -178,6 +178,21 @@
   }
 }
 
+/* A death card's upload bar filling up. */
+@keyframes upload {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+/* A page of a step-by-step box sliding in as the last step is locked in. */
+@keyframes page-in {
+  from {
+    transform: translateX(1.5rem);
+    opacity: 0;
+  }
+}
+
 /* A face-down card turning over to show what it is. */
 @keyframes flip-in {
   from {
@@ -187,21 +202,6 @@
   to {
     transform: none;
     filter: none;
-  }
-}
-
-/* The campfire taking a card: it burns from the bottom up. */
-@keyframes consumed {
-  0% {
-    clip-path: inset(0 0 0 0);
-    filter: none;
-  }
-  25% {
-    filter: brightness(1.3) sepia(1) hue-rotate(-30deg) saturate(3);
-  }
-  100% {
-    clip-path: inset(0 0 100% 0);
-    filter: brightness(0.4) sepia(1) hue-rotate(-30deg) saturate(3);
   }
 }
 
@@ -217,36 +217,70 @@
   }
 }
 
-/* A fire that stays lit. */
-@keyframes flicker {
-  0%,
-  100% {
-    transform: scaleY(1) scaleX(1);
-    filter: brightness(1);
+/* An animated icon's strip of frames, stepped through one frame at a time. */
+@keyframes sprite-strip {
+  from {
+    mask-position: 0% 0;
+  }
+  to {
+    mask-position: 100% 0;
+  }
+}
+
+/* A fire that stays lit, snapping between three poses like a sprite's frames. */
+@keyframes flame {
+  0% {
+    transform: none;
   }
   33% {
-    transform: scaleY(1.08) scaleX(0.96);
-    filter: brightness(1.2);
+    transform: scaleX(-1) scaleY(1.08);
   }
   66% {
-    transform: scaleY(0.95) scaleX(1.03);
-    filter: brightness(0.9);
+    transform: scaleX(0.94) scaleY(0.94);
   }
 }
 
 /* A card that has left a row folds its place away, so what's left slides to the middle. */
-@keyframes fold-away {
+@keyframes collapse-away {
   to {
     width: 0;
     margin-right: -1.5rem;
+  }
+}
+
+/* A merge request's two copies sliding together from either side, shrinking as they meet. */
+@keyframes merge-left {
+  from {
+    transform: translateX(-70%);
+  }
+  60% {
+    transform: none;
+    opacity: 1;
+  }
+  to {
+    transform: scale(0.4);
     opacity: 0;
   }
 }
 
-/* A merge request's copy sliding into the card it joins. */
-@keyframes merge-in {
+@keyframes merge-right {
+  from {
+    transform: translateX(70%);
+  }
+  60% {
+    transform: none;
+    opacity: 1;
+  }
   to {
-    transform: translateX(calc(100% + 1.5rem)) scale(0.9);
+    transform: scale(0.4);
+    opacity: 0;
+  }
+}
+
+/* The card the two made, growing in where they vanished. */
+@keyframes merge-out {
+  from {
+    transform: scale(0.4);
     opacity: 0;
   }
 }
@@ -353,6 +387,12 @@
   cursor:
     url(/cursors/press.svg) 2 2,
     pointer;
+}
+/* A card that opens to read, not to choose. */
+[data-table] button[data-read] {
+  cursor:
+    url(/cursors/read.svg) 2 2,
+    zoom-in;
 }
 [data-table] :is([data-action='mark'], [data-action='unmark']):not(:disabled) {
   cursor:

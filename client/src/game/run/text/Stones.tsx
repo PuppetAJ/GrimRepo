@@ -7,8 +7,8 @@ import { asUnit } from '../nodes.ts'
 import type { RunReady } from '../useRun.ts'
 import { Box } from './Box.tsx'
 import { NothingHere } from './CardBits.tsx'
-import { CardList } from './CardList.tsx'
-import { LeaveButton, ScreenBar, ScreenSearch } from './Screen.tsx'
+import { CardSlot } from './CardSlot.tsx'
+import { LeaveButton, ScreenBar } from './Screen.tsx'
 
 type Transfer = Extract<RunAction, { type: 'transfer' }>
 
@@ -33,7 +33,7 @@ export function Stones({ run }: { run: RunReady }) {
   }
 
   return (
-    <div className="@container flex flex-col gap-4">
+    <div data-center className="@container flex flex-col gap-4">
       <LeaveButton label="Leave the stones" onLeave={() => run.act({ type: 'leave' })} />
       {/* Above the cards, so the final choice is always in reach. */}
       <ScreenBar>
@@ -43,38 +43,25 @@ export function Stones({ run }: { run: RunReady }) {
               ? 'None of your cards has a sigil to give. Leave the stones be.'
               : 'Sacrifice a card; one of its sigils moves to another.'}
           </p>
-          {giver && chosen && receiver ? (
-            <button
-              type="button"
-              data-action="transfer"
-              onClick={() => run.act({ type: 'transfer', from: giver.uid, to: receiver.uid, sigil: chosen })}
-              className={`${SIDE_BUTTON} self-start border-p03 px-4 text-lg`}
-            >
-              Sacrifice {card(giver.card).name} to give {card(receiver.card).name} {SIGILS[chosen].name}
-            </button>
-          ) : null}
-          {moves.length ? <ScreenSearch label="Search the deck" count={run.state.deck.length} /> : null}
         </div>
       </ScreenBar>
       {moves.length ? (
-        // Left to right: the card given up, the sigil it gives, and the card that gains it; stacked when narrow.
-        <div className="grid items-start gap-3 @4xl:grid-cols-[minmax(0,1fr)_auto_auto_auto_minmax(0,1fr)]">
-          <Box className="flex flex-col gap-2">
+        // Left to right: the card given up, the sigil it gives, and the card that gains it; stacked, and narrower, when the frame is.
+        <div className="mx-auto grid w-full max-w-md items-center gap-3 @4xl:max-w-none @4xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)]">
+          <Box className="flex flex-col items-center gap-2 text-center">
             <h3 className="text-p03">The card to sacrifice</h3>
-            {/* Once one is picked, the rest fold away, so the next step is in reach without scrolling. */}
-            <CardList
-              units={giver ? [giver] : deck}
-              onPick={(unit) => pickFrom(unit.uid)}
+            <CardSlot
+              slot="give"
+              label="The card to sacrifice"
+              units={deck}
               can={(unit) => moves.some((move) => move.from === unit.uid)}
               picked={from}
+              onPick={(unit) => pickFrom(unit.uid)}
               data={(unit) => ({ 'data-action': 'give', 'data-card': unit.uid })}
-              size="w-20 sm:w-24"
-              filtered={!giver}
             />
-            {giver ? <Another onClick={() => pickFrom(giver.uid)} /> : null}
           </Box>
           <Arrow on={Boolean(giver)} />
-          <Box className={`flex flex-col gap-2 ${giver ? '' : 'opacity-50'}`}>
+          <Box className={`flex flex-col items-center gap-2 text-center ${giver ? '' : 'opacity-50'}`}>
             <h3 className="text-p03">The sigil it gives</h3>
             {giver ? (
               <div className="flex flex-wrap justify-center gap-2 @4xl:flex-col">
@@ -102,27 +89,43 @@ export function Stones({ run }: { run: RunReady }) {
             )}
           </Box>
           <Arrow on={Boolean(chosen)} />
-          <Box className={`flex flex-col gap-2 ${chosen ? '' : 'opacity-50'}`}>
+          <Box className={`flex flex-col items-center gap-2 text-center ${chosen ? '' : 'opacity-50'}`}>
             <h3 className="text-p03">
               {chosen ? `The card that gains ${SIGILS[chosen].name}` : 'The card that gains it'}
             </h3>
             {giver && chosen ? (
-              <>
-                <CardList
-                  units={receiver ? [receiver] : deck.filter((unit) => unit.uid !== from && fits(unit.uid))}
-                  onPick={(unit) => setTo(unit.uid === to ? null : unit.uid)}
-                  picked={to}
-                  data={(unit) => ({ 'data-action': 'take-sigil', 'data-card': unit.uid })}
-                  size="w-20 sm:w-24"
-                  filtered={!receiver}
-                />
-                {receiver ? <Another onClick={() => setTo(null)} /> : null}
-              </>
+              <CardSlot
+                slot="take-sigil"
+                label={`The card that gains ${SIGILS[chosen].name}`}
+                units={deck.filter((unit) => unit.uid !== from && fits(unit.uid))}
+                picked={receiver ? receiver.uid : null}
+                onPick={(unit) => setTo(unit.uid)}
+                data={(unit) => ({ 'data-action': 'take-sigil', 'data-card': unit.uid })}
+              />
             ) : (
               <p className="text-base text-p03-dim">Then the sigil.</p>
             )}
           </Box>
         </div>
+      ) : null}
+      {/* Below the three, grayed out until each is picked. */}
+      {moves.length ? (
+        <button
+          type="button"
+          data-action="transfer"
+          disabled={!(giver && chosen && receiver)}
+          onClick={() =>
+            giver &&
+            chosen &&
+            receiver &&
+            run.act({ type: 'transfer', from: giver.uid, to: receiver.uid, sigil: chosen })
+          }
+          className={`${SIDE_BUTTON} self-center border-p03 px-4 text-lg disabled:opacity-40`}
+        >
+          {giver && chosen && receiver
+            ? `Sacrifice ${card(giver.card).name} to give ${card(receiver.card).name} ${SIGILS[chosen].name}`
+            : 'Sacrifice and move the sigil'}
+        </button>
       ) : (
         <NothingHere>No card has a sigil to give.</NothingHere>
       )}
@@ -137,14 +140,5 @@ function Arrow({ on }: { on: boolean }) {
       <ArrowDown className="size-7 @4xl:hidden" />
       <ArrowRight className="hidden size-7 @4xl:block" />
     </span>
-  )
-}
-
-/** Brings the folded-away cards back, to choose again. */
-function Another({ onClick }: { onClick: () => void }) {
-  return (
-    <button type="button" onClick={onClick} className={`${SIDE_BUTTON} self-center px-4 text-lg`}>
-      Pick another
-    </button>
   )
 }

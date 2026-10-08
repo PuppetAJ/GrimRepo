@@ -19,9 +19,13 @@ const mockupsSlash: Plugin = {
   },
 }
 
-// The /art page's editor saves a card's art (24x24) or an icon (8x8) as a PNG into src/game/art; development only.
+// The /art page's editor saves a card's art (24x24) or an icon (8x8, the fire 16x16) as a PNG into src/game/art; development only.
 const ART_DIR = fileURLToPath(new URL('./src/game/art/', import.meta.url))
 const ART_SIZE = { cards: 24, icons: 8 } as const
+const LARGER_ICONS: Record<string, number> = { fire: 16 }
+// An animation's frames sit side by side in one strip, up to this many.
+const ANIMATED = new Set(['fire'])
+const MOST_FRAMES = 16
 const artEditor: Plugin = {
   name: 'art-editor',
   apply: 'serve',
@@ -40,17 +44,27 @@ const artEditor: Plugin = {
         }
         const { kind, id, png } = sent
         if (kind !== 'cards' && kind !== 'icons') return refuse('no such kind of art')
-        if (typeof id !== 'string' || !/^[A-Za-z0-9_]+$/.test(id)) return refuse('no such art')
+        // Hyphens too, for the type icons such as type-bot.
+        if (typeof id !== 'string' || !/^[A-Za-z0-9_-]+$/.test(id)) return refuse('no such art')
         if (typeof png !== 'string') return refuse('no image')
         const bytes = Buffer.from(png, 'base64')
         // A PNG's width and height are the first two numbers of its header chunk.
-        const size = ART_SIZE[kind]
+        const size = (kind === 'icons' ? LARGER_ICONS[id] : undefined) ?? ART_SIZE[kind]
+        const width = bytes.readUInt32BE(16)
+        const frames = ANIMATED.has(id) ? width / size : 1
         if (
           bytes.toString('latin1', 1, 4) !== 'PNG' ||
-          bytes.readUInt32BE(16) !== size ||
-          bytes.readUInt32BE(20) !== size
+          bytes.readUInt32BE(20) !== size ||
+          !Number.isInteger(frames) ||
+          frames < 1 ||
+          frames > MOST_FRAMES ||
+          width !== size * frames
         )
-          return refuse(`this art is ${size} by ${size}`)
+          return refuse(
+            ANIMATED.has(id)
+              ? `this art is up to ${MOST_FRAMES} frames of ${size} by ${size}`
+              : `this art is ${size} by ${size}`,
+          )
         writeFileSync(`${ART_DIR}${kind}/${id}.png`, bytes)
         res.writeHead(204).end()
       })

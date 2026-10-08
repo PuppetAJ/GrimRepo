@@ -12,6 +12,7 @@ import { Screen, ScreenActions } from '../text/Screen.tsx'
 import type { RunReady } from '../useRun.ts'
 import { BetweenBattles, warp, windowHeight } from './RunStage.tsx'
 import { preloadItems } from '../../table/table3d/ItemRack.tsx'
+import { InventoryDialog } from '../text/InventoryDialog.tsx'
 
 /** How long a projected screen takes to fade out before the next one comes in, in milliseconds. */
 const FADE_MS = 160
@@ -162,6 +163,7 @@ export default function Run3D({
   const { view, battle } = useRunScreen(run)
   // Looking back at the map from a battle shows the room's map, with the battle packed away until the player returns.
   const [look, setLook] = useState(false)
+  const [inventory, setInventory] = useState(false)
   if (look && view !== 'battle') setLook(false)
   const looking = look && view === 'battle'
   const wanted: Scene = view === 'battle' && !looking ? 'battle' : 'between'
@@ -206,6 +208,7 @@ export default function Run3D({
               leaving={shown.leaving}
               onLeft={left}
               onMap={() => setLook(true)}
+              onInventory={() => setInventory(true)}
             />
           ) : null
         ) : (
@@ -223,6 +226,7 @@ export default function Run3D({
         )}
       </TableStage>
       {replay ? <Replay looking={looking} inBattle={view === 'battle'} onLook={setLook} /> : null}
+      <InventoryDialog run={run} open={inventory} onOpenChange={setInventory} />
     </div>
   )
 }
