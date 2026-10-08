@@ -423,12 +423,14 @@ export function Screen({
           <span aria-hidden className="crt-glass pointer-events-none absolute inset-0 z-30" />
           {/* Where the deck drawer opens, covering the frame but taking no clicks until it does. */}
           {drawerHost}
-          {/* The title wraps rather than being cut off; short of room, the buttons drop to their own line. */}
-          <header className="relative z-10 flex shrink-0 flex-wrap items-center gap-2">
+          {/* The title wraps beside the buttons rather than pushing them to a line of their own, down to 320px. */}
+          <header className="relative z-10 flex shrink-0 items-center gap-2">
             {/* Stacked, the title stays clear of the menu in the corner. */}
-            <div className={`min-w-0 flex-1 ${stacked ? 'px-12 text-center' : 'basis-48'}`}>
+            <div className={`min-w-0 flex-1 ${stacked ? 'px-12 text-center' : ''}`}>
               {caption ? <p className="text-base text-p03-dim">{caption}</p> : null}
-              <h2 className="text-3xl leading-tight text-balance [overflow-wrap:anywhere] text-p03">{title}</h2>
+              <h2 className="text-2xl leading-tight text-balance [overflow-wrap:anywhere] text-p03 sm:text-3xl">
+                {title}
+              </h2>
             </div>
             {stacked ? <div className="absolute top-0 right-0">{menu}</div> : buttonRow}
           </header>
@@ -440,8 +442,9 @@ export function Screen({
               <div ref={setBar} className={`shrink-0 empty:hidden ${stacked ? 'text-center' : ''}`} />
               {stacked ? buttonRow : null}
               {/* Only the content scrolls, inside a frame that stays the same size; padded so focus rings aren't cut. */}
-              <div data-scroller className={`min-h-0 flex-1 overflow-y-auto px-1 ${FADE}`}>
-                {children}
+              <div data-scroller className={`flex min-h-0 flex-1 flex-col overflow-y-auto px-1 ${FADE}`}>
+                {/* A screen marked data-center, such as a card choice or an empty one, sits in the middle. */}
+                <div className="has-[[data-center]]:my-auto">{children}</div>
               </div>
             </div>
             {showDock ? (

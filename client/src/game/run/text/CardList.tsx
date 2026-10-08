@@ -1,5 +1,5 @@
 import { ZoomIn } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState, type MouseEvent, type PointerEvent } from 'react'
 import { card, SIGILS, type Unit } from 'shared'
 import { PixelCard } from '../../CardReader.tsx'
 import { describe } from '../../controls.tsx'
@@ -14,6 +14,10 @@ type Props = {
   data?: (unit: Unit) => Record<string, string | number>
   can?: (unit: Unit) => boolean
   picked?: number | null
+  /** Several cards chosen at once, as a merge request's pair is. */
+  chosen?: number[]
+  /** A class for each card's place, such as an entrance. */
+  itemClass?: string
   /** Each card's sigils spelled out beneath it, for a choice where they matter. */
   detail?: boolean
   size?: string
@@ -62,12 +66,15 @@ export function CardList({
   data,
   can = () => true,
   picked = null,
+  chosen: several,
+  itemClass = '',
   detail = false,
   size = 'w-28',
   filtered = false,
   flash,
 }: Props) {
   const [reading, setReading] = useState<Unit | null>(null)
+  const hold = useHoldToRead(setReading)
   const { matches } = useCardSearch()
   const shown = filtered ? units.filter(matches) : units
   return (
@@ -76,7 +83,7 @@ export function CardList({
       <ul className="flex flex-wrap justify-center gap-4 pt-3">
         {shown.map((unit) => {
           const allowed = can(unit)
-          const chosen = picked === unit.uid
+          const chosen = picked === unit.uid || Boolean(several?.includes(unit.uid))
           const flashed = flash?.uid === unit.uid ? flash : undefined
           const face = flashed ? (
             <span key={flashed.key} className="relative block motion-safe:animate-[warm-pop_650ms_ease-out]">
@@ -88,21 +95,24 @@ export function CardList({
             <PixelCard unit={unit} />
           )
           return (
-            <li key={unit.uid} className={`flex shrink-0 flex-col gap-2 ${size}`}>
+            <li key={unit.uid} className={`flex shrink-0 flex-col gap-2 ${size} ${itemClass}`}>
               {onPick ? (
                 <button
                   type="button"
                   {...data?.(unit)}
                   disabled={!allowed}
-                  aria-pressed={picked === null ? undefined : chosen}
+                  aria-pressed={picked === null && !several ? undefined : chosen}
                   aria-label={`${describe(unit)}, costs ${card(unit.card).cost}`}
-                  onClick={() => onPick(unit)}
+                  {...hold.props(unit)}
+                  onClick={() => !hold.read() && onPick(unit)}
                   className={`rounded-md p-1 transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03 disabled:brightness-50 disabled:saturate-50 motion-reduce:transition-none ${chosen ? '-translate-y-2 outline-2 outline-p03 outline-dashed' : 'enabled:hover:-translate-y-1'}`}
                 >
                   {face}
                 </button>
               ) : (
-                <div className="p-1">{face}</div>
+                <div className="touch-none p-1 select-none" {...hold.props(unit)}>
+                  {face}
+                </div>
               )}
               <Caption unit={unit} detail={detail} onRead={() => setReading(unit)} />
             </li>
@@ -113,4 +123,38 @@ export function CardList({
       <CardReader unit={reading} onClose={() => setReading(null)} />
     </div>
   )
+}
+
+/** How long a press must last to read the card instead of choosing it, in milliseconds, as an item's button has it. */
+const HOLD_MS = 350
+
+/** Holding a card opens it to read; letting go after a hold isn't a click. */
+function useHoldToRead(open: (unit: Unit) => void) {
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const held = useRef(false)
+  useEffect(() => () => clearTimeout(timer.current), [])
+  const stop = () => clearTimeout(timer.current)
+  return {
+    props: (unit: Unit) => ({
+      onPointerDown: (event: PointerEvent) => {
+        if (event.button !== 0) return
+        held.current = false
+        stop()
+        timer.current = setTimeout(() => {
+          held.current = true
+          open(unit)
+        }, HOLD_MS)
+      },
+      onPointerUp: stop,
+      onPointerLeave: stop,
+      onPointerCancel: stop,
+      onContextMenu: (event: MouseEvent) => event.preventDefault(),
+    }),
+    /** Whether the press just ended was a hold, which then isn't counted again. */
+    read: () => {
+      const was = held.current
+      held.current = false
+      return was
+    },
+  }
 }
