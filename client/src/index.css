@@ -302,6 +302,39 @@
   }
 }
 
+/* An uninstalled card shrinking out of its slot. */
+@keyframes uninstall-away {
+  to {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+}
+
+/* A used slot turning over: its face turns edge on and goes, then its back turns up from edge on. */
+@keyframes turn-away {
+  from {
+    transform: perspective(600px);
+  }
+  50%,
+  to {
+    transform: perspective(600px) rotateY(90deg);
+    visibility: hidden;
+  }
+}
+@keyframes turn-up {
+  from,
+  50% {
+    transform: perspective(600px) rotateY(-90deg);
+    visibility: hidden;
+  }
+  50.1% {
+    visibility: visible;
+  }
+  to {
+    transform: perspective(600px);
+  }
+}
+
 @keyframes fade-in {
   from {
     opacity: 0;

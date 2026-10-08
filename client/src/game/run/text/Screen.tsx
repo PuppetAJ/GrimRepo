@@ -21,7 +21,7 @@ import { Panel } from '../../text/Panel.tsx'
 import { useFit } from '../../text/sizing.ts'
 import type { Layout } from '../../text/useTextTable.ts'
 import type { RunReady } from '../useRun.ts'
-import { CardSearch, SEARCH_FROM, SearchContext, useCardSearch } from './CardBits.tsx'
+import { SearchContext } from './CardBits.tsx'
 import { DeckTable } from './DeckTable.tsx'
 import { HeldTools } from './HeldTools.tsx'
 import { SlotContext, type Mode } from './slots.ts'
@@ -98,13 +98,6 @@ export function LeaveButton({ label, onLeave }: { label: string; onLeave: () => 
       </button>
     </ScreenActions>
   )
-}
-
-/** The search box for a screen of cards, unless the open deck beside it already has the same one. */
-export function ScreenSearch({ label, count }: { label: string; count: number }) {
-  const { deckShown } = use(SlotContext)
-  const { query, setQuery } = useCardSearch()
-  return deckShown || count < SEARCH_FROM ? null : <CardSearch query={query} onChange={setQuery} label={label} />
 }
 
 const DOCK_KEY = 'grimrepo:run-deck'
@@ -411,7 +404,7 @@ export function Screen({
   // Over the 3D table, everything goes in the projector's window, which the scene warps onto it every frame.
   if (mode === 'hologram')
     return (
-      <SlotContext value={{ actions, bar, center, deckShown: false, mode }}>
+      <SlotContext value={{ actions, bar, center, mode }}>
         <SearchContext value={{ query, setQuery: (next) => setSearch({ title, query: next }) }}>
           <div
             data-table="run"
@@ -454,7 +447,7 @@ export function Screen({
           : 'relative h-[calc(100dvh-7rem)] min-h-[30rem] p-3'
         : `rounded-lg border p-4 ${fullScreen.on ? 'fixed z-50' : 'relative mx-auto'}`
   return (
-    <SlotContext value={{ actions, bar, center, deckShown: showDock, mode }}>
+    <SlotContext value={{ actions, bar, center, mode }}>
       <SearchContext value={{ query, setQuery: (next) => setSearch({ title, query: next }) }}>
         {terminal && fullScreen.on ? <div aria-hidden className="fixed inset-0 z-40 bg-[#030604]" /> : null}
         <div

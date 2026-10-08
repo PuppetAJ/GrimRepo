@@ -35,6 +35,7 @@ export {
 export {
   HAND_LIMIT,
   LANES,
+  MAX_SIGILS,
   RULES_VERSION,
   TIP,
   TURN_LIMIT,

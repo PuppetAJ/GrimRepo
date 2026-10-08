@@ -6,7 +6,6 @@ type Slots = {
   actions: HTMLElement | null
   bar: HTMLElement | null
   center: HTMLElement | null
-  deckShown: boolean
   mode: Mode
 }
 
@@ -15,7 +14,6 @@ export const SlotContext = createContext<Slots>({
   actions: null,
   bar: null,
   center: null,
-  deckShown: false,
   mode: 'terminal',
 })
 

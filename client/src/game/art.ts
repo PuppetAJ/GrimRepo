@@ -10,7 +10,7 @@ const ICONS = byName(import.meta.glob<string>('./art/icons/*.png', { eager: true
 /** How fast an animated icon, such as the campfire's fire, plays its frames. */
 export const SPRITE_FPS = 8
 
-export type IconId = SigilId | ItemId | 'attack' | 'health' | 'fire' | `type-${CardType}`
+export type IconId = SigilId | ItemId | 'attack' | 'health' | 'fire' | 'logs' | `type-${CardType}`
 
 /** Whether a card or icon has art of its own yet, rather than the stand-in. */
 export const hasArt = (kind: 'cards' | 'icons', id: string): boolean =>

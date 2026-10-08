@@ -1,17 +1,21 @@
+import { Ban, Plus } from 'lucide-react'
 import { useState } from 'react'
-import { card, ITEM_SLOTS, ITEMS, UNINSTALL_PRICE } from 'shared'
+import { card, ITEM_SLOTS, ITEMS, UNINSTALL_PRICE, type Unit } from 'shared'
 import { SIDE_BUTTON } from '../../text/Panel.tsx'
-import { Sigil } from '../../CardReader.tsx'
+import { PixelCard, Sigil } from '../../CardReader.tsx'
 import { asUnit } from '../nodes.ts'
 import type { RunReady } from '../useRun.ts'
 import { Box } from './Box.tsx'
 import { HeldTools } from './HeldTools.tsx'
-import { CardList, ReadableCard } from './CardList.tsx'
+import { ReadableCard } from './CardList.tsx'
+import { CardSlot } from './CardSlot.tsx'
 import { LeaveButton, ScreenBar } from './Screen.tsx'
 
 /** The Package Registry: cards for bytes, as many as the player can afford, each once. */
 export function Shop({ run }: { run: RunReady }) {
   const [removing, setRemoving] = useState<number | null>(null)
+  // The card just uninstalled, kept to show it going.
+  const [gone, setGone] = useState<Unit | null>(null)
   const visit = run.state.visit
   if (visit?.kind !== 'shop') return null
   const bytes = run.state.bytes
@@ -97,28 +101,76 @@ export function Shop({ run }: { run: RunReady }) {
             ? 'One uninstall a visit. Come back to the next registry.'
             : 'Pick a card to delete from your deck for good.'}
         </p>
-        {target && canUninstall ? (
-          <button
-            type="button"
-            data-action="uninstall"
-            onClick={() => {
-              run.act({ type: 'uninstall', card: target.id })
-              setRemoving(null)
-            }}
-            className={`${SIDE_BUTTON} self-start border-p03 px-4 text-lg`}
-          >
-            Uninstall {card(target.card).name} for {UNINSTALL_PRICE} bytes
-          </button>
-        ) : null}
-        <CardList
-          units={run.state.deck.map((entry) => asUnit(entry))}
-          onPick={(unit) => setRemoving(unit.uid === removing ? null : unit.uid)}
-          can={() => canUninstall}
-          picked={removing}
-          data={(unit) => ({ 'data-action': 'uninstall-card', 'data-card': unit.uid })}
-          size="w-24 sm:w-28"
-        />
+        {visit.uninstalled ? (
+          <>
+            <UsedSlot gone={gone} />
+            <button
+              type="button"
+              data-action="uninstall"
+              disabled
+              className={`${SIDE_BUTTON} self-center border-p03 px-4 text-lg disabled:opacity-40`}
+            >
+              {gone ? `${card(gone.card).name} uninstalled` : 'Uninstalled'}
+            </button>
+          </>
+        ) : (
+          <>
+            <CardSlot
+              slot="uninstall"
+              label="The card to uninstall"
+              units={run.state.deck.map((entry) => asUnit(entry))}
+              can={() => canUninstall}
+              picked={removing}
+              onPick={(unit) => setRemoving(unit.uid)}
+              data={(unit) => ({ 'data-action': 'uninstall-card', 'data-card': unit.uid })}
+            />
+            <button
+              type="button"
+              data-action="uninstall"
+              disabled={!(target && canUninstall)}
+              onClick={() => {
+                if (!target) return
+                setGone(asUnit(target))
+                run.act({ type: 'uninstall', card: target.id })
+                setRemoving(null)
+              }}
+              className={`${SIDE_BUTTON} self-center border-p03 px-4 text-lg disabled:opacity-40`}
+            >
+              {target
+                ? `Uninstall ${card(target.card).name} for ${UNINSTALL_PRICE} bytes`
+                : `Uninstall it for ${UNINSTALL_PRICE} bytes`}
+            </button>
+          </>
+        )}
       </Box>
+    </div>
+  )
+}
+
+/** The uninstall's slot once used: the card it took shrinks away, then the slot turns over to a crossed-out circle. */
+function UsedSlot({ gone }: { gone: Unit | null }) {
+  const face = 'absolute inset-0 grid place-items-center rounded-md border-2 border-dashed border-p03-edge text-p03-dim'
+  return (
+    <div
+      role="img"
+      aria-label="Uninstalled. One a visit"
+      data-uninstalled
+      className="relative aspect-[5/7] w-24 self-center sm:w-28"
+    >
+      {/* Just used, the + turns over to the cross; on a later visit to this screen, the cross is already up. */}
+      {gone ? (
+        <span className={`${face} motion-safe:animate-[turn-away_450ms_ease-in-out_450ms_both] motion-reduce:hidden`}>
+          <Plus aria-hidden className="size-10" />
+        </span>
+      ) : null}
+      <span className={`${face} ${gone ? 'motion-safe:animate-[turn-up_450ms_ease-in-out_450ms_both]' : ''}`}>
+        <Ban aria-hidden className="size-10" />
+      </span>
+      {gone ? (
+        <div className="absolute inset-0 z-10 motion-safe:animate-[uninstall-away_400ms_ease-in_forwards] motion-reduce:hidden">
+          <PixelCard unit={gone} />
+        </div>
+      ) : null}
     </div>
   )
 }

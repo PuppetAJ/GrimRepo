@@ -25,6 +25,7 @@ const ITEMS: Item[] = [
   { kind: 'icons', id: 'attack', name: 'Attack' },
   { kind: 'icons', id: 'health', name: 'Health' },
   { kind: 'icons', id: 'fire', name: 'Fire (16 × 16, animated)', size: 16, frames: true },
+  { kind: 'icons', id: 'logs', name: 'Campfire logs (16 × 16)', size: 16 },
 ]
 
 const sizeOf = (item: Item) => item.size ?? SIZE[item.kind]
