@@ -9,19 +9,29 @@ export function guestName(): string {
   return `guest_${[...bytes].map((byte) => LETTERS[byte % LETTERS.length]).join('')}`
 }
 
-/** The account's own open game, if any, wins over the guest's. */
-export async function claimGuestGames(guestId: string, account: { id: string; username?: string | null }) {
+/**
+ * Everything a guest made comes with them when they sign up or sign in: their games, their runs and their death card.
+ * The account's own open game or run, and its own death card, win over the guest's.
+ */
+export async function claimGuest(guestId: string, account: { id: string; username?: string | null }) {
   // The demo account is shared, so guests' games never land in it.
   if (account.username === demoAccount.username) return
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
+    for (const table of ['games', 'runs']) {
+      await client.query(
+        `DELETE FROM ${table} WHERE user_id = $1 AND status = 'playing'
+           AND EXISTS (SELECT 1 FROM ${table} WHERE user_id = $2 AND status = 'playing')`,
+        [guestId, account.id],
+      )
+      await client.query(`UPDATE ${table} SET user_id = $2 WHERE user_id = $1`, [guestId, account.id])
+    }
     await client.query(
-      `DELETE FROM games WHERE user_id = $1 AND status = 'playing'
-         AND EXISTS (SELECT 1 FROM games WHERE user_id = $2 AND status = 'playing')`,
+      `UPDATE users SET death_card = (SELECT death_card FROM users WHERE id = $1)
+       WHERE id = $2 AND death_card IS NULL`,
       [guestId, account.id],
     )
-    await client.query('UPDATE games SET user_id = $2 WHERE user_id = $1', [guestId, account.id])
     await client.query('COMMIT')
   } catch (error) {
     await client.query('ROLLBACK')

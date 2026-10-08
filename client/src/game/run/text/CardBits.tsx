@@ -1,12 +1,33 @@
 import { CircleOff, Search } from 'lucide-react'
 import { createContext, use, useState, type ReactNode } from 'react'
-import { card, SIGILS, type SigilId, type Unit } from 'shared'
+import { card, CARD_TYPES, SIGILS, type CardType, type SigilId, type Unit } from 'shared'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog.tsx'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover.tsx'
 import { ReaderBody, Sigil } from '../../CardReader.tsx'
 import { describe } from '../../controls.tsx'
 
 const LIGHT = '#b8f5c4'
+
+/** A card's type as an icon that says what the type means, as the sigils beside it do. */
+export function TypeIcon({ type, size = 18 }: { type: CardType; size?: number }) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={`${CARD_TYPES[type].name} type: what it means`}
+          className="grid size-7 place-items-center rounded-sm border border-p03-edge hover:bg-[#13261a] focus-visible:outline-2 focus-visible:outline-p03"
+        >
+          <Sigil id={`type-${type}`} size={size} color={LIGHT} />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="border-p03-edge bg-p03-ground font-terminal text-lg text-[#b8f5c4]">
+        <p className="text-p03">{CARD_TYPES[type].name}</p>
+        <p className="font-sans text-sm">{CARD_TYPES[type].about}</p>
+      </PopoverContent>
+    </Popover>
+  )
+}
 
 /** A card's sigils as icons; each opens a note on what it does, so the names needn't take the room. */
 export function SigilIcons({ sigils, size = 18 }: { sigils: SigilId[]; size?: number }) {
