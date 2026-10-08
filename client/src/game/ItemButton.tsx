@@ -1,7 +1,9 @@
+import { m } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ITEMS, type ItemId } from 'shared'
 import { Sigil } from './CardReader.tsx'
+import { fadeIn } from './moves.ts'
 
 /** How long a press must last to read the item instead of using it, in milliseconds. */
 const HOLD_MS = 350
@@ -78,15 +80,16 @@ export function ItemButton({
       </button>
       {reading
         ? createPortal(
-            <span
+            <m.span
               aria-hidden
+              {...fadeIn(0.12)}
               style={{ left: reading.left, bottom: reading.bottom }}
-              className="pointer-events-none fixed z-[70] flex w-56 flex-col items-center gap-2 rounded-md border-2 border-p03 bg-p03-ground p-3 text-center text-p03 shadow-[0_0_18px_rgb(125_255_154/0.45)] motion-safe:animate-[fade-in_120ms_ease-out]"
+              className="pointer-events-none fixed z-[70] flex w-56 flex-col items-center gap-2 rounded-md border-2 border-p03 bg-p03-ground p-3 text-center text-p03 shadow-[0_0_18px_rgb(125_255_154/0.45)]"
             >
               <Sigil id={item} size={56} color="currentColor" />
               <span className="font-terminal text-xl">{def.name}</span>
               <span className="font-sans text-sm text-[#b8f5c4]">{def.text}</span>
-            </span>,
+            </m.span>,
             document.body,
           )
         : null}

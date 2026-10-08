@@ -1,3 +1,4 @@
+import { m } from 'motion/react'
 import { X } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
@@ -36,6 +37,7 @@ import { authClient, DEMO } from '../lib/auth.ts'
 import { number } from '../lib/format.ts'
 import type { Shown } from './shown.ts'
 import type { Ready } from './useGame.ts'
+import { drift } from './moves.ts'
 
 export const has = (legal: Action[], match: Partial<Action>) =>
   legal.some((action) => Object.entries(match).every(([key, value]) => action[key as keyof Action] === value))
@@ -320,13 +322,14 @@ export function ScaleBar({
       >
         {Math.abs(scale)}
         {shown.change ? (
-          <span
+          <m.span
             key={shown.key}
             aria-hidden
-            className={`absolute top-full left-0 animate-[health-change_1.2s_ease-out_forwards] ${shown.change < 0 ? 'text-death' : 'text-foreground'}`}
+            {...drift}
+            className={`absolute top-full left-0 ${shown.change < 0 ? 'text-death' : 'text-foreground'}`}
           >
             {shown.change > 0 ? `+${shown.change}` : shown.change}
-          </span>
+          </m.span>
         ) : null}
       </span>
     </div>

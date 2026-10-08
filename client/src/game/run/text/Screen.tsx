@@ -3,6 +3,7 @@ import { Backpack, Flag, LogOut, Maximize, Menu, Minimize, Repeat, X } from 'luc
 import { Dialog as DialogPrimitive } from 'radix-ui'
 import { use, useEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { AnimatePresence, m, useReducedMotion } from 'motion/react'
 import { STAGES } from 'shared'
 import { AlertDialog } from '@/components/ui/alert-dialog.tsx'
 import {
@@ -57,12 +58,15 @@ function Hologram({ fading, children }: { fading: boolean; children: ReactNode }
   return (
     <div ref={light} className="hologram">
       {/* Fades in as a screen takes the window, and out before the next one does. */}
-      <div
+      <m.div
         inert={fading}
-        className={`hologram-glow animate-in duration-200 fade-in-0 motion-reduce:animate-none ${fading ? 'opacity-0 transition-opacity duration-150' : ''}`}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: fading ? 0 : 1 }}
+        transition={{ duration: fading ? 0.15 : 0.2 }}
+        className="hologram-glow"
       >
         {children}
-      </div>
+      </m.div>
     </div>
   )
 }
@@ -318,13 +322,7 @@ export function Screen({
   // Over the hologram the deck is a drawer, so the room stays in view.
   const roomy = layout === 'wide' && mode !== 'hologram'
   const [docked, setDocked] = useState(dockedAtFirst)
-  // Closing, the inventory slides away before it goes, as it slid in.
-  const [closing, setClosing] = useState(false)
-  // Whether its column has its width: it grows from nothing as it opens and shrinks as it closes, so the screen beside it
-  // widens and narrows smoothly instead of snapping.
-  const [widened, setWidened] = useState(dockedAtFirst)
-  const settle = (open: boolean) => {
-    setClosing(false)
+  const dock = (open: boolean) => {
     setDocked(open)
     try {
       localStorage.setItem(DOCK_KEY, open ? 'open' : 'closed')
@@ -332,20 +330,8 @@ export function Screen({
       // Storage can be refused in a private window; the choice then lasts until the page closes.
     }
   }
-  const dock = (open: boolean) => {
-    if (prefersReducedMotion()) {
-      setWidened(open)
-      return settle(open)
-    }
-    if (!open) {
-      setWidened(false)
-      return setClosing(true)
-    }
-    settle(true)
-    // A frame at no width first, so the column has something to grow from.
-    requestAnimationFrame(() => requestAnimationFrame(() => setWidened(true)))
-  }
   const showDock = deck && roomy && docked
+  const still = useReducedMotion()
   const [drawer, setDrawer] = useState(false)
   const menuButton = useRef<HTMLButtonElement>(null)
   // One search per screen, cleared when the screen changes.
@@ -440,7 +426,7 @@ export function Screen({
   // Over the 3D table, the scene behind is the frame, and its page decides full screen.
   const place =
     mode === 'floating'
-      ? `absolute z-10 bg-p03-ground/60 backdrop-blur-[3px] animate-in fade-in-0 slide-in-from-bottom-3 duration-500 motion-reduce:animate-none ${phone ? 'inset-0 p-3' : 'inset-x-3 inset-y-3 mx-auto max-w-6xl rounded-lg border p-4'}`
+      ? `absolute z-10 bg-p03-ground/60 backdrop-blur-[3px] ${phone ? 'inset-0 p-3' : 'inset-x-3 inset-y-3 mx-auto max-w-6xl rounded-lg border p-4'}`
       : phone
         ? fullScreen.on
           ? 'fixed inset-0 z-50 p-3'
@@ -450,9 +436,13 @@ export function Screen({
     <SlotContext value={{ actions, bar, center, mode }}>
       <SearchContext value={{ query, setQuery: (next) => setSearch({ title, query: next }) }}>
         {terminal && fullScreen.on ? <div aria-hidden className="fixed inset-0 z-40 bg-[#030604]" /> : null}
-        <div
+        {/* Floating over the 3D table, it rises into place as it opens. */}
+        <m.div
           ref={phone || !terminal ? undefined : frame}
           style={phone || !terminal ? undefined : size}
+          initial={mode === 'floating' ? { opacity: 0, y: 12 } : false}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
           // A table to the keyboard, so a screen's number keys work while focus is anywhere inside it.
           data-table="run"
           tabIndex={-1}
@@ -477,8 +467,15 @@ export function Screen({
             {stacked ? <div className="absolute top-0 right-0">{menu}</div> : buttonRow}
           </header>
           {deckDrawer}
-          <div
-            className={`relative z-10 grid min-h-0 flex-1 gap-y-4 transition-[grid-template-columns,column-gap] duration-200 ease-out motion-reduce:transition-none ${showDock ? (widened ? 'grid-cols-[minmax(0,1fr)_20rem] gap-x-4' : 'grid-cols-[minmax(0,1fr)_0rem] gap-x-0') : ''}`}
+          {/* The inventory's column grows from nothing as it opens and shrinks as it closes, so the screen beside it widens and narrows smoothly. */}
+          <m.div
+            initial={false}
+            animate={{
+              gridTemplateColumns: showDock ? 'minmax(0px, 1fr) 20rem' : 'minmax(0px, 1fr) 0rem',
+              columnGap: showDock ? '1rem' : '0rem',
+            }}
+            transition={{ duration: still ? 0 : 0.2, ease: 'easeOut' }}
+            className="relative z-10 grid min-h-0 flex-1 gap-y-4"
           >
             <div className="flex min-h-0 min-w-0 flex-col gap-2">
               <div ref={setBar} className={`shrink-0 empty:hidden ${stacked ? 'text-center' : ''}`} />
@@ -487,44 +484,53 @@ export function Screen({
               <div data-scroller className={`flex min-h-0 flex-1 flex-col overflow-y-auto px-1 ${FADE}`}>
                 {/* A screen marked data-center, such as a card choice or an empty one, sits in the middle. */}
                 {/* Fades in on load and as each screen takes its place, as the projector's screens do. */}
-                <div
+                <m.div
                   key={title}
-                  className="animate-in duration-200 fade-in-0 has-[[data-center]]:my-auto motion-reduce:animate-none"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.2 }}
+                  className="has-[[data-center]]:my-auto"
                 >
                   {children}
-                </div>
+                </m.div>
               </div>
             </div>
-            {showDock ? (
-              <aside
-                id="run-deck"
-                aria-label="Your inventory"
-                onAnimationEnd={(event) => closing && event.target === event.currentTarget && settle(false)}
-                className={`min-h-0 overflow-hidden duration-200 motion-reduce:animate-none ${closing ? 'animate-out fade-out-0 fill-mode-forwards slide-out-to-right-4' : 'animate-in fade-in-0 slide-in-from-right-4'}`}
-              >
-                {/* Its own width throughout, so nothing reflows while its column grows or shrinks around it. */}
-                <Panel className="flex h-full min-h-0 w-[20rem] flex-col gap-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <h2 className="text-p03">Inventory</h2>
-                    <button
-                      type="button"
-                      onClick={() => dock(false)}
-                      aria-label="Close the inventory"
-                      className={ICON_BUTTON}
-                    >
-                      <X aria-hidden className="size-5" />
-                    </button>
-                  </div>
-                  <HeldTools items={state.items} label="Tools" />
-                  <h3 className="text-p03">Deck ({state.deck.length})</h3>
-                  <div className={`min-h-0 flex-1 overflow-y-auto px-1 ${FADE}`}>
-                    <DeckTable deck={state.deck} caption="Your deck" />
-                  </div>
-                </Panel>
-              </aside>
-            ) : null}
-          </div>
-        </div>
+            {/* Slides in as it opens and away before it goes; already open on load, it's simply there. */}
+            <AnimatePresence initial={false}>
+              {showDock ? (
+                <m.aside
+                  id="run-deck"
+                  aria-label="Your inventory"
+                  initial={{ opacity: 0, x: 16 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 16 }}
+                  transition={{ duration: 0.2 }}
+                  className="min-h-0 overflow-hidden"
+                >
+                  {/* Its own width throughout, so nothing reflows while its column grows or shrinks around it. */}
+                  <Panel className="flex h-full min-h-0 w-[20rem] flex-col gap-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <h2 className="text-p03">Inventory</h2>
+                      <button
+                        type="button"
+                        onClick={() => dock(false)}
+                        aria-label="Close the inventory"
+                        className={ICON_BUTTON}
+                      >
+                        <X aria-hidden className="size-5" />
+                      </button>
+                    </div>
+                    <HeldTools items={state.items} label="Tools" />
+                    <h3 className="text-p03">Deck ({state.deck.length})</h3>
+                    <div className={`min-h-0 flex-1 overflow-y-auto px-1 ${FADE}`}>
+                      <DeckTable deck={state.deck} caption="Your deck" />
+                    </div>
+                  </Panel>
+                </m.aside>
+              ) : null}
+            </AnimatePresence>
+          </m.div>
+        </m.div>
       </SearchContext>
     </SlotContext>
   )

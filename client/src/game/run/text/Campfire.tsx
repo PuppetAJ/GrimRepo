@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { m } from 'motion/react'
+import { warmPop } from '../../moves.ts'
 import { card, legalRunActions, type Unit } from 'shared'
 import {
   AlertDialog,
@@ -51,11 +53,11 @@ export function Campfire({ run }: { run: RunReady }) {
       {warmed ? (
         <div className="w-24 sm:w-28">
           {/* Pops with what it gained each time it comes out of the fire. */}
-          <span key={visit.buffs} className="relative block motion-safe:animate-[warm-pop_450ms_ease-out]">
+          <m.span key={visit.buffs} {...warmPop} className="relative block">
             <ReadableCard unit={warmed} />
             {/* The rise animation centers the text on this point itself. */}
             <Rising text={boost} tone="note" className="top-1/3 left-1/2 text-2xl" />
-          </span>
+          </m.span>
         </div>
       ) : (
         <CardSlot

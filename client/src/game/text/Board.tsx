@@ -1,7 +1,9 @@
-import type { CSSProperties, KeyboardEvent, ReactNode } from 'react'
+import { animate, m, useReducedMotion } from 'motion/react'
+import { useLayoutEffect, useRef, type KeyboardEvent, type ReactNode } from 'react'
 import type { Slot } from 'shared'
 import { describe, Ending, laneAction, whyNot } from '../controls.tsx'
 import { PixelCard } from '../CardReader.tsx'
+import { arrive, leave, rise, strike } from '../moves.ts'
 import { shown } from '../shown.ts'
 import { LUNGE_MS, SLIDE_MS, type Playback } from '../table/playback.ts'
 import { useTable } from './context.ts'
@@ -36,53 +38,59 @@ function Occupant({
   const popups = playback.popups.filter(
     (popup) => 'row' in popup.spot && popup.spot.row === row && popup.spot.lane === lane,
   )
+  const still = useReducedMotion() ?? false
+  // A card that changes lanes slides from the one it left, an arc over the lanes between; reduced, it fades in place.
+  const sliding = useRef<HTMLSpanElement>(null)
+  useLayoutEffect(() => {
+    const element = sliding.current
+    if (!slide || !element) return
+    if (still) {
+      const fade = animate(element, { opacity: [0.4, 1] }, { duration: SLIDE_MS / 1000 })
+      return () => fade.stop()
+    }
+    // A lane over is the card's own width and the gap between lanes.
+    const gap = parseFloat(getComputedStyle(document.documentElement).fontSize) * 0.5
+    const from = (slide.from - slide.to) * (element.offsetWidth + gap)
+    const move = animate(
+      element,
+      { x: [from, from / 2, 0], y: ['0%', '-12%', '0%'] },
+      { duration: SLIDE_MS / 1000, ease: 'easeInOut' },
+    )
+    return () => {
+      move.stop()
+      element.style.transform = ''
+    }
+  }, [slide, still])
   return (
     <span className="relative block size-full">
       {unit ? (
-        <span
+        <m.span
+          ref={sliding}
           // Keyed by its move too, so a card that changes lanes slides in from the one it left.
           key={`${unit.uid}:${slide?.at ?? 0}`}
-          className={`block size-full transition-transform duration-200 motion-reduce:transition-none ${tilted ? '-translate-y-1 rotate-6' : ''}`}
-          style={
-            slide
-              ? ({
-                  animation: `slide-lane ${SLIDE_MS}ms ease-in-out`,
-                  '--from': `calc(${slide.from - slide.to} * (100% + 0.5rem))`,
-                } as CSSProperties)
-              : isNew(unit.uid)
-                ? { animation: `${row === 'board' ? 'arrive-up' : 'arrive-down'} 280ms ease-out` }
-                : undefined
-          }
+          {...(!slide && isNew(unit.uid) ? arrive(row) : {})}
+          className="block size-full"
         >
+          {/* Tilted while marked for sacrifice; a plain CSS transition, as hovers are. */}
           <span
-            key={striking ? striking.at : 'still'}
-            className="block size-full"
-            style={
-              striking
-                ? { animation: `${row === 'board' ? 'lunge-up' : 'lunge-down'} ${LUNGE_MS}ms ease-in-out` }
-                : undefined
-            }
+            className={`block size-full transition-transform duration-200 motion-reduce:transition-none ${tilted ? '-translate-y-1 rotate-6' : ''}`}
           >
-            <PixelCard unit={unit} />
+            <m.span
+              key={striking ? striking.at : 'still'}
+              {...(striking ? strike(row, LUNGE_MS / 1000, still) : {})}
+              className="block size-full"
+            >
+              <PixelCard unit={unit} />
+            </m.span>
           </span>
-        </span>
+        </m.span>
       ) : (
         empty
       )}
       {leaving.map((gone) => (
-        <span
-          key={`gone-${gone.unit.uid}`}
-          aria-hidden
-          className="absolute inset-0"
-          style={
-            {
-              animation: `${gone.how === 'sacrificed' ? 'offer-up' : 'fold-away'} 550ms ease-in forwards`,
-              '--away': row === 'board' ? '60%' : '-60%',
-            } as CSSProperties
-          }
-        >
+        <m.span key={`gone-${gone.unit.uid}`} aria-hidden {...leave(gone.how, row, still)} className="absolute inset-0">
           <PixelCard unit={gone.unit} />
-        </span>
+        </m.span>
       ))}
       {popups.map((popup) => (
         <Rising key={popup.id} text={popup.text} tone={popup.tone} />
@@ -100,14 +108,15 @@ export function Rising({
   tone: string
   className?: string
 }) {
+  const still = useReducedMotion() ?? false
   return (
-    <span
+    <m.span
       aria-hidden
+      {...rise(still)}
       className={`pointer-events-none absolute z-10 text-3xl whitespace-nowrap [-webkit-text-stroke:1px_#000] [text-shadow:0_0_6px_#000,0_0_2px_#000,0_0_1px_#000] ${className} ${tone === 'heal' ? 'text-p03' : tone === 'note' ? 'text-[#f2c14e]' : 'text-death'}`}
-      style={{ animation: 'rise 1s ease-out forwards' }}
     >
       {text}
-    </span>
+    </m.span>
   )
 }
 
@@ -129,7 +138,7 @@ export function Board() {
     inspectProps,
     isNew,
     showRefusal,
-    refusalShake,
+    shakeRef,
   } = useTable()
   const { laneSize, setReading, aiming, setAiming, aimAt } = useTable()
   // Over each card the item in hand can reach, a button that uses it there.
@@ -268,7 +277,8 @@ export function Board() {
                 }
                 // A container, so the lane's badge sizes to it.
                 className={`${CELL} @container relative ${frame}`}
-                style={{ ...laneSize, ...refusalShake(`lane-${i}`) }}
+                ref={shakeRef(`lane-${i}`)}
+                style={laneSize}
               >
                 <Occupant
                   row="board"

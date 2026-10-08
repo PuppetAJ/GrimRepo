@@ -1,12 +1,13 @@
+import { m } from 'motion/react'
 import { card, HAND_LIMIT, reshuffleCostsMemory, type Action } from 'shared'
 import { describe, has, reshuffleNote, whyNot } from '../controls.tsx'
+import { arrive } from '../moves.ts'
 import { PixelCard } from '../CardReader.tsx'
 import { useTable } from './context.ts'
 
 export function Hand() {
-  const { view, state, legal, busy, act, layout, compact, phone, sideways, tapToRead, inspectProps, isNew, refusal } =
-    useTable()
-  const { showRefusal, refusalShake, setReading } = useTable()
+  const { view, state, legal, busy, act, layout, compact, phone, sideways, tapToRead, inspectProps, isNew } = useTable()
+  const { showRefusal, shakeRef, setReading } = useTable()
   return (
     <div
       className={`flex min-w-0 flex-1 gap-2 rounded-md border-2 border-[#1f3a26] bg-[#050d07]/70 px-1 pb-1 ${sideways ? 'min-h-0 flex-wrap content-start justify-center overflow-y-auto pt-3' : `justify-[safe_center] items-center overflow-x-auto ${phone ? 'pt-3' : 'pt-5'}`} ${compact ? '' : 'h-full'}`}
@@ -16,11 +17,11 @@ export function Hand() {
         const allowed = has(legal, { type: 'select', uid: unit.uid } as Partial<Action>)
         return (
           // The button is never disabled, so an unplayable card can still be read and shake when clicked.
-          <div
+          <m.div
             key={unit.uid}
             {...inspectProps({ uid: unit.uid }, unit)}
             className={`shrink-0 select-none [-webkit-touch-callout:none] ${layout === 'mid' ? 'w-[clamp(5rem,6.5vw,6.5rem)]' : phone && !sideways ? 'w-12 tall:w-14' : phone ? 'w-14' : 'aspect-[5/7] h-full'}`}
-            style={isNew(unit.uid) ? { animation: 'arrive-up 280ms ease-out' } : undefined}
+            {...(isNew(unit.uid) ? arrive('hand') : {})}
           >
             <button
               type="button"
@@ -39,15 +40,11 @@ export function Hand() {
               }
               className={`w-full rounded-md p-1 transition-transform motion-reduce:transition-none ${selected ? '-translate-y-3 outline-2 outline-p03 outline-dashed' : allowed ? 'hover:-translate-y-1' : 'brightness-50 saturate-50'}`}
             >
-              <span
-                key={refusal.what === `card-${unit.uid}` ? refusal.count : 0}
-                className="block"
-                style={refusalShake(`card-${unit.uid}`)}
-              >
+              <span ref={shakeRef(`card-${unit.uid}`)} className="block">
                 <PixelCard unit={unit} />
               </span>
             </button>
-          </div>
+          </m.div>
         )
       })}
     </div>
@@ -55,16 +52,15 @@ export function Hand() {
 }
 
 export function Piles() {
-  const { view, state, mustDraw, handFull, act, compact, phone, sideways, refusal, refusalShake } = useTable()
+  const { view, state, mustDraw, handFull, act, compact, phone, sideways, shakeRef } = useTable()
   // An empty deck shows what a draw would shuffle back in, not a bare 0.
   const reshuffle = view.deck ? null : reshuffleNote(state)
   const size = sideways ? 'w-10' : phone ? 'w-8 tall:w-10' : compact ? 'w-12 sm:w-16' : 'w-20'
   const full = handFull ? `Your hand is full (${HAND_LIMIT})` : undefined
   return (
     <div
-      key={refusal.count}
+      ref={shakeRef('piles')}
       className={`flex shrink-0 gap-3 ${compact ? 'items-center rounded-md border-2 border-[#1f3a26] bg-[#050d07]/70 px-2 pt-2 pb-1' : ''}`}
-      style={refusalShake('piles')}
     >
       <button
         type="button"
