@@ -1,4 +1,5 @@
 import {
+  Backpack,
   Flag,
   LayoutGrid,
   ListEnd,
@@ -58,6 +59,7 @@ export function Hud({
   pinned,
   onUnpin,
   onMap,
+  onInventory,
   aimed = null,
   onPutBack,
   aiming = null,
@@ -68,6 +70,8 @@ export function Hud({
   onAim?: (slot: number | null) => void
   /** In a run, glides back to look at the map on the projector. */
   onMap?: () => void
+  /** A run's inventory, the deck and tools carried; a quick battle has none. */
+  onInventory?: () => void
   /** The item picked up to aim at a card, and how to put it back. */
   aimed?: ItemId | null
   onPutBack?: () => void
@@ -178,6 +182,12 @@ export function Hud({
             <Button size="sm" variant="ghost" onClick={onMap} aria-keyshortcuts="M" title="Look at the map">
               <MapIcon aria-hidden />
               <Label>Look at the map</Label>
+            </Button>
+          ) : null}
+          {onInventory ? (
+            <Button size="sm" variant="ghost" onClick={onInventory} title="Inventory">
+              <Backpack aria-hidden />
+              <Label>Inventory</Label>
             </Button>
           ) : null}
           <Button size="sm" variant="ghost" onClick={onText} title="Text table">

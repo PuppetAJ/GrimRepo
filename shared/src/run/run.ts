@@ -14,17 +14,17 @@ import type { MapNode, Pick, RunAction, RunCard, RunEvent, RunResult, RunState, 
 export const STARTER_DECKS: Record<string, { name: string; about: string; cards: string[] }> = {
   'hello-world': {
     name: 'Hello, World',
-    about: 'Steady: hits every empty lane, survives its sacrifice, and guards.',
+    about: 'Steady: Reliable and balanced between defense and offense.',
     cards: ['HelloWorld', 'CronJob', 'MergeConflict'],
   },
   'legacy-stack': {
     name: 'Legacy Stack',
-    about: 'Sacrifices: Refactor and Technical Debt pay for big cards early.',
+    about: 'Sacrifices: Pay for high cost cards early.',
     cards: ['CronJob', 'OffCenterDiv', 'LegacyCode', 'SpamBot'],
   },
   'move-fast': {
     name: 'Move Fast',
-    about: 'Three cards and little health: hit hard, and hope.',
+    about: 'Glass Cannon: Hit hard, and hope.',
     cards: ['CopyPaste', 'SpamBot', 'CronJob'],
   },
 }

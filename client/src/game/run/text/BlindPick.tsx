@@ -24,7 +24,7 @@ export function BlindPick({ run }: { run: RunReady }) {
           onPick={(unit) => run.act({ type: 'take', index: unit.uid - 1 })}
           data={(unit) => ({ 'data-action': 'take', 'data-index': unit.uid - 1 })}
           size="w-36 sm:w-44"
-          itemClass="motion-safe:animate-[flip-in_450ms_ease-out_both] [&:nth-child(2)]:[animation-delay:120ms] [&:nth-child(3)]:[animation-delay:240ms]"
+          itemClass="motion-safe:animate-[flip-in_300ms_ease-out_both] [&:nth-child(2)]:[animation-delay:80ms] [&:nth-child(3)]:[animation-delay:160ms]"
         />
       </div>
     )

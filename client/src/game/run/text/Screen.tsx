@@ -1,5 +1,5 @@
 import { useNavigate } from '@tanstack/react-router'
-import { Flag, Layers, LogOut, Maximize, Menu, Minimize, Repeat, X } from 'lucide-react'
+import { Backpack, Flag, LogOut, Maximize, Menu, Minimize, Repeat, X } from 'lucide-react'
 import { Dialog as DialogPrimitive } from 'radix-ui'
 import { use, useEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
@@ -23,6 +23,7 @@ import type { Layout } from '../../text/useTextTable.ts'
 import type { RunReady } from '../useRun.ts'
 import { CardSearch, SEARCH_FROM, SearchContext, useCardSearch } from './CardBits.tsx'
 import { DeckTable } from './DeckTable.tsx'
+import { HeldTools } from './HeldTools.tsx'
 import { SlotContext, type Mode } from './slots.ts'
 
 export const ICON_BUTTON =
@@ -72,6 +73,12 @@ export function ScreenActions({ children }: { children: ReactNode }) {
   return actions ? createPortal(children, actions) : null
 }
 
+/** Something of the screen's in the middle of the header, where there's room for it; shown only on wide screens. */
+export function ScreenCenter({ children }: { children: ReactNode }) {
+  const { center } = use(SlotContext)
+  return center ? createPortal(children, center) : null
+}
+
 /** A screen's own line under the header, above its scrolling content, so it's always in reach. */
 export function ScreenBar({ children }: { children: ReactNode }) {
   const { bar } = use(SlotContext)
@@ -110,10 +117,17 @@ function dockedAtFirst(): boolean {
   }
 }
 
-function DeckButton({ count, ...props }: { count: number } & ComponentProps<'button'>) {
+/** Opens the inventory: the deck and the tools carried. */
+function InventoryButton({ count, tools, ...props }: { count: number; tools: number } & ComponentProps<'button'>) {
   return (
-    <button type="button" aria-label={`Your deck, ${count} cards`} title="Your deck" className={ICON_BUTTON} {...props}>
-      <Layers aria-hidden className="size-5" />
+    <button
+      type="button"
+      aria-label={`Your inventory, ${count} cards and ${tools} ${tools === 1 ? 'tool' : 'tools'}`}
+      title="Inventory"
+      className={ICON_BUTTON}
+      {...props}
+    >
+      <Backpack aria-hidden className="size-5" />
       <span
         aria-hidden
         className="absolute -top-2 -right-2 min-w-5 rounded-full bg-p03 px-1 text-center text-sm leading-5 text-p03-ground"
@@ -153,14 +167,16 @@ function DeckDrawer({
           className="absolute top-0 right-0 z-50 flex h-full w-full max-w-sm flex-col gap-3 border-l-2 border-p03-edge bg-p03-ground p-4 font-terminal text-xl text-[#b8f5c4] outline-none motion-reduce:animate-none data-open:animate-in data-open:slide-in-from-right data-closed:animate-out data-closed:slide-out-to-right"
         >
           <div className="flex items-center justify-between gap-2">
-            <DialogPrimitive.Title className="text-3xl text-p03">Your deck ({count})</DialogPrimitive.Title>
-            <DialogPrimitive.Close aria-label="Close the deck" className={ICON_BUTTON}>
+            <DialogPrimitive.Title className="text-3xl text-p03">Inventory</DialogPrimitive.Title>
+            <DialogPrimitive.Close aria-label="Close the inventory" className={ICON_BUTTON}>
               <X aria-hidden className="size-5" />
             </DialogPrimitive.Close>
           </div>
           <DialogPrimitive.Description className="sr-only">
-            Every card as it stands after this run's changes.
+            The tools carried, and every card as it stands after this run's changes.
           </DialogPrimitive.Description>
+          <HeldTools items={run.state.items} label="Tools" />
+          <h3 className="text-p03">Deck ({count})</h3>
           <div className={`min-h-0 flex-1 overflow-y-auto px-1 ${FADE}`}>
             <DeckTable deck={run.state.deck} caption="Your deck" />
           </div>
@@ -234,8 +250,8 @@ function RunMenu({
           <DropdownMenuSeparator />
           {onDeck ? (
             <DropdownMenuItem onSelect={onDeck} className="text-lg">
-              <Layers aria-hidden />
-              Your deck ({state.deck.length})
+              <Backpack aria-hidden />
+              Inventory
             </DropdownMenuItem>
           ) : null}
           {fullScreen.supported ? (
@@ -309,13 +325,32 @@ export function Screen({
   // Over the hologram the deck is a drawer, so the room stays in view.
   const roomy = layout === 'wide' && mode !== 'hologram'
   const [docked, setDocked] = useState(dockedAtFirst)
-  const dock = (open: boolean) => {
+  // Closing, the inventory slides away before it goes, as it slid in.
+  const [closing, setClosing] = useState(false)
+  // Whether its column has its width: it grows from nothing as it opens and shrinks as it closes, so the screen beside it
+  // widens and narrows smoothly instead of snapping.
+  const [widened, setWidened] = useState(dockedAtFirst)
+  const settle = (open: boolean) => {
+    setClosing(false)
     setDocked(open)
     try {
       localStorage.setItem(DOCK_KEY, open ? 'open' : 'closed')
     } catch {
       // Storage can be refused in a private window; the choice then lasts until the page closes.
     }
+  }
+  const dock = (open: boolean) => {
+    if (prefersReducedMotion()) {
+      setWidened(open)
+      return settle(open)
+    }
+    if (!open) {
+      setWidened(false)
+      return setClosing(true)
+    }
+    settle(true)
+    // A frame at no width first, so the column has something to grow from.
+    requestAnimationFrame(() => requestAnimationFrame(() => setWidened(true)))
   }
   const showDock = deck && roomy && docked
   const [drawer, setDrawer] = useState(false)
@@ -330,6 +365,17 @@ export function Screen({
   const [host, setHost] = useState<HTMLDivElement | null>(null)
   const [actions, setActions] = useState<HTMLDivElement | null>(null)
   const [bar, setBar] = useState<HTMLDivElement | null>(null)
+  const [center, setCenter] = useState<HTMLDivElement | null>(null)
+  // Between the title and the buttons, on screens wide enough to keep all three on one line.
+  // Its top level with the title's and the menu's; taller than they are, it hangs down beside the screen's line rather than
+  // making the header taller.
+  const centerSlot = (
+    <div
+      ref={setCenter}
+      data-center-slot
+      className="absolute top-0 left-1/2 hidden -translate-x-1/2 empty:hidden xl:flex"
+    />
+  )
   // The screen's own buttons, the deck and the menu, beside the title or, stacked, under the screen's line.
   const menu = (
     <RunMenu
@@ -345,8 +391,9 @@ export function Screen({
     <div className={`flex shrink-0 items-center gap-2 ${stacked ? 'justify-center' : 'ml-auto'}`}>
       <div ref={setActions} className="flex shrink-0 items-center gap-2 empty:hidden" />
       {deck && roomy ? (
-        <DeckButton
+        <InventoryButton
           count={state.deck.length}
+          tools={state.items.length}
           aria-expanded={docked}
           aria-controls="run-deck"
           onClick={() => dock(!docked)}
@@ -364,7 +411,7 @@ export function Screen({
   // Over the 3D table, everything goes in the projector's window, which the scene warps onto it every frame.
   if (mode === 'hologram')
     return (
-      <SlotContext value={{ actions, bar, deckShown: false, mode }}>
+      <SlotContext value={{ actions, bar, center, deckShown: false, mode }}>
         <SearchContext value={{ query, setQuery: (next) => setSearch({ title, query: next }) }}>
           <div
             data-table="run"
@@ -377,7 +424,7 @@ export function Screen({
               style={{ width: WINDOW_PX.width, height: WINDOW_PX.height }}
             >
               <Hologram fading={fading}>
-                <header className="flex shrink-0 items-center gap-3">
+                <header className="relative flex shrink-0 items-center gap-3">
                   <div className="min-w-0 flex-1">
                     {caption ? <p className="text-base text-p03-dim">{caption}</p> : null}
                     <h2 className="text-2xl leading-tight text-balance [overflow-wrap:anywhere] text-p03">{title}</h2>
@@ -407,7 +454,7 @@ export function Screen({
           : 'relative h-[calc(100dvh-7rem)] min-h-[30rem] p-3'
         : `rounded-lg border p-4 ${fullScreen.on ? 'fixed z-50' : 'relative mx-auto'}`
   return (
-    <SlotContext value={{ actions, bar, deckShown: showDock, mode }}>
+    <SlotContext value={{ actions, bar, center, deckShown: showDock, mode }}>
       <SearchContext value={{ query, setQuery: (next) => setSearch({ title, query: next }) }}>
         {terminal && fullScreen.on ? <div aria-hidden className="fixed inset-0 z-40 bg-[#030604]" /> : null}
         <div
@@ -426,17 +473,19 @@ export function Screen({
           {/* The title wraps beside the buttons rather than pushing them to a line of their own, down to 320px. */}
           <header className="relative z-10 flex shrink-0 items-center gap-2">
             {/* Stacked, the title stays clear of the menu in the corner. */}
-            <div className={`min-w-0 flex-1 ${stacked ? 'px-12 text-center' : ''}`}>
+            {/* Never squeezed to a letter a line: the buttons beside it keep short on a phone. */}
+            <div className={`min-w-[7rem] flex-1 ${stacked ? 'px-12 text-center' : ''}`}>
               {caption ? <p className="text-base text-p03-dim">{caption}</p> : null}
-              <h2 className="text-2xl leading-tight text-balance [overflow-wrap:anywhere] text-p03 sm:text-3xl">
+              <h2 className="text-xl leading-tight text-balance [overflow-wrap:anywhere] text-p03 sm:text-3xl">
                 {title}
               </h2>
             </div>
+            {stacked ? null : centerSlot}
             {stacked ? <div className="absolute top-0 right-0">{menu}</div> : buttonRow}
           </header>
           {deckDrawer}
           <div
-            className={`relative z-10 grid min-h-0 flex-1 gap-4 ${showDock ? 'grid-cols-[minmax(0,1fr)_20rem]' : ''}`}
+            className={`relative z-10 grid min-h-0 flex-1 gap-y-4 transition-[grid-template-columns,column-gap] duration-200 ease-out motion-reduce:transition-none ${showDock ? (widened ? 'grid-cols-[minmax(0,1fr)_20rem] gap-x-4' : 'grid-cols-[minmax(0,1fr)_0rem] gap-x-0') : ''}`}
           >
             <div className="flex min-h-0 min-w-0 flex-col gap-2">
               <div ref={setBar} className={`shrink-0 empty:hidden ${stacked ? 'text-center' : ''}`} />
@@ -444,27 +493,37 @@ export function Screen({
               {/* Only the content scrolls, inside a frame that stays the same size; padded so focus rings aren't cut. */}
               <div data-scroller className={`flex min-h-0 flex-1 flex-col overflow-y-auto px-1 ${FADE}`}>
                 {/* A screen marked data-center, such as a card choice or an empty one, sits in the middle. */}
-                <div className="has-[[data-center]]:my-auto">{children}</div>
+                {/* Fades in on load and as each screen takes its place, as the projector's screens do. */}
+                <div
+                  key={title}
+                  className="animate-in duration-200 fade-in-0 has-[[data-center]]:my-auto motion-reduce:animate-none"
+                >
+                  {children}
+                </div>
               </div>
             </div>
             {showDock ? (
               <aside
                 id="run-deck"
-                aria-label="Your deck"
-                className="min-h-0 animate-in duration-200 fade-in-0 slide-in-from-right-4 motion-reduce:animate-none"
+                aria-label="Your inventory"
+                onAnimationEnd={(event) => closing && event.target === event.currentTarget && settle(false)}
+                className={`min-h-0 overflow-hidden duration-200 motion-reduce:animate-none ${closing ? 'animate-out fade-out-0 fill-mode-forwards slide-out-to-right-4' : 'animate-in fade-in-0 slide-in-from-right-4'}`}
               >
-                <Panel className="flex h-full min-h-0 flex-col gap-2">
+                {/* Its own width throughout, so nothing reflows while its column grows or shrinks around it. */}
+                <Panel className="flex h-full min-h-0 w-[20rem] flex-col gap-2">
                   <div className="flex items-center justify-between gap-2">
-                    <h2 className="text-p03">Your deck ({state.deck.length})</h2>
+                    <h2 className="text-p03">Inventory</h2>
                     <button
                       type="button"
                       onClick={() => dock(false)}
-                      aria-label="Close the deck"
+                      aria-label="Close the inventory"
                       className={ICON_BUTTON}
                     >
                       <X aria-hidden className="size-5" />
                     </button>
                   </div>
+                  <HeldTools items={state.items} label="Tools" />
+                  <h3 className="text-p03">Deck ({state.deck.length})</h3>
                   <div className={`min-h-0 flex-1 overflow-y-auto px-1 ${FADE}`}>
                     <DeckTable deck={state.deck} caption="Your deck" />
                   </div>

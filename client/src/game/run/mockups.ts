@@ -210,7 +210,7 @@ export const MOCKUPS: Record<string, Entry> = {
   'worst-stones': {
     title: 'Sigil stones with a 40-card deck full of sigils',
     group: 'worst',
-    revision: 2,
+    revision: 4,
     make: () => ({ ...worstRun({ visit: { kind: 'stones', node: '4-1' } }), news: LONG_NEWS }),
   },
   'worst-event': {
@@ -225,6 +225,7 @@ export const MOCKUPS: Record<string, Entry> = {
   'worst-summary': {
     title: 'A cleared run with the biggest numbers and deck',
     group: 'worst',
+    revision: 4,
     make: () => ({
       ...worstRun({ status: 'won' }),
       over: { status: 'won', score: 99_999_999, stage: 2, bosses: 3, forfeited: false },
@@ -233,7 +234,7 @@ export const MOCKUPS: Record<string, Entry> = {
   'worst-abandoned': {
     title: 'An abandoned run',
     group: 'worst',
-    revision: 2,
+    revision: 7,
     make: () => ({
       ...worstRun({ status: 'lost' }),
       over: { status: 'lost', score: 99_999_999, stage: 2, bosses: 3, forfeited: true },
@@ -247,14 +248,14 @@ export const MOCKUPS: Record<string, Entry> = {
   start: {
     title: 'The starter deck choice',
     group: 'reached',
-    revision: 2,
+    revision: 4,
     make: () => ({ state: createRun({ seed: 1 }), path: [] }),
   },
   card: { title: 'A card choice', group: 'reached', revision: 1, make: () => reached((s) => s.visit?.kind === 'card') },
   'death-start': {
     title: 'The starter deck choice, with a death card to leave out',
     group: 'reached',
-    revision: 3,
+    revision: 8,
     make: () => ({ state: createRun({ seed: 1, death: SAMPLE_DEATH }), path: [] }),
   },
   'death-offer': {
@@ -265,7 +266,7 @@ export const MOCKUPS: Record<string, Entry> = {
   'death-build': {
     title: 'A lost run, building a death card from three hands',
     group: 'reached',
-    revision: 3,
+    revision: 9,
     make: () => {
       const found = reached((s) => s.status === 'lost' && s.deck.length >= 5)
       return (
@@ -287,13 +288,13 @@ export const MOCKUPS: Record<string, Entry> = {
   blind: {
     title: 'A face-down card choice',
     group: 'reached',
-    revision: 2,
+    revision: 3,
     make: () => reached((s) => s.visit?.kind === 'blind'),
   },
   'blind-revealed': {
     title: 'A face-down card choice, turned over to three cards',
     group: 'reached',
-    revision: 1,
+    revision: 2,
     make: () => {
       const found = reached((s) => s.visit?.kind === 'blind')
       const turned = found && applyRun(found.state, { type: 'take', index: 0 })
@@ -303,7 +304,7 @@ export const MOCKUPS: Record<string, Entry> = {
   shop: {
     title: 'The Package Registry, with bytes for one card',
     group: 'reached',
-    revision: 2,
+    revision: 5,
     make: () => {
       const found = reached((s) => s.visit?.kind === 'shop')
       return found && { ...found, state: { ...found.state, bytes: 7 } }
@@ -324,7 +325,7 @@ export const MOCKUPS: Record<string, Entry> = {
   burned: {
     title: 'A card the campfire took, falling, until you leave',
     group: 'reached',
-    revision: 1,
+    revision: 6,
     make: () => {
       const found = reached((s) => s.visit?.kind === 'campfire' && s.visit.buffs === 1)
       if (!found || found.state.visit?.kind !== 'campfire') return null
@@ -346,6 +347,7 @@ export const MOCKUPS: Record<string, Entry> = {
   merged: {
     title: 'A merge request, after two copies become one',
     group: 'reached',
+    revision: 2,
     make: () => {
       const found = reached((s) => s.visit?.kind === 'event' && s.deck.length >= 2)
       if (!found) return null
@@ -364,7 +366,7 @@ export const MOCKUPS: Record<string, Entry> = {
   'stones-done': {
     title: 'Sigil stones, after a sigil has moved',
     group: 'reached',
-    revision: 1,
+    revision: 5,
     make: () => {
       const found = reached((s) => s.visit?.kind === 'stones' && s.deck.length >= 2)
       if (!found) return null
@@ -387,7 +389,7 @@ export const MOCKUPS: Record<string, Entry> = {
   stones: {
     title: 'Sigil stones, given a FourOhFour to sacrifice',
     group: 'reached',
-    revision: 2,
+    revision: 4,
     make: () => {
       const found = reached((s) => s.visit?.kind === 'stones')
       if (!found) return null
@@ -400,7 +402,7 @@ export const MOCKUPS: Record<string, Entry> = {
   'stones-empty': {
     title: 'Sigil stones with no sigil to give',
     group: 'reached',
-    revision: 2,
+    revision: 4,
     make: () => {
       const found = reached((s) => s.visit?.kind === 'stones')
       if (!found) return null
@@ -412,7 +414,7 @@ export const MOCKUPS: Record<string, Entry> = {
   event: {
     title: 'An event',
     group: 'reached',
-    revision: 1,
+    revision: 2,
     make: () => {
       const found = reached((s) => s.visit?.kind === 'event')
       if (!found || found.state.visit?.kind !== 'event') return null
@@ -433,7 +435,7 @@ export const MOCKUPS: Record<string, Entry> = {
   fuse: {
     title: 'The merge request, with two copies to merge',
     group: 'reached',
-    revision: 2,
+    revision: 3,
     make: () => {
       const found = reached((s) => s.visit?.kind === 'event')
       if (!found || found.state.visit?.kind !== 'event') return null
@@ -489,7 +491,7 @@ export const MOCKUPS: Record<string, Entry> = {
   'item-full': {
     title: 'A tool rack, with every slot already full',
     group: 'reached',
-    revision: 2,
+    revision: 3,
     make: () => {
       const found = reached((s) => s.visit?.kind === 'item')
       const items: ItemId[] = ['hammer', 'hook', 'scissors']
@@ -499,6 +501,7 @@ export const MOCKUPS: Record<string, Entry> = {
   'items-own': {
     title: 'Items: the Hammer on your Bug, the Pliers on a sigil, the Hourglass',
     group: 'reached',
+    revision: 1,
     make: () =>
       itemBattle(['hammer', 'pliers', 'hourglass'], {
         board: ['Bug', 'CopyPaste'],
@@ -509,6 +512,7 @@ export const MOCKUPS: Record<string, Entry> = {
   'items-steal': {
     title: 'Items: the Hook on a Mainframe, the Bottled Boilerplate, the Scissors on the queue',
     group: 'reached',
+    revision: 1,
     make: () =>
       itemBattle(['hook', 'bottle', 'scissors'], {
         board: [null, null, 'Watchdog'],
@@ -519,7 +523,7 @@ export const MOCKUPS: Record<string, Entry> = {
   'shop-item': {
     title: 'The Package Registry with its two tools, Scissors among them',
     group: 'reached',
-    revision: 2,
+    revision: 5,
     make: () => {
       const found = reached((s) => s.visit?.kind === 'shop')
       if (!found || found.state.visit?.kind !== 'shop') return null
@@ -537,7 +541,7 @@ export const MOCKUPS: Record<string, Entry> = {
   toolbox: {
     title: 'The toolbox event',
     group: 'reached',
-    revision: 1,
+    revision: 2,
     make: () => {
       const found = reached((s) => s.visit?.kind === 'event')
       if (!found || found.state.visit?.kind !== 'event') return null
@@ -595,8 +599,8 @@ export const MOCKUPS: Record<string, Entry> = {
   lost: {
     title: 'A run lost in battle',
     group: 'reached',
-    revision: 2,
+    revision: 6,
     make: () => reached((s) => s.status === 'lost'),
   },
-  won: { title: 'A cleared run', group: 'reached', make: () => reached((s) => s.status === 'won') },
+  won: { title: 'A cleared run', group: 'reached', revision: 3, make: () => reached((s) => s.status === 'won') },
 }

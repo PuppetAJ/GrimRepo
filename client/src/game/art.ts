@@ -7,6 +7,9 @@ const byName = (files: Record<string, string>) =>
 const CARDS = byName(import.meta.glob<string>('./art/cards/*.png', { eager: true, import: 'default' }))
 const ICONS = byName(import.meta.glob<string>('./art/icons/*.png', { eager: true, import: 'default' }))
 
+/** How fast an animated icon, such as the campfire's fire, plays its frames. */
+export const SPRITE_FPS = 8
+
 export type IconId = SigilId | ItemId | 'attack' | 'health' | 'fire' | `type-${CardType}`
 
 /** Whether a card or icon has art of its own yet, rather than the stand-in. */
