@@ -4,7 +4,7 @@ import { type Seat, has, hasEnded, outcomeOf } from '../controls.tsx'
 import { useFullScreen } from '../fullScreen.ts'
 import type { Ready } from '../useGame.ts'
 import { FlatReaderBody } from '../CardReader.tsx'
-import { forTable } from '../shortcuts.ts'
+import { forTable, useEscapeCancel } from '../shortcuts.ts'
 import { loadCardAssets } from './faces.ts'
 import type { CameraView } from './layout.ts'
 import { logLines, statusLines } from './Factory.tsx'
@@ -90,6 +90,10 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
     game.act(action)
   }
   const playing = { ...game, act }
+  useEscapeCancel(
+    aiming === null && !busy && !hasEnded(game) && has(legalActions(game.state), { type: 'cancel' }),
+    () => act({ type: 'cancel' }),
+  )
 
   // Kept by id so a reader shows the card's current stats.
   const [peek, setPeek] = useState<number | null>(null)

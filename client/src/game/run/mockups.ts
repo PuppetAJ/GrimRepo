@@ -170,6 +170,7 @@ export const MOCKUPS: Record<string, Entry> = {
   'worst-map': {
     title: 'The densest map the generator draws',
     group: 'worst',
+    revision: 1,
     make: () => ({ ...worstRun({}), news: LONG_NEWS }),
   },
   'worst-card': {
@@ -248,6 +249,7 @@ export const MOCKUPS: Record<string, Entry> = {
   map: {
     title: 'The map, partway through a stage',
     group: 'reached',
+    revision: 1,
     make: () => reached((s) => s.at !== null && !s.visit),
   },
   start: {
@@ -479,7 +481,7 @@ export const MOCKUPS: Record<string, Entry> = {
   battle: {
     title: 'A battle in a run',
     group: 'reached',
-    revision: 1,
+    revision: 2,
     make: () => reached((s) => s.visit?.kind === 'battle' && s.visit.game.turn > 2),
   },
   'battle-items': {
