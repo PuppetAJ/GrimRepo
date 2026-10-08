@@ -213,6 +213,11 @@ describe('a shop', () => {
         { card: 'Mainframe', price: 10 },
       ],
       sold: [],
+      tools: [
+        { id: 'hammer', price: 6 },
+        { id: 'scissors', price: 10 },
+      ],
+      toolsSold: [],
     })
     return { ...state, bytes }
   }
@@ -304,9 +309,50 @@ describe('the code review', () => {
   })
 })
 
+describe("a shop's tools", () => {
+  it('sells two different ones, each once, for bytes, while a slot is free', () => {
+    const state = at('shop', {
+      kind: 'shop',
+      node: '0-0',
+      offer: [],
+      sold: [],
+      tools: [
+        { id: 'hammer', price: 6 },
+        { id: 'scissors', price: 10 },
+      ],
+      toolsSold: [],
+    })
+    const rich = { ...state, bytes: 20 }
+    const one = step(rich, { type: 'buyItem', index: 1 })
+    assert.deepEqual([one.items, one.bytes], [['scissors'], 10])
+    assert.equal(refused(one, { type: 'buyItem', index: 1 }), 'That tool is sold')
+    const both = step(one, { type: 'buyItem', index: 0 })
+    assert.deepEqual(both.items, ['scissors', 'hammer'])
+    assert.equal(refused({ ...state, bytes: 5 }, { type: 'buyItem', index: 0 }), 'Not enough bytes')
+    const full = { ...rich, items: ['hook', 'bottle', 'pliers'] as RunState['items'] }
+    assert.ok(!legalRunActions(full).some((action) => action.type === 'buyItem'))
+  })
+
+  it('are two different tools at every shop', () => {
+    for (let seed = 1; seed <= 40; seed++) {
+      let state = createRun({ seed })
+      state = step(state, { type: 'start', deck: 'hello-world' })
+      const node = state.map.rows[0]?.[0]
+      assert.ok(node)
+      node.kind = 'shop'
+      const visit = step(state, { type: 'go', node: node.id }).visit
+      assert.ok(visit?.kind === 'shop')
+      assert.equal(new Set(visit.tools.map((tool) => tool.id)).size, 2)
+    }
+  })
+})
+
 describe('uninstalling at a shop', () => {
   it('removes a chosen card for bytes, once a visit', () => {
-    const state = { ...at('shop', { kind: 'shop', node: '0-0', offer: [], sold: [] }), bytes: 9 }
+    const state = {
+      ...at('shop', { kind: 'shop', node: '0-0', offer: [], sold: [], tools: [], toolsSold: [] }),
+      bytes: 9,
+    }
     const target = state.deck[1] as RunCard
     const after = step(state, { type: 'uninstall', card: target.id })
     assert.ok(!after.deck.some((entry) => entry.id === target.id))

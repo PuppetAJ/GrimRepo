@@ -104,7 +104,8 @@ export function nextRunAction(state: RunState, strategy: Strategy = 'greedy', de
         (a, b) => cardValue(visit.offer[b.index]?.card as string) - cardValue(visit.offer[a.index]?.card as string),
       )[0]
       if (best && cardValue(visit.offer[best.index]?.card as string) > average) return best
-      if (legal.some((action) => action.type === 'buyItem')) return { type: 'buyItem' }
+      const tool = legal.find((action) => action.type === 'buyItem')
+      if (tool) return tool
       // With bytes left, a big deck sheds its weakest card, by value for its cost.
       const worth = (entry: RunCard) => value(entry) / (card(entry.card).cost + 1)
       const weakest = [...state.deck].sort((x, y) => worth(x) - worth(y))[0]

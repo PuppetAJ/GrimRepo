@@ -5,7 +5,8 @@ import {
   card,
   createRun,
   deathCardId,
-  deathHands,
+  deathCostHand,
+  deathStatsHand,
   deathSkipBonus,
   playRun,
   replayRun,
@@ -200,7 +201,7 @@ describe('the run actions the server takes', () => {
       { type: 'strip', card: 1, sigil: 'bypass' },
       { type: 'buy', index: 0 },
       { type: 'uninstall', card: 1 },
-      { type: 'buyItem' },
+      { type: 'buyItem', index: 0 },
       { type: 'pickItem', index: 0, drop: 1 },
       { type: 'play', action: { type: 'use', slot: 0, row: 'front', lane: 1 } },
       { type: 'fuse', card: 1 },
@@ -233,8 +234,8 @@ async function lose(cookie: string, opening: RunAction = { type: 'start', deck: 
 
 /** The first card of each hand the lost run deals. */
 function firstOfEach(state: RunState, name: string) {
-  const [costs, stats, sigils] = deathHands(state)
-  return { cost: costs[0]?.id ?? -1, stats: stats[0]?.id ?? -1, sigils: sigils[0]?.id ?? -1, name }
+  const cost = deathCostHand(state)[0]?.id ?? -1
+  return { cost, stats: deathStatsHand(state, cost)[0]?.id ?? -1, name }
 }
 
 const build = (cookie: string, id: number, body: object) =>

@@ -7,7 +7,7 @@ const byName = (files: Record<string, string>) =>
 const CARDS = byName(import.meta.glob<string>('./art/cards/*.png', { eager: true, import: 'default' }))
 const ICONS = byName(import.meta.glob<string>('./art/icons/*.png', { eager: true, import: 'default' }))
 
-export type IconId = SigilId | ItemId | 'attack' | 'health' | `type-${CardType}`
+export type IconId = SigilId | ItemId | 'attack' | 'health' | 'fire' | `type-${CardType}`
 
 /** Whether a card or icon has art of its own yet, rather than the stand-in. */
 export const hasArt = (kind: 'cards' | 'icons', id: string): boolean =>

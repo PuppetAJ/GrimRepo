@@ -1,28 +1,37 @@
 import { Link } from '@tanstack/react-router'
-import { useState } from 'react'
-import { buildDeathCard, card, DEATH_NAME_LIMIT, deathHands, deathNameProblem, type RunCard } from 'shared'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import {
+  buildDeathCard,
+  card,
+  DEATH_NAME_LIMIT,
+  deathCardId,
+  deathCostHand,
+  deathNameProblem,
+  deathParts,
+  deathSigilCard,
+  deathStatsHand,
+  SIGILS,
+} from 'shared'
 import { api, ApiError, type BuiltDeathCard } from '../../../lib/api.ts'
+import { prefersReducedMotion } from '../../../lib/motion.ts'
 import { PixelCard } from '../../CardReader.tsx'
-import { Panel, SIDE_BUTTON } from '../../text/Panel.tsx'
+import { SIDE_BUTTON } from '../../text/Panel.tsx'
 import { asUnit } from '../nodes.ts'
 import type { RunReady } from '../useRun.ts'
-import { CardList } from './CardList.tsx'
+import { Box } from './Box.tsx'
+import { CardList, ReadableCard } from './CardList.tsx'
 
-/** What the preview is called before the player names it. */
+/** What the card is called before the player names it. */
 const UNNAMED = 'Death Card'
 
-/** Each hand's step: what its card gives the death card. */
-const STEPS = [
-  { key: 'cost', label: 'Its cost, from one of these', action: 'death-cost' },
-  { key: 'stats', label: 'Its attack, health and art, from one of these', action: 'death-stats' },
-  { key: 'sigils', label: 'Its sigils, every one this card has', action: 'death-sigils' },
-] as const
-
-type Part = (typeof STEPS)[number]['key']
-
-/** After a lost run: a card built from one pick in each of three hands the deck deals, kept for later runs. */
+/**
+ * After a lost run, a card built a step at a time beside the card taking shape: its cost from one hand, its stats and
+ * art from cards near that cost, its sigils from a card chance picks, then its name.
+ */
 export function DeathCardBuilder({ run }: { run: RunReady }) {
-  const [picked, setPicked] = useState<Record<Part, number | null>>({ cost: null, stats: null, sigils: null })
+  const [cost, setCost] = useState<number | null>(null)
+  const [stats, setStats] = useState<number | null>(null)
+  const [rolled, setRolled] = useState(false)
   const [name, setName] = useState('')
   const [touched, setTouched] = useState(false)
   const [sending, setSending] = useState(false)
@@ -30,17 +39,26 @@ export function DeathCardBuilder({ run }: { run: RunReady }) {
   const [error, setError] = useState<string | null>(null)
   const [skipped, setSkipped] = useState(false)
 
-  const hands = deathHands(run.state)
+  const state = run.state
+  const costs = deathCostHand(state)
+  const costCard = costs.find((entry) => entry.id === cost)
+  const statsHand = cost === null ? [] : deathStatsHand(state, cost)
+  const statsCard = statsHand.find((entry) => entry.id === stats)
+  const chance = cost !== null && stats !== null ? deathSigilCard(state, cost, stats) : null
   const problem = deathNameProblem(name)
-  const complete = picked.cost !== null && picked.stats !== null && picked.sigils !== null
-  const choice = (named: string) => ({
-    cost: picked.cost ?? -1,
-    stats: picked.stats ?? -1,
-    sigils: picked.sigils ?? -1,
-    name: named,
-  })
-  const preview = complete ? buildDeathCard(run.state, choice(problem ? UNNAMED : name)) : null
-  const costCard = hands[0].find((entry) => entry.id === picked.cost)
+  const choice = (named: string) => ({ cost: cost ?? -1, stats: stats ?? -1, name: named })
+  const preview = costCard && statsCard ? buildDeathCard(state, choice(problem ? UNNAMED : name)) : null
+  // Until the stats are picked, a stand-in shows what is known so far.
+  const shown = preview?.ok
+    ? preview.id
+    : deathCardId({
+        name: UNNAMED,
+        cost: costCard ? card(costCard.card).cost : 0,
+        attack: 0,
+        health: 0,
+        art: 'Boilerplate',
+        sigils: [],
+      })
   // The server's record must be saved before it can build from it; a mockup builds here and keeps nothing.
   const mockup = run.id === -1
   const ready = mockup || run.over !== null
@@ -49,7 +67,7 @@ export function DeathCardBuilder({ run }: { run: RunReady }) {
   if (skipped)
     return (
       <p role="status" className="text-center text-lg text-p03-dim">
-        No death card this time.{run.state.death ? ` ${card(run.state.death.card).name} is still yours.` : ''}
+        No death card this time.{state.death ? ` ${card(state.death.card).name} is still yours.` : ''}
       </p>
     )
 
@@ -69,93 +87,171 @@ export function DeathCardBuilder({ run }: { run: RunReady }) {
   }
 
   return (
-    <section aria-labelledby="death-card" className="flex flex-col gap-4">
+    <section aria-labelledby="death-card" className="@container flex flex-col gap-4">
       <div className="flex flex-col gap-1">
         <h3 id="death-card" className="text-2xl text-p03">
           Build a death card
         </h3>
-        <p className="font-sans text-base">
-          Your deck deals three hands. Pick one card from each: the first gives its cost, the second its attack, health
-          and art, the third its sigils. Your next run offers it once, at its first card choice, and P03 brings it to
-          the final boss either way, so build with care.
-        </p>
+        <p className="font-sans text-base">Something of this run comes back. P03 brings it to the final boss.</p>
       </div>
-      {STEPS.map((step, index) => (
-        <section key={step.key} aria-labelledby={`death-${step.key}`} className="flex flex-col gap-2">
-          <h4 id={`death-${step.key}`} className="text-p03">
-            {index + 1}. {step.label}
-          </h4>
-          <CardList
-            units={(hands[index] as RunCard[]).map((entry) => asUnit(entry))}
-            onPick={(unit) =>
-              setPicked((now) => ({ ...now, [step.key]: now[step.key] === unit.uid ? null : unit.uid }))
-            }
-            picked={picked[step.key]}
-            data={(unit) => ({ 'data-action': step.action, 'data-card': unit.uid })}
-            size="w-20 sm:w-24"
-          />
-        </section>
-      ))}
-      <div className="flex flex-col gap-1">
-        <label htmlFor="death-name" className="text-p03">
-          4. Its name
-        </label>
-        <input
-          id="death-name"
-          value={name}
-          maxLength={DEATH_NAME_LIMIT}
-          autoComplete="off"
-          aria-invalid={touched && problem !== null}
-          aria-describedby="death-name-help"
-          onChange={(event) => setName(event.target.value)}
-          onBlur={() => setTouched(true)}
-          className="max-w-xs rounded-md border-2 border-p03-edge bg-[#07130b] px-2 py-1 font-terminal text-lg text-p03"
-        />
-        <p id="death-name-help" className={`text-base ${touched && problem ? 'text-death' : 'text-p03-dim'}`}>
-          {touched && problem ? problem : `Up to ${DEATH_NAME_LIMIT} characters.`}
-        </p>
-      </div>
-      {preview?.ok && costCard ? (
-        <Panel>
-          <div className="flex flex-wrap items-start gap-4">
-            <div className="w-28 shrink-0">
-              <PixelCard unit={asUnit(preview.id)} />
-            </div>
-            <p className="max-w-sm font-sans text-base">
-              Costs {card(preview.id).cost}
-              {card(preview.id).cost > card(costCard.card).cost
-                ? `: a card can be at most one cheaper than the one its stats came from, and never free if that one wasn't.`
-                : '.'}
-            </p>
+      <div className="grid gap-4 @2xl:grid-cols-[9rem_minmax(0,1fr)]">
+        {/* The card taking shape, filled in as each part is chosen. */}
+        <div className="flex flex-col items-center gap-2 self-start @2xl:sticky @2xl:top-0">
+          <div className="w-36">
+            <ReadableCard
+              unit={asUnit(shown)}
+              blank={{ cost: !costCard, art: !statsCard, stats: !statsCard, sigils: !rolled }}
+              label="Read the card being built"
+            />
           </div>
-        </Panel>
-      ) : null}
-      {error ? (
-        <p role="alert" className="text-death">
-          {error}
-        </p>
-      ) : null}
-      <div className="flex flex-wrap gap-3">
-        <button
-          type="button"
-          data-action="build-death-card"
-          disabled={!complete || sending || !ready}
-          onClick={submit}
-          className={`${SIDE_BUTTON} border-p03 px-4 disabled:opacity-50`}
-        >
-          {sending ? 'Building…' : ready ? 'Build it' : 'Saving the run first…'}
-        </button>
-        <button
-          type="button"
-          data-action="skip-death-card"
-          disabled={sending}
-          onClick={() => setSkipped(true)}
-          className={`${SIDE_BUTTON} px-4 disabled:opacity-50`}
-        >
-          Skip
-        </button>
+          <p className="max-w-36 truncate text-lg text-p03">{tidy(name) || UNNAMED}</p>
+        </div>
+        <div className="flex min-w-0 flex-col gap-4">
+          <Step number={1} title="Its cost">
+            <CardList
+              units={costs.map((entry) => asUnit(entry))}
+              onPick={(unit) => {
+                setCost(unit.uid === cost ? null : unit.uid)
+                setStats(null)
+                setRolled(false)
+              }}
+              picked={cost}
+              data={(unit) => ({ 'data-action': 'death-cost', 'data-card': unit.uid })}
+              size="w-20 sm:w-24"
+            />
+          </Step>
+          {costCard ? (
+            <Step number={2} title="Its attack, health and art">
+              <CardList
+                units={statsHand.map((entry) => asUnit(entry))}
+                onPick={(unit) => {
+                  setStats(unit.uid === stats ? null : unit.uid)
+                  setRolled(false)
+                }}
+                picked={stats}
+                data={(unit) => ({ 'data-action': 'death-stats', 'data-card': unit.uid })}
+                size="w-20 sm:w-24"
+              />
+            </Step>
+          ) : null}
+          {costCard && statsCard ? (
+            <Step number={3} title="Its sigils, left to chance">
+              <Roll key={`${cost}-${stats}`} run={run} landsOn={chance} onDone={() => setRolled(true)} />
+            </Step>
+          ) : null}
+          {rolled ? (
+            <Step number={4} title="Its name">
+              <div className="flex flex-col gap-1">
+                <input
+                  id="death-name"
+                  aria-label="Its name"
+                  value={name}
+                  maxLength={DEATH_NAME_LIMIT}
+                  autoComplete="off"
+                  aria-invalid={touched && problem !== null}
+                  aria-describedby="death-name-help"
+                  onChange={(event) => setName(event.target.value)}
+                  onBlur={() => setTouched(true)}
+                  className="max-w-xs rounded-md border-2 border-p03-edge bg-[#07130b] px-2 py-1 font-terminal text-lg text-p03"
+                />
+                <p id="death-name-help" className={`text-base ${touched && problem ? 'text-death' : 'text-p03-dim'}`}>
+                  {touched && problem ? problem : `Up to ${DEATH_NAME_LIMIT} characters.`}
+                </p>
+              </div>
+            </Step>
+          ) : null}
+          {error ? (
+            <p role="alert" className="text-death">
+              {error}
+            </p>
+          ) : null}
+          <div className="flex flex-wrap gap-3">
+            {rolled ? (
+              <button
+                type="button"
+                data-action="build-death-card"
+                disabled={sending || !ready}
+                onClick={submit}
+                className={`${SIDE_BUTTON} border-p03 px-4 disabled:opacity-50`}
+              >
+                {sending ? 'Building…' : ready ? 'Build it' : 'Saving the run first…'}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              data-action="skip-death-card"
+              disabled={sending}
+              onClick={() => setSkipped(true)}
+              className={`${SIDE_BUTTON} px-4 disabled:opacity-50`}
+            >
+              Skip
+            </button>
+          </div>
+        </div>
       </div>
     </section>
+  )
+}
+
+const tidy = (name: string) => name.trim().replace(/\s+/g, ' ')
+
+function Step({ number, title, children }: { number: number; title: string; children: ReactNode }) {
+  return (
+    <Box className="flex flex-col gap-2 motion-safe:animate-[fade-in_250ms_ease-out]">
+      <h4 className="text-p03">
+        {number}. {title}
+      </h4>
+      {children}
+    </Box>
+  )
+}
+
+/** How long chance takes to settle on a card, and how fast the cards flick past before it does. */
+const ROLL_MS = 1400
+const FLICK_MS = 90
+
+/** Flicks through the deck and lands on the card chance picked, then says what it gives. */
+function Roll({
+  run,
+  landsOn,
+  onDone,
+}: {
+  run: RunReady
+  landsOn: ReturnType<typeof deathSigilCard>
+  onDone: () => void
+}) {
+  const parts = deathParts(run.state.deck)
+  const [index, setIndex] = useState(0)
+  const [done, setDone] = useState(() => prefersReducedMotion() || parts.length < 2)
+  // The latest callback, so a new one each render doesn't restart the roll.
+  const finished = useRef(onDone)
+  useEffect(() => {
+    finished.current = onDone
+  })
+  useEffect(() => {
+    if (done) return void finished.current()
+    const flick = setInterval(() => setIndex((now) => (now + 1) % parts.length), FLICK_MS)
+    const settle = setTimeout(() => setDone(true), ROLL_MS)
+    return () => {
+      clearInterval(flick)
+      clearTimeout(settle)
+    }
+  }, [done, parts.length])
+  const showing = done ? landsOn : parts[index]
+  if (!showing) return <p className="text-p03-dim">No card to take sigils from.</p>
+  return (
+    <div className="flex items-center gap-4">
+      <div className={`w-20 shrink-0 sm:w-24 ${done ? 'motion-safe:animate-[warm-pop_650ms_ease-out]' : ''}`}>
+        <PixelCard unit={asUnit(showing)} />
+      </div>
+      <p role={done ? 'status' : undefined} className="text-lg">
+        {!done
+          ? 'Shuffling…'
+          : showing.sigils.length
+            ? `${card(showing.card).name} gives ${showing.sigils.map((sigil) => SIGILS[sigil].name).join(' and ')}.`
+            : `${card(showing.card).name} has no sigils to give.`}
+      </p>
+    </div>
   )
 }
 
@@ -167,7 +263,7 @@ function Built({ built, mockup }: { built: BuiltDeathCard; mockup: boolean }) {
       </h3>
       <div className="flex flex-wrap items-start gap-4">
         <div className="w-28 shrink-0">
-          <PixelCard unit={asUnit(built.card)} />
+          <ReadableCard unit={asUnit(built.card)} />
         </div>
         <p className="max-w-sm font-sans text-base" role="status">
           {built.saved ? (

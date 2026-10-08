@@ -55,7 +55,9 @@ export { DEATH_SKIP_BONUS, SCORE_TURN_BASELINE, scoreBattle, scoreRun, type Outc
 export {
   buildDeathCard,
   deathCost,
-  deathHands,
+  deathCostHand,
+  deathSigilCard,
+  deathStatsHand,
   deathSkipBonus,
   deathThreat,
   rivalAllowed,
