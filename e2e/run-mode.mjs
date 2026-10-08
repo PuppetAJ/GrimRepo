@@ -296,6 +296,38 @@ section('The campfire, from a mockup')
   await context.close()
 }
 
+section("A run's battle menu, from a mockup")
+{
+  const { context, page } = await freshPage(browser, { width: 1440, height: 900, table: 'text' })
+  await page.goto(`${BASE}/run/mockups/battle?table=text`, MOCKUP)
+  await page.locator('[data-run-view="battle"] [data-seed]').waitFor({ timeout: 30_000 })
+  await page.getByRole('button', { name: /^Run menu/ }).click()
+  check(
+    'the battle has a run menu',
+    (await page
+      .getByRole('menu')
+      .getByText(/^Stage 1 of/)
+      .count()) === 1,
+  )
+  await page.getByRole('menuitem', { name: 'Inventory' }).click()
+  const inventory = page.getByRole('dialog')
+  check(
+    'it opens the inventory over the table',
+    await inventory.waitFor().then(
+      () => true,
+      () => false,
+    ),
+  )
+  await page.keyboard.press('Escape')
+  await inventory.waitFor({ state: 'detached' })
+  await page.locator('[data-table]').first().focus()
+  await page.keyboard.press('m')
+  check('M looks at the map without leaving the battle', await shows(page, 'map'))
+  await page.getByRole('button', { name: 'Back to the battle' }).click()
+  check('and goes back to the battle', await shows(page, 'battle'))
+  await context.close()
+}
+
 section('The sigil stones, from a mockup')
 {
   const { context, page } = await freshPage(browser, { width: 1440, height: 900, table: 'text' })

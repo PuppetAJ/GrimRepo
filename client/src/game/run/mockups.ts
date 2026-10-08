@@ -481,7 +481,7 @@ export const MOCKUPS: Record<string, Entry> = {
   battle: {
     title: 'A battle in a run',
     group: 'reached',
-    revision: 2,
+    revision: 3,
     make: () => reached((s) => s.visit?.kind === 'battle' && s.visit.game.turn > 2),
   },
   'battle-items': {

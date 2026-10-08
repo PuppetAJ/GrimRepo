@@ -1,5 +1,15 @@
 import { m } from 'motion/react'
-import { Box, Flag, LogOut, Maximize, Minimize, ScrollText, SquareTerminal } from 'lucide-react'
+import {
+  Backpack,
+  Box,
+  Flag,
+  LogOut,
+  Map as MapIcon,
+  Maximize,
+  Minimize,
+  ScrollText,
+  SquareTerminal,
+} from 'lucide-react'
 import { Link } from '@tanstack/react-router'
 import FaultyScreenShader from '../../components/p03/FaultyScreenShader.tsx'
 import { Forfeit, ScaleBar, SeatNote } from '../controls.tsx'
@@ -35,7 +45,7 @@ function Status() {
 }
 
 function Menu() {
-  const { menu, setMenu, setLogOpen, setTerminalOpen, fullScreen, game, on3d, sideways } = useTable()
+  const { menu, setMenu, setLogOpen, setTerminalOpen, fullScreen, game, on3d, sideways, run } = useTable()
   if (!menu) return null
   // Close the menu first so it doesn't cover what the choice opens.
   const choose = (then: () => void) => () => {
@@ -48,6 +58,19 @@ function Menu() {
       className={`absolute top-12 z-40 flex w-72 max-w-[calc(100%-1rem)] flex-col gap-3 rounded-md border-2 border-p03-edge bg-[#07130b] p-2 ${sideways ? 'left-2' : 'right-2'}`}
     >
       <div className="grid grid-cols-2 gap-2 [&_svg]:size-4 [&_svg]:shrink-0">
+        {/* A run's own first: its deck and tools, and its map. */}
+        {run ? (
+          <>
+            <button type="button" onClick={choose(run.onInventory)} className={MENU_BUTTON}>
+              <Backpack aria-hidden />
+              Inventory
+            </button>
+            <button type="button" onClick={choose(run.onMap)} className={MENU_BUTTON} aria-keyshortcuts="M">
+              <MapIcon aria-hidden />
+              Map
+            </button>
+          </>
+        ) : null}
         <button type="button" onClick={choose(() => setLogOpen(true))} className={MENU_BUTTON}>
           <ScrollText aria-hidden />
           Battle log

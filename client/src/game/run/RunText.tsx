@@ -1,40 +1,78 @@
+import { useEffect, useRef, useState } from 'react'
 import type { Seat } from '../controls.tsx'
+import { forTable } from '../shortcuts.ts'
 import { TerminalTable } from '../TerminalTable.tsx'
 import type { Layout } from '../text/useTextTable.ts'
-import { ScreenBody, useRunScreen } from './screens.tsx'
-import { Screen } from './text/Screen.tsx'
+import { mapTitle, ScreenBody, useRunScreen } from './screens.tsx'
+import { BattleMenu } from './text/BattleMenu.tsx'
+import { InventoryDialog } from './text/InventoryDialog.tsx'
+import { HEADER_BUTTON, Screen, ScreenActions } from './text/Screen.tsx'
 import type { RunReady } from './useRun.ts'
 
 /** The run at the text table: its battles on the text table itself, and every other screen as a terminal panel. */
 export function RunText({ run, layout, seat, on3d }: { run: RunReady; layout: Layout; seat: Seat; on3d: () => void }) {
   const { view, battle, title, caption } = useRunScreen(run)
+  const fighting = Boolean(battle) && view === 'battle'
+  // In a battle, the deck and tools open over the table, and the map can be looked at without leaving it.
+  const [inventory, setInventory] = useState(false)
+  // Which battle the map was looked at from, so the next battle starts on its table.
+  const battleKey = `${run.generation}:${run.state.stage}:${run.state.at}`
+  const [lookingFrom, setLookingFrom] = useState<string | null>(null)
+  const lookingAtMap = fighting && lookingFrom === battleKey
+  const look = (on: boolean) => setLookingFrom(on ? battleKey : null)
+  // M looks at the map from the battle and back again, as on the 3D table.
+  const toggle = useRef(() => {})
+  useEffect(() => {
+    toggle.current = () => fighting && look(!lookingAtMap)
+  })
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() === 'm' && !event.repeat && forTable(event)) toggle.current()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+  const shown = lookingAtMap ? 'map' : view
   return (
-    <div data-run-seed={run.state.seed} data-run-moves={run.moves} data-run-unsaved={run.unsaved} data-run-view={view}>
+    <div data-run-seed={run.state.seed} data-run-moves={run.moves} data-run-unsaved={run.unsaved} data-run-view={shown}>
       {/* Negative margins give the table most of the gutter, as on the quick battle's page. */}
       <div className={layout === 'phone' ? '-mx-(--gutter)' : '-mx-[calc(var(--gutter)-0.75rem)]'}>
-        {battle && view === 'battle' ? (
+        {battle && fighting && !lookingAtMap ? (
           // Remounted for each battle, so its playback never starts from the last one.
           <TerminalTable
-            key={`${run.generation}:${run.state.stage}:${run.state.at}`}
+            key={battleKey}
             game={battle}
             seat={seat}
             layout={layout}
             on3d={on3d}
+            run={{
+              menu: <BattleMenu run={run} onInventory={() => setInventory(true)} onMap={() => look(true)} />,
+              onInventory: () => setInventory(true),
+              onMap: () => look(true),
+            }}
           />
-        ) : view !== 'battle' ? (
+        ) : shown !== 'battle' ? (
           <Screen
             run={run}
             layout={layout}
-            title={title}
-            caption={caption}
-            stack={view === 'map'}
-            deck={view !== 'summary' && view !== 'start'}
+            title={lookingAtMap ? mapTitle(run.state) : title}
+            caption={lookingAtMap ? undefined : caption}
+            stack={shown === 'map'}
+            deck={shown !== 'summary' && shown !== 'start'}
             onSwitch={{ label: 'Play on the 3D table', go: on3d }}
           >
-            <ScreenBody run={run} view={view} layout={layout} />
+            {lookingAtMap ? (
+              <ScreenActions>
+                <button type="button" onClick={() => look(false)} aria-keyshortcuts="M" className={HEADER_BUTTON}>
+                  Back to the battle
+                </button>
+              </ScreenActions>
+            ) : null}
+            <ScreenBody run={run} view={shown} layout={layout} />
           </Screen>
         ) : null}
       </div>
+      {fighting ? <InventoryDialog run={run} open={inventory} onOpenChange={setInventory} /> : null}
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import { animate } from 'motion/react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { ITEMS, legalActions, type Action, type Slot, type Unit } from 'shared'
 import { has, hasEnded, overText, owed, prompt, skippedDraw, type Seat } from '../controls.tsx'
 import { usePlayback } from '../table/usePlayback.ts'
@@ -23,15 +23,20 @@ const placeOf = (key: string): Place =>
     ? { uid: Number(key.slice(4)) }
     : { row: key.split(':')[0] as BoardRow, lane: Number(key.split(':')[1]) }
 
+/** What a run adds to its battles' table: its menu, and ways to the deck and the map for the phone's menu. */
+export type RunControls = { menu: ReactNode; onInventory: () => void; onMap: () => void }
+
 export function useTextTable({
   game,
   seat,
   on3d,
+  run,
   layout,
 }: {
   game: Ready
   seat: Seat
   on3d?: () => void
+  run?: RunControls
   layout: Layout
 }) {
   const shape = useTableLayout(layout)
@@ -164,6 +169,7 @@ export function useTextTable({
     game,
     seat,
     on3d,
+    run,
     layout,
     ...shape,
     state,
