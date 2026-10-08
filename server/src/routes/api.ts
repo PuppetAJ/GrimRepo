@@ -59,7 +59,7 @@ const runAction = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('uninstall'), card: cardId }),
   z.strictObject({ type: z.literal('buyItem') }),
   z.strictObject({ type: z.literal('pickItem'), index: small, drop: z.number().int().min(0).max(2).optional() }),
-  z.strictObject({ type: z.literal('fuse'), card: cardId }),
+  z.strictObject({ type: z.literal('fuse'), card: cardId, with: cardId.optional() }),
   z.strictObject({ type: z.literal('leave') }),
 ])
 

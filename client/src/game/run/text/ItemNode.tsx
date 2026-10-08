@@ -42,16 +42,17 @@ export function ItemNode({ run }: { run: RunReady }) {
           ))}
         </fieldset>
       ) : null}
+      {/* Every tool the same size, as tall as the longest description. */}
       <ul className="flex flex-wrap justify-center gap-6">
         {visit.offer.map((item, index) => (
-          <li key={item} className="w-44 shrink-0">
+          <li key={item} className="flex w-44 shrink-0">
             <button
               type="button"
               data-action="pick-item"
               data-index={index}
               disabled={full && drop === null}
               onClick={() => run.act({ type: 'pickItem', index, ...(full && drop !== null ? { drop } : {}) })}
-              className="flex w-full flex-col items-center gap-3 rounded-md border-2 border-p03-edge bg-[#0b1f12] p-4 text-center text-p03 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03 enabled:hover:border-p03 enabled:hover:bg-[#13261a] disabled:opacity-50"
+              className="flex h-full w-full flex-col items-center gap-3 rounded-md border-2 border-p03-edge bg-[#0b1f12] p-4 text-center text-p03 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03 enabled:hover:border-p03 enabled:hover:bg-[#13261a] disabled:opacity-50"
             >
               <Sigil id={item} size={56} color="currentColor" />
               <span className="text-xl">{ITEMS[item].name}</span>

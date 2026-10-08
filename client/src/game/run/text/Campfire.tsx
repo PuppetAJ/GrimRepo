@@ -33,7 +33,7 @@ export function Campfire({ run }: { run: RunReady }) {
             {visit.buffs === 0
               ? `Warm a card for ${boost}.`
               : allowed.size
-                ? `Warm it again for more? Something is creeping in at the edge of the light. Half the time, it takes the card.`
+                ? 'Warm it again for more? Something is creeping in at the edge of the light.'
                 : 'The fire has done all it will. Whatever was out there has gone quiet.'}
           </p>
           <ScreenSearch label="Search the deck for a card to warm" count={run.state.deck.length} />
@@ -55,8 +55,7 @@ export function Campfire({ run }: { run: RunReady }) {
           <AlertDialogHeader>
             <AlertDialogTitle>Warm {risking ? card(risking.card).name : 'it'} again for more?</AlertDialogTitle>
             <AlertDialogDescription>
-              Something is creeping in at the edge of the light, drawn by the heat. Half the time the card comes out
-              with another {boost}. The other half, it burns, and leaves your deck for the rest of the run.
+              Something is waiting just past the light, drawn by the heat. It hasn&apos;t moved. Yet.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -298,9 +298,18 @@ function step(state: RunState, rng: Rng, action: RunAction, events: RunEvent[]):
     }
     case 'take': {
       if (visit?.kind === 'blind') {
-        const pick = Number.isInteger(action.index) ? visit.picks[action.index] : undefined
-        if (!pick) return 'No such choice'
-        const added = newCard(state, rng.pick(COMMONS.filter(PICKS[pick].fits)))
+        if (!visit.revealed) {
+          const pick = Number.isInteger(action.index) ? visit.picks[action.index] : undefined
+          if (!pick) return 'No such choice'
+          visit.revealed = {
+            pick: action.index,
+            offer: rng.shuffle(COMMONS.filter(PICKS[pick].fits)).slice(0, OFFER_SIZE),
+          }
+          return
+        }
+        const id = Number.isInteger(action.index) ? visit.revealed.offer[action.index] : undefined
+        if (id === undefined) return 'No such card on offer'
+        const added = newCard(state, id)
         state.deck.push(added)
         events.push({ type: 'added', card: added })
         state.visit = null
@@ -369,7 +378,12 @@ function step(state: RunState, rng: Rng, action: RunAction, events: RunEvent[]):
     case 'fuse': {
       if (visit?.kind !== 'fuse') return 'There is no merge request here'
       const kept = inDeck(action.card)
-      const other = kept && state.deck.find((entry) => entry.id !== kept.id && entry.card === kept.card)
+      const other =
+        kept &&
+        state.deck.find(
+          (entry) =>
+            entry.id !== kept.id && entry.card === kept.card && (action.with === undefined || entry.id === action.with),
+        )
       if (!kept || !other) return 'That card has no copy to merge with'
       // Stats add up and sigils join, three at most; the cost stays the card's own.
       kept.attack += other.attack
@@ -488,7 +502,7 @@ export function legalRunActions(state: RunState): RunAction[] {
           : [{ type: 'start', deck }],
       )
     case 'blind':
-      return visit.picks.map((_, index) => ({ type: 'take', index }))
+      return (visit.revealed?.offer ?? visit.picks).map((_, index) => ({ type: 'take', index }))
     case 'shop': {
       const actions: RunAction[] = [{ type: 'leave' }]
       visit.offer.forEach((item, index) => {

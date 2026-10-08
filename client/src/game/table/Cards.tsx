@@ -21,7 +21,8 @@ type Assets = Awaited<ReturnType<typeof loadCardAssets>>
 
 export type Place = { at: 'hand'; index: number; count: number; lowered?: boolean } | { at: Row; lane: number }
 
-export type Look = 'plain' | 'selected' | 'marked' | 'markable' | 'dim'
+/** `aimable` is a card the tool in hand can reach, in the tool's amber rather than a sacrifice's red. */
+export type Look = 'plain' | 'selected' | 'marked' | 'markable' | 'aimable' | 'dim'
 
 const FLAT = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0))
 
@@ -209,20 +210,22 @@ export function Card({
     }
 
     const rest = MOOD.cardGlow
-    const pulse = look === 'markable' ? 0.12 + 0.1 * Math.sin(now / 160) : 0
+    const pulse = look === 'markable' || look === 'aimable' ? 0.12 + 0.1 * Math.sin(now / 160) : 0
     const glow =
       look === 'selected'
         ? rest + 0.25
         : look === 'marked'
           ? rest + 0.15
-          : look === 'markable'
+          : look === 'markable' || look === 'aimable'
             ? rest + pulse
             : hovered && onClick
               ? rest + 0.15
               : rest
     // Squared so the glow dies before the content fades as the disk closes.
     content.emissiveIntensity = glow * open.current * open.current
-    content.emissive.set(look === 'marked' || look === 'markable' ? '#ff4040' : '#ffffff')
+    content.emissive.set(
+      look === 'marked' || look === 'markable' ? '#ff4040' : look === 'aimable' ? '#ffb454' : '#ffffff',
+    )
     front.color.setScalar(look === 'dim' ? 0.45 : 1)
     content.color.setScalar(look === 'dim' ? 0.45 : 1)
     front.opacity = rear.opacity = 1 - away
@@ -239,6 +242,8 @@ export function Card({
       onClick?.(event, touched.current)
     },
     onPointerDown: (event: ThreeEvent<PointerEvent>) => {
+      // A card in front, as one in the hand is, keeps a hold from reading the card behind it.
+      event.stopPropagation()
       touched.current = event.pointerType === 'touch'
       if (!onHold || (!touched.current && event.button !== 0)) return
       endHold()

@@ -73,7 +73,11 @@ async function playRun(page, mirror, { pick = nextRunAction, done }) {
           await clickMove(page, `[data-action="aim"][data-row="${row}"][data-lane="${lane}"]`, expected)
         }
       } else if (action.type === 'fuse') {
+        // Both copies, the engine's pick of the second when the bot names none, then the button.
+        const kept = state.deck.find((entry) => entry.id === action.card)
+        const other = action.with ?? state.deck.find((entry) => entry.id !== kept.id && entry.card === kept.card).id
         await page.locator(`[data-action="fuse-card"][data-card="${action.card}"]`).click()
+        await page.locator(`[data-action="fuse-card"][data-card="${other}"]`).click()
         await clickMove(page, '[data-action="fuse"]', expected)
       } else if (action.type === 'uninstall') {
         await page.locator(`[data-action="uninstall-card"][data-card="${action.card}"]`).click()
@@ -85,8 +89,10 @@ async function playRun(page, mirror, { pick = nextRunAction, done }) {
         if (!(await sigil.isChecked())) await sigil.check()
         await clickMove(page, '[data-action="strip"]', expected)
       } else await clickMove(page, targetFor(action), expected)
-      // An event's result stays up until the player moves on.
-      if (action.type === 'choose') await page.locator('[data-action="continue"]').click()
+      // An event's result, or a node's work once done, stays up until the player moves on.
+      const ended = state.visit && !result.state.visit && action.type !== 'leave'
+      if (ended && ['event', 'campfire', 'stones', 'lint', 'fuse', 'item'].includes(state.visit.kind))
+        await page.locator('[data-action="continue"]').click()
     } catch (error) {
       console.log(
         `  The mirror wanted ${JSON.stringify(action)} as move ${moves + 1}, on the ${await view(page)} view.`,
@@ -227,7 +233,8 @@ await page.waitForFunction(() => document.querySelector('[data-run-moves]')?.get
 check('starting another run opens on the starter deck choice', (await view(page)) === 'start')
 check(
   'which offers to leave the death card out for more score',
-  (await page.locator('[data-action="skip-death"]').count()) === 1 && (await visibleText(page)).includes('E2E Ghost'),
+  (await page.locator('[data-action="include-death"]').count()) === 1 &&
+    (await visibleText(page)).includes('E2E Ghost'),
 )
 
 section('Abandoning')
@@ -280,7 +287,12 @@ section('The sigil stones, from a mockup')
   await page.locator('[data-action="give"]:not([disabled])').first().click()
   await page.locator('[data-action="take-sigil"]:not([disabled])').first().click()
   await page.locator('[data-action="transfer"]').click()
-  check('moving a sigil goes back to the map', await shows(page, 'map'))
+  check(
+    'moving a sigil shows what moved, until leaving',
+    (await shows(page, 'stones')) && (await page.getByRole('status').filter({ hasText: 'gains' }).count()) === 1,
+  )
+  await page.locator('[data-action="continue"]').click()
+  check('and leaving goes back to the map', await shows(page, 'map'))
   check(
     'and P03 names the card that gained it',
     (await page.getByRole('status').filter({ hasText: 'gains' }).count()) === 1,
