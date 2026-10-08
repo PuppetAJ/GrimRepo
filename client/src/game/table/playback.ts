@@ -21,6 +21,8 @@ export type Playback = {
   view: View
   lunges: Map<number, Lunge>
   slides: Map<number, Slide>
+  /** When each of P03's cards stepped up from its queue into the lane below. */
+  advances: Map<number, number>
   popups: Popup[]
   leaving: Leaving[]
   spawns: Map<number, Vec3>
@@ -82,7 +84,15 @@ export const LEAVE_MS = 550
 export const POPUP_MS = 1000
 
 export function start(state: GameState): Playback {
-  return { view: project(state), lunges: new Map(), slides: new Map(), popups: [], leaving: [], spawns: new Map() }
+  return {
+    view: project(state),
+    lunges: new Map(),
+    slides: new Map(),
+    advances: new Map(),
+    popups: [],
+    leaving: [],
+    spawns: new Map(),
+  }
 }
 
 let popupIds = 0
@@ -101,6 +111,7 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
     // Lunges expire so a card drawn again later doesn't strike twice.
     lunges: new Map([...playback.lunges].filter(([, lunge]) => now - lunge.at < 1000)),
     slides: new Map([...playback.slides].filter(([, slide]) => now - slide.at < 1000)),
+    advances: new Map([...playback.advances].filter(([, at]) => now - at < 1000)),
     popups: playback.popups.filter((popup) => now - popup.at < POPUP_MS),
     leaving: playback.leaving.filter((card) => now - card.at < LEAVE_MS),
     spawns: playback.spawns,
@@ -120,6 +131,9 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
       break
     case 'queued':
       next.spawns = new Map(next.spawns).set(event.unit.uid, P03_HAND)
+      break
+    case 'advanced':
+      next.advances = new Map(next.advances).set(event.uid, now)
       break
     case 'moved':
       next.slides = new Map(next.slides).set(event.uid, { at: now, from: event.from, to: event.to })

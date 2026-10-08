@@ -1,5 +1,8 @@
+import { m, type HTMLMotionProps } from 'motion/react'
+import type { ComponentProps } from 'react'
 import { card, CARD_TYPES, SIGILS } from 'shared'
 import { cardArt, iconArt, type IconId } from './art.ts'
+import { pop } from './moves.ts'
 import type { Shown } from './shown.ts'
 
 const INK = '#0b1f12'
@@ -94,7 +97,10 @@ function Stats({ unit, icon, className }: { unit: Shown; icon: number; className
 /** Parts left blank, as on a death card being built: each fills in, with a pop, once it's chosen. */
 type Blank = { cost?: boolean; art?: boolean; stats?: boolean; sigils?: boolean }
 
-const POP = 'motion-safe:animate-[warm-pop_400ms_ease-out]'
+/** A part of a card that pops as it fills in, on a card being built; on any other card, a plain span. */
+function Part({ pops, ...props }: { pops: boolean } & ComponentProps<'span'>) {
+  return pops ? <m.span {...pop(0.4)} {...(props as HTMLMotionProps<'span'>)} /> : <span {...props} />
+}
 
 export function PixelCard({ unit, blank }: { unit: Shown; blank?: Blank }) {
   const def = card(unit.card)
@@ -114,31 +120,33 @@ export function PixelCard({ unit, blank }: { unit: Shown; blank?: Blank }) {
         {/* Its own row, so the type and cost never overlap the art on a small card. */}
         <span className="flex h-[10cqw] shrink-0 items-start justify-between px-[3cqw] pt-[3cqw]">
           {def.type && !blank?.art ? <Sigil id={`type-${def.type}`} size="7cqw" /> : <span />}
-          <span key={blank?.cost ? 'blank' : 'cost'} className={blank ? POP : ''}>
+          <Part pops={Boolean(blank)} key={blank?.cost ? 'blank' : 'cost'}>
             <CostPips
               cost={blank?.cost ? 0 : def.cost}
               pip="size-[7cqw] outline-1"
               className="gap-[2cqw]"
               announce={false}
             />
-          </span>
+          </Part>
         </span>
-        <span
+        <Part
+          pops={Boolean(blank)}
           key={blank?.art ? 'blank' : 'art'}
-          className={`flex min-h-0 flex-1 items-center justify-center ${blank ? POP : ''}`}
+          className={`flex min-h-0 flex-1 items-center justify-center`}
         >
           {blank?.art ? <span className="text-[24cqw] opacity-40">?</span> : <Art id={unit.card} />}
-        </span>
+        </Part>
       </span>
       {/* The band stays even when empty, so every card lays out the same. */}
-      <span
+      <Part
+        pops={Boolean(blank)}
         key={blank?.sigils ? 'blank' : 'sigils'}
-        className={`flex h-[19%] shrink-0 items-center justify-center gap-[2cqw] ${blank ? POP : ''}`}
+        className={`flex h-[19%] shrink-0 items-center justify-center gap-[2cqw]`}
       >
         {(blank?.sigils ? [] : unit.sigils).map((sigil) => (
           <Sigil key={sigil} id={sigil} size={`${Math.min(20, 86 / unit.sigils.length - 2)}cqw`} />
         ))}
-      </span>
+      </Part>
       {/* Long numbers shrink so they don't run off the card. */}
       <span
         className="flex flex-1 items-end justify-between px-[5cqw] pb-[3cqw] leading-none"
@@ -146,20 +154,22 @@ export function PixelCard({ unit, blank }: { unit: Shown; blank?: Blank }) {
           fontSize: `${Math.min(21, 44 / Math.max(String(unit.attack).length, String(unit.health).length))}cqw`,
         }}
       >
-        <span
+        <Part
+          pops={Boolean(blank)}
           key={blank?.stats ? 'attack-blank' : 'attack'}
-          className={`flex items-center gap-[2cqw] ${auraColor(unit)} ${blank ? POP : ''}`}
+          className={`flex items-center gap-[2cqw] ${auraColor(unit)}`}
         >
           <Sigil id="attack" size="0.5em" color="currentColor" />
           {blank?.stats ? '?' : unit.attack}
-        </span>
-        <span
+        </Part>
+        <Part
+          pops={Boolean(blank)}
           key={blank?.stats ? 'health-blank' : 'health'}
-          className={`flex items-center gap-[2cqw] ${unit.health < unit.maxHealth ? 'text-[#a3172b]' : ''} ${blank ? POP : ''}`}
+          className={`flex items-center gap-[2cqw] ${unit.health < unit.maxHealth ? 'text-[#a3172b]' : ''}`}
         >
           {blank?.stats ? '?' : unit.health}
           <Sigil id="health" size="0.5em" />
-        </span>
+        </Part>
       </span>
     </span>
   )

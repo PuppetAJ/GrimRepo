@@ -1,3 +1,4 @@
+import { m } from 'motion/react'
 import { Box, Flag, LogOut, Maximize, Minimize, ScrollText, SquareTerminal } from 'lucide-react'
 import { Link } from '@tanstack/react-router'
 import FaultyScreenShader from '../../components/p03/FaultyScreenShader.tsx'
@@ -11,6 +12,7 @@ import { Hand, Piles } from './Hand.tsx'
 import { Items } from './Items.tsx'
 import { LogBox, LogDialog, TerminalDialog } from './Log.tsx'
 import { MENU_BUTTON, Panel } from './Panel.tsx'
+import { dropIn } from '../moves.ts'
 import { Inspector, Magnifier } from './Reading.tsx'
 
 function Status() {
@@ -41,8 +43,9 @@ function Menu() {
     then()
   }
   return (
-    <div
-      className={`absolute top-12 z-40 flex w-72 max-w-[calc(100%-1rem)] animate-in flex-col gap-3 rounded-md border-2 border-p03-edge bg-[#07130b] p-2 duration-150 fade-in-0 slide-in-from-top-2 motion-reduce:animate-none ${sideways ? 'left-2' : 'right-2'}`}
+    <m.div
+      {...dropIn}
+      className={`absolute top-12 z-40 flex w-72 max-w-[calc(100%-1rem)] flex-col gap-3 rounded-md border-2 border-p03-edge bg-[#07130b] p-2 ${sideways ? 'left-2' : 'right-2'}`}
     >
       <div className="grid grid-cols-2 gap-2 [&_svg]:size-4 [&_svg]:shrink-0">
         <button type="button" onClick={choose(() => setLogOpen(true))} className={MENU_BUTTON}>
@@ -79,7 +82,7 @@ function Menu() {
           Leave Game
         </Link>
       </div>
-    </div>
+    </m.div>
   )
 }
 

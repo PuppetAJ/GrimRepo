@@ -1,5 +1,7 @@
 import { Ban, Plus } from 'lucide-react'
 import { useState } from 'react'
+import { m } from 'motion/react'
+import { shrinkAway, turnAway, turnUp } from '../../moves.ts'
 import { card, ITEM_SLOTS, ITEMS, UNINSTALL_PRICE, type Unit } from 'shared'
 import { SIDE_BUTTON } from '../../text/Panel.tsx'
 import { PixelCard, Sigil } from '../../CardReader.tsx'
@@ -159,17 +161,17 @@ function UsedSlot({ gone }: { gone: Unit | null }) {
     >
       {/* Just used, the + turns over to the cross; on a later visit to this screen, the cross is already up. */}
       {gone ? (
-        <span className={`${face} motion-safe:animate-[turn-away_450ms_ease-in-out_450ms_both] motion-reduce:hidden`}>
+        <m.span {...turnAway(0.45)} className={face}>
           <Plus aria-hidden className="size-10" />
-        </span>
+        </m.span>
       ) : null}
-      <span className={`${face} ${gone ? 'motion-safe:animate-[turn-up_450ms_ease-in-out_450ms_both]' : ''}`}>
+      <m.span {...(gone ? turnUp(0.45) : {})} className={face}>
         <Ban aria-hidden className="size-10" />
-      </span>
+      </m.span>
       {gone ? (
-        <div className="absolute inset-0 z-10 motion-safe:animate-[uninstall-away_400ms_ease-in_forwards] motion-reduce:hidden">
+        <m.div {...shrinkAway} className="absolute inset-0 z-10">
           <PixelCard unit={gone} />
-        </div>
+        </m.div>
       ) : null}
     </div>
   )

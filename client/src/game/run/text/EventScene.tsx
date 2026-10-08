@@ -1,6 +1,8 @@
+import { m } from 'motion/react'
 import { useEffect } from 'react'
 import { scene } from 'shared'
 import { forTable } from '../../shortcuts.ts'
+import { fadeIn } from '../../moves.ts'
 import type { RunReady } from '../useRun.ts'
 import { Box } from './Box.tsx'
 import { Sentences } from '../../text/Sentences.tsx'
@@ -38,7 +40,7 @@ export function EventScene({ run }: { run: RunReady }) {
         <p className="text-xl leading-relaxed text-[#b8f5c4]">{found.text}</p>
       </Box>
       {after ? (
-        <div className="flex flex-col gap-3 motion-safe:animate-[fade-in_200ms_ease-out]">
+        <m.div {...fadeIn()} className="flex flex-col gap-3">
           <p className="text-p03-dim">&gt; {found.options[after.option]?.label}</p>
           {/* Announced, so a screen reader hears what the choice did. */}
           <div role="status" className="flex flex-col gap-1 text-xl text-p03">
@@ -61,7 +63,7 @@ export function EventScene({ run }: { run: RunReady }) {
           >
             Continue
           </button>
-        </div>
+        </m.div>
       ) : (
         <>
           <p className="text-p03">P03&gt; Well? What do you do?</p>

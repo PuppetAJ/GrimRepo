@@ -4,6 +4,7 @@ import { FIXTURES_ON } from '../game/fixtures.ts'
 import { MOCKUPS } from '../game/run/mockups.ts'
 import { NotFound } from './NotFound.tsx'
 import { RunTable } from './Run.tsx'
+import { MotionRoot } from '../components/MotionRoot.tsx'
 
 const LAYOUTS = ['wide', 'mid', 'phone'] as const
 
@@ -181,5 +182,9 @@ export function MockupRun() {
   const { layout, table } = useSearch({ from: '/run/mockups/$name' })
   const mockup = useMemo(() => (FIXTURES_ON ? (MOCKUPS[name]?.make() ?? null) : null), [name])
   if (!mockup) return <NotFound />
-  return <RunTable key={`${name}:${table}`} mockup={mockup} forced={layout} table={table} />
+  return (
+    <MotionRoot>
+      <RunTable key={`${name}:${table}`} mockup={mockup} forced={layout} table={table} />
+    </MotionRoot>
+  )
 }

@@ -13,6 +13,7 @@ import { useKeepTableFocus } from '../game/shortcuts.ts'
 import { Boot } from '../game/table/Boot.tsx'
 import { TableFailed, TurnSideways } from '../game/tableNotices.tsx'
 import type { Layout } from '../game/text/useTextTable.ts'
+import { MotionRoot } from '../components/MotionRoot.tsx'
 
 // three.js is most of the 3D table's weight, so it loads only when that table is shown.
 const Run3D = lazy(() => import('../game/run/three/Run3D.tsx'))
@@ -91,5 +92,9 @@ export function RunTable({
 export function Run() {
   // ?layout forces a layout, for comparing them in development and tests.
   const search = useSearch({ from: '/run' })
-  return <RunTable forced={FIXTURES_ON ? search.layout : undefined} />
+  return (
+    <MotionRoot>
+      <RunTable forced={FIXTURES_ON ? search.layout : undefined} />
+    </MotionRoot>
+  )
 }

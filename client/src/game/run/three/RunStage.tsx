@@ -178,6 +178,7 @@ function Projector({
   closing,
   onClosed,
   onPin,
+  onOpen,
 }: {
   corners: THREE.Vector3[]
   ready: RefObject<number>
@@ -185,6 +186,7 @@ function Projector({
   closing: boolean
   onClosed: () => void
   onPin: (points: number[] | null) => void
+  onOpen?: (open: boolean) => void
 }) {
   const { model, lens } = useProjector()
   const { camera, size } = useThree()
@@ -212,6 +214,7 @@ function Projector({
     across: 1,
     up: 1,
     done: false,
+    open: false,
   })
   const now = useRef([new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()])
   useFrame(({ clock }) => {
@@ -263,6 +266,12 @@ function Projector({
     const across = shut < 0 ? state.across : state.across * (1 - phase(shut, DROP, SHRINK))
     const up = shut < 0 ? state.up : state.up * (1 - phase(shut, 0, DROP))
     const lit = opening > 0 && (shut < 0 || shut < SHRINK)
+    // Told once the window has opened all the way, and again as it starts to shut.
+    const open = opening >= 1 && shut < 0
+    if (open !== state.open) {
+      state.open = open
+      onOpen?.(open)
+    }
     // Never quite flat, so the page element's warp stays solvable.
     opened(corners, Math.max(0.01, across), Math.max(0.01, up), now.current)
     const window = now.current
@@ -331,6 +340,7 @@ export function BetweenBattles({
   closing = false,
   onClosed,
   onPin,
+  onOpen,
 }: {
   /** Shuts the projector and lifts it away, then calls `onClosed`. */
   closing?: boolean
@@ -343,6 +353,8 @@ export function BetweenBattles({
   from?: CameraView
   /** Given where the window's page element goes on screen every frame, or null while it's dark. */
   onPin: (points: number[] | null) => void
+  /** Told when the window has opened all the way, and when it starts to shut. */
+  onOpen?: (open: boolean) => void
 }) {
   const stage = useStage()
   const view = useMemo(() => restView(state), [state])
@@ -362,7 +374,14 @@ export function BetweenBattles({
       {/* Across the table at the window, gliding back from the seat after a battle. */}
       <CameraRig view="map" from={from} fit={FIT} />
       {projecting ? (
-        <Projector corners={corners} ready={ready} closing={closing} onClosed={onClosed} onPin={onPin} />
+        <Projector
+          corners={corners}
+          ready={ready}
+          closing={closing}
+          onClosed={onClosed}
+          onPin={onPin}
+          onOpen={onOpen}
+        />
       ) : null}
       <WarmUp onWarm={stage.warm} />
     </stage.Scene>
