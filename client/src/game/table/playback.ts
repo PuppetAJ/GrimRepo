@@ -13,7 +13,8 @@ export type Popup = {
   at: number
 }
 export type Leaving = { unit: Unit; row: Row; lane: number; at: number; how: 'died' | 'sacrificed' }
-export type Lunge = { at: number; toward: 1 | -1 }
+/** `across` is how many lanes aside it strikes, as Fork and Broadcast do; 0 is straight ahead. */
+export type Lunge = { at: number; toward: 1 | -1; across: number }
 /** A card moving along its row, from one lane to another. */
 export type Slide = { at: number; from: number; to: number }
 
@@ -165,7 +166,12 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
     }
     case 'attacked': {
       const unit = (event.side === 'player' ? view.board : view.front)[event.lane]
-      if (unit) next.lunges = new Map(next.lunges).set(unit.uid, { at: now, toward: event.side === 'player' ? -1 : 1 })
+      if (unit)
+        next.lunges = new Map(next.lunges).set(unit.uid, {
+          at: now,
+          toward: event.side === 'player' ? -1 : 1,
+          across: Math.sign(event.aimed - event.lane),
+        })
       break
     }
     case 'damaged':

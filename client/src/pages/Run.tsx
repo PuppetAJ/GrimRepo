@@ -72,7 +72,7 @@ export function RunTable({
           <TurnSideways onText={() => choose('text')} />
         </div>
       ) : (
-        <LoadFailed fallback={<TableFailed onText={() => choose('text')} />}>
+        <LoadFailed fallback={(error) => <TableFailed error={error} onText={() => choose('text')} />}>
           <Suspense fallback={<Boot stage="code" />}>
             <Run3D
               key={run.generation}

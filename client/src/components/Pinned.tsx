@@ -83,11 +83,11 @@ function DeathCardPin({ id }: { id: string | null }) {
       <PinText
         ref={text}
         name={def.name}
-        about="Death card, built when a run was lost."
+        about="Death card. Built on run loss."
         details={[
           ['cost', String(def.cost)],
           ['stats', `${def.attack}/${def.health}`],
-          ['sigil', def.sigils[0] ? SIGILS[def.sigils[0]].name : 'none'],
+          [def.sigils.length > 1 ? 'sigils' : 'sigil', def.sigils.map((id) => SIGILS[id].name).join(', ') || 'none'],
         ]}
       />
     </PinBox>

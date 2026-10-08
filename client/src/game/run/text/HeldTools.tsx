@@ -27,3 +27,12 @@ export function HeldTools({ items, label = 'Your tools' }: { items: ItemId[]; la
     </div>
   )
 }
+
+/** The overkill banked for the Package Registry, in the inventory beside the tools. */
+export function Bytes({ count }: { count: number }) {
+  return (
+    <p className="text-p03-dim">
+      Bytes <span className="text-p03">{count}</span>
+    </p>
+  )
+}

@@ -5,7 +5,12 @@ const VERTEX = `attribute vec2 corner;
 void main() { gl_Position = vec4(corner, 0.0, 1.0); }`
 
 // Dot-matrix glyphs lit in slow noise patches, with the odd row slipping sideways.
-const FRAGMENT = `precision mediump float;
+// High precision where there is any: phones honor mediump, and at their pixel counts the hashes break into blocks.
+const FRAGMENT = `#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
 uniform float time;
 uniform float bright;
 float hash(vec2 p) {

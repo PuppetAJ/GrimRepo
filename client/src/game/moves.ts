@@ -152,12 +152,13 @@ export const shake = (still: boolean) =>
       }
 
 /** A card striking: it lunges toward the other side and back; with reduced motion it dims for a moment instead. */
-export const strike = (row: 'board' | 'front' | 'back', duration: number, still: boolean): Move =>
+export const strike = (row: 'board' | 'front' | 'back', duration: number, still: boolean, across = 0): Move =>
   still
     ? { initial: { opacity: 1 }, animate: { opacity: [1, 0.6, 1] }, transition: { duration, ease: 'easeInOut' } }
     : {
-        initial: { y: '0%' },
-        animate: { y: ['0%', row === 'board' ? '-38%' : '38%', '0%'] },
+        // Toward the lane it strikes, half a lane over, when a sigil such as Fork turns it aside.
+        initial: { y: '0%', x: '0%' },
+        animate: { y: ['0%', row === 'board' ? '-38%' : '38%', '0%'], x: ['0%', `${across * 52}%`, '0%'] },
         transition: { duration, ease: 'easeInOut' },
       }
 
