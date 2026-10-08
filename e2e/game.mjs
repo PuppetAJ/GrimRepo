@@ -145,6 +145,20 @@ section('Resuming')
       (await page.locator('[data-action="draw-deck"]:not(:disabled)').count()) === 0,
   )
 
+  // Escape calls off a card picked to play.
+  const playable = page.locator('[data-action="select"][aria-disabled="false"]')
+  if (await playable.count()) {
+    await playable.first().click()
+    await page.locator('[data-action="cancel"]').waitFor()
+    await page.keyboard.press('Escape')
+    const calledOff = await page
+      .locator('[data-action="cancel"]')
+      .waitFor({ state: 'detached' })
+      .then(() => true)
+      .catch(() => false)
+    check('Escape calls off the card being played', calledOff)
+  } else console.log('  (no playable card in this hand, so Escape is skipped)')
+
   section('Walking away')
   await page.getByRole('button', { name: 'Forfeit' }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Forfeit' }).click()

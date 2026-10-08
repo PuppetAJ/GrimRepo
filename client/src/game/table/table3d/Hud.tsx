@@ -299,7 +299,12 @@ export function Hud({
             ) : (
               <>
                 {state.summon ? (
-                  <Button data-action="cancel" variant="outline" onClick={() => act({ type: 'cancel' })}>
+                  <Button
+                    data-action="cancel"
+                    variant="outline"
+                    onClick={() => act({ type: 'cancel' })}
+                    aria-keyshortcuts="Escape"
+                  >
                     Cancel
                   </Button>
                 ) : null}

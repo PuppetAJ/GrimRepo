@@ -152,6 +152,16 @@ section('The 3D table')
     const fuel = dealt.player.hand.findLast((unit) => unit.card === 'Boilerplate')
     const victim = dealt.player.board.findIndex((unit) => !unit)
     const costly = dealt.player.hand.find((unit) => card(unit.card).cost === 1)
+    // Escape calls off a card being placed; the drawn Boilerplate is always there to try it with.
+    if (fuel) {
+      await act({ type: 'select', uid: fuel.uid })
+      await until(page, (uid) => window.__game.state().summon?.uid === uid, fuel.uid)
+      await page.keyboard.press('Escape')
+      const calledOff = await until(page, () => window.__game.state().summon === null)
+        .then(() => true)
+        .catch(() => false)
+      check('Escape calls off the card being placed', calledOff)
+    }
     if (costly && fuel && victim >= 0) {
       // Each move waits for the last to land, as a player's clicks would.
       await act({ type: 'select', uid: fuel.uid })

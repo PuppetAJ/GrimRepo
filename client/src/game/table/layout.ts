@@ -47,7 +47,7 @@ export function slot(row: Row, lane: number, lift = 0): Vec3 {
 export const lanes = [...Array(LANES).keys()]
 
 // Camera space: x right, y up, z toward the viewer.
-const HAND = { distance: 1.5, scale: 0.4, y: -0.455, radius: 3, raise: 0.14, hover: 0.09, stowed: -0.5, away: -0.9 }
+const HAND = { distance: 1.5, scale: 0.46, y: -0.417, radius: 3, raise: 0.14, hover: 0.09, stowed: -0.5, away: -0.9 }
 export const HAND_SCALE = HAND.scale
 
 export function handPlace(

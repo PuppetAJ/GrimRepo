@@ -50,6 +50,7 @@ export function CancelButton() {
       {...(state.summon ? { 'data-action': 'cancel' } : {})}
       disabled={!state.summon}
       onClick={() => act({ type: 'cancel' })}
+      aria-keyshortcuts="Escape"
       className={`${SIDE_BUTTON} w-full disabled:opacity-40 disabled:hover:bg-[#07130b] ${layout === 'mid' ? 'mt-1' : ''}`}
     >
       Cancel

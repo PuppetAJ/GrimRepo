@@ -15,6 +15,8 @@ import { NODE_ICONS, nodeIcon, nodeName } from '../nodes.ts'
 import { usePlan } from '../plan.ts'
 import type { Layout } from '../../text/useTextTable.ts'
 import type { RunReady } from '../useRun.ts'
+import link from './link.svg'
+import { prefersReducedMotion } from '../../../lib/motion.ts'
 import { PenLayer } from './PenLayer.tsx'
 import { ICON_BUTTON, ScreenActions, ScreenBar, useScreenMode } from './Screen.tsx'
 
@@ -55,6 +57,8 @@ const ROW_HEIGHT = 'var(--map-row, clamp(3.75rem, 9dvh, 5rem))'
 const NODE = 44
 /** How long a press must last to read a node instead of clicking it, in milliseconds. */
 const HOLD_MS = 350
+/** Stages whose map has already been shown scrolling down, this page load. */
+const SURVEYED = new Set<string>()
 
 const describeNext = (map: StageMap, node: MapNode) =>
   node.next.length
@@ -194,8 +198,43 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
     if (!node || !scroller) return
     // Only the frame's own scroller moves, never the page.
     const offset = node.getBoundingClientRect().top - scroller.getBoundingClientRect().top
-    scroller.scrollTop += offset - scroller.clientHeight / 2
-  }, [])
+    const target = scroller.scrollTop + offset - scroller.clientHeight / 2
+    const key = `${state.seed}:${state.stage}`
+    if (SURVEYED.has(key) || prefersReducedMotion()) {
+      scroller.scrollTop = target
+      return
+    }
+    // A stage's map first shows from the top, then travels down as far as it can with the next choice still in view.
+    const top = scroller.scrollTop + offset
+    scroller.scrollTop = 0
+    const distance = Math.min(top - NODE * 1.5, scroller.scrollHeight - scroller.clientHeight)
+    if (distance <= 0) return
+    const duration = Math.min(1600, Math.max(700, distance * 1.4))
+    let frame = 0
+    let start = 0
+    const step = (now: number) => {
+      start ||= now
+      const t = Math.min(1, (now - start) / duration)
+      scroller.scrollTop = distance * (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2)
+      if (t < 1) frame = requestAnimationFrame(step)
+    }
+    const delay = setTimeout(() => {
+      SURVEYED.add(key)
+      frame = requestAnimationFrame(step)
+    }, 350)
+    // The player's own scroll takes over.
+    const stop = () => {
+      clearTimeout(delay)
+      cancelAnimationFrame(frame)
+    }
+    scroller.addEventListener('wheel', stop, { passive: true })
+    scroller.addEventListener('touchstart', stop, { passive: true })
+    return () => {
+      stop()
+      scroller.removeEventListener('wheel', stop)
+      scroller.removeEventListener('touchstart', stop)
+    }
+  }, [state.seed, state.stage])
 
   // Neighbors never come closer than this many pixels, so the path between them always shows.
   const gap = 22
@@ -333,7 +372,7 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
                       top: from.y - 2,
                       width: length,
                       transform: `rotate(${angle}rad)`,
-                      maskImage: 'url(/run/link.svg)',
+                      maskImage: `url("${link}")`,
                       maskRepeat: 'repeat-x',
                     }
                     return (

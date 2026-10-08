@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 
 /** Single-key shortcuts act only while focus is in the table (WCAG 2.1.4), never elsewhere on the page. */
 export const forTable = (event: KeyboardEvent) =>
@@ -43,4 +43,21 @@ export function useKeepTableFocus() {
       document.removeEventListener('pointerdown', onPointerDown, true)
     }
   }, [])
+}
+
+/** Escape calls off the card being placed and its sacrifice marks; in full screen the browser keeps Escape for leaving it. */
+export function useEscapeCancel(canCancel: boolean, cancel: () => void) {
+  const latest = useRef(cancel)
+  useEffect(() => {
+    latest.current = cancel
+  })
+  useEffect(() => {
+    if (!canCancel) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented || document.querySelector('[role="dialog"]')) return
+      latest.current()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [canCancel])
 }
