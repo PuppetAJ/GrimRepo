@@ -129,7 +129,7 @@ export function CardList({
 const HOLD_MS = 350
 
 /** Holding a card opens it to read; letting go after a hold isn't a click. */
-function useHoldToRead(open: (unit: Unit) => void) {
+export function useHoldToRead(open: (unit: Unit) => void) {
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const held = useRef(false)
   useEffect(() => () => clearTimeout(timer.current), [])
@@ -157,4 +157,32 @@ function useHoldToRead(open: (unit: Unit) => void) {
       return was
     },
   }
+}
+
+/** A card shown, not chosen, that still opens to read when held or clicked, as every card on these screens can. */
+export function ReadableCard({
+  unit,
+  blank,
+  label,
+}: {
+  unit: Unit
+  blank?: Parameters<typeof PixelCard>[0]['blank']
+  label?: string
+}) {
+  const [reading, setReading] = useState<Unit | null>(null)
+  const hold = useHoldToRead(setReading)
+  return (
+    <>
+      <button
+        type="button"
+        aria-label={label ?? `Read ${card(unit.card).name}`}
+        {...hold.props(unit)}
+        onClick={() => !hold.read() && setReading(unit)}
+        className="block w-full touch-none rounded-md select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03"
+      >
+        <PixelCard unit={unit} blank={blank} />
+      </button>
+      <CardReader unit={reading} onClose={() => setReading(null)} />
+    </>
+  )
 }

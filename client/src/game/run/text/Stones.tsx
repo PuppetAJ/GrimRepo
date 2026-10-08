@@ -1,8 +1,11 @@
+import { ArrowDown, ArrowRight } from 'lucide-react'
 import { useState } from 'react'
 import { card, legalRunActions, SIGILS, type RunAction, type SigilId } from 'shared'
 import { SIDE_BUTTON } from '../../text/Panel.tsx'
+import { Sigil } from '../../CardReader.tsx'
 import { asUnit } from '../nodes.ts'
 import type { RunReady } from '../useRun.ts'
+import { Box } from './Box.tsx'
 import { NothingHere } from './CardBits.tsx'
 import { CardList } from './CardList.tsx'
 import { LeaveButton, ScreenBar, ScreenSearch } from './Screen.tsx'
@@ -30,7 +33,7 @@ export function Stones({ run }: { run: RunReady }) {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="@container flex flex-col gap-4">
       <LeaveButton label="Leave the stones" onLeave={() => run.act({ type: 'leave' })} />
       {/* Above the cards, so the final choice is always in reach. */}
       <ScreenBar>
@@ -54,11 +57,10 @@ export function Stones({ run }: { run: RunReady }) {
         </div>
       </ScreenBar>
       {moves.length ? (
-        <>
-          <section aria-labelledby="stones-give" className="flex flex-col gap-2">
-            <h3 id="stones-give" className="text-p03">
-              1. The card to sacrifice
-            </h3>
+        // Left to right: the card given up, the sigil it gives, and the card that gains it; stacked when narrow.
+        <div className="grid items-start gap-3 @4xl:grid-cols-[minmax(0,1fr)_auto_auto_auto_minmax(0,1fr)]">
+          <Box className="flex flex-col gap-2">
+            <h3 className="text-p03">The card to sacrifice</h3>
             {/* Once one is picked, the rest fold away, so the next step is in reach without scrolling. */}
             <CardList
               units={giver ? [giver] : deck}
@@ -66,55 +68,75 @@ export function Stones({ run }: { run: RunReady }) {
               can={(unit) => moves.some((move) => move.from === unit.uid)}
               picked={from}
               data={(unit) => ({ 'data-action': 'give', 'data-card': unit.uid })}
-              size="w-24 sm:w-28"
+              size="w-20 sm:w-24"
               filtered={!giver}
             />
             {giver ? <Another onClick={() => pickFrom(giver.uid)} /> : null}
-          </section>
-          {giver && sigils.length > 1 ? (
-            <fieldset className="flex flex-col gap-2">
-              <legend className="text-p03">2. The sigil it gives</legend>
-              {sigils.map((id) => (
-                <label key={id} className="flex items-start gap-2">
-                  <input
-                    type="radio"
-                    name="sigil"
-                    checked={chosen === id}
-                    onChange={() => {
+          </Box>
+          <Arrow on={Boolean(giver)} />
+          <Box className={`flex flex-col gap-2 ${giver ? '' : 'opacity-50'}`}>
+            <h3 className="text-p03">The sigil it gives</h3>
+            {giver ? (
+              <div className="flex flex-wrap justify-center gap-2 @4xl:flex-col">
+                {sigils.map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    data-action="stone-sigil"
+                    data-sigil={id}
+                    aria-pressed={chosen === id}
+                    title={SIGILS[id].text}
+                    onClick={() => {
                       setSigil(id)
                       setTo(null)
                     }}
-                    className="mt-1.5 accent-p03"
-                  />
-                  <span>
-                    <strong>{SIGILS[id].name}.</strong> <span className="font-sans text-base">{SIGILS[id].text}</span>
-                  </span>
-                </label>
-              ))}
-            </fieldset>
-          ) : null}
-          {giver && chosen ? (
-            <section aria-labelledby="stones-take" className="flex flex-col gap-2">
-              <h3 id="stones-take" className="text-p03">
-                {sigils.length > 1 ? '3.' : '2.'} The card that gains {SIGILS[chosen].name}
-              </h3>
-              <CardList
-                units={receiver ? [receiver] : deck.filter((unit) => unit.uid !== from)}
-                onPick={(unit) => setTo(unit.uid === to ? null : unit.uid)}
-                can={(unit) => fits(unit.uid)}
-                picked={to}
-                data={(unit) => ({ 'data-action': 'take-sigil', 'data-card': unit.uid })}
-                size="w-24 sm:w-28"
-                filtered={!receiver}
-              />
-              {receiver ? <Another onClick={() => setTo(null)} /> : null}
-            </section>
-          ) : null}
-        </>
+                    className="flex items-center gap-2 rounded-md border-2 border-p03-edge bg-[#07130b] px-3 py-2 text-left text-lg text-p03 hover:border-p03 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03 aria-pressed:border-p03 aria-pressed:bg-[#13261a]"
+                  >
+                    <Sigil id={id} size={28} color="currentColor" />
+                    {SIGILS[id].name}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-base text-p03-dim">Pick a card first.</p>
+            )}
+          </Box>
+          <Arrow on={Boolean(chosen)} />
+          <Box className={`flex flex-col gap-2 ${chosen ? '' : 'opacity-50'}`}>
+            <h3 className="text-p03">
+              {chosen ? `The card that gains ${SIGILS[chosen].name}` : 'The card that gains it'}
+            </h3>
+            {giver && chosen ? (
+              <>
+                <CardList
+                  units={receiver ? [receiver] : deck.filter((unit) => unit.uid !== from && fits(unit.uid))}
+                  onPick={(unit) => setTo(unit.uid === to ? null : unit.uid)}
+                  picked={to}
+                  data={(unit) => ({ 'data-action': 'take-sigil', 'data-card': unit.uid })}
+                  size="w-20 sm:w-24"
+                  filtered={!receiver}
+                />
+                {receiver ? <Another onClick={() => setTo(null)} /> : null}
+              </>
+            ) : (
+              <p className="text-base text-p03-dim">Then the sigil.</p>
+            )}
+          </Box>
+        </div>
       ) : (
         <NothingHere>No card has a sigil to give.</NothingHere>
       )}
     </div>
+  )
+}
+
+/** Points from one step to the next: across when side by side, down when stacked. */
+function Arrow({ on }: { on: boolean }) {
+  return (
+    <span aria-hidden className={`grid place-items-center self-center ${on ? 'text-p03' : 'text-p03-dim opacity-50'}`}>
+      <ArrowDown className="size-7 @4xl:hidden" />
+      <ArrowRight className="hidden size-7 @4xl:block" />
+    </span>
   )
 }
 

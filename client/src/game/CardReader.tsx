@@ -91,7 +91,12 @@ function Stats({ unit, icon, className }: { unit: Shown; icon: number; className
   )
 }
 
-export function PixelCard({ unit }: { unit: Shown }) {
+/** Parts left blank, as on a death card being built: each fills in, with a pop, once it's chosen. */
+type Blank = { cost?: boolean; art?: boolean; stats?: boolean; sigils?: boolean }
+
+const POP = 'motion-safe:animate-[warm-pop_650ms_ease-out]'
+
+export function PixelCard({ unit, blank }: { unit: Shown; blank?: Blank }) {
   const def = card(unit.card)
   const rare = def.tier === 'S'
   return (
@@ -108,16 +113,29 @@ export function PixelCard({ unit }: { unit: Shown }) {
       >
         {/* Its own row, so the type and cost never overlap the art on a small card. */}
         <span className="flex h-[10cqw] shrink-0 items-start justify-between px-[3cqw] pt-[3cqw]">
-          {def.type ? <Sigil id={`type-${def.type}`} size="7cqw" /> : <span />}
-          <CostPips cost={def.cost} pip="size-[7cqw] outline-1" className="gap-[2cqw]" announce={false} />
+          {def.type && !blank?.art ? <Sigil id={`type-${def.type}`} size="7cqw" /> : <span />}
+          <span key={blank?.cost ? 'blank' : 'cost'} className={blank ? POP : ''}>
+            <CostPips
+              cost={blank?.cost ? 0 : def.cost}
+              pip="size-[7cqw] outline-1"
+              className="gap-[2cqw]"
+              announce={false}
+            />
+          </span>
         </span>
-        <span className="flex min-h-0 flex-1 items-center justify-center">
-          <Art id={unit.card} />
+        <span
+          key={blank?.art ? 'blank' : 'art'}
+          className={`flex min-h-0 flex-1 items-center justify-center ${blank ? POP : ''}`}
+        >
+          {blank?.art ? <span className="text-[24cqw] opacity-40">?</span> : <Art id={unit.card} />}
         </span>
       </span>
       {/* The band stays even when empty, so every card lays out the same. */}
-      <span className="flex h-[19%] shrink-0 items-center justify-center gap-[2cqw]">
-        {unit.sigils.map((sigil) => (
+      <span
+        key={blank?.sigils ? 'blank' : 'sigils'}
+        className={`flex h-[19%] shrink-0 items-center justify-center gap-[2cqw] ${blank ? POP : ''}`}
+      >
+        {(blank?.sigils ? [] : unit.sigils).map((sigil) => (
           <Sigil key={sigil} id={sigil} size={`${Math.min(20, 86 / unit.sigils.length - 2)}cqw`} />
         ))}
       </span>
@@ -128,12 +146,18 @@ export function PixelCard({ unit }: { unit: Shown }) {
           fontSize: `${Math.min(21, 44 / Math.max(String(unit.attack).length, String(unit.health).length))}cqw`,
         }}
       >
-        <span className={`flex items-center gap-[2cqw] ${auraColor(unit)}`}>
+        <span
+          key={blank?.stats ? 'attack-blank' : 'attack'}
+          className={`flex items-center gap-[2cqw] ${auraColor(unit)} ${blank ? POP : ''}`}
+        >
           <Sigil id="attack" size="0.5em" color="currentColor" />
-          {unit.attack}
+          {blank?.stats ? '?' : unit.attack}
         </span>
-        <span className={`flex items-center gap-[2cqw] ${unit.health < unit.maxHealth ? 'text-[#a3172b]' : ''}`}>
-          {unit.health}
+        <span
+          key={blank?.stats ? 'health-blank' : 'health'}
+          className={`flex items-center gap-[2cqw] ${unit.health < unit.maxHealth ? 'text-[#a3172b]' : ''} ${blank ? POP : ''}`}
+        >
+          {blank?.stats ? '?' : unit.health}
           <Sigil id="health" size="0.5em" />
         </span>
       </span>

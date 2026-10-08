@@ -57,7 +57,7 @@ const runAction = z.discriminatedUnion('type', [
   }),
   z.strictObject({ type: z.literal('buy'), index: small }),
   z.strictObject({ type: z.literal('uninstall'), card: cardId }),
-  z.strictObject({ type: z.literal('buyItem') }),
+  z.strictObject({ type: z.literal('buyItem'), index: small }),
   z.strictObject({ type: z.literal('pickItem'), index: small, drop: z.number().int().min(0).max(2).optional() }),
   z.strictObject({ type: z.literal('fuse'), card: cardId, with: cardId.optional() }),
   z.strictObject({ type: z.literal('leave') }),
@@ -68,7 +68,6 @@ const runMoves = z.strictObject({ from: z.number().int().min(0), actions: z.arra
 const deathChoice = z.strictObject({
   cost: cardId,
   stats: cardId,
-  sigils: cardId,
   // Room for spaces the builder trims away.
   name: z.string().max(DEATH_NAME_LIMIT * 4),
 })

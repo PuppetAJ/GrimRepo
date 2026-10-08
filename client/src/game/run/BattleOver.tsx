@@ -1,6 +1,7 @@
 import { findNode, STAGES, TIP } from 'shared'
 import { Button } from '@/components/ui/button.tsx'
 import type { RunReady } from './useRun.ts'
+import { Sentences } from '../text/Sentences.tsx'
 
 /** The panel over the board when a run's battle ends; both tables show it. */
 export function BattleOver({ run, onSummary }: { run: RunReady; onSummary: () => void }) {
@@ -16,13 +17,17 @@ export function BattleOver({ run, onSummary }: { run: RunReady; onSummary: () =>
       className="flex w-full max-w-md flex-col gap-3 rounded border border-p03 bg-p03-ground/95 p-4 font-terminal text-xl"
     >
       <p className="text-3xl text-p03">
-        {!won
-          ? `You lose on turn ${visit.game.turn}. The run ends here.`
-          : state.status === 'won'
-            ? `${STAGES[state.stage]} is down. You cleared the run.`
-            : boss
-              ? `The boss is down. ${STAGES[state.stage]} is cleared.`
-              : `You win in ${visit.game.turn} turns.`}
+        <Sentences
+          text={
+            !won
+              ? `You lose on turn ${visit.game.turn}. The run ends here.`
+              : state.status === 'won'
+                ? `${STAGES[state.stage]} is down. You cleared the run.`
+                : boss
+                  ? `The boss is down. ${STAGES[state.stage]} is cleared.`
+                  : `You win in ${visit.game.turn} turns.`
+          }
+        />
       </p>
       {won && overkill ? <p>{overkill} overkill, which counts toward the run's score.</p> : null}
       <div className="flex flex-wrap gap-3 font-sans text-base">

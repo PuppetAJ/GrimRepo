@@ -3,6 +3,7 @@ import { asUnit } from '../nodes.ts'
 import type { RunReady } from '../useRun.ts'
 import { CardList } from './CardList.tsx'
 import { ScreenBar } from './Screen.tsx'
+import { Sentences } from '../../text/Sentences.tsx'
 
 /** A face-down card choice: three traits; picking one turns over three cards with it, to take one. */
 export function BlindPick({ run }: { run: RunReady }) {
@@ -14,7 +15,9 @@ export function BlindPick({ run }: { run: RunReady }) {
     return (
       <div data-center className="flex flex-col gap-4">
         <ScreenBar>
-          <p className="pb-1 text-lg">{PICKS[visit.picks[revealed.pick] ?? 'free'].label}. Take one.</p>
+          <p className="pb-1 text-lg">
+            <Sentences text={`${PICKS[visit.picks[revealed.pick] ?? 'free'].label}. Take one.`} />
+          </p>
         </ScreenBar>
         <CardList
           units={revealed.offer.map((id, index) => asUnit(id, index + 1))}
@@ -28,7 +31,9 @@ export function BlindPick({ run }: { run: RunReady }) {
   return (
     <div data-center className="flex flex-col gap-4">
       <ScreenBar>
-        <p className="pb-1 text-lg">Three cards, face down. You only get to read the label.</p>
+        <p className="pb-1 text-lg">
+          <Sentences text="Three cards, face down. You only get to read the label." />
+        </p>
       </ScreenBar>
       <ul className="flex flex-wrap justify-center gap-6 pt-3">
         {visit.picks.map((pick, index) => (

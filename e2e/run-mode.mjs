@@ -36,7 +36,7 @@ function targetFor(action) {
   if (action.type === 'choose') return `[data-action="choose"][data-option="${action.option}"]`
   if (action.type === 'start') return `[data-action="start"][data-deck="${action.deck}"]`
   if (action.type === 'buy') return `[data-action="buy"][data-index="${action.index}"]`
-  if (action.type === 'buyItem') return '[data-action="buy-item"]'
+  if (action.type === 'buyItem') return `[data-action="buy-item"][data-index="${action.index}"]`
   if (action.type === 'pickItem') return `[data-action="pick-item"][data-index="${action.index}"]`
   if (action.type === 'leave') return '[data-action="leave"]'
   if (action.type === 'play') return selectorFor(action.action)
@@ -59,8 +59,7 @@ async function playRun(page, mirror, { pick = nextRunAction, done }) {
       } else if (action.type === 'transfer') {
         // The giver, its sigil when it has more than one, the receiver, then the stones' button.
         await page.locator(`[data-action="give"][data-card="${action.from}"]`).click()
-        const sigil = page.getByRole('radio', { name: new RegExp(`^${SIGILS[action.sigil].name}\\.`) })
-        if (await sigil.count()) await sigil.check()
+        await page.locator(`[data-action="stone-sigil"][data-sigil="${action.sigil}"]`).click()
         await page.locator(`[data-action="take-sigil"][data-card="${action.to}"]`).click()
         await clickMove(page, '[data-action="transfer"]', expected)
       } else if (action.type === 'play' && action.action.type === 'use') {
@@ -72,6 +71,10 @@ async function playRun(page, mirror, { pick = nextRunAction, done }) {
           await page.locator(item).click()
           await clickMove(page, `[data-action="aim"][data-row="${row}"][data-lane="${lane}"]`, expected)
         }
+      } else if (action.type === 'pickItem' && action.drop !== undefined) {
+        // A full kit gives one up first.
+        await page.locator(`[data-action="drop-item"][data-slot="${action.drop}"]`).click()
+        await clickMove(page, targetFor(action), expected)
       } else if (action.type === 'fuse') {
         // Both copies, the engine's pick of the second when the bot names none, then the button.
         const kept = state.deck.find((entry) => entry.id === action.card)
@@ -212,7 +215,6 @@ check(
 section('A death card')
 await page.locator('[data-action="death-cost"]').first().click()
 await page.locator('[data-action="death-stats"]').first().click()
-await page.locator('[data-action="death-sigils"]').first().click()
 await page.locator('#death-name').fill('<b>')
 await page.locator('[data-action="build-death-card"]').click()
 check('a name it cannot print is refused before sending', await page.getByText('Letters, numbers').isVisible())
