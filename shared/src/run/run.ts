@@ -32,8 +32,8 @@ export const STARTER_DECKS: Record<string, { name: string; about: string; cards:
 /** What a card costs at a shop, in bytes, by tier. */
 const PRICE: Record<string, number> = { E: 3, D: 5, C: 6, B: 12, A: 15 }
 
-/** How often a shop has an item for sale. */
-const SHOP_ITEM_SHARE = 0.3
+/** How many different tools a shop sells. */
+const SHOP_TOOLS = 2
 
 /** What removing a card at a shop costs, in bytes; once a visit. */
 export const UNINSTALL_PRICE = 4
@@ -149,9 +149,12 @@ function enter(state: RunState, rng: Rng, node: MapNode): Visit {
       const cards = [...rng.shuffle(COMMONS).slice(0, 2), ...rng.shuffle(RARES).slice(0, 1)]
       const offer = cards.map((id) => ({ card: id, price: PRICE[card(id).tier] ?? 10 }))
       // Now and then a tool too; Scissors are found nowhere else.
-      const tool = rng.float() < SHOP_ITEM_SHARE ? rng.pick<ItemId>(['scissors', ...FOUND_ITEMS]) : null
-      const item = tool ? { id: tool, price: tool === 'scissors' ? 10 : 6 } : undefined
-      return { kind: 'shop', node: node.id, offer, sold: [], ...(item ? { item } : {}) }
+      // Two tools too; Scissors are found nowhere else.
+      const tools = rng
+        .shuffle<ItemId>(['scissors', ...FOUND_ITEMS])
+        .slice(0, SHOP_TOOLS)
+        .map((tool) => ({ id: tool, price: tool === 'scissors' ? 10 : 6 }))
+      return { kind: 'shop', node: node.id, offer, sold: [], tools, toolsSold: [] }
     }
     case 'item':
       return { kind: 'item', node: node.id, offer: rng.shuffle(FOUND_ITEMS).slice(0, OFFER_SIZE) }
@@ -412,14 +415,15 @@ function step(state: RunState, rng: Rng, action: RunAction, events: RunEvent[]):
       return
     }
     case 'buyItem': {
-      if (visit?.kind !== 'shop' || !visit.item) return 'No item for sale here'
-      if (visit.itemSold) return 'That item is sold'
-      if (state.bytes < visit.item.price) return 'Not enough bytes'
+      const tool = visit?.kind === 'shop' && Number.isInteger(action.index) ? visit.tools[action.index] : undefined
+      if (visit?.kind !== 'shop' || !tool) return 'No such tool for sale'
+      if (visit.toolsSold.includes(action.index)) return 'That tool is sold'
+      if (state.bytes < tool.price) return 'Not enough bytes'
       if (state.items.length >= ITEM_SLOTS) return 'No slot free'
-      state.bytes -= visit.item.price
-      visit.itemSold = true
-      state.items.push(visit.item.id)
-      events.push({ type: 'gotItem', item: visit.item.id })
+      state.bytes -= tool.price
+      visit.toolsSold.push(action.index)
+      state.items.push(tool.id)
+      events.push({ type: 'gotItem', item: tool.id })
       return
     }
     case 'uninstall': {
@@ -508,8 +512,10 @@ export function legalRunActions(state: RunState): RunAction[] {
       visit.offer.forEach((item, index) => {
         if (!visit.sold.includes(index) && item.price <= state.bytes) actions.push({ type: 'buy', index })
       })
-      if (visit.item && !visit.itemSold && state.bytes >= visit.item.price && state.items.length < ITEM_SLOTS)
-        actions.push({ type: 'buyItem' })
+      visit.tools.forEach((tool, index) => {
+        if (!visit.toolsSold.includes(index) && state.bytes >= tool.price && state.items.length < ITEM_SLOTS)
+          actions.push({ type: 'buyItem', index })
+      })
       if (!visit.uninstalled && state.bytes >= UNINSTALL_PRICE && state.deck.length > 1)
         for (const entry of state.deck) actions.push({ type: 'uninstall', card: entry.id })
       return actions

@@ -14,6 +14,7 @@ import { asUnit, boostText } from '../nodes.ts'
 import type { RunReady } from '../useRun.ts'
 import { CardList } from './CardList.tsx'
 import { LeaveButton, ScreenBar, ScreenSearch } from './Screen.tsx'
+import { Sentences } from '../../text/Sentences.tsx'
 
 /** One card gets the campfire's boost; a second boost risks burning it, so that one asks first. */
 export function Campfire({ run }: { run: RunReady }) {
@@ -30,11 +31,15 @@ export function Campfire({ run }: { run: RunReady }) {
       <ScreenBar>
         <div className="flex flex-col gap-2 pb-1">
           <p className="text-lg">
-            {visit.buffs === 0
-              ? `Warm a card for ${boost}.`
-              : allowed.size
-                ? 'Warm it again for more? Something is creeping in at the edge of the light.'
-                : 'The fire has done all it will. Whatever was out there has gone quiet.'}
+            <Sentences
+              text={
+                visit.buffs === 0
+                  ? `Warm a card for ${boost}.`
+                  : allowed.size
+                    ? 'Warm it again for more? Something is creeping in at the edge of the light.'
+                    : 'The fire has done all it will. Whatever was out there has gone quiet.'
+              }
+            />
           </p>
           <ScreenSearch label="Search the deck for a card to warm" count={run.state.deck.length} />
         </div>

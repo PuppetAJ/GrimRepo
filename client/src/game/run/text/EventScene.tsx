@@ -2,6 +2,8 @@ import { useEffect } from 'react'
 import { scene } from 'shared'
 import { forTable } from '../../shortcuts.ts'
 import type { RunReady } from '../useRun.ts'
+import { Box } from './Box.tsx'
+import { Sentences } from '../../text/Sentences.tsx'
 
 /** An event's scene and its choices; what each choice does shows once it's made, until the player moves on. */
 export function EventScene({ run }: { run: RunReady }) {
@@ -30,16 +32,22 @@ export function EventScene({ run }: { run: RunReady }) {
   if (!found) return null
   return (
     // The scene's title is the screen's; a rule sets the scene off beneath it.
-    <article className="flex max-w-3xl flex-col gap-4 border-t-2 border-p03-edge pt-4">
-      {/* The scene sits apart from P03's question and the choices, like a quote. */}
-      <p className="border-l-2 border-p03-dim pl-4 text-xl leading-relaxed text-[#b8f5c4]">{found.text}</p>
+    <article className="flex max-w-3xl flex-col gap-4">
+      {/* The scene sits apart from P03's question and the choices, in a box of its own. */}
+      <Box>
+        <p className="text-xl leading-relaxed text-[#b8f5c4]">{found.text}</p>
+      </Box>
       {after ? (
         <div className="flex flex-col gap-3 motion-safe:animate-[fade-in_200ms_ease-out]">
           <p className="text-p03-dim">&gt; {found.options[after.option]?.label}</p>
           {/* Announced, so a screen reader hears what the choice did. */}
           <div role="status" className="flex flex-col gap-1 text-xl text-p03">
             {after.lines.length ? (
-              after.lines.map((line) => <p key={line}>P03&gt; {line}</p>)
+              after.lines.map((line) => (
+                <p key={line}>
+                  <Sentences text={`P03> ${line}`} />
+                </p>
+              ))
             ) : (
               <p>P03&gt; Nothing happened. Riveting.</p>
             )}

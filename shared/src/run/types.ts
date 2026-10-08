@@ -3,7 +3,7 @@ import type { ItemId } from '../items.ts'
 import type { Action, DeckCard, GameEvent, GameState } from '../engine/types.ts'
 
 /** Bumped whenever a change would make an old run replay differently. */
-export const RUN_RULES_VERSION = 16
+export const RUN_RULES_VERSION = 17
 
 /** The most actions one save may send; 200 of the largest kind fit the server's 16 KB body limit. */
 export const RUN_SAVE_LIMIT = 200
@@ -53,15 +53,15 @@ export type Visit =
   | { kind: 'start' }
   /** Cards for bytes; several may be bought before leaving. */
   /** `uninstalled` once a card has been removed for bytes, which a visit allows once. */
-  /** `item` is the one tool for sale this visit, with its price; `itemSold` once bought. */
+  /** `tools` are for sale this visit, with their prices; `toolsSold` holds the places bought. */
   | {
       kind: 'shop'
       node: string
       offer: { card: string; price: number }[]
       sold: number[]
       uninstalled?: boolean
-      item?: { id: ItemId; price: number }
-      itemSold?: boolean
+      tools: { id: ItemId; price: number }[]
+      toolsSold: number[]
     }
   /** Three items to choose one from, when there's a slot free. */
   | { kind: 'item'; node: string; offer: ItemId[] }
@@ -103,7 +103,7 @@ export type RunAction =
   /** `skipDeath` leaves the player's death card out of the run, for a higher score. */
   | { type: 'start'; deck: string; skipDeath?: boolean }
   | { type: 'buy'; index: number }
-  | { type: 'buyItem' }
+  | { type: 'buyItem'; index: number }
   /** At an item node, the item in that place; at a full kit, the slot to give up for it. */
   | { type: 'pickItem'; index: number; drop?: number }
   | { type: 'uninstall'; card: number }

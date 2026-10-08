@@ -8,7 +8,16 @@ import type { GameEvent } from '../engine/types.ts'
 import { makeUnit, worthOf } from '../engine/units.ts'
 import { Rng } from '../rng.ts'
 import { DEATH_SKIP_BONUS, scoreRun } from '../scoring.ts'
-import { buildDeathCard, deathCost, deathHands, deathParts, deathSkipBonus, rivalAllowed } from './death.ts'
+import {
+  buildDeathCard,
+  deathCost,
+  deathCostHand,
+  deathParts,
+  deathSigilCard,
+  deathSkipBonus,
+  deathStatsHand,
+  rivalAllowed,
+} from './death.ts'
 import { applyRun, createRun, legalRunActions, replayRun } from './run.ts'
 import type { RunAction, RunCard, RunState } from './types.ts'
 
@@ -69,53 +78,64 @@ describe('building a death card', () => {
     entry(3, 'NullPointer'),
     entry(4, 'Firewall'),
     entry(5, 'Cookie'),
+    entry(6, 'CronJob'),
   ]
   const lost = (rng = 7, cards = deck): RunState => ({ ...createRun({ seed: 3 }), rng, deck: cards })
-  /** A lost run whose hands put these cards where asked, found by trying the run's random state. */
-  function dealing(want: (hands: RunCard[][]) => boolean, cards = deck): RunState {
-    for (let rng = 1; rng < 5000; rng++) if (want(deathHands(lost(rng, cards)))) return lost(rng, cards)
+  const has = (hand: RunCard[], id: number) => hand.some((part) => part.id === id)
+  /** A lost run that deals this cost card, and then this stats card for it, found by trying the run's random state. */
+  function dealing(cost: number, stats: number, cards = deck): RunState {
+    for (let rng = 1; rng < 20_000; rng++) {
+      const state = lost(rng, cards)
+      if (has(deathCostHand(state), cost) && has(deathStatsHand(state, cost), stats)) return state
+    }
     throw new Error('No deal matched')
   }
-  const has = (hand: RunCard[] | undefined, id: number) => Boolean(hand?.some((part) => part.id === id))
 
-  it('deals three hands of three from the deck, the same every time the run is replayed', () => {
-    const hands = deathHands(lost())
-    assert.deepEqual(
-      hands.map((hand) => hand.length),
-      [3, 3, 3],
-    )
-    assert.deepEqual(deathHands(lost()), hands)
+  it('deals the cost hand first, then a stats hand for the cost picked, the same every replay', () => {
+    const state = lost()
+    const costs = deathCostHand(state)
+    assert.equal(costs.length, 3)
+    assert.deepEqual(deathCostHand(lost()), costs)
+    const first = costs[0] as RunCard
+    assert.deepEqual(deathStatsHand(lost(), first.id), deathStatsHand(state, first.id))
+    assert.deepEqual(deathStatsHand(state, 999), [], 'nothing for a cost card not dealt')
   })
 
-  it('takes the cost from the first hand, the stats and art from the second, and every sigil from the third', () => {
-    const state = dealing((hands) => has(hands[0], 4) && has(hands[1], 3) && has(hands[2], 1))
-    const built = buildDeathCard(state, { cost: 4, stats: 3, sigils: 1, name: 'Grim  Ping ' })
+  it('deals stats only from cards within one cost of the cost card', () => {
+    for (let rng = 1; rng < 200; rng++) {
+      const state = lost(rng)
+      for (const costCard of deathCostHand(state))
+        for (const statsCard of deathStatsHand(state, costCard.id))
+          assert.ok(Math.abs(card(statsCard.card).cost - card(costCard.card).cost) <= 1)
+    }
+  })
+
+  it('takes the cost from one, the stats and art from another, and every sigil of a card chance picks', () => {
+    const state = dealing(4, 3)
+    const built = buildDeathCard(state, { cost: 4, stats: 3, name: 'Grim  Ping ' })
     assert.ok(built.ok)
     const def = card(built.id)
+    const chance = deathSigilCard(state, 4, 3)
     assert.deepEqual(
-      [def.name, def.cost, def.attack, def.health, def.sigils, def.art],
-      ['Grim Ping', 1, 4, 2, ['broadcast'], 'NullPointer'],
+      [def.name, def.cost, def.attack, def.health, def.art, def.sigils],
+      ['Grim Ping', 1, 4, 2, 'NullPointer', chance?.sigils ?? []],
     )
-    const twoSigils = [...deck.slice(0, 4), entry(5, 'Cookie', { sigils: ['popup', 'retry'] })]
-    const both = dealing((hands) => has(hands[0], 4) && has(hands[1], 3) && has(hands[2], 5), twoSigils)
-    const built2 = buildDeathCard(both, { cost: 4, stats: 3, sigils: 5, name: 'Both' })
-    assert.ok(built2.ok)
-    assert.deepEqual(card(built2.id).sigils, ['popup', 'retry'])
+    assert.deepEqual(deathSigilCard(state, 4, 3), chance, 'the same chance card every replay')
   })
 
   it('keeps the buffs the stats card gained in the run', () => {
-    const state = dealing((hands) => has(hands[0], 2) && has(hands[1], 2) && has(hands[2], 2))
-    const built = buildDeathCard(state, { cost: 2, stats: 2, sigils: 2, name: 'Big Iron' })
+    const state = dealing(2, 2)
+    const built = buildDeathCard(state, { cost: 2, stats: 2, name: 'Big Iron' })
     assert.ok(built.ok)
     assert.equal(card(built.id).attack, 15)
   })
 
   it('refuses a card from outside its hand, and a bad name', () => {
-    const state = dealing((hands) => !has(hands[1], 2) && has(hands[0], 1) && has(hands[2], 1))
-    assert.ok(!buildDeathCard(state, { cost: 1, stats: 2, sigils: 1, name: 'Nope' }).ok)
-    const fine = dealing((hands) => has(hands[0], 1) && has(hands[1], 1) && has(hands[2], 1))
+    const state = dealing(4, 3)
+    const outside = deck.find((part) => !has(deathStatsHand(state, 4), part.id)) as RunCard
+    assert.ok(!buildDeathCard(state, { cost: 4, stats: outside.id, name: 'Nope' }).ok)
     for (const name of ['', '   ', 'Seventeen chars!!', '<b>', ' -lead'])
-      assert.ok(!buildDeathCard(fine, { cost: 1, stats: 1, sigils: 1, name }).ok, name)
+      assert.ok(!buildDeathCard(state, { cost: 4, stats: 3, name }).ok, name)
   })
 
   it('costs at most one less than the stats card, and something if that card did', () => {
@@ -130,7 +150,15 @@ describe('building a death card', () => {
   it('never deals a death card as a part, so costs cannot be shaved run after run', () => {
     const withDeath = [...deck, entry(9, DEATH)]
     assert.ok(!deathParts(withDeath).some((part) => part.id === 9))
-    for (let rng = 1; rng < 300; rng++) assert.ok(!deathHands(lost(rng, withDeath)).some((hand) => has(hand, 9)))
+    for (let rng = 1; rng < 300; rng++) {
+      const state = lost(rng, withDeath)
+      const costs = deathCostHand(state)
+      assert.ok(!has(costs, 9))
+      for (const costCard of costs) {
+        assert.ok(!has(deathStatsHand(state, costCard.id), 9))
+        assert.notEqual(deathSigilCard(state, costCard.id, 1)?.id, 9)
+      }
+    }
   })
 })
 

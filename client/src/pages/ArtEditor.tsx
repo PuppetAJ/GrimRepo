@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, type PointerEvent } from 'react'
-import { CARDS, SIGILS } from 'shared'
+import { CARD_TYPES, CARDS, ITEMS as TOOLS, SIGILS, type CardType } from 'shared'
 import { cardArt, hasArt, iconArt, type IconId } from '../game/art.ts'
 import { NotFound } from './NotFound.tsx'
 
 type Kind = 'cards' | 'icons'
-type Item = { kind: Kind; id: string; name: string }
+/** `size` overrides the kind's, for an icon drawn larger, as the campfire's fire is. */
+type Item = { kind: Kind; id: string; name: string; size?: number }
 
 const SIZE: Record<Kind, number> = { cards: 24, icons: 8 }
 const CELL: Record<Kind, number> = { cards: 18, icons: 44 }
@@ -12,9 +13,36 @@ const CELL: Record<Kind, number> = { cards: 18, icons: 44 }
 const ITEMS: Item[] = [
   ...Object.values(CARDS).map((card): Item => ({ kind: 'cards', id: card.id, name: card.name })),
   ...Object.entries(SIGILS).map(([id, sigil]): Item => ({ kind: 'icons', id, name: sigil.name })),
+  ...Object.entries(TOOLS).map(([id, tool]): Item => ({ kind: 'icons', id, name: tool.name })),
+  ...(Object.keys(CARD_TYPES) as CardType[]).map((type): Item => ({
+    kind: 'icons',
+    id: `type-${type}`,
+    name: `${CARD_TYPES[type].name} type`,
+  })),
   { kind: 'icons', id: 'attack', name: 'Attack' },
   { kind: 'icons', id: 'health', name: 'Health' },
+  { kind: 'icons', id: 'fire', name: 'Fire (16 × 16)', size: 16 },
 ]
+
+const sizeOf = (item: Item) => item.size ?? SIZE[item.kind]
+const cellOf = (item: Item) =>
+  item.size ? Math.round((CELL[item.kind] * SIZE[item.kind]) / item.size) : CELL[item.kind]
+
+/** Every pixel moved one step, wrapping round, so shifting back restores the drawing. */
+function shifted(pixels: boolean[], size: number, dx: number, dy: number): boolean[] {
+  return pixels.map((_, index) => {
+    const x = (index % size) - dx
+    const y = Math.floor(index / size) - dy
+    return pixels[((y + size) % size) * size + ((x + size) % size)] as boolean
+  })
+}
+
+const ARROWS: Record<string, [number, number]> = {
+  ArrowLeft: [-1, 0],
+  ArrowRight: [1, 0],
+  ArrowUp: [0, -1],
+  ArrowDown: [0, 1],
+}
 
 const keyOf = (item: Item) => `${item.kind}:${item.id}`
 const urlOf = (item: Item) => (item.kind === 'cards' ? cardArt(item.id) : iconArt(item.id as IconId))
@@ -47,7 +75,7 @@ export function ArtEditor() {
   const [selected, setSelected] = useState(
     () => ITEMS.find((item) => keyOf(item) === location.hash.slice(1)) ?? ITEMS[0]!,
   )
-  const size = SIZE[selected.kind]
+  const size = sizeOf(selected)
   const [pixels, setPixels] = useState<boolean[]>([])
   const [loaded, setLoaded] = useState<boolean[]>([])
   const [status, setStatus] = useState('')
@@ -55,7 +83,7 @@ export function ArtEditor() {
 
   useEffect(() => {
     let live = true
-    void pixelsOf(urlOf(selected), SIZE[selected.kind]).then((read) => {
+    void pixelsOf(urlOf(selected), sizeOf(selected)).then((read) => {
       if (!live) return
       // A stand-in starts blank, so the new drawing doesn't begin as a question mark.
       const start = hasArt(selected.kind, selected.id) ? read : read.map(() => false)
@@ -127,9 +155,16 @@ export function ArtEditor() {
         <div className="flex flex-wrap items-start gap-6">
           <div
             role="img"
-            aria-label={`${selected.name}, ${size} by ${size} pixels`}
-            className="grid touch-none border border-border bg-white select-none"
-            style={{ gridTemplateColumns: `repeat(${size}, ${CELL[selected.kind]}px)` }}
+            aria-label={`${selected.name}, ${size} by ${size} pixels; arrow keys shift it`}
+            tabIndex={0}
+            onKeyDown={(event) => {
+              const step = ARROWS[event.key]
+              if (!step) return
+              event.preventDefault()
+              setPixels(shifted(pixels, size, ...step))
+            }}
+            className="grid touch-none border border-border bg-white select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            style={{ gridTemplateColumns: `repeat(${size}, ${cellOf(selected)}px)` }}
             onPointerDown={(event) => {
               const index = cellAt(event)
               if (index === null) return
@@ -147,7 +182,7 @@ export function ArtEditor() {
               <span
                 key={index}
                 className={on ? 'bg-black' : (index + Math.floor(index / size)) % 2 ? 'bg-neutral-100' : 'bg-white'}
-                style={{ height: CELL[selected.kind] }}
+                style={{ height: cellOf(selected) }}
               />
             ))}
           </div>
@@ -181,6 +216,26 @@ export function ArtEditor() {
           <button type="button" className={button} onClick={() => setPixels(pixels.map((on) => !on))}>
             Invert
           </button>
+          {/* Every pixel one step over, wrapping round the edges; the arrow keys do the same over the drawing. */}
+          {(
+            [
+              ['ArrowLeft', '←', 'left'],
+              ['ArrowUp', '↑', 'up'],
+              ['ArrowDown', '↓', 'down'],
+              ['ArrowRight', '→', 'right'],
+            ] as const
+          ).map(([key, arrow, way]) => (
+            <button
+              key={key}
+              type="button"
+              aria-label={`Shift ${way}`}
+              title={`Shift ${way}`}
+              className={button}
+              onClick={() => setPixels(shifted(pixels, size, ...(ARROWS[key] as [number, number])))}
+            >
+              {arrow}
+            </button>
+          ))}
           <span role="status" className="self-center text-sm text-muted-foreground">
             {status}
           </span>
