@@ -390,7 +390,13 @@ section('Planning a route, from a mockup')
     'and then every node can be marked, not only the ones in reach',
     (await page.locator('[data-run-view] ol button[aria-pressed]').count()) > 3,
   )
-  // A stroke through a node marks it; the node is found inside the part of the map the frame shows.
+  // A stroke through a node marks it; the node is found inside the part of the map the frame shows, once its first glide down has stopped.
+  const scrolled = () => page.locator('[data-scroller]').evaluate((element) => element.scrollTop)
+  let last = -1
+  for (let now = await scrolled(); now !== last; now = await scrolled()) {
+    last = now
+    await page.waitForTimeout(300)
+  }
   const scroller = await page.locator('[data-scroller]').boundingBox()
   const nodes = page.locator('[data-run-view] ol button[aria-pressed]')
   let target = null
