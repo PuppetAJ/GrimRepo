@@ -48,6 +48,8 @@ function Between({
   useEffect(() => void loadCardAssets(), [])
   useEffect(() => preloadItems(run.state.items), [run.state.items])
   const pin = useRef<HTMLDivElement>(null)
+  // Whether the projector's window has opened all the way, so a screen's entrances play where they can be seen.
+  const [open, setOpen] = useState(false)
   // Every screen goes on the projector, unless the stage is too small to read its window; then they float.
   const readable = windowHeight(stage.size.width, stage.size.height) >= READABLE
   const projects = (screen: RunView) => screen !== 'battle' && readable
@@ -82,6 +84,7 @@ function Between({
         from={glide ? 'table' : undefined}
         closing={leaving || toFloat}
         onClosed={leaving ? onLeft : () => setShown(view)}
+        onOpen={setOpen}
         onPin={(points) => {
           const element = pin.current
           if (!element) return
@@ -101,6 +104,7 @@ function Between({
           stack={body === 'map'}
           deck={body !== 'summary' && body !== 'start'}
           mode={projecting ? 'hologram' : 'floating'}
+          waiting={projecting && !open}
           pinTo={pin}
           onSwitch={{ label: 'Play on the text table', go: onText }}
         >

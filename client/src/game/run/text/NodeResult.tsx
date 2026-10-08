@@ -1,6 +1,8 @@
+import { m, useReducedMotion } from 'motion/react'
 import { useEffect } from 'react'
 import { ITEMS, type RunCard, type RunEvent } from 'shared'
 import { PixelCard, Sigil } from '../../CardReader.tsx'
+import { burnFall, kindle, mergeIn, mergeOut, sacrificed, warmPop } from '../../moves.ts'
 import { forTable } from '../../shortcuts.ts'
 import { asUnit } from '../nodes.ts'
 import { ReadableCard } from './CardList.tsx'
@@ -13,6 +15,7 @@ import { Sentences } from '../../text/Sentences.tsx'
 export function NodeResult({ run }: { run: RunReady }) {
   const after = run.aftermath?.kind === 'node' ? run.aftermath : null
   const { dismiss } = run
+  const still = useReducedMotion() ?? false
   // Enter or Space leaves, as it moves on from an event's result.
   useEffect(() => {
     if (!after) return
@@ -44,45 +47,47 @@ export function NodeResult({ run }: { run: RunReady }) {
       {shown.length || items.length ? (
         <ul className="flex flex-wrap justify-center gap-6 pt-3">
           {shown.map(({ card, how, into }) => (
-            <li
+            <m.li
               key={card.id}
+              // A sacrifice falls and folds its place away, so what's left centers; once gone, it can't catch a click.
+              {...(how === 'sacrificed' ? sacrificed(still) : {})}
               // A burning card is taller than its fire, so the fire keeps room for it above and below.
-              className={`relative w-32 shrink-0 sm:w-36 ${how === 'burned' ? 'py-7' : (LEAVES[how] ?? '')}`}
+              className={`relative w-32 shrink-0 sm:w-36 ${how === 'burned' ? 'py-7' : how === 'sacrificed' ? 'pointer-events-none' : ''}`}
             >
               {how === 'burned' ? (
                 <>
                   {/* The fire that took it holds the place, and stays lit. */}
-                  <span className="flex origin-bottom justify-center motion-safe:animate-[kindle_0.6s_ease-out_0.1s_both]">
+                  <m.span {...kindle} className="flex origin-bottom justify-center">
                     <FireOnLogs />
-                  </span>
+                  </m.span>
                   {/* The card falls over and burns away on top of the fire, so its going moves nothing; once gone, it can't catch a click. */}
                   <div className="pointer-events-none absolute inset-x-0 top-1/2 z-10 -translate-y-1/2">
-                    <div className="motion-safe:animate-[burn-fall_0.8s_ease-in_0.2s_forwards] motion-reduce:invisible">
+                    <m.div {...burnFall(still)}>
                       <PixelCard unit={asUnit(card)} />
-                    </div>
+                    </m.div>
                   </div>
                 </>
               ) : how === 'merged' && into ? (
                 <>
                   {/* The two copies slide together and shrink away; the one they made takes their place. */}
-                  <div className="absolute inset-0 motion-safe:animate-[merge-left_0.6s_ease-in-out_0.15s_both] motion-reduce:hidden">
+                  <m.div {...mergeIn('left', still)} className="absolute inset-0">
                     <PixelCard unit={asUnit(into)} />
-                  </div>
-                  <div className="absolute inset-0 motion-safe:animate-[merge-right_0.6s_ease-in-out_0.15s_both] motion-reduce:hidden">
+                  </m.div>
+                  <m.div {...mergeIn('right', still)} className="absolute inset-0">
                     <PixelCard unit={asUnit(before(card, into))} />
-                  </div>
-                  <div className="motion-safe:animate-[merge-out_300ms_ease-out_0.7s_both]">
+                  </m.div>
+                  <m.div {...mergeOut}>
                     <ReadableCard unit={asUnit(card)} />
-                  </div>
+                  </m.div>
                 </>
               ) : how === 'changed' ? (
-                <div className="motion-safe:animate-[warm-pop_450ms_ease-out_both]">
+                <m.div {...warmPop}>
                   <ReadableCard unit={asUnit(last(after.events, card))} />
-                </div>
+                </m.div>
               ) : (
                 <PixelCard unit={asUnit(card)} />
               )}
-            </li>
+            </m.li>
           ))}
           {items.map((item) => (
             <li key={item} className="flex flex-col items-center gap-2 text-p03">
@@ -115,12 +120,6 @@ export function NodeResult({ run }: { run: RunReady }) {
 
 /** `into` is the copy a merged card took in. */
 type Part = { card: RunCard; how: 'burned' | 'sacrificed' | 'merged' | 'changed'; into?: RunCard }
-
-/** How a card leaves the row: a sacrifice falls and folds away, a merged copy slides into its twin; either way, what's left centers. */
-const LEAVES: Partial<Record<Part['how'], string>> = {
-  sacrificed:
-    'pointer-events-none motion-safe:animate-[burn-fall_0.7s_ease-in_0.2s_forwards,collapse-away_300ms_ease-in-out_0.9s_forwards] motion-reduce:hidden',
-}
 
 /** A merged card as it was before taking in its copy, near enough to show the two side by side. */
 const before = (card: RunCard, into: RunCard): RunCard => ({

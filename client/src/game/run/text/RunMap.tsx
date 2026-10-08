@@ -1,4 +1,5 @@
 import { Eraser, PenLine, Undo2 } from 'lucide-react'
+import { animate, m, type AnimationPlaybackControls } from 'motion/react'
 import {
   useEffect,
   useLayoutEffect,
@@ -17,6 +18,7 @@ import type { Layout } from '../../text/useTextTable.ts'
 import type { RunReady } from '../useRun.ts'
 import link from './link.svg'
 import { prefersReducedMotion } from '../../../lib/motion.ts'
+import { fadeIn } from '../../moves.ts'
 import { PenLayer } from './PenLayer.tsx'
 import { ICON_BUTTON, ScreenActions, ScreenBar, useScreenMode } from './Screen.tsx'
 
@@ -209,23 +211,19 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
     scroller.scrollTop = 0
     const distance = Math.min(top - NODE * 1.5, scroller.scrollHeight - scroller.clientHeight)
     if (distance <= 0) return
-    const duration = Math.min(1600, Math.max(700, distance * 1.4))
-    let frame = 0
-    let start = 0
-    const step = (now: number) => {
-      start ||= now
-      const t = Math.min(1, (now - start) / duration)
-      scroller.scrollTop = distance * (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2)
-      if (t < 1) frame = requestAnimationFrame(step)
-    }
+    let glide: AnimationPlaybackControls | undefined
     const delay = setTimeout(() => {
       SURVEYED.add(key)
-      frame = requestAnimationFrame(step)
+      glide = animate(0, distance, {
+        duration: Math.min(1.6, Math.max(0.7, distance * 0.0014)),
+        ease: [0.65, 0, 0.35, 1],
+        onUpdate: (top) => (scroller.scrollTop = top),
+      })
     }, 350)
     // The player's own scroll takes over, as does a press, so a stroke or a click never lands on a moving map.
     const stop = () => {
       clearTimeout(delay)
-      cancelAnimationFrame(frame)
+      glide?.stop()
     }
     scroller.addEventListener('wheel', stop, { passive: true })
     scroller.addEventListener('touchstart', stop, { passive: true })
@@ -416,15 +414,16 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
                     const face = <Icon aria-hidden style={{ width: icon, height: icon }} />
                     const reading =
                       held === node.id ? (
-                        <span
+                        <m.span
                           aria-hidden
+                          {...fadeIn(0.12)}
                           style={{ left: style.left, top: style.top }}
-                          className={`pointer-events-none absolute z-40 flex -translate-x-1/2 ${spot.y < 0.3 ? 'translate-y-9' : '-translate-y-[calc(100%+2.25rem)]'} flex-col items-center gap-1 rounded-md border-2 border-p03 bg-p03-ground px-3 py-2 text-center whitespace-nowrap text-p03 shadow-[0_0_18px_rgb(125_255_154/0.5)] motion-safe:animate-[fade-in_120ms_ease-out]`}
+                          className={`pointer-events-none absolute z-40 flex -translate-x-1/2 ${spot.y < 0.3 ? 'translate-y-9' : '-translate-y-[calc(100%+2.25rem)]'} flex-col items-center gap-1 rounded-md border-2 border-p03 bg-p03-ground px-3 py-2 text-center whitespace-nowrap text-p03 shadow-[0_0_18px_rgb(125_255_154/0.5)]`}
                         >
                           <Icon className="size-10" />
                           <span className="text-xl">{nodeName(node)}</span>
                           {WORDS[mark] ? <span className="text-base text-p03-dim">{WORDS[mark]}</span> : null}
-                        </span>
+                        </m.span>
                       ) : null
                     // With the pen on, every node marks the plan; otherwise only the ones in reach are buttons.
                     if (pen || mark === 'next')

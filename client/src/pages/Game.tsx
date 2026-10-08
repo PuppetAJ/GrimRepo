@@ -12,6 +12,7 @@ import { TableFailed, TurnSideways } from '../game/tableNotices.tsx'
 import { TerminalTable } from '../game/TerminalTable.tsx'
 import { useLayoutChoice } from '../game/layoutChoice.ts'
 import { useGame } from '../game/useGame.ts'
+import { MotionRoot } from '../components/MotionRoot.tsx'
 
 // three.js is most of the table's weight, so it loads only when the 3D table is shown.
 const Table3D = lazy(() => import('../game/table/Table3D.tsx'))
@@ -29,6 +30,14 @@ function savedMode(text: boolean): Mode {
 }
 
 export function Game() {
+  return (
+    <MotionRoot>
+      <GameTable />
+    </MotionRoot>
+  )
+}
+
+function GameTable() {
   useKeepTableFocus()
   useLeaveFullScreen()
   const game = useGame()

@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { Check } from 'lucide-react'
+import { animate, m } from 'motion/react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
   buildDeathCard,
@@ -15,6 +16,7 @@ import {
 } from 'shared'
 import { api, ApiError, type BuiltDeathCard } from '../../../lib/api.ts'
 import { prefersReducedMotion } from '../../../lib/motion.ts'
+import { fill, growIn, pageIn } from '../../moves.ts'
 import { SIDE_BUTTON } from '../../text/Panel.tsx'
 import { asUnit } from '../nodes.ts'
 import type { RunReady } from '../useRun.ts'
@@ -229,9 +231,9 @@ export function DeathCardBuilder({ run }: { run: RunReady }) {
           </div>
           {/* Keyed on the page, so each one slides in as the last is locked in. */}
           {/* Slides in as a step is locked in; the first page just appears with the screen's fade. */}
-          <div key={page} className={page > 0 ? 'motion-safe:animate-[page-in_180ms_ease-out]' : ''}>
+          <m.div key={page} {...(page > 0 ? pageIn : {})}>
             {current.body}
-          </div>
+          </m.div>
         </Box>
       </div>
       {error ? (
@@ -264,18 +266,17 @@ function Built({ built, mockup, from }: { built: BuiltDeathCard; mockup: boolean
     const element = cardAt.current
     if (!element || !from || prefersReducedMotion()) return
     const to = element.getBoundingClientRect()
-    const glide = element.animate(
-      [
-        {
-          transformOrigin: 'top left',
-          transform: `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${from.width / to.width})`,
-        },
-        { transformOrigin: 'top left', transform: 'none' },
-      ],
-      { duration: 500, easing: 'ease-out' },
+    element.style.transformOrigin = 'top left'
+    const glide = animate(
+      element,
+      { x: [from.left - to.left, 0], y: [from.top - to.top, 0], scale: [from.width / to.width, 1] },
+      { duration: 0.5, ease: 'easeOut' },
     )
-    // Cancelled on the way out, so a second run of this effect measures the card at rest, not mid-glide.
-    return () => glide.cancel()
+    // Stopped and put back on the way out, so a second run of this effect measures the card at rest, not mid-glide.
+    return () => {
+      glide.stop()
+      element.style.transform = ''
+    }
   }, [from])
   return (
     <section aria-labelledby="death-card" className="flex flex-col items-center gap-3 text-center">
@@ -285,12 +286,13 @@ function Built({ built, mockup, from }: { built: BuiltDeathCard; mockup: boolean
       <div ref={cardAt} className="relative w-28">
         <ReadableCard unit={asUnit(built.card)} />
         {uploaded ? (
-          <span
+          <m.span
             aria-hidden
-            className="absolute -top-2 -right-2 grid size-9 place-items-center rounded-full border-2 border-p03-ground bg-p03 text-p03-ground motion-safe:animate-[merge-out_250ms_ease-out_both]"
+            {...growIn()}
+            className="absolute -top-2 -right-2 grid size-9 place-items-center rounded-full border-2 border-p03-ground bg-p03 text-p03-ground"
           >
             <Check className="size-6" strokeWidth={3} />
-          </span>
+          </m.span>
         ) : null}
       </div>
       {uploaded ? (
@@ -313,7 +315,7 @@ function Built({ built, mockup, from }: { built: BuiltDeathCard; mockup: boolean
         // Below the card, filling over the upload's length, then giving way to the check mark.
         <div className="flex w-48 flex-col items-center gap-2">
           <span className="block h-3 w-full overflow-hidden rounded-full border-2 border-p03-edge">
-            <span className="block h-full w-full origin-left bg-p03 motion-safe:animate-[upload_1.1s_ease-in-out_both]" />
+            <m.span {...fill(1.1)} className="block h-full w-full origin-left bg-p03" />
           </span>
           <span className="text-base text-p03-dim">Pushing to the repo…</span>
         </div>

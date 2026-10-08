@@ -1,8 +1,10 @@
 import { ZoomIn } from 'lucide-react'
+import { m } from 'motion/react'
 import { useEffect, useRef, useState, type MouseEvent, type PointerEvent } from 'react'
 import { card, SIGILS, type Unit } from 'shared'
 import { PixelCard } from '../../CardReader.tsx'
 import { describe } from '../../controls.tsx'
+import { warmPop, type Move } from '../../moves.ts'
 import { Rising } from '../../text/Board.tsx'
 import { CardReader, SigilIcons, useCardSearch } from './CardBits.tsx'
 
@@ -17,7 +19,8 @@ type Props = {
   /** Several cards chosen at once, as a merge request's pair is. */
   chosen?: number[]
   /** A class for each card's place, such as an entrance. */
-  itemClass?: string
+  /** How each card comes in, by its place in the row. */
+  itemMove?: (index: number) => Move
   /** Each card's sigils spelled out beneath it, for a choice where they matter. */
   detail?: boolean
   size?: string
@@ -67,7 +70,7 @@ export function CardList({
   can = () => true,
   picked = null,
   chosen: several,
-  itemClass = '',
+  itemMove,
   detail = false,
   size = 'w-28',
   filtered = false,
@@ -81,21 +84,21 @@ export function CardList({
     <div className="flex flex-col gap-3">
       {/* Room above, so a chosen card's lift and outline aren't cut off by the top of the scroll. */}
       <ul className="flex flex-wrap justify-center gap-4 pt-3">
-        {shown.map((unit) => {
+        {shown.map((unit, index) => {
           const allowed = can(unit)
           const chosen = picked === unit.uid || Boolean(several?.includes(unit.uid))
           const flashed = flash?.uid === unit.uid ? flash : undefined
           const face = flashed ? (
-            <span key={flashed.key} className="relative block motion-safe:animate-[warm-pop_450ms_ease-out]">
+            <m.span key={flashed.key} {...warmPop} className="relative block">
               <PixelCard unit={unit} />
               {/* The rise animation centers the text on this point itself. */}
               <Rising text={flashed.text} tone="note" className="top-1/3 left-1/2 text-2xl" />
-            </span>
+            </m.span>
           ) : (
             <PixelCard unit={unit} />
           )
           return (
-            <li key={unit.uid} className={`flex shrink-0 flex-col gap-2 ${size} ${itemClass}`}>
+            <m.li key={unit.uid} {...itemMove?.(index)} className={`flex shrink-0 flex-col gap-2 ${size}`}>
               {onPick ? (
                 <button
                   type="button"
@@ -123,7 +126,7 @@ export function CardList({
                 </button>
               )}
               <Caption unit={unit} detail={detail} onRead={() => setReading(unit)} />
-            </li>
+            </m.li>
           )
         })}
       </ul>

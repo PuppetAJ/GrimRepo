@@ -1,4 +1,5 @@
-import { useEffect, useState, type CSSProperties } from 'react'
+import { animate } from 'motion/react'
+import { useEffect, useRef, useState } from 'react'
 import { ITEMS, legalActions, type Action, type Slot, type Unit } from 'shared'
 import { has, hasEnded, overText, owed, prompt, skippedDraw, type Seat } from '../controls.tsx'
 import { usePlayback } from '../table/usePlayback.ts'
@@ -6,7 +7,9 @@ import type { Ready } from '../useGame.ts'
 import { authClient } from '../../lib/auth.ts'
 import { useBellKey } from './useBellKey.ts'
 import { useEscapeCancel } from '../shortcuts.ts'
+import { shake } from '../moves.ts'
 import { shown } from '../shown.ts'
+import { prefersReducedMotion } from '../../lib/motion.ts'
 import { useHoldToMagnify } from './useHoldToMagnify.ts'
 import { useTableLayout, type Layout } from './useTableLayout.ts'
 
@@ -112,12 +115,25 @@ export function useTextTable({
       ),
   )
   const isNew = (uid: number) => !present.has(uid)
-  const [refusal, setRefused] = useState({ what: '', count: 0, reason: '' })
-  const showRefusal = (what: string, reason: string) => setRefused((last) => ({ what, count: last.count + 1, reason }))
-  const refusalShake = (what: string): CSSProperties | undefined =>
-    refusal.count && (refusal.what === what || (what === 'piles' && mustDraw))
-      ? { animation: 'shake 0.45s' }
-      : undefined
+  // `piles` notes a draw was owed at the time, which shakes the piles too.
+  const [refusal, setRefused] = useState({ what: '', count: 0, reason: '', piles: false })
+  const showRefusal = (what: string, reason: string) =>
+    setRefused((last) => ({ what, count: last.count + 1, reason, piles: mustDraw }))
+  // What a refusal shakes, by name: the card or lane refused, and the piles if a draw was owed.
+  const shakeable = useRef(new Map<string, HTMLElement>())
+  const shakeRef = (what: string) => (element: HTMLElement | null) => {
+    if (element) shakeable.current.set(what, element)
+    else shakeable.current.delete(what)
+  }
+  useEffect(() => {
+    if (!refusal.count) return
+    const { keyframes, options } = shake(prefersReducedMotion())
+    const shakes = [refusal.what, ...(refusal.piles ? ['piles'] : [])].flatMap((what) => {
+      const element = shakeable.current.get(what)
+      return element ? [animate(element, keyframes, options)] : []
+    })
+    return () => shakes.forEach((running) => running.stop())
+  }, [refusal])
   const canPress = has(legal, { type: 'ringBell' })
   useBellKey(canPress, () => act({ type: 'ringBell' }))
   useEscapeCancel(aiming === null && has(legal, { type: 'cancel' }), () => act({ type: 'cancel' }))
@@ -175,7 +191,7 @@ export function useTextTable({
     isNew,
     refusal,
     showRefusal,
-    refusalShake,
+    shakeRef,
     canPress,
     promptText,
     aiming,

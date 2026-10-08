@@ -1,5 +1,6 @@
 import { PICKS } from 'shared'
 import { asUnit } from '../nodes.ts'
+import { flipIn } from '../../moves.ts'
 import type { RunReady } from '../useRun.ts'
 import { CardList } from './CardList.tsx'
 import { ScreenBar } from './Screen.tsx'
@@ -24,7 +25,7 @@ export function BlindPick({ run }: { run: RunReady }) {
           onPick={(unit) => run.act({ type: 'take', index: unit.uid - 1 })}
           data={(unit) => ({ 'data-action': 'take', 'data-index': unit.uid - 1 })}
           size="w-36 sm:w-44"
-          itemClass="motion-safe:animate-[flip-in_300ms_ease-out_both] [&:nth-child(2)]:[animation-delay:80ms] [&:nth-child(3)]:[animation-delay:160ms]"
+          itemMove={(index) => flipIn(index * 0.08)}
         />
       </div>
     )
