@@ -49,6 +49,21 @@ const TITLES: Record<Exclude<RunView, 'battle' | 'map'>, string> = {
   summary: 'The run is over',
 }
 
+/** Where looking at the map returns to, for its Back button, from every screen it can be looked at from. */
+export const BACK_TO: Partial<Record<RunView, string>> = {
+  battle: 'the battle',
+  card: 'the card choice',
+  blind: 'the card choice',
+  shop: 'the registry',
+  reward: 'the reward',
+  campfire: 'the campfire',
+  stones: 'the stones',
+  event: 'the event',
+  lint: 'the linter',
+  fuse: 'the merge request',
+  item: 'the tool rack',
+}
+
 /** The map's title: the stage itself. */
 export const mapTitle = (state: RunReady['state']) =>
   `Stage ${state.stage + 1} of ${STAGES.length}: ${STAGES[state.stage]}`

@@ -185,21 +185,24 @@ async function finish(
   return { status, score, stage: state.stage, bosses: state.record.bosses, forfeited }
 }
 
-export type BuiltDeathCard = { card: string; saved: boolean }
+/** `guest` marks a card kept on a guest account, which moves to the account the guest signs up for. */
+export type BuiltDeathCard = { card: string; saved: boolean; guest: boolean }
 
 /**
  * Builds a death card from the deck a lost run ended with: the player's latest run, once.
- * Guests and the shared demo account see their card but don't keep it.
+ * The shared demo account sees its card but doesn't keep it; a guest keeps it until signing up, which carries it over.
  */
 export async function buildRunDeathCard(userId: string, runId: number, choice: DeathChoice): Promise<BuiltDeathCard> {
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
-    const found = await client.query<Row & { status: string; death_built: boolean; latest: boolean; keeps: boolean }>(
+    const found = await client.query<
+      Row & { status: string; death_built: boolean; latest: boolean; keeps: boolean; guest: boolean }
+    >(
       `SELECT r.id, r.seed, r.actions, r.rules_version, r.run_version, r.death_card, r.rival_card, r.rival_by,
               r.status, r.death_built,
               NOT EXISTS (SELECT 1 FROM runs later WHERE later.user_id = r.user_id AND later.id > r.id) AS latest,
-              NOT u.is_anonymous AND u.username <> $3 AS keeps
+              u.username <> $3 AS keeps, u.is_anonymous AS guest
        FROM runs r JOIN users u ON u.id = r.user_id
        WHERE r.id = $1 AND r.user_id = $2 FOR UPDATE OF r`,
       [runId, userId, demoAccount.username],
@@ -217,7 +220,7 @@ export async function buildRunDeathCard(userId: string, runId: number, choice: D
       await client.query(`UPDATE runs SET death_built = true WHERE id = $1`, [run.id])
     }
     await client.query('COMMIT')
-    return { card: built.id, saved: run.keeps }
+    return { card: built.id, saved: run.keeps, guest: run.guest }
   } catch (error) {
     await client.query('ROLLBACK')
     throw error

@@ -287,13 +287,39 @@ describe('a death card', () => {
     assert.equal(score, scoreRun(state.record, false, deathSkipBonus(state.death.card)))
   })
 
-  it('is shown to a guest but not kept', async () => {
+  it('is kept for a guest, and comes with their runs and scores to the account they sign up for', async () => {
     const visitor = await app.call('POST', '/api/auth/sign-in/anonymous')
     const { run, state } = await lose(visitor.cookie)
     const reply = await build(visitor.cookie, run.id, firstOfEach(state, 'Guest'))
     assert.equal(reply.status, 200)
-    assert.equal(reply.body.saved, false)
-    assert.equal((await start(visitor.cookie)).death, null)
+    assert.deepEqual([reply.body.saved, reply.body.guest], [true, true])
+    const board = async () =>
+      (await app.call('GET', '/api/leaderboard/runs')).body.players.map((row: { username: string }) => row.username)
+    assert.deepEqual(await board(), [], 'a guest stays off the leaderboard')
+
+    const player = newPlayer('keeper')
+    const signedUp = await app.call('POST', '/api/auth/sign-up/email', { body: player, cookie: visitor.cookie })
+    assert.equal(signedUp.status, 200, JSON.stringify(signedUp.body))
+    const profile = await app.call('GET', `/api/players/${player.username}/stats`)
+    assert.equal(profile.body.deathCard, reply.body.card)
+    assert.deepEqual(await board(), [player.username], "the guest's lost run and its score came along")
+    assert.equal((await start(signedUp.cookie)).death, reply.body.card)
+  })
+
+  it("never replaces an account's own death card with a guest's", async () => {
+    const player = await signedIn()
+    const first = await lose(player.cookie)
+    const own = await build(player.cookie, first.run.id, firstOfEach(first.state, 'Mine'))
+    const visitor = await app.call('POST', '/api/auth/sign-in/anonymous')
+    const lost = await lose(visitor.cookie)
+    await build(visitor.cookie, lost.run.id, firstOfEach(lost.state, 'Theirs'))
+    const back = await app.call('POST', '/api/auth/sign-in/username', {
+      body: { username: player.username, password: player.password },
+      cookie: visitor.cookie,
+    })
+    assert.equal(back.status, 200)
+    const profile = await app.call('GET', `/api/players/${player.username}/stats`)
+    assert.equal(profile.body.deathCard, own.body.card)
   })
 })
 
