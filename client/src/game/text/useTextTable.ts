@@ -5,6 +5,7 @@ import { usePlayback } from '../table/usePlayback.ts'
 import type { Ready } from '../useGame.ts'
 import { authClient } from '../../lib/auth.ts'
 import { useBellKey } from './useBellKey.ts'
+import { useEscapeCancel } from '../shortcuts.ts'
 import { shown } from '../shown.ts'
 import { useHoldToMagnify } from './useHoldToMagnify.ts'
 import { useTableLayout, type Layout } from './useTableLayout.ts'
@@ -119,6 +120,7 @@ export function useTextTable({
       : undefined
   const canPress = has(legal, { type: 'ringBell' })
   useBellKey(canPress, () => act({ type: 'ringBell' }))
+  useEscapeCancel(aiming === null && has(legal, { type: 'cancel' }), () => act({ type: 'cancel' }))
 
   const promptText = busy
     ? "P03's turn…"
