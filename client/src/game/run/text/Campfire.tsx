@@ -10,10 +10,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog.tsx'
+import { SIDE_BUTTON } from '../../text/Panel.tsx'
+import { Rising } from '../../text/Board.tsx'
 import { asUnit, boostText } from '../nodes.ts'
 import type { RunReady } from '../useRun.ts'
-import { CardList } from './CardList.tsx'
-import { LeaveButton, ScreenBar, ScreenSearch } from './Screen.tsx'
+import { CardSlot } from './CardSlot.tsx'
+import { FireOnLogs } from './Fire.tsx'
+import { ReadableCard } from './CardList.tsx'
+import { LeaveButton, ScreenBar } from './Screen.tsx'
 import { Sentences } from '../../text/Sentences.tsx'
 
 /** One card gets the campfire's boost; a second boost risks burning it, so that one asks first. */
@@ -24,37 +28,56 @@ export function Campfire({ run }: { run: RunReady }) {
   const allowed = new Set(legalRunActions(run.state).flatMap((action) => (action.type === 'buff' ? [action.card] : [])))
   const boost = boostText(visit.boost)
   const buff = (unit: Unit) => run.act({ type: 'buff', card: unit.uid })
+  const deck = run.state.deck.map((entry) => asUnit(entry))
+  const warmed = deck.find((unit) => unit.uid === visit.card)
 
   return (
-    <div className="flex flex-col gap-4">
+    <div data-center className="flex flex-col items-center gap-4 text-center">
       <LeaveButton label="Leave the campfire" onLeave={() => run.act({ type: 'leave' })} />
       <ScreenBar>
-        <div className="flex flex-col gap-2 pb-1">
-          <p className="text-lg">
-            <Sentences
-              text={
-                visit.buffs === 0
-                  ? `Warm a card for ${boost}.`
-                  : allowed.size
-                    ? 'Warm it again for more? Something is creeping in at the edge of the light.'
-                    : 'The fire has done all it will. Whatever was out there has gone quiet.'
-              }
-            />
-          </p>
-          <ScreenSearch label="Search the deck for a card to warm" count={run.state.deck.length} />
-        </div>
+        <p className="pb-1 text-lg">
+          <Sentences
+            text={
+              visit.buffs === 0
+                ? `Warm a card for ${boost}.`
+                : allowed.size
+                  ? 'Warm it again for more? Something is creeping in at the edge of the light.'
+                  : 'The fire has done all it will. Whatever was out there has gone quiet.'
+            }
+          />
+        </p>
       </ScreenBar>
-      <CardList
-        units={run.state.deck.map((entry) => asUnit(entry))}
-        onPick={(unit) => (visit.buffs > 0 ? setRisking(unit) : buff(unit))}
-        can={(unit) => allowed.has(unit.uid)}
-        // Nothing stays selected once warmed; the warmed card pops with what it gained instead.
-        picked={null}
-        flash={visit.card !== null && visit.buffs > 0 ? { uid: visit.card, key: visit.buffs, text: boost } : undefined}
-        data={(unit) => ({ 'data-action': 'buff', 'data-card': unit.uid })}
-        size="w-24 sm:w-28"
-        filtered
-      />
+      <FireOnLogs />
+      {warmed ? (
+        <div className="w-24 sm:w-28">
+          {/* Pops with what it gained each time it comes out of the fire. */}
+          <span key={visit.buffs} className="relative block motion-safe:animate-[warm-pop_450ms_ease-out]">
+            <ReadableCard unit={warmed} />
+            {/* The rise animation centers the text on this point itself. */}
+            <Rising text={boost} tone="note" className="top-1/3 left-1/2 text-2xl" />
+          </span>
+        </div>
+      ) : (
+        <CardSlot
+          label="Choose a card to warm"
+          units={deck}
+          can={(unit) => allowed.has(unit.uid)}
+          picked={null}
+          onPick={buff}
+          data={(unit) => ({ 'data-action': 'buff', 'data-card': unit.uid })}
+          slot="campfire"
+        />
+      )}
+      {warmed && allowed.size ? (
+        <button
+          type="button"
+          data-action="warm-again"
+          onClick={() => setRisking(warmed)}
+          className={`${SIDE_BUTTON} px-4 text-lg`}
+        >
+          Warm it again
+        </button>
+      ) : null}
       <AlertDialog open={risking !== null} onOpenChange={(open) => !open && setRisking(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
