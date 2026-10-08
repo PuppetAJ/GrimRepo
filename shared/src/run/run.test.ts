@@ -256,6 +256,18 @@ describe('the merge request', () => {
     assert.equal(merged.visit, null)
   })
 
+  it('merges with the copy named, when there are more than two', () => {
+    const state = at('event', { kind: 'event', node: '0-0', event: 'merge-request' })
+    const first = state.deck[0] as RunCard
+    state.deck.push({ ...first, id: 98, attack: 1 }, { ...first, id: 99, attack: 5 })
+    const opened = step(state, { type: 'choose', option: 0 })
+    const merged = step(opened, { type: 'fuse', card: first.id, with: 99 })
+    assert.equal(merged.deck.find((entry) => entry.id === first.id)?.attack, first.attack + 5)
+    assert.ok(merged.deck.some((entry) => entry.id === 98))
+    assert.ok(!merged.deck.some((entry) => entry.id === 99))
+    assert.ok(!applyRun(opened, { type: 'fuse', card: first.id, with: first.id }).ok)
+  })
+
   it('opens only when the deck holds a duplicate', () => {
     const state = at('event', { kind: 'event', node: '0-0', event: 'merge-request' })
     assert.equal(step(state, { type: 'choose', option: 0 }).visit, null)
@@ -331,13 +343,19 @@ describe('items in a run', () => {
 })
 
 describe('a face-down card choice', () => {
-  it('gives a random card with the trait picked', () => {
+  it('turns over three cards with the trait picked, and adds the one taken', () => {
     const state = at('card', { kind: 'blind', node: '0-0', picks: ['free', 'sigil', 'sturdy'] })
-    const after = step(state, { type: 'take', index: 2 })
-    const gained = after.deck.at(-1)
-    assert.ok(gained && PICKS.sturdy.fits(gained.card), gained?.card ?? 'nothing')
+    const turned = step(state, { type: 'take', index: 2 })
+    assert.ok(turned.visit?.kind === 'blind' && turned.visit.revealed)
+    const offer = turned.visit.revealed.offer
+    assert.equal(offer.length, 3)
+    for (const id of offer) assert.ok(PICKS.sturdy.fits(id), id)
+    assert.equal(turned.deck.length, state.deck.length)
+    const after = step(turned, { type: 'take', index: 1 })
+    assert.equal(after.deck.at(-1)?.card, offer[1])
     assert.equal(after.visit, null)
     assert.equal(refused(state, { type: 'take', index: 3 }), 'No such choice')
+    assert.equal(refused(turned, { type: 'take', index: 3 }), 'No such card on offer')
   })
 })
 

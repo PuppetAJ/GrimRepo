@@ -90,7 +90,13 @@ describe('P03', () => {
         const result = apply(state, action)
         assert.ok(result.ok)
         if (action.type === 'ringBell' && result.state.status === 'playing') {
+          // A Load Balancer moving in front of a wall gives it something to guard again.
+          const guarded = (uid: number | undefined) => {
+            const lane = dead[walls.indexOf(uid)]
+            return result.events.some((event) => event.type === 'moved' && event.side === 'player' && event.to === lane)
+          }
           for (const uid of walls) {
+            if (guarded(uid)) continue
             const gone = result.events.some(
               (event) => (event.type === 'retired' || event.type === 'killed') && event.uid === uid,
             )

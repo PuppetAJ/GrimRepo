@@ -225,6 +225,8 @@ export function drawFace(context: CanvasRenderingContext2D, unit: Shown, layer: 
   context.fillStyle = palette.cost
   for (let i = cells - def.cost; i < cells; i++)
     context.fillRect(sx + sw - 8 - (cells - i) * (cell + 3), sy + 7, cell, 24)
+  // The type in the opposite corner, the same height as the cost.
+  if (def.type) pixels(context, iconImage(`type-${def.type}`), sx + 8, sy + 7, 3, palette.line)
   context.fillStyle = '#f4fbff'
   context.fillRect(sx, divider - 2, sw, 3)
   const [top, bottom] = SIGIL_BAND
