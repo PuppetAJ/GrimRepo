@@ -159,7 +159,8 @@ export function useGame(): Game {
       if (!table || result) return
       const outcome = apply(table.state, action)
       if (!outcome.ok) {
-        toast.error(outcome.reason)
+        // Keyed by the reason, so a move refused again refreshes its notice instead of stacking another.
+        toast.error(outcome.reason, { id: outcome.reason })
         return
       }
       // Fixtures are never saved.

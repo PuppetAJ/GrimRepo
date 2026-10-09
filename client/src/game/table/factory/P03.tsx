@@ -9,9 +9,9 @@ import { TINT } from '../palette.ts'
 import { CENTER_X } from '../layout.ts'
 import { LIT, STILL } from './constants.ts'
 
-// Smug reuses the happy face texture.
+// Smug, his resting look, wears the neutral face from the V2 model's own screen.
 type Mood = 'smug' | 'happy' | 'impatient' | 'choking' | 'dying' | 'whiteflag'
-const MOODS = ['happy', 'impatient', 'choking', 'dying', 'whiteflag'] as const
+const MOODS = ['neutral', 'happy', 'impatient', 'choking', 'dying', 'whiteflag'] as const
 type Face = (typeof MOODS)[number]
 
 const FACE_GLOW = 1.6
@@ -41,15 +41,17 @@ function useMood(view: View, busy: boolean, outcome: 'win' | 'loss' | undefined,
   const [choking, setChoking] = useState(false)
   const [impatient, setImpatient] = useState(false)
   const scale = view.scale
-  const last = useRef(scale)
+  const last = useRef({ scale, turn: view.turn })
   useEffect(() => {
-    const hit = scale - last.current
-    last.current = scale
-    if (hit < 4) return
+    const hit = scale - last.current.scale
+    // Turn 0 is the room's view between battles, so going to or from it is no hit, as when looking back from the map.
+    const between = view.turn === 0 || last.current.turn === 0
+    last.current = { scale, turn: view.turn }
+    if (hit < 4 || between) return
     const start = setTimeout(() => setChoking(true), 0)
     setTimeout(() => setChoking(false), 1600)
     return () => clearTimeout(start)
-  }, [scale])
+  }, [scale, view.turn])
   useEffect(() => {
     const calm = setTimeout(() => setImpatient(false), 0)
     const waiting = busy || patient ? undefined : setTimeout(() => setImpatient(true), 25_000)
@@ -85,7 +87,7 @@ function P03({ mood }: { mood: Mood }) {
       clawRight: part('ArmRight-ClawRight'),
     }
   }, [scene])
-  const face = mood === 'smug' ? 'happy' : mood
+  const face = mood === 'smug' ? 'neutral' : mood
   const screen = useRef<THREE.MeshStandardMaterial | null>(null)
   // Set up once; after that the face changes in the frame loop, so it can flicker across.
   useLayoutEffect(() => {
@@ -97,7 +99,7 @@ function P03({ mood }: { mood: Mood }) {
     material.alphaTest = 0
     material.emissive.set(LIT)
     // Any face, so the shader is built with one; the frame loop puts on the right one.
-    material.emissiveMap = textures.happy
+    material.emissiveMap = textures.neutral
     material.emissiveIntensity = FACE_GLOW
     material.needsUpdate = true
     screen.current = material

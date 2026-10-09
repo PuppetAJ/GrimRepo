@@ -54,6 +54,7 @@ export function Scene({
   hint,
   hinted,
   onHint,
+  onFocusBoard,
   onWarm,
   reader,
   leaving = false,
@@ -82,6 +83,8 @@ export function Scene({
   /** uid of the card last tried before drawing; it shakes. */
   hinted: number | null
   onHint: (uid: number) => void
+  /** Set while seated, so a tap on the board brings it into view. */
+  onFocusBoard?: () => void
   /** Fires once everything has loaded and every shader is compiled. */
   onWarm: () => void
 }) {
@@ -144,9 +147,17 @@ export function Scene({
         <CameraRig view={camera} from={from} />
         {/* The room and P03 are the stage's; it draws them once every light and the fog are in place. */}
         <WarmUp onWarm={onWarm} />
-        <TechBoard appear={at(SET.board)} leave={leaving} />
+        <TechBoard appear={at(SET.board)} leave={leaving} onClick={onFocusBoard} />
         <Arrive delay={at(SET.lanes)} leave={leaving}>
-          <Lanes view={view} legal={legal} act={act} play={TINT.play} aimed={aimed} onAim={setAimed} />
+          <Lanes
+            view={view}
+            legal={legal}
+            act={act}
+            play={TINT.play}
+            aimed={aimed}
+            onAim={setAimed}
+            onIdle={onFocusBoard}
+          />
         </Arrive>
         <Arrive delay={at(SET.deck)} leave={leaving}>
           <Deck
@@ -190,8 +201,8 @@ export function Scene({
                 // On touch every card is tappable, to read it; with a mouse, only one that can act.
                 selected || selectable || can({ type: 'draw' }) || COARSE
                   ? (_event, touch) => {
-                      // On touch the first tap lifts and reads the card; the second plays it.
-                      if (touch && !selected && reader.peek !== unit.uid) return reader.lift(unit)
+                      // On touch, as at the text table, a tap plays a card; one that can't be played is read instead.
+                      if (touch && !selected && !selectable && !can({ type: 'draw' })) return reader.lift(unit)
                       reader.lift(null)
                       if (selected) act({ type: 'cancel' })
                       else if (selectable) act({ type: 'select', uid: unit.uid })

@@ -229,7 +229,8 @@ export function useRun(mockup: Mockup | null = null): Run {
       if (!table) return
       const outcome = applyRun(table.state, action)
       if (!outcome.ok) {
-        toast.error(outcome.reason)
+        // Keyed by the reason, so a move refused again refreshes its notice instead of stacking another.
+        toast.error(outcome.reason, { id: outcome.reason })
         return
       }
       if (table.id !== -1) pending.current.push(action)

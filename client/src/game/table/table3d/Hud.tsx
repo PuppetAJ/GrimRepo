@@ -8,12 +8,11 @@ import {
   Maximize,
   Minimize,
   MoveDown,
-  MoveUp,
   Type,
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
-import { ITEMS, legalActions, type ItemId, type Unit } from 'shared'
+import { ITEMS, legalActions, type Action, type ItemId, type Unit } from 'shared'
 import { Button } from '@/components/ui/button.tsx'
 import { FlatReaderBody } from '../../CardReader.tsx'
 import { ItemButton } from '../../ItemButton.tsx'
@@ -105,8 +104,8 @@ export function Hud({
       <div className="pointer-events-none absolute top-0 bottom-24 left-0 z-10 flex flex-col items-start p-3 font-terminal sm:p-4">
         <ScaleBar scale={view.scale} className="text-xl sm:text-2xl" />
         <span className="text-lg text-p03-dim sm:text-xl">
-          Turn {view.turn} · Deck {view.deck}
-          {reshuffle ? ` · draw reshuffles ${reshuffle.cards}` : null}
+          {/* Just where the battle stands; the deck and a reshuffle show on the table itself. */}
+          Turn {view.turn}
           {phaseText(state, view.phase) ? ` · ${phaseText(state, view.phase)}` : null}
         </span>
         {/* The rack is far off and out of view from the board, so the items are here too. */}
@@ -173,10 +172,11 @@ export function Hud({
             disabled={Boolean(view.summon) && camera !== 'queue'}
             onClick={() => setCamera(camera === 'table' ? 'board' : 'table')}
             aria-keyshortcuts={camera === 'table' ? 'W' : 'D'}
-            title={camera === 'table' ? 'Look at the board' : 'Look up'}
+            title={camera === 'table' ? 'Look at the board' : 'Sit back'}
           >
-            {camera === 'table' ? <LayoutGrid aria-hidden /> : <MoveUp aria-hidden />}
-            <Label>{camera === 'table' ? 'Look at the board' : 'Look up'}</Label>
+            {/* Down, back toward the seat, once looking at the board. */}
+            {camera === 'table' ? <LayoutGrid aria-hidden /> : <MoveDown aria-hidden />}
+            <Label>{camera === 'table' ? 'Look at the board' : 'Sit back'}</Label>
           </Button>
           {onMap ? (
             <Button size="sm" variant="ghost" onClick={onMap} aria-keyshortcuts="M" title="Look at the map">
@@ -284,9 +284,10 @@ export function Hud({
                 <Button
                   data-action="draw-deck"
                   title={reshuffle?.text}
+                  disabled={!has(legal, { type: 'draw', from: 'deck' } as Partial<Action>)}
                   onClick={() => act({ type: 'draw', from: 'deck' })}
                 >
-                  {reshuffle ? 'Reshuffle and draw' : 'Draw from the deck'}
+                  {reshuffle ? 'Reshuffle and draw' : view.deck ? 'Draw from the deck' : 'Deck empty'}
                 </Button>
                 <Button
                   data-action="draw-boilerplate"

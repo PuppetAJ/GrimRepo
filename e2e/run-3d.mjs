@@ -107,7 +107,7 @@ section('Into a battle from the map')
   check('a battle is reached', (await view(page)) === 'battle')
   check(
     'and the table is set without a loading screen',
-    await shown(page.getByRole('button', { name: /Look at the board|Look up/ })),
+    await shown(page.getByRole('button', { name: /Look at the board|Sit back/ })),
   )
   check('on the same canvas', (await page.locator('canvas').count()) === 1)
   await context.close()

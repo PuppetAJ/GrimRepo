@@ -13,7 +13,16 @@ export const BOARD = '/textures/board.webp'
 const UNROLL = 0.45
 
 /** The board, which can roll out from P03's side toward the player `appear` seconds after it mounts, and back as it `leave`s. */
-export function TechBoard({ appear, leave = false }: { appear?: number; leave?: boolean }) {
+export function TechBoard({
+  appear,
+  leave = false,
+  onClick,
+}: {
+  appear?: number
+  leave?: boolean
+  /** A tap on the board's mat, as when bringing it into view from the seat. */
+  onClick?: () => void
+}) {
   const width = (lanes.length - 1) * LANE_GAP + CARD.width + 0.5
   const depth = ROW_Z.board - ROW_Z.back + CARD.height + 0.5
   const left = slot('board', 0)[0] - CARD.width / 2 - 0.25
@@ -57,6 +66,14 @@ export function TechBoard({ appear, leave = false }: { appear?: number; leave?: 
     <>
       <mesh
         ref={board}
+        onClick={
+          onClick
+            ? (event) => {
+                event.stopPropagation()
+                onClick()
+              }
+            : undefined
+        }
         visible={appear === undefined || STILL}
         position={[left + width / 2, TABLE_Y + 0.004, far + depth / 2]}
         rotation={[-Math.PI / 2, 0, 0]}

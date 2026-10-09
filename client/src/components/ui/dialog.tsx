@@ -67,9 +67,10 @@ function DialogContent({
         {children}
         {showCloseButton && (
           <DialogPrimitive.Close data-slot="dialog-close" asChild>
+            {/* A fingertip's worth on touch screens, and clear of the screen's top edge, where Safari takes the first tap. */}
             <Button
               variant="ghost"
-              className="absolute top-2 right-2"
+              className="absolute top-2 right-2 pointer-coarse:top-3 pointer-coarse:right-3 pointer-coarse:size-11"
               size="icon-sm"
             >
               <XIcon

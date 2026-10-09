@@ -67,23 +67,27 @@ export function RunTable({
       {/* Remount on a new run or reload, so no screen keeps the last run's choices. */}
       {mode === 'text' ? (
         <RunText key={run.generation} run={run} layout={layout} seat={seat} on3d={() => choose('3d')} />
-      ) : upright ? (
-        <div className="-mx-(--gutter) -my-8 h-[calc(100dvh-7rem)]">
-          <TurnSideways onText={() => choose('text')} />
-        </div>
       ) : (
-        <LoadFailed fallback={(error) => <TableFailed error={error} onText={() => choose('text')} />}>
-          <Suspense fallback={<Boot stage="code" />}>
-            <Run3D
-              key={run.generation}
-              run={run}
-              layout={layout}
-              seat={seat}
-              onText={() => choose('text')}
-              replay={Boolean(mockup)}
-            />
-          </Suspense>
-        </LoadFailed>
+        <>
+          <LoadFailed fallback={(error) => <TableFailed error={error} onText={() => choose('text')} />}>
+            <Suspense fallback={<Boot stage="code" />}>
+              <Run3D
+                key={run.generation}
+                run={run}
+                layout={layout}
+                seat={seat}
+                onText={() => choose('text')}
+                replay={Boolean(mockup)}
+              />
+            </Suspense>
+          </LoadFailed>
+          {/* Over the table, not in its place, so turning the phone back finds it as it was rather than set again. */}
+          {upright ? (
+            <div className="fixed inset-0 z-[60] bg-background">
+              <TurnSideways onText={() => choose('text')} />
+            </div>
+          ) : null}
+        </>
       )}
     </>
   )

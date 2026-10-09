@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { cardAt, play, refused, table, uidOf } from './test-support.ts'
+import { card } from '../cards.ts'
 import type { GameEvent, GameState } from './types.ts'
 
 const bell = (state: GameState) => play(state, { type: 'ringBell' })
@@ -201,6 +202,21 @@ describe('the sigils that move cards', () => {
     assert.ok(events.some((event) => event.type === 'shipped'))
     assert.equal(state.player.board[0]?.card, 'ShippedFeature')
     assert.equal(state.player.board[0]?.attack, 4)
+  })
+
+  it('a Prototype ships with the buffs and sigils the run gave it', () => {
+    const start = table({ board: ['Prototype'] })
+    const prototype = start.player.board[0] as NonNullable<(typeof start.player.board)[0]>
+    prototype.attack += 2
+    prototype.health += 3
+    prototype.maxHealth += 3
+    prototype.sigils.push('hotfix')
+    const { state } = bell(start)
+    const shipped = state.player.board[0]
+    assert.equal(shipped?.card, 'ShippedFeature')
+    assert.equal(shipped?.attack, 4 + 2)
+    assert.equal(shipped?.maxHealth, card('ShippedFeature').health + 3)
+    assert.ok(shipped?.sigils.includes('hotfix') && !shipped.sigils.includes('beta'))
   })
 
   it('Beta on any other card ships it with +3/+3', () => {

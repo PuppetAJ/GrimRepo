@@ -46,6 +46,7 @@ export function Lanes({
   play,
   aimed: hovered,
   onAim: setHovered,
+  onIdle,
 }: {
   view: View
   legal: Action[]
@@ -54,6 +55,8 @@ export function Lanes({
   /** The hovered lane, whether the pointer is on the lane or on the card in it. */
   aimed: number | null
   onAim: (lane: number | null) => void
+  /** A tap on a lane with nothing to do there, which brings the board into view from the seat. */
+  onIdle?: () => void
 }) {
   const target = hovered === null ? null : laneAction(legal, hovered)
   const self = useRef({})
@@ -81,6 +84,7 @@ export function Lanes({
             onClick={(event) => {
               event.stopPropagation()
               if (action) act(action)
+              else onIdle?.()
             }}
             onPointerOver={() => setHovered(lane)}
             onPointerOut={() => setHovered(null)}
