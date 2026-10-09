@@ -145,7 +145,7 @@ export function attack(state: GameState, side: Side, events: GameEvent[]): void 
           ? null
           : (defenders[aimed] ?? failover(defenders, aimed, side === 'player' ? 'opponent' : 'player', covers, events))
         const defender = defended
-        events.push({ type: 'attacked', side, lane, target: defender ? aimed : 'face' })
+        events.push({ type: 'attacked', side, lane, target: defender ? aimed : 'face', aimed })
 
         if (!defender) {
           state.scale += toward * power

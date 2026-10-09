@@ -179,8 +179,13 @@ function remove(state: RunState, target: RunCard, events: RunEvent[]): void {
   events.push({ type: 'removed', card: target })
 }
 
+/** Sigils a card can't hold together: with Fork's two lanes and Broadcast's three, one would do nothing. */
+const CLASHES: [SigilId, SigilId][] = [['fork', 'broadcast']]
+const clashes = (sigils: SigilId[], sigil: SigilId): boolean =>
+  CLASHES.some(([one, other]) => (sigil === one && sigils.includes(other)) || (sigil === other && sigils.includes(one)))
+
 const canGain = (target: RunCard, sigil: SigilId): boolean =>
-  !target.added && !target.sigils.includes(sigil) && target.sigils.length < MAX_SIGILS
+  !target.added && !target.sigils.includes(sigil) && target.sigils.length < MAX_SIGILS && !clashes(target.sigils, sigil)
 
 function addSigil(target: RunCard, sigil: SigilId, events: RunEvent[]): void {
   target.sigils.push(sigil)

@@ -173,7 +173,9 @@ export function TableStage({ children }: { children: ReactNode }) {
         data-quality={quality}
         // Focusable, so a click anywhere on the table puts focus here and its shortcuts work.
         tabIndex={-1}
-        className={fullScreen.on ? 'fixed inset-0 z-40 bg-[#050403]' : 'relative h-full w-full'}
+        // A long press is the table's magnifier, so iOS mustn't select text, show its loupe or offer a menu.
+        onContextMenu={(event) => event.preventDefault()}
+        className={`select-none [-webkit-touch-callout:none] ${fullScreen.on ? 'fixed inset-0 z-40 bg-[#050403]' : 'relative h-full w-full'}`}
       >
         <Canvas
           dpr={dpr}

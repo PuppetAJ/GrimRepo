@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import { Link } from '@tanstack/react-router'
 import FaultyScreenShader from '../../components/p03/FaultyScreenShader.tsx'
-import { Forfeit, ScaleBar, SeatNote } from '../controls.tsx'
+import { Forfeit, hasEnded, ScaleBar, SeatNote } from '../controls.tsx'
 import { Balance } from './Balance.tsx'
 import { Board } from './Board.tsx'
 import { CancelButton, ExecuteButton, SaveStatus } from './Buttons.tsx'
@@ -26,17 +26,19 @@ import { dropIn } from '../moves.ts'
 import { Inspector, Magnifier } from './Reading.tsx'
 
 function Status() {
-  const { menu, setMenu } = useTable()
+  const { menu, setMenu, sideways } = useTable()
   return (
     <div className="flex items-center gap-2 text-lg">
       <TurnLabel />
-      <SaveStatus className="ml-auto truncate text-sm text-p03-dim" />
+      {/* Sideways the line is short, so the save note gives way to the turn. */}
+      {sideways ? <span className="ml-auto" /> : <SaveStatus className="ml-auto truncate text-sm text-p03-dim" />}
+      {/* A full fingertip to hit, though it looks small; negative margins keep the line's height. */}
       <button
         type="button"
         aria-expanded={menu}
         aria-label="Menu"
         onClick={() => setMenu((open) => !open)}
-        className="rounded px-2 text-2xl leading-none text-p03 hover:bg-[#13261a]"
+        className="-my-2.5 -mr-2 grid size-11 shrink-0 touch-manipulation place-items-center rounded text-2xl leading-none text-p03 hover:bg-[#13261a]"
       >
         ≡
       </button>
@@ -45,7 +47,7 @@ function Status() {
 }
 
 function Menu() {
-  const { menu, setMenu, setLogOpen, setTerminalOpen, fullScreen, game, on3d, sideways, run } = useTable()
+  const { menu, setMenu, setLogOpen, setTerminalOpen, fullScreen, game, on3d, sideways, run, state } = useTable()
   if (!menu) return null
   // Close the menu first so it doesn't cover what the choice opens.
   const choose = (then: () => void) => () => {
@@ -57,6 +59,13 @@ function Menu() {
       {...dropIn}
       className={`absolute top-12 z-40 flex w-72 max-w-[calc(100%-1rem)] flex-col gap-3 rounded-md border-2 border-p03-edge bg-[#07130b] p-2 ${sideways ? 'left-2' : 'right-2'}`}
     >
+      {/* Upright, the board has no room for the tools, so they're here. */}
+      {sideways ? null : (
+        <div className="flex flex-col items-center gap-1">
+          {state.items?.length ? <span className="font-terminal text-base text-p03-dim">Tools</span> : null}
+          <Items className="justify-center" onPick={() => setMenu(false)} />
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-2 [&_svg]:size-4 [&_svg]:shrink-0">
         {/* A run's own first: its deck and tools, and its map. */}
         {run ? (
@@ -80,7 +89,11 @@ function Menu() {
           Terminal
         </button>
         {fullScreen.supported ? (
-          <button type="button" onClick={choose(fullScreen.toggle)} className={`${MENU_BUTTON} whitespace-nowrap`}>
+          <button
+            type="button"
+            onClick={choose(fullScreen.toggle)}
+            className={`${MENU_BUTTON} text-center leading-tight`}
+          >
             {fullScreen.on ? <Minimize aria-hidden /> : <Maximize aria-hidden />}
             {fullScreen.on ? 'Exit full screen' : 'Full screen'}
           </button>
@@ -110,7 +123,10 @@ function Menu() {
 }
 
 export function PhoneLayout() {
-  const { frameProps, phoneFrame, covering, sideways, scrolling, seat, setArea, setHandSection, view } = useTable()
+  const { frameProps, phoneFrame, covering, sideways, scrolling, seat, setArea, setHandSection, view, game } =
+    useTable()
+  // Once the battle ends, its panel over the board may run past the board, so the board rises above the rest.
+  const over = hasEnded(game)
   // Too short in the page, the page scrolls; covering the screen, the frame scrolls instead.
   const flowing = scrolling && !covering
   const pieces = `z-10 gap-2 pt-[max(0.5rem,env(safe-area-inset-top))] pr-[max(0.5rem,env(safe-area-inset-right))] pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(0.5rem,env(safe-area-inset-left))] ${flowing ? 'relative min-h-svh' : 'absolute inset-0'}`
@@ -119,7 +135,7 @@ export function PhoneLayout() {
       role="region"
       ref={setArea}
       aria-label="The table"
-      className={`relative z-10 flex min-w-0 items-center justify-center ${scrolling ? 'shrink-0' : 'min-h-0 flex-1'}`}
+      className={`relative flex min-w-0 items-center justify-center ${over ? 'z-30' : 'z-10'} ${scrolling ? 'shrink-0' : 'min-h-0 flex-1'}`}
     >
       <Board />
     </div>
@@ -174,7 +190,6 @@ export function PhoneLayout() {
           <section ref={setHandSection} aria-label="Your hand" className="relative z-10 flex shrink-0">
             <Hand />
           </section>
-          <Items className="relative z-10 shrink-0 justify-center" />
           <div className="relative z-10 flex shrink-0 items-stretch gap-2">
             <Piles />
             <div className="flex min-w-0 flex-1 flex-col">

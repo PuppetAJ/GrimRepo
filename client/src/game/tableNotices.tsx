@@ -2,11 +2,14 @@ import { RotateCw } from 'lucide-react'
 import { Button } from '@/components/ui/button.tsx'
 
 /** Shown when a model fails to load or the WebGL context is lost. */
-export function TableFailed({ onText }: { onText: () => void }) {
+export function TableFailed({ onText, error }: { onText: () => void; error?: unknown }) {
+  // What went wrong, small, so a player can pass it on; phones can't open a console.
+  const detail = error instanceof Error ? error.message : error ? String(error) : null
   return (
     <div role="alert" className="flex h-full flex-col items-center justify-center gap-4 px-6 text-center">
       <p className="font-terminal text-2xl text-p03">The 3D table could not be set.</p>
       <p className="text-sm text-muted-foreground">The game is saved; the text table plays the same one.</p>
+      {detail ? <p className="max-w-md font-mono text-xs break-words text-muted-foreground">{detail}</p> : null}
       <Button onClick={onText}>Play the text version</Button>
     </div>
   )

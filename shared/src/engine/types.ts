@@ -92,7 +92,8 @@ export type GameEvent =
   | { type: 'sacrificed'; lane: number; uid: number; survived: boolean }
   | { type: 'placed'; lane: number; unit: Unit }
   | { type: 'wiped'; uids: number[] }
-  | { type: 'attacked'; side: Side; lane: number; target: number | 'face' }
+  /** `aimed` is the lane struck at, the one opposite unless a sigil such as Fork turns it aside. */
+  | { type: 'attacked'; side: Side; lane: number; target: number | 'face'; aimed: number }
   | { type: 'damaged'; uid: number; amount: number; health: number }
   | { type: 'overkill'; lane: number; amount: number }
   | { type: 'struckBack'; uid: number; amount: number }

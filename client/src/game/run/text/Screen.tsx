@@ -24,7 +24,7 @@ import type { Layout } from '../../text/useTextTable.ts'
 import type { RunReady } from '../useRun.ts'
 import { SearchContext } from './CardBits.tsx'
 import { DeckTable } from './DeckTable.tsx'
-import { HeldTools } from './HeldTools.tsx'
+import { Bytes, HeldTools } from './HeldTools.tsx'
 import { SlotContext, type Mode } from './slots.ts'
 
 export const ICON_BUTTON =
@@ -173,6 +173,7 @@ function DeckDrawer({
             The tools carried, and every card as it stands after this run's changes.
           </DialogPrimitive.Description>
           <HeldTools items={run.state.items} label="Tools" />
+          <Bytes count={run.state.bytes} />
           <h3 className="text-p03">Deck ({count})</h3>
           <div className={`min-h-0 flex-1 overflow-y-auto px-1 ${FADE}`}>
             <DeckTable deck={run.state.deck} caption="Your deck" />
@@ -524,6 +525,7 @@ export function Screen({
                       </button>
                     </div>
                     <HeldTools items={state.items} label="Tools" />
+                    <Bytes count={state.bytes} />
                     <h3 className="text-p03">Deck ({state.deck.length})</h3>
                     <div className={`min-h-0 flex-1 overflow-y-auto px-1 ${FADE}`}>
                       <DeckTable deck={state.deck} caption="Your deck" />

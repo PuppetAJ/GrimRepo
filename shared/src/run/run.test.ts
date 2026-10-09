@@ -152,6 +152,22 @@ describe('sigil stones', () => {
   })
 })
 
+describe('fork and broadcast', () => {
+  it('never share a card, since one of them would do nothing', () => {
+    const state = at('stones', { kind: 'stones', node: '0-0' })
+    state.deck[0]?.sigils.push('fork')
+    state.deck[1]?.sigils.push('broadcast')
+    assert.equal(
+      refused(state, { type: 'transfer', from: 1, to: 2, sigil: 'fork' }),
+      'That card cannot take this sigil',
+    )
+    assert.equal(
+      refused(state, { type: 'transfer', from: 2, to: 1, sigil: 'broadcast' }),
+      'That card cannot take this sigil',
+    )
+  })
+})
+
 describe('an event', () => {
   it('applies the chosen option', () => {
     const state = at('event', { kind: 'event', node: '0-0', event: 'stack-overflow' })

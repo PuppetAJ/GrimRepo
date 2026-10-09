@@ -9,8 +9,7 @@ import {
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react'
-import { findNode, ITEMS, MAP_COLUMNS, reachable, type MapNode, type NodeKind, type StageMap } from 'shared'
-import { Sigil } from '../../CardReader.tsx'
+import { findNode, MAP_COLUMNS, reachable, type MapNode, type NodeKind, type StageMap } from 'shared'
 import { mapRows, sideOf, spots, type Spot } from '../layout.ts'
 import { NODE_ICONS, nodeIcon, nodeName } from '../nodes.ts'
 import { usePlan } from '../plan.ts'
@@ -87,10 +86,11 @@ function Legend({
 }) {
   const mode = useScreenMode()
   const terminal = mode === 'terminal'
-  // In the projector's window it's a row of icons under the title, named by tooltip and label.
-  if (mode === 'hologram')
+  // In the projector's window, and on a phone, it's a row of icons named by tooltip and label, so it never covers the map.
+  const hologram = mode === 'hologram'
+  if (hologram || centered)
     return (
-      <ul aria-label="What the icons mean" className="flex gap-1 text-p03-dim">
+      <ul aria-label="What the icons mean" className={`flex gap-1 text-p03-dim ${centered ? 'justify-center' : ''}`}>
         {KINDS.map((kind) => {
           const Icon = NODE_ICONS[kind]
           return (
@@ -103,9 +103,9 @@ function Legend({
                 onClick={() => onPick(kind)}
                 onPointerEnter={() => onHover(kind)}
                 onPointerLeave={() => onHover(null)}
-                className="grid size-6 place-items-center rounded-sm hover:text-p03 hover:[filter:drop-shadow(0_0_6px_rgb(125_255_154/0.9))] focus-visible:outline-2 focus-visible:outline-p03 aria-pressed:text-p03 aria-pressed:outline-1 aria-pressed:outline-p03"
+                className={`grid place-items-center rounded-sm hover:text-p03 hover:[filter:drop-shadow(0_0_6px_rgb(125_255_154/0.9))] focus-visible:outline-2 focus-visible:outline-p03 aria-pressed:text-p03 aria-pressed:outline-1 aria-pressed:outline-p03 ${hologram ? 'size-6' : 'size-9'}`}
               >
-                <Icon aria-hidden className="size-4" />
+                <Icon aria-hidden className={hologram ? 'size-4' : 'size-5'} />
               </button>
             </li>
           )
@@ -341,19 +341,8 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
         </div>
       </ScreenActions>
       <ScreenBar>
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 pb-1">
-          {legend}
-          {/* The items carried, and overkill banked for the Package Registry. */}
-          <p className="flex shrink-0 items-center gap-2 text-base text-p03-dim">
-            {state.items.map((item, slot) => (
-              <span key={`${item}-${slot}`} title={ITEMS[item].name}>
-                <Sigil id={item} size={18} color="var(--p03)" />
-                <span className="sr-only">{ITEMS[item].name}, </span>
-              </span>
-            ))}
-            <span className="text-p03">{state.bytes}</span> {state.bytes === 1 ? 'byte' : 'bytes'}
-          </p>
-        </div>
+        {/* The tools carried and the bytes banked are in the inventory, so the map keeps to itself. */}
+        <div className="pb-1">{legend}</div>
       </ScreenBar>
       {/* Padded, so the boss and the first row are never cut off at the top or bottom of the scroll. */}
       <div className={hologram ? 'py-5' : 'py-8'}>
@@ -418,7 +407,8 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
                           aria-hidden
                           {...fadeIn(0.12)}
                           style={{ left: style.left, top: style.top }}
-                          className={`pointer-events-none absolute z-40 flex -translate-x-1/2 ${spot.y < 0.3 ? 'translate-y-9' : '-translate-y-[calc(100%+2.25rem)]'} flex-col items-center gap-1 rounded-md border-2 border-p03 bg-p03-ground px-3 py-2 text-center whitespace-nowrap text-p03 shadow-[0_0_18px_rgb(125_255_154/0.5)]`}
+                          // Centered on its node, unless that would run it off a side of the frame.
+                          className={`pointer-events-none absolute z-40 flex ${spot.x < 0.25 ? '-translate-x-6' : spot.x > 0.75 ? '-translate-x-[calc(100%-1.5rem)]' : '-translate-x-1/2'} ${spot.y < 0.3 ? 'translate-y-9' : '-translate-y-[calc(100%+2.25rem)]'} flex-col items-center gap-1 rounded-md border-2 border-p03 bg-p03-ground px-3 py-2 text-center whitespace-nowrap text-p03 shadow-[0_0_18px_rgb(125_255_154/0.5)]`}
                         >
                           <Icon className="size-10" />
                           <span className="text-xl">{nodeName(node)}</span>
@@ -464,7 +454,7 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
                           title={nodeName(node)}
                           style={style}
                           data-planned={planned || undefined}
-                          className={`${box} touch-none select-none`}
+                          className={`${box} touch-manipulation select-none`}
                           {...holdProps(node.id)}
                         >
                           {face}
