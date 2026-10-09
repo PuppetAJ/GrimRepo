@@ -56,7 +56,10 @@ export const SIGILS: Record<SigilId, { name: string; text: string }> = {
   technical_debt: { name: 'Technical Debt', text: 'Worth 3 when sacrificed, but tips the scale 1 against you.' },
   try_catch: { name: 'try/catch', text: 'Survives being sacrificed.' },
   rate_limiter: { name: 'Rate Limiter', text: 'Deals 1 damage back to anything that attacks it.' },
-  fork: { name: 'Fork', text: 'Attacks the lanes on either side instead of the one opposite.' },
+  fork: {
+    name: 'Fork',
+    text: 'Attacks the lanes on either side instead of the one opposite. Never on the same card as Broadcast.',
+  },
   hotfix: { name: 'Hotfix', text: 'Heals 1 at the end of each turn.' },
   fatal_error: { name: 'Fatal Error', text: 'Destroys any card it damages.' },
   rollback: { name: 'Rollback', text: 'Shrugs off the first damage it takes.' },
@@ -65,7 +68,10 @@ export const SIGILS: Record<SigilId, { name: string; text: string }> = {
   retry: { name: 'Retry', text: 'Attacks twice.' },
   deprecated: { name: 'Deprecated', text: 'Dies after it attacks, leaving a Boilerplate in its lane.' },
   scope_creep: { name: 'Scope Creep', text: 'Gains 1 attack each time it destroys a card.' },
-  broadcast: { name: 'Broadcast', text: 'Attacks the lane opposite and both lanes beside it.' },
+  broadcast: {
+    name: 'Broadcast',
+    text: 'Attacks the lane opposite and both lanes beside it. Never on the same card as Fork.',
+  },
   popup: { name: 'Pop-up', text: 'The card opposite it has 1 more attack.' },
   refactor: {
     name: 'Refactor',

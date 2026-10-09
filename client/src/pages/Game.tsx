@@ -82,7 +82,7 @@ function GameTable() {
       {upright ? (
         <TurnSideways onText={() => choose('text')} />
       ) : (
-        <LoadFailed fallback={<TableFailed onText={() => choose('text')} />}>
+        <LoadFailed fallback={(error) => <TableFailed error={error} onText={() => choose('text')} />}>
           <Suspense fallback={<Boot stage="code" />}>
             {/* Remount on a new deal or reload so the table rebuilds from the current state. */}
             <Table3D key={game.generation} game={game} seat={seat} onText={() => choose('text')} />

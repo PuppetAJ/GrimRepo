@@ -7,8 +7,8 @@ type Source = {
   subscribe: (listener: (events: GameEvent[]) => void) => () => void
 }
 
-// Past this many queued events, playback speeds up so it never falls far behind the game.
-const BACKLOG = 12
+// Past this many queued events, playback speeds up gradually, at most double, so it never falls far behind the game.
+const BACKLOG = 20
 
 /** Plays events back one at a time; `busy` holds the table during P03's turn. */
 export function usePlayback({ state, subscribe }: Source) {
@@ -40,7 +40,7 @@ export function usePlayback({ state, subscribe }: Source) {
       return
     }
     setPlayback((current) => advance(current, event, now))
-    const speed = queue.current.length > BACKLOG ? 3 : 1
+    const speed = Math.min(2, 1 + Math.max(0, queue.current.length - BACKLOG) / BACKLOG)
     timer.current = setTimeout(tick, pace(event) / speed)
   }, [])
 

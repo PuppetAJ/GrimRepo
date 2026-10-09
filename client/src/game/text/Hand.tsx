@@ -1,3 +1,4 @@
+import { ZoomIn } from 'lucide-react'
 import { m } from 'motion/react'
 import { card, HAND_LIMIT, reshuffleCostsMemory, type Action } from 'shared'
 import { describe, has, reshuffleNote, whyNot } from '../controls.tsx'
@@ -8,9 +9,17 @@ import { useTable } from './context.ts'
 export function Hand() {
   const { view, state, legal, busy, act, layout, compact, phone, sideways, tapToRead, inspectProps, isNew } = useTable()
   const { showRefusal, shakeRef, setReading } = useTable()
+  const cardWidth =
+    layout === 'mid'
+      ? 'w-[clamp(5rem,6.5vw,6.5rem)]'
+      : phone && !sideways
+        ? 'w-12 tall:w-14'
+        : phone
+          ? 'w-14'
+          : 'aspect-[5/7] h-full'
   return (
     <div
-      className={`flex min-w-0 flex-1 gap-2 rounded-md border-2 border-[#1f3a26] bg-[#050d07]/70 px-1 pb-1 ${sideways ? 'min-h-0 flex-wrap content-start justify-center overflow-y-auto pt-3' : `justify-[safe_center] items-center overflow-x-auto ${phone ? 'pt-3' : 'pt-5'}`} ${compact ? '' : 'h-full'}`}
+      className={`flex min-w-0 flex-1 gap-2 rounded-md border-2 border-[#1f3a26] bg-[#050d07]/70 px-1 pb-1 ${sideways ? 'min-h-0 flex-wrap content-start justify-center overflow-y-auto pt-4' : `justify-[safe_center] items-center overflow-x-auto ${phone ? 'pt-4' : 'pt-5'}`} ${compact ? '' : 'h-full'}`}
     >
       {view.hand.map((unit) => {
         const selected = unit.uid === state.summon?.uid
@@ -20,7 +29,7 @@ export function Hand() {
           <m.div
             key={unit.uid}
             {...inspectProps({ uid: unit.uid }, unit)}
-            className={`shrink-0 select-none [-webkit-touch-callout:none] ${layout === 'mid' ? 'w-[clamp(5rem,6.5vw,6.5rem)]' : phone && !sideways ? 'w-12 tall:w-14' : phone ? 'w-14' : 'aspect-[5/7] h-full'}`}
+            className={`relative shrink-0 select-none [-webkit-touch-callout:none] ${cardWidth}`}
             {...(isNew(unit.uid) ? arrive('hand') : {})}
           >
             <button
@@ -44,9 +53,26 @@ export function Hand() {
                 <PixelCard unit={unit} />
               </span>
             </button>
+            {/* On a phone a tap plays the card, so reading it is its own button, at the corner. */}
+            {tapToRead ? (
+              <button
+                type="button"
+                aria-label={`Read ${card(unit.card).name}`}
+                onClick={() => setReading({ uid: unit.uid })}
+                className="absolute -top-1.5 -right-1.5 z-10 grid size-6 place-items-center rounded-full border border-p03-edge bg-p03-ground text-p03 focus-visible:outline-2 focus-visible:outline-p03"
+              >
+                <ZoomIn aria-hidden className="size-3.5" />
+              </button>
+            ) : null}
           </m.div>
         )
       })}
+      {/* An empty hand keeps a card's height, so the row never collapses to a strip. */}
+      {view.hand.length ? null : (
+        <span aria-hidden className={`invisible shrink-0 p-1 ${cardWidth}`}>
+          <span className="block aspect-[5/7]" />
+        </span>
+      )}
     </div>
   )
 }

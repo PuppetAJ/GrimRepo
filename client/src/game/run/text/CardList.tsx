@@ -120,7 +120,7 @@ export function CardList({
                   aria-label={`Read ${describe(unit)}`}
                   {...hold.props(unit)}
                   onClick={() => !hold.read() && setReading(unit)}
-                  className="touch-none rounded-md p-1 select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03"
+                  className="touch-manipulation rounded-md p-1 select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03"
                 >
                   {face}
                 </button>
@@ -190,7 +190,7 @@ export function ReadableCard({
         aria-label={label ?? `Read ${card(unit.card).name}`}
         {...hold.props(unit)}
         onClick={() => !hold.read() && setReading(unit)}
-        className="block w-full touch-none rounded-md select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03"
+        className="block w-full touch-manipulation rounded-md select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03"
       >
         <PixelCard unit={unit} blank={blank} />
       </button>

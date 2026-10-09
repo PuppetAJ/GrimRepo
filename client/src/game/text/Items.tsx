@@ -1,9 +1,9 @@
-import { ITEMS } from 'shared'
+import { ITEM_SLOTS, ITEMS } from 'shared'
 import { ItemButton } from '../ItemButton.tsx'
 import { useTable } from './context.ts'
 
-/** The run's items: one without a target is used at once; the rest are picked up, then aimed at a card on the board. */
-export function Items({ className = '' }: { className?: string }) {
+/** The run's items and the rack's empty slots; a pick uses or aims one, then calls `onPick`, as a menu does to close. */
+export function Items({ className = '', onPick }: { className?: string; onPick?: () => void }) {
   const { state, legal, busy, act, aiming, setAiming } = useTable()
   const items = state.items ?? []
   if (!items.length) return null
@@ -21,10 +21,21 @@ export function Items({ className = '' }: { className?: string }) {
             usable={usable}
             held={held}
             size={48}
-            onUse={() => (def.target === 'none' ? act({ type: 'use', slot }) : setAiming(held ? null : slot))}
+            onUse={() => {
+              if (def.target === 'none') act({ type: 'use', slot })
+              else setAiming(held ? null : slot)
+              onPick?.()
+            }}
           />
         )
       })}
+      {Array.from({ length: Math.max(0, ITEM_SLOTS - items.length) }, (_, index) => (
+        <span
+          key={`empty-${index}`}
+          aria-hidden
+          className="size-12 shrink-0 rounded-md border-2 border-dashed border-p03-edge"
+        />
+      ))}
     </div>
   )
 }

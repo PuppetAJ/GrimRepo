@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import type { Action } from 'shared'
+import { card, CARD_TYPES, SIGILS, type Action } from 'shared'
 import { describe, has } from '../controls.tsx'
-import { FlatReaderBody, PixelCard, ReaderBody } from '../CardReader.tsx'
+import { FlatReaderBody, PixelCard, ReaderBody, Sigil } from '../CardReader.tsx'
 import { Dialog, DialogContent, DialogTitle } from '../../components/ui/dialog.tsx'
 import { useTable } from './context.ts'
 import { Panel } from './Panel.tsx'
@@ -61,23 +61,46 @@ export function ReaderPanel() {
 export function Magnifier() {
   const { magnified } = useTable()
   if (!magnified) return null
+  const { unit } = magnified
+  const type = card(unit.card).type
+  // What its sigils and type do, as the reader and the 3D table's magnifier say, so a held card is as good as read.
+  const notes = [
+    ...(type
+      ? [{ id: `type-${type}` as const, name: `${CARD_TYPES[type].name} type`, text: CARD_TYPES[type].about }]
+      : []),
+    ...unit.sigils.map((sigil) => ({ id: sigil, name: SIGILS[sigil].name, text: SIGILS[sigil].text })),
+  ]
+  const width = notes.length ? 224 : 160
+  const left = Math.min(Math.max(8, magnified.x - width / 2), window.innerWidth - width - 8)
+  // Above the finger in the lower half of the screen, below it in the upper half, so it's never under the finger.
+  const above = magnified.y > window.innerHeight / 2
   return (
     <div
       aria-hidden
-      className="pointer-events-none fixed z-[60] w-40 drop-shadow-[0_0_12px_rgb(0_0_0/0.8)]"
-      // Above the finger so it isn't hidden, or beside it when there's no room above.
+      className="pointer-events-none fixed z-[60] flex flex-col items-center gap-2 drop-shadow-[0_0_12px_rgb(0_0_0/0.8)]"
       style={
-        magnified.y - 250 >= 8
-          ? { left: Math.min(Math.max(8, magnified.x - 80), window.innerWidth - 168), top: magnified.y - 250 }
-          : {
-              left: magnified.x > window.innerWidth / 2 ? magnified.x - 184 : magnified.x + 24,
-              top: Math.min(Math.max(8, magnified.y - 112), window.innerHeight - 232),
-            }
+        above ? { left, width, bottom: window.innerHeight - magnified.y + 26 } : { left, width, top: magnified.y + 26 }
       }
     >
-      <PixelCard unit={magnified.unit} />
-      {/* Matches the glass on the 3D table's magnified cards. */}
-      <span className="crt-glass absolute inset-0 [clip-path:polygon(0_0,86%_0,100%_9%,100%_100%,0_100%)]" />
+      <div className="relative w-40">
+        <PixelCard unit={unit} />
+        {/* Matches the glass on the 3D table's magnified cards. */}
+        <span className="crt-glass absolute inset-0 [clip-path:polygon(0_0,86%_0,100%_9%,100%_100%,0_100%)]" />
+      </div>
+      {notes.length ? (
+        <ul className="flex w-full flex-col gap-1.5 rounded-md border-2 border-p03-edge bg-p03-ground p-2 font-terminal text-[#b8f5c4]">
+          {notes.map((note) => (
+            <li key={note.id} className="flex items-start gap-2">
+              <span className="mt-0.5 shrink-0">
+                <Sigil id={note.id} size={16} color="var(--p03)" />
+              </span>
+              <span className="leading-tight">
+                <span className="text-p03">{note.name}.</span> <span className="font-sans text-xs">{note.text}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </div>
   )
 }

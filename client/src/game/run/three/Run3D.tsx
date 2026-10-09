@@ -9,7 +9,7 @@ import { Battle3D } from '../../table/Table3D.tsx'
 import { TableStage, useStage } from '../../table/TableStage.tsx'
 import type { Layout } from '../../text/useTextTable.ts'
 import { BACK_TO, mapTitle, ScreenBody, useRunScreen, type RunView } from '../screens.tsx'
-import { Screen, ScreenActions } from '../text/Screen.tsx'
+import { HEADER_BUTTON, Screen, ScreenActions } from '../text/Screen.tsx'
 import type { RunReady } from '../useRun.ts'
 import { BetweenBattles, warp, windowHeight } from './RunStage.tsx'
 import { preloadItems } from '../../table/table3d/ItemRack.tsx'
@@ -115,25 +115,33 @@ function Between({
           pinTo={pin}
           onSwitch={{ label: 'Play on the text table', go: onText }}
         >
+          {/* In the hologram's own button style; the site's gray buttons wash out under its glow. */}
           {onBack ? (
             <ScreenActions>
-              <Button variant="outline" onClick={onBack} disabled={leaving} aria-keyshortcuts="M">
-                {back === 'the battle' ? <Swords aria-hidden /> : null}
+              <button
+                type="button"
+                onClick={onBack}
+                disabled={leaving}
+                aria-keyshortcuts="M"
+                className={`${HEADER_BUTTON} gap-2`}
+              >
+                {back === 'the battle' ? <Swords aria-hidden className="size-5" /> : null}
                 Back to {back}
-              </Button>
+              </button>
             </ScreenActions>
           ) : onMap && !fading ? (
             <ScreenActions>
-              <Button
-                variant="outline"
+              <button
+                type="button"
                 onClick={onMap}
                 disabled={leaving}
                 aria-keyshortcuts="M"
                 title="Look at the map"
+                className={`${HEADER_BUTTON} gap-2`}
               >
-                <MapIcon aria-hidden />
+                <MapIcon aria-hidden className="size-5" />
                 Map
-              </Button>
+              </button>
             </ScreenActions>
           ) : null}
           <ScreenBody run={screenRun} view={body} layout={layout} />

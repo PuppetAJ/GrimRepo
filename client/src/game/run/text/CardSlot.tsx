@@ -49,7 +49,14 @@ export function CardSlot({
         )}
       </button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="flex max-h-[85dvh] flex-col gap-3 border-2 border-p03-edge bg-[#07130b] font-terminal text-p03 sm:max-w-3xl">
+        {/* Focus lands on the dialog, not its search box, so a phone's keyboard stays down until the player wants it. */}
+        <DialogContent
+          onOpenAutoFocus={(event) => {
+            event.preventDefault()
+            ;(event.currentTarget as HTMLElement).focus()
+          }}
+          className="flex max-h-[85dvh] flex-col gap-3 border-2 border-p03-edge bg-[#07130b] font-terminal text-p03 sm:max-w-3xl"
+        >
           <DialogTitle className="text-2xl text-p03">{label}</DialogTitle>
           <CardSearch query={query} onChange={setQuery} label={`Search: ${label}`} />
           <SearchContext value={{ query, setQuery }}>

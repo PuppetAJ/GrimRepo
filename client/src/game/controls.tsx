@@ -290,6 +290,22 @@ export function ScaleBar({
   const reach = (Math.min(TIP, Math.abs(scale)) / TIP) * 50
   // The player's side is on the left, P03's on the right.
   const knot = 50 - Math.sign(scale) * reach
+  const tone = scale > 0 ? 'text-foreground' : scale < 0 ? 'text-death' : 'text-p03-dim'
+  const margin = (
+    <>
+      {Math.abs(scale)}
+      {shown.change ? (
+        <m.span
+          key={shown.key}
+          aria-hidden
+          {...drift}
+          className={`absolute top-full left-0 ${shown.change < 0 ? 'text-death' : 'text-foreground'}`}
+        >
+          {shown.change > 0 ? `+${shown.change}` : shown.change}
+        </m.span>
+      ) : null}
+    </>
+  )
   return (
     <div
       role="meter"
@@ -301,6 +317,8 @@ export function ScaleBar({
       className={`flex items-center gap-2 font-terminal ${className}`}
     >
       <span className="text-foreground">You</span>
+      {/* The margin sits by whoever leads, in a slot each side keeps, so the bar never jumps. */}
+      <span className={`relative w-8 shrink-0 text-right tabular-nums ${tone}`}>{scale > 0 ? margin : null}</span>
       <span
         className={`relative h-3 rounded-sm border border-p03-dim/60 ${fluid ? 'min-w-12 flex-1' : 'w-32 sm:w-44'}`}
       >
@@ -317,21 +335,7 @@ export function ScaleBar({
         />
       </span>
       <span className="text-p03">P03</span>
-      <span
-        className={`relative w-10 tabular-nums ${scale > 0 ? 'text-foreground' : scale < 0 ? 'text-death' : 'text-p03-dim'}`}
-      >
-        {Math.abs(scale)}
-        {shown.change ? (
-          <m.span
-            key={shown.key}
-            aria-hidden
-            {...drift}
-            className={`absolute top-full left-0 ${shown.change < 0 ? 'text-death' : 'text-foreground'}`}
-          >
-            {shown.change > 0 ? `+${shown.change}` : shown.change}
-          </m.span>
-        ) : null}
-      </span>
+      <span className={`relative w-8 shrink-0 tabular-nums ${tone}`}>{scale > 0 ? null : margin}</span>
     </div>
   )
 }

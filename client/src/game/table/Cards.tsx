@@ -11,7 +11,7 @@ import { kindOf } from './kind.ts'
 import { MOOD } from './mood.ts'
 import { Disk, facePlanes, type DiskHandle } from './Disk.tsx'
 import { backTexture, faceContent, faceLights, faceTexture, type loadCardAssets } from './faces.ts'
-import { DECK, handPlace, slot, type Row, type Vec3 } from './layout.ts'
+import { DECK, handPlace, LANE_GAP, slot, type Row, type Vec3 } from './layout.ts'
 import { LEAVE_MS, LUNGE_MS, SLIDE_MS, type Lunge, type Slide } from './playback.ts'
 import { holding, startHold } from './reading.ts'
 
@@ -165,8 +165,12 @@ export function Card({
       if (look === 'marked') rotation.multiply(roll.setFromAxisAngle(Z, 0.09))
       scale.setScalar(1)
     }
-    if (!STILL && lunge && now - lunge.at < LUNGE_MS)
-      position.z += lunge.toward * 0.4 * Math.sin((Math.PI * (now - lunge.at)) / LUNGE_MS)
+    if (!STILL && lunge && now - lunge.at < LUNGE_MS) {
+      const swing = Math.sin((Math.PI * (now - lunge.at)) / LUNGE_MS)
+      position.z += lunge.toward * 0.4 * swing
+      // Toward the lane it strikes, half a lane over, when a sigil turns its attack aside.
+      position.x += lunge.across * LANE_GAP * 0.45 * swing
+    }
     const sliding = !STILL && slide !== undefined && now - slide.at < SLIDE_MS
     // Lifted off the table in an arc while it crosses, so the move reads as one.
     if (sliding) position.y += Math.sin((Math.PI * (now - slide.at)) / SLIDE_MS) * 0.3

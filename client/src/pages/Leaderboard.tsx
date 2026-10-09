@@ -1,4 +1,4 @@
-import { Suspense } from 'react'
+import { Suspense, useLayoutEffect, useRef, useState, type Ref, type RefObject } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Link, useLocation, useNavigate, useSearch } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button.tsx'
@@ -15,6 +15,8 @@ import { useAsync } from '../lib/useAsync.ts'
 import { FaultyScreen } from '../components/p03/FaultyScreen.ts'
 
 export function Leaderboard() {
+  // First place's row, which its screen and corruption are laid over.
+  const firstRow = useRef<HTMLTableRowElement>(null)
   const page = useSearch({ from: '/leaderboard', select: (search) => search.page ?? 1 })
   const runs = useSearch({ from: '/leaderboard', select: (search) => search.board === 'runs' })
   const navigate = useNavigate({ from: '/leaderboard' })
@@ -121,7 +123,7 @@ export function Leaderboard() {
         ) : null}
         {board.status === 'ready' && board.data.players.length > 0 ? (
           // Not clipped, so first place's corruption can spill past the board's edges.
-          <div className="rounded-lg border bg-card">
+          <div data-board className="relative isolate rounded-lg border bg-card">
             <table className="w-full border-collapse text-left">
               <caption className="sr-only">Players by their best {runs ? 'run' : 'score'}</caption>
               <thead className="text-xs tracking-wide text-muted-foreground uppercase">
@@ -143,7 +145,13 @@ export function Leaderboard() {
               <tbody>
                 {board.data.players.map((row, index) =>
                   index === 0 && board.data.page === 1 ? (
-                    <FirstPlace key={row.username} row={row} runs={runs} mine={row.username.toLowerCase() === me} />
+                    <FirstPlace
+                      key={row.username}
+                      row={row}
+                      runs={runs}
+                      mine={row.username.toLowerCase() === me}
+                      rowRef={firstRow}
+                    />
                   ) : (
                     <Row
                       key={row.username}
@@ -156,6 +164,10 @@ export function Leaderboard() {
                 )}
               </tbody>
             </table>
+            {/* After the table, so its first row is in place to be measured; the layers' z-index does the stacking. */}
+            {board.data.page === 1 ? (
+              <FirstPlaceLayers key={`${runs}:${board.data.players[0]?.username}`} row={firstRow} />
+            ) : null}
             {board.data.pages > 1 ? (
               <nav
                 aria-label="Leaderboard pages"
@@ -198,17 +210,37 @@ function Played({ row, runs }: { row: LeaderboardRow; runs: boolean }) {
   )
 }
 
-function FirstPlace({ row, runs, mine }: { row: LeaderboardRow; runs: boolean; mine: boolean }) {
+/** First place's screen and corruption, measured onto its row from the board, since Safari won't place them on a row. */
+function FirstPlaceLayers({ row }: { row: RefObject<HTMLTableRowElement | null> }) {
+  const [band, setBand] = useState<{ top: number; height: number } | null>(null)
+  useLayoutEffect(() => {
+    const element = row.current
+    const board = element?.closest<HTMLElement>('[data-board]')
+    if (!element || !board) return
+    const measure = () => {
+      const at = element.getBoundingClientRect()
+      setBand({ top: at.top - board.getBoundingClientRect().top - board.clientTop, height: at.height })
+    }
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(element)
+    observer.observe(board)
+    return () => observer.disconnect()
+  }, [row])
+  if (!band) return null
+  const place = { top: band.top, height: band.height }
   return (
-    // Isolated so the negative-z layers sit behind the text but above the row's background.
-    <tr className="p03-screen relative isolate border-y border-p03-edge font-terminal">
-      <td className="py-4 pr-4 pl-4 text-xl text-p03-dim sm:pr-5 sm:pl-6">
+    <>
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 -z-10" style={place}>
+        <span className="p03-screen absolute inset-0" />
         <Suspense fallback={null}>
-          <FaultyScreen className="-z-10" />
+          <FaultyScreen />
         </Suspense>
-        <Glass />
         {/* A table row doesn't reliably take a box-shadow, so the glow is its own layer. */}
-        <span aria-hidden className="p03-glow-soft pointer-events-none absolute inset-0 -z-20" />
+        <span className="p03-glow-soft absolute inset-0 -z-10" />
+      </div>
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 z-10" style={place}>
+        <Glass />
         <FrameDamage frame="row" />
         <Corruption dense cols={12} rows={2} corner="top-left" seed={37} className="top-0 left-0" />
         <Corruption dense cols={9} rows={2} corner="bottom-left" seed={43} className="bottom-0 left-0" />
@@ -232,6 +264,29 @@ function FirstPlace({ row, runs, mine }: { row: LeaderboardRow; runs: boolean; m
           seed={59}
           className="bottom-0 left-full max-sm:hidden"
         />
+      </div>
+    </>
+  )
+}
+
+function FirstPlace({
+  row,
+  runs,
+  mine,
+  rowRef,
+}: {
+  row: LeaderboardRow
+  runs: boolean
+  mine: boolean
+  rowRef: Ref<HTMLTableRowElement>
+}) {
+  return (
+    // Its screen and corruption are drawn by FirstPlaceLayers: Safari doesn't position anything against a table row.
+    <tr
+      ref={rowRef}
+      className="p03-screen relative border-y border-p03-edge bg-transparent [background-image:none] font-terminal"
+    >
+      <td className="py-4 pr-4 pl-4 text-xl text-p03-dim sm:pr-5 sm:pl-6">
         <span aria-hidden>0x01</span>
         <span className="sr-only">1</span>
       </td>

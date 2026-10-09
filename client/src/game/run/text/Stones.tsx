@@ -66,7 +66,12 @@ export function Stones({ run }: { run: RunReady }) {
                 action="stone-sigil"
                 onChoose={(id) => {
                   setSigil(id)
-                  setTo(null)
+                  // The card picked to gain it stays, if it can take this sigil too.
+                  setTo((now) =>
+                    now !== null && moves.some((move) => move.from === from && move.sigil === id && move.to === now)
+                      ? now
+                      : null,
+                  )
                 }}
               />
             ) : (

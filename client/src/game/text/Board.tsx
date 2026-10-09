@@ -93,7 +93,7 @@ function Occupant({
           >
             <m.span
               key={striking ? striking.at : 'still'}
-              {...(striking ? strike(row, LUNGE_MS / 1000, still) : {})}
+              {...(striking ? strike(row, LUNGE_MS / 1000, still, striking.across) : {})}
               className="block size-full"
             >
               <PixelCard unit={unit} />
