@@ -140,7 +140,13 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
       'data-table': '3d',
     }),
   )
-  useEffect(() => stage.onMissed(() => (peek !== null || pinned !== null) && reader.lift(null)))
+  // A tap on nothing puts down whatever is being read; with nothing to put down, it sits back from the board.
+  useEffect(() =>
+    stage.onMissed(() => {
+      if (peek !== null || pinned !== null) reader.lift(null)
+      else if (chosen !== 'table' && aiming === null) setCamera('table')
+    }),
+  )
   useLayoutEffect(() =>
     stage.room({
       view: playback.view,
@@ -172,6 +178,7 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
           skip={skip}
           rung={rung}
           camera={camera}
+          onFocusBoard={camera === 'table' && !playback.view.summon ? () => setCamera('board') : undefined}
           from={from}
           hint={hint}
           hinted={hinted}

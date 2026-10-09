@@ -11,8 +11,8 @@ import { useAsync, type Async } from '../lib/useAsync.ts'
 
 const badges = [
   { label: 'build', value: 'haunted', color: 'bg-primary' },
-  { label: 'cards', value: '26', color: 'bg-[#c4b5fd]' },
-  { label: 'license', value: 'MIT', color: 'bg-muted-foreground' },
+  // As many as the compendium lists; the license badge went so P03's fits beside these on a phone.
+  { label: 'cards', value: '35', color: 'bg-[#c4b5fd]' },
 ]
 
 const turn = [

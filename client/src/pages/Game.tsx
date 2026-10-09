@@ -79,16 +79,18 @@ function GameTable() {
       >
         Play the text table, which a screen reader can follow
       </Button>
+      <LoadFailed fallback={(error) => <TableFailed error={error} onText={() => choose('text')} />}>
+        <Suspense fallback={<Boot stage="code" />}>
+          {/* Remount on a new deal or reload so the table rebuilds from the current state. */}
+          <Table3D key={game.generation} game={game} seat={seat} onText={() => choose('text')} />
+        </Suspense>
+      </LoadFailed>
+      {/* Over the table, not in its place, so turning the phone back finds it as it was rather than set again. */}
       {upright ? (
-        <TurnSideways onText={() => choose('text')} />
-      ) : (
-        <LoadFailed fallback={(error) => <TableFailed error={error} onText={() => choose('text')} />}>
-          <Suspense fallback={<Boot stage="code" />}>
-            {/* Remount on a new deal or reload so the table rebuilds from the current state. */}
-            <Table3D key={game.generation} game={game} seat={seat} onText={() => choose('text')} />
-          </Suspense>
-        </LoadFailed>
-      )}
+        <div className="fixed inset-0 z-[60] bg-background">
+          <TurnSideways onText={() => choose('text')} />
+        </div>
+      ) : null}
     </div>
   )
 }

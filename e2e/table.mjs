@@ -266,9 +266,10 @@ section('Phones')
   const player = await signUp(page, newPlayer('Upright'))
   await page.goto(`${BASE}/game`)
   await page.getByText('The 3D table needs your phone on its side.').waitFor()
+  // The table stays set behind the prompt, so turning the phone finds it as it was.
   check(
-    'an upright phone is offered the text table instead of the 3D one',
-    (await page.locator('canvas').count()) === 0,
+    'an upright phone is offered the text table over the 3D one',
+    await page.getByRole('button', { name: 'Play the text version' }).isVisible(),
   )
   await page.getByRole('button', { name: 'Play the text version' }).click()
   await page.locator('[data-table="text"]').waitFor()
