@@ -344,8 +344,20 @@ function playTurn(state: GameState, rng: Rng, events: GameEvent[]): void {
   for (const unit of [...units(state.player.board), ...units(state.opponent.front)]) {
     if (!unit.sigils.includes('beta')) continue
     const shipped = SHIPS_AS[unit.card]
-    if (shipped) Object.assign(unit, { ...deckCard(shipped), maxHealth: card(shipped).health })
-    else
+    if (shipped) {
+      // It keeps what the run gave it: its buffs over its own card's stats, and any sigil it gained.
+      const base = card(unit.card)
+      const into = card(shipped)
+      const health = into.health + (unit.maxHealth - base.health)
+      const gained = unit.sigils.filter((sigil) => sigil !== 'beta' && !base.sigils.includes(sigil))
+      Object.assign(unit, {
+        ...deckCard(shipped),
+        attack: into.attack + (unit.attack - base.attack),
+        health,
+        maxHealth: health,
+        sigils: [...new Set([...into.sigils, ...gained])].slice(0, MAX_SIGILS),
+      })
+    } else
       Object.assign(unit, {
         attack: unit.attack + BETA_BOOST,
         health: unit.health + BETA_BOOST,

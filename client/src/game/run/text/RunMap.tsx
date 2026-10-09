@@ -1,4 +1,4 @@
-import { Eraser, PenLine, Undo2 } from 'lucide-react'
+import { Eraser, PenLine, Undo2, X } from 'lucide-react'
 import { animate, m, type AnimationPlaybackControls } from 'motion/react'
 import {
   useEffect,
@@ -400,7 +400,14 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
                     }
                     // The icon keeps its share of the node, so a small node keeps its padding.
                     const icon = Math.round(nodeSize * (boss ? 0.8 : 0.55))
-                    const face = <Icon aria-hidden style={{ width: icon, height: icon }} />
+                    // A node already gone to is crossed out, as Inscryption's maps do, its icon dimmed beneath.
+                    const gone = mark === 'visited' || mark === 'here'
+                    const face = (
+                      <>
+                        <Icon aria-hidden style={{ width: icon, height: icon }} className={gone ? 'opacity-25' : ''} />
+                        {gone ? <X aria-hidden strokeWidth={3} className="absolute inset-0 m-auto size-[90%]" /> : null}
+                      </>
+                    )
                     const reading =
                       held === node.id ? (
                         <m.span

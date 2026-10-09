@@ -27,6 +27,9 @@ import { Sentences } from '../../text/Sentences.tsx'
 /** What the card is called before the player names it. */
 const UNNAMED = 'Death Card'
 
+/** Each run's death card, built or skipped, for the page's life; a reload starts a new run anyway. */
+const DECIDED = new Map<string, { built?: BuiltDeathCard; skipped?: boolean }>()
+
 /**
  * After a lost run, a card built a step at a time beside the card taking shape: its cost from one hand, its stats and
  * art from cards near that cost, its sigils from a third card, then its name.
@@ -38,16 +41,23 @@ export function DeathCardBuilder({ run }: { run: RunReady }) {
   const [name, setName] = useState('')
   const [touched, setTouched] = useState(false)
   const [sending, setSending] = useState(false)
-  const [built, setBuilt] = useState<BuiltDeathCard | null>(null)
+  // What became of this run's death card, kept past a remount, as when the table is switched or the phone turned.
+  const decision = `${run.id}:${run.state.seed}`
+  const [built, setBuilt] = useState<BuiltDeathCard | null>(() => DECIDED.get(decision)?.built ?? null)
   // Where the card being built sat, so the finished one can glide from there to the middle.
   const cardAt = useRef<HTMLDivElement>(null)
   const [from, setFrom] = useState<DOMRect | null>(null)
   const finish = (done: BuiltDeathCard) => {
     setFrom(cardAt.current?.getBoundingClientRect() ?? null)
     setBuilt(done)
+    DECIDED.set(decision, { built: done })
   }
   const [error, setError] = useState<string | null>(null)
-  const [skipped, setSkipped] = useState(false)
+  const [skipped, setSkipped] = useState(() => DECIDED.get(decision)?.skipped ?? false)
+  const leaveOut = () => {
+    setSkipped(true)
+    DECIDED.set(decision, { skipped: true })
+  }
 
   const state = run.state
   const costs = deathCostHand(state)
@@ -182,7 +192,7 @@ export function DeathCardBuilder({ run }: { run: RunReady }) {
       type="button"
       data-action="skip-death-card"
       disabled={sending}
-      onClick={() => setSkipped(true)}
+      onClick={leaveOut}
       className={`${SIDE_BUTTON} px-4 disabled:opacity-50`}
     >
       Skip
@@ -303,7 +313,7 @@ function Built({ built, mockup, from }: { built: BuiltDeathCard; mockup: boolean
               <Link to="/signup" className="text-p03 underline">
                 Sign up
               </Link>{' '}
-              within a week to keep it, with your runs and scores.
+              to keep it, with your runs and scores.
             </>
           ) : built.saved ? (
             'Saved, and pinned to your profile. Your next run offers it at its first card choice.'

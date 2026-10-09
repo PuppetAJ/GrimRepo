@@ -170,7 +170,7 @@ export const MOCKUPS: Record<string, Entry> = {
   'worst-map': {
     title: 'The densest map the generator draws',
     group: 'worst',
-    revision: 2,
+    revision: 3,
     make: () => ({ ...worstRun({}), news: LONG_NEWS }),
   },
   'worst-card': {
@@ -250,7 +250,7 @@ export const MOCKUPS: Record<string, Entry> = {
   map: {
     title: 'The map, partway through a stage',
     group: 'reached',
-    revision: 2,
+    revision: 3,
     make: () => reached((s) => s.at !== null && !s.visit),
   },
   start: {
@@ -275,7 +275,7 @@ export const MOCKUPS: Record<string, Entry> = {
   'death-build': {
     title: 'A lost run, building a death card from three hands',
     group: 'reached',
-    revision: 9,
+    revision: 10,
     make: () => {
       const found = reached((s) => s.status === 'lost' && s.deck.length >= 5)
       return (
@@ -478,18 +478,19 @@ export const MOCKUPS: Record<string, Entry> = {
   'next-stage': {
     title: 'The map of the second stage',
     group: 'reached',
-    revision: 1,
+    revision: 2,
     make: () => reached((s) => s.stage === 1 && !s.visit && s.at !== null),
   },
   battle: {
     title: 'A battle in a run',
     group: 'reached',
-    revision: 4,
+    revision: 5,
     make: () => reached((s) => s.visit?.kind === 'battle' && s.visit.game.turn > 2),
   },
   'battle-empty-deck': {
     title: 'A battle whose deck has run out, with a draw owed',
     group: 'reached',
+    revision: 1,
     make: () => {
       const found = reached((s) => s.visit?.kind === 'battle' && s.visit.game.turn > 1 && !s.visit.game.drawn)
       if (!found || found.state.visit?.kind !== 'battle') return null
@@ -501,7 +502,7 @@ export const MOCKUPS: Record<string, Entry> = {
   'battle-items': {
     title: 'A battle in a run, with three items to use',
     group: 'reached',
-    revision: 1,
+    revision: 2,
     make: () => {
       const found = reached((s) => s.visit?.kind === 'battle' && s.visit.game.turn > 2 && s.visit.game.drawn)
       if (!found || found.state.visit?.kind !== 'battle') return null
@@ -622,7 +623,7 @@ export const MOCKUPS: Record<string, Entry> = {
   lost: {
     title: 'A run lost in battle',
     group: 'reached',
-    revision: 6,
+    revision: 7,
     make: () => reached((s) => s.status === 'lost'),
   },
   won: { title: 'A cleared run', group: 'reached', revision: 3, make: () => reached((s) => s.status === 'won') },
