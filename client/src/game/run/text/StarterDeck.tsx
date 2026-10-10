@@ -1,7 +1,8 @@
 import { m, useReducedMotion } from 'motion/react'
 import { useState } from 'react'
 import { card, deathSkipBonus, PACK_SIZE, PACKS, STARTER_DECKS, type Rarity } from 'shared'
-import { flipIn, tearOpen } from '../../moves.ts'
+import { packArt } from '../../art.ts'
+import { flipIn, tearBody, tearTop } from '../../moves.ts'
 import { Sentences } from '../../text/Sentences.tsx'
 import { asUnit } from '../nodes.ts'
 import type { RunReady } from '../useRun.ts'
@@ -137,34 +138,35 @@ export function PackOpening({ run }: { run: RunReady }) {
             )
           return (
             <li key={`pack-${visit.opened}-${place}`}>
-              <m.button
+              <button
                 type="button"
                 data-action="open-pack"
                 aria-label={`Open a ${STARTER_DECKS[visit.deck]?.name} pack`}
                 disabled={Boolean(current)}
                 onClick={() => setTorn({ pack: visit.opened, place, open: false })}
-                {...(tearing ? tearOpen(still) : {})}
-                onAnimationComplete={() => tearing && setTorn({ pack: visit.opened, place, open: true })}
-                // Shaped like a foil pack: taller than a card, sealed in a band at either end, as the face-down choices are drawn.
-                className={`group flex flex-col rounded-md border-2 border-p03-edge bg-[#0b1f12] text-p03 shadow-[3px_3px_0_#1f3a26,6px_6px_0_#13261a] transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03 enabled:hover:-translate-y-1 enabled:hover:border-p03 disabled:opacity-60 motion-reduce:transition-none ${PACK_SIZE_CLASS}`}
+                className="group flex flex-col items-center gap-2 rounded-md p-2 text-p03 transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03 enabled:hover:-translate-y-1 disabled:opacity-60 motion-reduce:transition-none"
               >
-                <span
-                  aria-hidden
-                  className="h-6 shrink-0 border-b-2 border-dashed border-p03-edge group-enabled:group-hover:border-p03"
-                />
-                <span className="flex flex-1 flex-col items-center justify-center gap-3 px-3">
-                  <span aria-hidden className="text-6xl text-p03-dim group-enabled:group-hover:text-p03">
-                    ?
-                  </span>
-                  <span className="text-2xl leading-tight">{STARTER_DECKS[visit.deck]?.name}</span>
-                  <span className="text-lg text-p03-dim">{PACK_SIZE} cards</span>
-                  <span className="text-xl">Tear it open</span>
+                {/* The pack in two layers, cut along the crimp, so tearing it open pulls the top away from the rest. */}
+                <span className={`relative block ${PACK_SIZE_CLASS}`}>
+                  <m.img
+                    src={packArt(visit.deck)}
+                    alt=""
+                    draggable={false}
+                    {...(tearing ? tearBody(still) : {})}
+                    onAnimationComplete={() => tearing && setTorn({ pack: visit.opened, place, open: true })}
+                    className="pixel-art absolute inset-0 size-full [clip-path:inset(11%_0_0_0)]"
+                  />
+                  <m.img
+                    src={packArt(visit.deck)}
+                    alt=""
+                    draggable={false}
+                    {...(tearing ? tearTop(still) : {})}
+                    className="pixel-art absolute inset-0 size-full [clip-path:inset(0_0_89%_0)]"
+                  />
                 </span>
-                <span
-                  aria-hidden
-                  className="h-6 shrink-0 border-t-2 border-dashed border-p03-edge group-enabled:group-hover:border-p03"
-                />
-              </m.button>
+                <span className="text-xl leading-tight">{STARTER_DECKS[visit.deck]?.name}</span>
+                <span className="text-lg text-p03-dim group-enabled:group-hover:text-p03">Tear it open</span>
+              </button>
             </li>
           )
         })}
@@ -173,8 +175,8 @@ export function PackOpening({ run }: { run: RunReady }) {
   )
 }
 
-/** A sealed pack's size. */
-const PACK_SIZE_CLASS = 'h-64 w-40 sm:h-80 sm:w-48'
+/** A sealed pack's size: its art, 84 by 154, at one and a half times on a phone and twice beside it. */
+const PACK_SIZE_CLASS = 'h-[231px] w-[126px] sm:h-[308px] sm:w-[168px]'
 
 /** The death card, and a switch to bring it into the run or leave it out for more score. */
 function DeathOption({

@@ -272,7 +272,7 @@ export const MOCKUPS: Record<string, Entry> = {
   pack: {
     title: 'The starter packs, both sealed',
     group: 'reached',
-    revision: 5,
+    revision: 6,
     make: () => {
       const opened = applyRun(createRun({ seed: 1 }), { type: 'start', deck: 'move-fast' })
       return opened.ok ? { state: opened.state, path: [] } : null
@@ -281,7 +281,7 @@ export const MOCKUPS: Record<string, Entry> = {
   'pack-second': {
     title: 'The starter packs, one taken and one left',
     group: 'reached',
-    revision: 1,
+    revision: 2,
     make: () => {
       const opened = applyRun(createRun({ seed: 1 }), { type: 'start', deck: 'move-fast' })
       const took = opened.ok && applyRun(opened.state, { type: 'take', index: 0 })
