@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { m } from 'motion/react'
 import { warmPop } from '../../moves.ts'
-import { card, legalRunActions, type Unit } from 'shared'
+import { card, INTEGRITY, legalRunActions, REPAIR, type Unit } from 'shared'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,6 +12,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog.tsx'
+import { IntegrityBar } from '../../controls.tsx'
 import { SIDE_BUTTON } from '../../text/Panel.tsx'
 import { Rising } from '../../text/Board.tsx'
 import { asUnit, boostText } from '../nodes.ts'
@@ -22,7 +23,7 @@ import { ReadableCard } from './CardList.tsx'
 import { LeaveButton, ScreenBar } from './Screen.tsx'
 import { Sentences } from '../../text/Sentences.tsx'
 
-/** One card gets the campfire's boost; a second boost risks burning it, so that one asks first. */
+/** One card gets the campfire's boost, or the run's integrity is repaired instead; a second boost risks burning it. */
 export function Campfire({ run }: { run: RunReady }) {
   const [risking, setRisking] = useState<Unit | null>(null)
   const visit = run.state.visit
@@ -32,6 +33,8 @@ export function Campfire({ run }: { run: RunReady }) {
   const buff = (unit: Unit) => run.act({ type: 'buff', card: unit.uid })
   const deck = run.state.deck.map((entry) => asUnit(entry))
   const warmed = deck.find((unit) => unit.uid === visit.card)
+  const canRepair = legalRunActions(run.state).some((action) => action.type === 'repair')
+  const repairs = Math.min(REPAIR, INTEGRITY - run.state.integrity)
 
   return (
     <div data-center className="flex flex-col items-center gap-4 text-center">
@@ -41,7 +44,9 @@ export function Campfire({ run }: { run: RunReady }) {
           <Sentences
             text={
               visit.buffs === 0
-                ? `Warm a card for ${boost}.`
+                ? canRepair
+                  ? `Warm a card for ${boost}, or repair ${repairs} of your integrity.`
+                  : `Warm a card for ${boost}.`
                 : allowed.size
                   ? 'Warm it again for more? Something is creeping in at the edge of the light.'
                   : 'The fire has done all it will. Whatever was out there has gone quiet.'
@@ -50,6 +55,21 @@ export function Campfire({ run }: { run: RunReady }) {
         </p>
       </ScreenBar>
       <FireOnLogs />
+      {visit.buffs === 0 ? (
+        <div className="flex flex-wrap items-center justify-center gap-4">
+          <IntegrityBar left={run.state.integrity} max={INTEGRITY} className="text-xl" />
+          {canRepair ? (
+            <button
+              type="button"
+              data-action="repair"
+              onClick={() => run.act({ type: 'repair' })}
+              className={`${SIDE_BUTTON} px-4 text-lg`}
+            >
+              Repair +{repairs} integrity
+            </button>
+          ) : null}
+        </div>
+      ) : null}
       {warmed ? (
         <div className="w-24 sm:w-28">
           {/* Pops with what it gained each time it comes out of the fire. */}

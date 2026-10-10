@@ -3,7 +3,10 @@ import type { ItemId } from '../items.ts'
 import type { Action, DeckCard, GameEvent, GameState } from '../engine/types.ts'
 
 /** Bumped whenever a change would make an old run replay differently. */
-export const RUN_RULES_VERSION = 18
+export const RUN_RULES_VERSION = 19
+
+/** The integrity a run starts with, and the most it can hold. */
+export const INTEGRITY = 20
 
 /** The most actions one save may send; 200 of the largest kind fit the server's 16 KB body limit. */
 export const RUN_SAVE_LIMIT = 200
@@ -44,6 +47,7 @@ export type Visit =
   | { kind: 'card'; node: string; offer: string[] }
   /** The rare card offered after a boss. */
   | { kind: 'reward'; offer: string[] }
+  /** A campfire warms one card, with `boost`, or repairs the run's integrity instead. */
   | { kind: 'campfire'; node: string; boost: 'attack' | 'health'; card: number | null; buffs: number }
   | { kind: 'stones'; node: string }
   | { kind: 'event'; node: string; event: string }
@@ -51,6 +55,8 @@ export type Visit =
   | { kind: 'lint'; node: string }
   /** A run's first choice: which starter deck to take. */
   | { kind: 'start' }
+  /** The starter deck's pack, opened: the deck ids of the cards it held. */
+  | { kind: 'pack'; cards: number[] }
   /** Cards for bytes; several may be bought before leaving. */
   /** `uninstalled` once a card has been removed for bytes, which a visit allows once. */
   /** `tools` are for sale this visit, with their prices; `toolsSold` holds the places bought. */
@@ -86,6 +92,10 @@ export type RunState = {
   bytes: number
   /** Tools carried between battles, three at most. */
   items: ItemId[]
+  /** What's left of the run's integrity: each card P03 destroys costs 1, and the run is lost at 0. */
+  integrity: number
+  /** Added to a rare's chance at each card offered: it grows with every common and resets with a rare. */
+  pity: number
   /** The player's death card from a lost run: offered once, at the first card choice, unless left out for more score. */
   death: { card: string; skipped: boolean; offered: boolean } | null
   /** Another player's death card, which the Staging boss brings into its last phase; `by` is its maker. */
@@ -97,6 +107,8 @@ export type RunAction =
   | { type: 'play'; action: Action }
   | { type: 'take'; index: number }
   | { type: 'buff'; card: number }
+  /** At a campfire, repairs the run's integrity instead of warming a card. */
+  | { type: 'repair' }
   | { type: 'transfer'; from: number; to: number; sigil: SigilId }
   | { type: 'choose'; option: number }
   | { type: 'strip'; card: number; sigil: SigilId }
@@ -126,7 +138,9 @@ export type RunEvent =
   | { type: 'fused'; card: RunCard; into: RunCard }
   /** A code review: the cards drawn, the trial's total and the bar, and whether it passed. */
   | { type: 'trialled'; trial: Trial; cards: RunCard[]; total: number; bar: number; passed: boolean }
+  | { type: 'repaired'; amount: number; integrity: number }
   | { type: 'stageCleared'; stage: number }
-  | { type: 'runOver'; outcome: 'win' | 'loss' }
+  /** `integrity` marks a run lost because its integrity ran out. */
+  | { type: 'runOver'; outcome: 'win' | 'loss'; integrity?: boolean }
 
 export type RunResult = { ok: true; state: RunState; events: RunEvent[] } | { ok: false; reason: string }

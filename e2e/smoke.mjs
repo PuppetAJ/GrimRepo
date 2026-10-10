@@ -129,7 +129,7 @@ section('The compendium')
   const names = page.locator('main li h2')
   // Development and test builds append a worst-case card for checking layouts.
   const listed = (await names.allInnerTexts()).filter((name) => name !== 'destroyEverything(everyone)')
-  check('every card a player can hold is listed', listed.length === 36, String(listed.length))
+  check('every card a player can hold is listed', listed.length === 38, String(listed.length))
   await page.getByLabel('Sort').selectOption('attack')
   await page.getByRole('button', { name: 'Lowest first' }).click()
   check(

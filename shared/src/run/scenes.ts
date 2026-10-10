@@ -180,7 +180,7 @@ const list: Scene[] = [
     text: 'P03 will review three random cards from your deck. Pick what it judges them on. Pass, and it grudgingly hands over a rare.',
     options: [
       { label: 'Throughput: 6 or more attack between them', effects: [{ type: 'trial', trial: 'attack' }] },
-      { label: 'Uptime: 10 or more health between them', effects: [{ type: 'trial', trial: 'health' }] },
+      { label: 'Stability: 10 or more health between them', effects: [{ type: 'trial', trial: 'health' }] },
       { label: 'Coverage: 2 or more sigils between them', effects: [{ type: 'trial', trial: 'sigils' }] },
     ],
   },

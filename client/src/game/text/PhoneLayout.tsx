@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import { Link } from '@tanstack/react-router'
 import FaultyScreenShader from '../../components/p03/FaultyScreenShader.tsx'
-import { Forfeit, hasEnded, ScaleBar, SeatNote } from '../controls.tsx'
+import { Forfeit, hasEnded, IntegrityBar, ScaleBar, SeatNote } from '../controls.tsx'
 import { Balance } from './Balance.tsx'
 import { Board } from './Board.tsx'
 import { CancelButton, ExecuteButton, SaveStatus } from './Buttons.tsx'
@@ -26,10 +26,14 @@ import { dropIn } from '../moves.ts'
 import { Inspector, Magnifier } from './Reading.tsx'
 
 function Status() {
-  const { menu, setMenu, sideways } = useTable()
+  const { menu, setMenu, sideways, view } = useTable()
   return (
     <div className="flex items-center gap-2 text-lg">
       <TurnLabel />
+      {/* Just the count, since the line has little room. */}
+      {view.integrity ? (
+        <IntegrityBar left={view.integrity.left} max={view.integrity.max} compact className="gap-1" />
+      ) : null}
       {/* Sideways the line is short, so the save note gives way to the turn. */}
       {sideways ? <span className="ml-auto" /> : <SaveStatus className="ml-auto truncate text-sm text-p03-dim" />}
       {/* A full fingertip to hit, though it looks small; negative margins keep the line's height. */}

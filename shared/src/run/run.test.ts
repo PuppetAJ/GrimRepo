@@ -9,13 +9,16 @@ import {
   applyRun,
   createRun,
   legalRunActions,
+  CHOICE_POOLS,
+  PACK_SIZE,
   PICKS,
+  REPAIR,
   reachable,
   replayRun,
   STARTER_DECKS,
   UNINSTALL_PRICE,
 } from './run.ts'
-import type { NodeKind, RunAction, RunCard, RunState, Visit } from './types.ts'
+import { INTEGRITY, type NodeKind, type RunAction, type RunCard, type RunState, type Visit } from './types.ts'
 
 const step = (state: RunState, action: RunAction) => {
   const result = applyRun(state, action)
@@ -29,10 +32,11 @@ const refused = (state: RunState, action: RunAction) => {
   return result.reason
 }
 
-const STARTER = STARTER_DECKS['hello-world']?.cards as string[]
+const STARTER = STARTER_DECKS['hello-world']?.core as string[]
 
-/** A fresh run past its first choice, on the Hello, World deck. */
-const started = ({ seed }: { seed: number }) => step(createRun({ seed }), { type: 'start', deck: 'hello-world' })
+/** A fresh run past its first choice, on the Hello, World deck, with its pack opened and put away. */
+const started = ({ seed }: { seed: number }) =>
+  step(step(createRun({ seed }), { type: 'start', deck: 'hello-world' }), { type: 'leave' })
 
 /** A fresh run standing on a node of the given kind, whatever the map says. */
 function at(kind: NodeKind, visit: Visit, seed = 1): RunState {
@@ -50,11 +54,15 @@ describe('a new run', () => {
     assert.equal(fresh.visit?.kind, 'start')
     assert.deepEqual(reachable(fresh), [], 'the map waits for the deck')
     assert.equal(refused(fresh, { type: 'start', deck: 'nope' }), 'No such starter deck')
-    const state = started({ seed: 9 })
+    const opened = step(fresh, { type: 'start', deck: 'hello-world' })
+    assert.equal(opened.visit?.kind, 'pack')
+    assert.deepEqual(reachable(opened), [], 'the map waits for the pack to be put away')
+    const state = step(opened, { type: 'leave' })
     assert.deepEqual(
-      state.deck.map((entry) => entry.card),
+      state.deck.slice(0, STARTER.length).map((entry) => entry.card),
       STARTER,
     )
+    assert.equal(state.integrity, INTEGRITY)
     assert.equal(state.stage, 0)
     assert.deepEqual(
       reachable(state),
@@ -72,6 +80,37 @@ describe('a new run', () => {
   })
 })
 
+describe('a starter pack', () => {
+  const opened = (seed: number, deck: string) => {
+    const state = step(createRun({ seed }), { type: 'start', deck })
+    const ids = state.visit?.kind === 'pack' ? state.visit.cards : []
+    return ids.map((id) => state.deck.find((entry) => entry.id === id)?.card as string)
+  }
+
+  it("opens three cards from the deck's pool, at least one uncommon or better, the same for a seed", () => {
+    for (const [id, deck] of Object.entries(STARTER_DECKS))
+      for (let seed = 1; seed <= 40; seed++) {
+        const cards = opened(seed, id)
+        assert.equal(cards.length, PACK_SIZE)
+        assert.ok(
+          cards.every((found) => Object.values(deck.pack).flat().includes(found)),
+          cards.join(),
+        )
+        assert.ok(
+          cards.some((found) => !deck.pack.common.includes(found)),
+          cards.join(),
+        )
+        assert.deepEqual(opened(seed, id), cards)
+      }
+  })
+
+  it('holds a rare now and then', () => {
+    const rares = STARTER_DECKS['move-fast']?.pack.rare ?? []
+    const packs = Array.from({ length: 300 }, (_, seed) => opened(seed + 1, 'move-fast'))
+    assert.ok(packs.some((cards) => cards.some((found) => rares.includes(found))))
+  })
+})
+
 describe('a card choice', () => {
   it('adds one of three common cards to the deck', () => {
     const state = at('card', { kind: 'card', node: '0-0', offer: ['Bug', 'Cookie', 'HelloWorld'] })
@@ -81,18 +120,36 @@ describe('a card choice', () => {
     assert.equal(refused(state, { type: 'take', index: 3 }), 'No such card on offer')
   })
 
-  it('never offers a rare', () => {
+  const offered = (state: RunState) => {
+    const cardNode = reachable(state).find((id) => findNode(state.map, id)?.kind === 'card')
+    if (!cardNode) return null
+    const next = step(state, { type: 'go', node: cardNode })
+    return { state: next, offer: next.visit?.kind === 'card' ? next.visit.offer : [] }
+  }
+
+  it('offers no rare at first, while the pity offset holds the odds at 0, and never an A tier', () => {
     for (let seed = 0; seed < 100; seed++) {
-      let state = started({ seed })
-      const cardNode = reachable(state).find((id) => findNode(state.map, id)?.kind === 'card')
-      if (!cardNode) continue
-      state = step(state, { type: 'go', node: cardNode })
-      const offer = state.visit?.kind === 'card' ? state.visit.offer : []
-      assert.equal(offer.length, 3)
+      const found = offered(started({ seed }))
+      if (!found) continue
+      assert.equal(found.offer.length, 3)
       assert.ok(
-        offer.every((id) => !['A', 'B'].includes(card(id).tier)),
-        offer.join(', '),
+        found.offer.every((id) => [...CHOICE_POOLS.common, ...CHOICE_POOLS.uncommon].includes(id)),
+        found.offer.join(', '),
       )
+    }
+    assert.ok(
+      Object.values(CHOICE_POOLS)
+        .flat()
+        .every((id) => card(id).tier !== 'A'),
+    )
+  })
+
+  it('offers rares as the pity offset grows, and a rare resets it', () => {
+    for (let seed = 0; seed < 20; seed++) {
+      const found = offered({ ...started({ seed }), pity: 97 })
+      if (!found) continue
+      assert.ok(CHOICE_POOLS.rare.includes(found.offer.find((id) => card(id).tier === 'B') ?? ''), found.offer.join())
+      assert.ok(found.state.pity < 0, 'reset by the rare, then grown by any commons after it')
     }
   })
 })
@@ -124,6 +181,48 @@ describe('a campfire', () => {
       assert.equal(refused(twice, { type: 'buff', card: 1 }), 'The campfire has gone out')
     }
     assert.ok(burned > 30 && burned < 70, `burned ${burned} of 100`)
+  })
+
+  it('repairs integrity instead, up to full, and then goes out', () => {
+    const worn = { ...fire('attack'), integrity: 9 }
+    const repaired = step(worn, { type: 'repair' })
+    assert.equal(repaired.integrity, 9 + REPAIR)
+    assert.equal(repaired.visit, null)
+    assert.equal(step({ ...fire('attack'), integrity: INTEGRITY - 2 }, { type: 'repair' }).integrity, INTEGRITY)
+    assert.equal(refused(fire('attack'), { type: 'repair' }), 'Integrity is already full')
+    assert.ok(!legalRunActions(fire('attack')).some((action) => action.type === 'repair'))
+  })
+
+  it('repairs or warms, never both', () => {
+    const state = { ...fire('attack'), integrity: 9 }
+    assert.ok(legalRunActions(state).some((action) => action.type === 'repair'))
+    const warmed = step(state, { type: 'buff', card: 1 })
+    assert.equal(refused(warmed, { type: 'repair' }), 'The campfire is already warming a card')
+    assert.ok(!legalRunActions(warmed).some((action) => action.type === 'repair'))
+  })
+})
+
+describe('integrity', () => {
+  it('carries out of a battle, and ends the run when it runs out', () => {
+    let state = { ...started({ seed: 4 }), integrity: 1 }
+    const node = reachable(state).find((id) => findNode(state.map, id)?.kind === 'battle') ?? reachable(state)[0]
+    const found = findNode(state.map, node as string)
+    assert.ok(found)
+    found.kind = 'battle'
+    found.encounter = 'localhost-hello'
+    state = step(state, { type: 'go', node: found.id })
+    assert.ok(state.visit?.kind === 'battle')
+    assert.equal(state.visit.game.integrity?.left, 1)
+    // A Cron Job facing a Sandbox is destroyed on the bell.
+    const game = state.visit.game
+    game.drawn = true
+    game.player.board[0] = { uid: 900, card: 'CronJob', attack: 1, health: 2, maxHealth: 2, sigils: [] }
+    game.opponent.front[0] = { uid: 901, card: 'Sandbox', attack: 2, health: 5, maxHealth: 5, sigils: [] }
+    const result = applyRun(state, { type: 'play', action: { type: 'ringBell' } })
+    assert.ok(result.ok)
+    assert.equal(result.state.integrity, 0)
+    assert.equal(result.state.status, 'lost')
+    assert.ok(result.events.some((event) => event.type === 'runOver' && event.integrity))
   })
 })
 
@@ -351,7 +450,7 @@ describe("a shop's tools", () => {
   it('are two different tools at every shop', () => {
     for (let seed = 1; seed <= 40; seed++) {
       let state = createRun({ seed })
-      state = step(state, { type: 'start', deck: 'hello-world' })
+      state = step(step(state, { type: 'start', deck: 'hello-world' }), { type: 'leave' })
       const node = state.map.rows[0]?.[0]
       assert.ok(node)
       node.kind = 'shop'
@@ -444,7 +543,8 @@ describe('battles', () => {
   it('deal the run’s deck, and a won one waits for the player to leave', () => {
     const state = battleAt(started({ seed: 4 }), 'battle')
     assert.ok(state.visit?.kind === 'battle')
-    assert.equal(state.visit.game.player.library.length, STARTER.length)
+    assert.equal(state.visit.game.player.library.length, STARTER.length + PACK_SIZE)
+    assert.deepEqual(state.visit.game.integrity, { left: INTEGRITY, max: INTEGRITY })
     const won = win(state)
     assert.equal(won.record.battles, 1)
     assert.equal(won.record.overkill, 13 + 23 - 24)
@@ -535,8 +635,8 @@ describe('two hundred random runs', () => {
 })
 
 describe('the run’s balance', () => {
-  // Measured at about 58% past the first boss and 3% cleared, over 300 greedy runs, with Out of Memory.
-  it('lets a simple bot clear stage one more often than not, and rarely the whole run', () => {
+  // Measured at about 48% past the first boss and 6% cleared, over 600 greedy runs, with integrity and the comebacks.
+  it('lets a simple bot clear stage one about half the time, and rarely the whole run', () => {
     let firstBoss = 0
     let cleared = 0
     for (let seed = 1; seed <= 200; seed++) {
@@ -544,7 +644,7 @@ describe('the run’s balance', () => {
       if (state.record.bosses >= 1) firstBoss += 1
       if (state.status === 'won') cleared += 1
     }
-    assert.ok(firstBoss > 100, `${firstBoss} of 200 beat the first boss`)
-    assert.ok(cleared < 60, `${cleared} of 200 cleared the run`)
+    assert.ok(firstBoss > 80, `${firstBoss} of 200 beat the first boss`)
+    assert.ok(cleared < 30, `${cleared} of 200 cleared the run`)
   })
 })

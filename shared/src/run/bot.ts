@@ -4,7 +4,7 @@ import { nextBotAction, type Strategy } from '../engine/bot.ts'
 import { findNode } from './map.ts'
 import { COMMONS, legalRunActions, PICKS, STARTER_DECKS, TRIALS } from './run.ts'
 import { scene, type Effect } from './scenes.ts'
-import type { RunAction, RunCard, RunState, Trial } from './types.ts'
+import { INTEGRITY, type RunAction, type RunCard, type RunState, type Trial } from './types.ts'
 
 const value = (entry: { attack: number; health: number }) => entry.attack * 2 + entry.health
 const cardValue = (id: string) => value(card(id)) / (card(id).cost + 1)
@@ -134,9 +134,13 @@ export function nextRunAction(state: RunState, strategy: Strategy = 'greedy', de
       return { type: 'take', index: scores.indexOf(Math.max(...scores)) }
     }
     case 'campfire': {
+      // Repairs when well worn, else warms its strongest card once.
+      if (visit.buffs === 0 && state.integrity <= INTEGRITY / 2) return { type: 'repair' }
       const target = best(state.deck)
       return visit.buffs === 0 && target ? { type: 'buff', card: target.id } : { type: 'leave' }
     }
+    case 'pack':
+      return { type: 'leave' }
     case 'event': {
       // Picks the choice worth most, the first on a tie.
       const scores = scene(visit.event).options.map((option) =>

@@ -21,6 +21,7 @@ import {
   Forfeit,
   has,
   hasEnded,
+  IntegrityBar,
   overText,
   owed,
   phaseText,
@@ -103,6 +104,9 @@ export function Hud({
       {/* Stops above the prompt so the reader never runs over it. */}
       <div className="pointer-events-none absolute top-0 bottom-24 left-0 z-10 flex flex-col items-start p-3 font-terminal sm:p-4">
         <ScaleBar scale={view.scale} className="text-xl sm:text-2xl" />
+        {view.integrity ? (
+          <IntegrityBar left={view.integrity.left} max={view.integrity.max} className="text-lg sm:text-xl" />
+        ) : null}
         <span className="text-lg text-p03-dim sm:text-xl">
           {/* Just where the battle stands; the deck and a reshuffle show on the table itself. */}
           Turn {view.turn}

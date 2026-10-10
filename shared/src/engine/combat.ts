@@ -89,6 +89,30 @@ export function reinforce(row: Slot[], lane: number, events: GameEvent[]): void 
   events.push({ type: 'buffed', uid: unit.uid, attack: unit.attack, health: unit.health, sigils: [...unit.sigils] })
 }
 
+/** How much integrity one Uptime card repairs a battle. */
+export const UPTIME_LIMIT = 3
+
+/** A run's card destroyed by P03 costs 1 integrity; a Boilerplate costs nothing. */
+function lost(state: GameState, unit: Unit, events: GameEvent[]): void {
+  const integrity = state.integrity
+  if (!integrity || unit.card === BOILERPLATE || integrity.left <= 0) return
+  integrity.left -= 1
+  events.push({ type: 'integrity', uid: unit.uid, change: -1, left: integrity.left })
+}
+
+/** An Uptime card that blocks an attack repairs 1 integrity, up to its limit a battle. */
+function uptime(state: GameState, unit: Unit, events: GameEvent[]): void {
+  const integrity = state.integrity
+  if (!integrity || !unit.sigils.includes('uptime') || (unit.repaired ?? 0) >= UPTIME_LIMIT) return
+  if (integrity.left >= integrity.max) return
+  unit.repaired = (unit.repaired ?? 0) + 1
+  integrity.left += 1
+  events.push({ type: 'integrity', uid: unit.uid, change: 1, left: integrity.left })
+}
+
+/** Whether the run's integrity has run out, which loses the battle and the run. */
+export const broken = (state: GameState): boolean => state.integrity !== undefined && state.integrity.left <= 0
+
 /** Deals damage to a card: a Rollback card shrugs off the first, and Fatal Error makes any damage deadly. */
 function damage(unit: Unit, amount: number, fatal: boolean, events: GameEvent[]): number {
   if (unit.sigils.includes('rollback') && !unit.rolledBack) {
@@ -159,6 +183,7 @@ export function attack(state: GameState, side: Side, events: GameEvent[]): void 
         }
 
         const left = damage(defender, power, attacker.sigils.includes('fatal_error'), events)
+        if (side === 'opponent') uptime(state, defender, events)
         if (defender.sigils.includes('rate_limiter')) strikeBack(state, side, attacker, events)
 
         if (left <= 0) {
@@ -170,6 +195,7 @@ export function attack(state: GameState, side: Side, events: GameEvent[]): void 
             lane: aimed,
             row: 'front',
           })
+          if (side === 'opponent') lost(state, defender, events)
           perish(state, side === 'player' ? 'opponent' : 'player', defender, aimed, events)
           // Scope Creep grows with every card it takes down.
           if (attacker.sigils.includes('scope_creep') && attackers[lane]?.uid === attacker.uid) {
@@ -221,6 +247,7 @@ function strikeBack(state: GameState, side: Side, attacker: Unit, events: GameEv
   const row = side === 'player' ? state.player.board : state.opponent.front
   const lane = remove(row, attacker.uid)
   events.push({ type: 'killed', uid: attacker.uid, side, lane, row: 'front' })
+  if (side === 'player') lost(state, attacker, events)
   perish(state, side, attacker, lane, events)
 }
 

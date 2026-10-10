@@ -1,5 +1,5 @@
 import FaultyScreenShader from '../../components/p03/FaultyScreenShader.tsx'
-import { SeatNote } from '../controls.tsx'
+import { IntegrityBar, SeatNote } from '../controls.tsx'
 import { Balance } from './Balance.tsx'
 import { Board } from './Board.tsx'
 import { CancelButton, Controls, ExecuteButton, SaveStatus } from './Buttons.tsx'
@@ -31,8 +31,11 @@ export function WideLayout() {
             <TurnLabel stack />
             <SaveStatus className="text-base text-p03-dim" />
           </Panel>
-          <Panel>
+          <Panel className="flex flex-col gap-2">
             <Balance scale={view.scale} />
+            {view.integrity ? (
+              <IntegrityBar left={view.integrity.left} max={view.integrity.max} fluid className="text-xl" />
+            ) : null}
           </Panel>
           <ExecuteButton />
           <Items className="justify-center" />

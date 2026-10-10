@@ -12,12 +12,14 @@ export function logLines(log: string[], count = 8): string[] {
   return ['// P03 CONSOLE', ...log.slice(-count).map((line) => line.replace(/^P03> /, '> '))]
 }
 
-export function statusLines(view: Pick<View, 'scale' | 'turn' | 'deck'>): string[] {
+export function statusLines(view: Pick<View, 'scale' | 'turn' | 'deck'> & Partial<Pick<View, 'integrity'>>): string[] {
   return [
     '// STATUS',
     `SCALE ${view.scale === 0 ? 'LEVEL' : `${view.scale > 0 ? '+' : ''}${view.scale} ${view.scale > 0 ? 'YOU' : 'P03'}`}`,
     scaleBar(view.scale),
     `TIP AT ${TIP}`,
+    // Only in a run, which has integrity.
+    ...(view.integrity ? [`INTEGRITY ${view.integrity.left}/${view.integrity.max}`] : []),
     `TURN ${view.turn}`,
     `DECK ${view.deck}`,
   ]

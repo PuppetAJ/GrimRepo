@@ -105,6 +105,11 @@ if (runs('run')) {
     ['rival-haunt', 'battle'],
     ['card-types', 'battle'],
     ['type-cards', 'card'],
+    ['pack', 'pack'],
+    ['campfire-repair', 'campfire'],
+    ['repaired', 'campfire'],
+    ['low-integrity', 'battle'],
+    ['new-cards', 'card'],
   ]
   for (const [layout, width, height] of [
     ['wide', 1440, 900],
@@ -141,6 +146,7 @@ if (runs('tables')) {
     ['worst-event', 'event'],
     ['worst-summary', 'summary'],
     ['death-build', 'summary'],
+    ['pack', 'pack'],
   ])
     await audit(`the run's ${name} on the projector`, `/run/mockups/${name}?table=3d`, projected(view))
   await page.setViewportSize({ width: 1280, height: 800 })

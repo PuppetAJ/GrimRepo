@@ -1,7 +1,7 @@
 import { useGLTF } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useLayoutEffect, useMemo, useRef, type RefObject } from 'react'
-import { LANES, type RunState } from 'shared'
+import { INTEGRITY, LANES, type RunState } from 'shared'
 import * as THREE from 'three'
 import { STILL } from '../../table/factory/constants.ts'
 import { CAMERA, CENTER_X, FOV, TABLE_Y, type CameraView, type Vec3 } from '../../table/layout.ts'
@@ -25,6 +25,7 @@ function restView(state: RunState): View {
     back: empty,
     summon: null,
     phase: 0,
+    integrity: { left: state.integrity, max: INTEGRITY },
   }
 }
 

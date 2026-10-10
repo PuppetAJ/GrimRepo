@@ -1,5 +1,11 @@
-import { ITEM_SLOTS, ITEMS, type ItemId } from 'shared'
+import { INTEGRITY, ITEM_SLOTS, ITEMS, type ItemId } from 'shared'
 import { Sigil } from '../../CardReader.tsx'
+import { IntegrityBar } from '../../controls.tsx'
+
+/** The run's integrity, at the top of the inventory. */
+export function RunIntegrity({ left }: { left: number }) {
+  return <IntegrityBar left={left} max={INTEGRITY} fluid />
+}
 
 /** The tools carried, one place for each slot, empty ones dashed; each names itself and what it does on hover. */
 export function HeldTools({ items, label = 'Your tools' }: { items: ItemId[]; label?: string }) {

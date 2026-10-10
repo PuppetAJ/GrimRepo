@@ -48,7 +48,8 @@ export {
   type Slot,
   type Unit,
 } from './engine/types.ts'
-export { attackIn, kin } from './engine/combat.ts'
+export { attackIn, kin, UPTIME_LIMIT } from './engine/combat.ts'
+export { DESPERATE_AT, EASE_AT } from './engine/opponent.ts'
 export { FOUND_ITEMS, ITEM_SLOTS, ITEMS, type ItemId, type ItemTarget } from './items.ts'
 export { canOwe, costOf, deckCard, indebted, worthOf } from './engine/units.ts'
 export { Rng } from './rng.ts'
@@ -78,7 +79,10 @@ export {
   legalRunActions,
   reachable,
   replayRun,
+  PACK_SIZE,
   PICKS,
+  type Rarity,
+  REPAIR,
   type RunDealt,
   STARTER_DECKS,
   TRIALS,
@@ -87,6 +91,7 @@ export {
 } from './run/run.ts'
 export { SCENES, scene, type Effect, type Scene } from './run/scenes.ts'
 export {
+  INTEGRITY,
   RUN_RULES_VERSION,
   RUN_SAVE_LIMIT,
   type MapNode,

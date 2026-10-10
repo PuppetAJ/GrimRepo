@@ -15,6 +15,8 @@ export type View = {
   summon: { uid: number; marked: number[] } | null
   /** A boss's phase, counted from 0. */
   phase: number
+  /** A run's integrity; null in a quick battle. */
+  integrity: { left: number; max: number } | null
 }
 
 export function project(state: GameState): View {
@@ -30,6 +32,7 @@ export function project(state: GameState): View {
     back: state.opponent.back,
     summon: state.summon,
     phase: state.opponent.phase,
+    integrity: state.integrity ?? null,
   }
 }
 
@@ -122,6 +125,8 @@ export function step(view: View, event: GameEvent): View {
     case 'hit':
     case 'indebted':
       return { ...view, scale: event.scale }
+    case 'integrity':
+      return view.integrity ? { ...view, integrity: { ...view.integrity, left: event.left } } : view
     case 'advanced': {
       const unit = view.back[event.lane] ?? null
       return { ...view, front: setAt(view.front, event.lane, unit), back: setAt(view.back, event.lane, null) }

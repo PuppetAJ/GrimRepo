@@ -144,6 +144,7 @@ A clean-up runs every night at 04:00 UTC as its own Railway service. It clears t
 - **Five lanes.** P03's board in Inscryption's third act is five lanes wide. Grim Repo keeps four for now: every encounter and boss is tuned to four, and five cards across is tight on a phone. The rules engine counts lanes in one place, so a fifth is mostly a matter of the 3D board, the camera views and a rebalance.
 - **Conduits.** Act 3's conduit cards power the cards between them. A fifth lane would leave room for three cards between two conduits, where four lanes leaves two, so conduits would come with it.
 - **A challenge ladder.** Optional rules that make a run harder for a higher score, unlocked one level at a time, as in Kaycee's Mod. Designed, but set aside until enough players come back for more runs.
+- **Scarred cards.** Today a card P03 destroys costs the run 1 integrity and comes back whole for the next battle. A scarred card would come back with 1 less health instead, until a campfire repairs it, so a run would be about keeping its own cards alive. It would change the balance of every encounter, so it waits until integrity has been played for a while.
 
 ## Credits
 

@@ -124,7 +124,7 @@ describe('building a death card', () => {
     const def = card(built.id)
     assert.deepEqual(
       [def.name, def.cost, def.attack, def.health, def.art, def.sigils],
-      ['Grim Ping', 1, 4, 2, 'NullPointer', ['broadcast']],
+      ['Grim Ping', 1, 4, 2, 'NullPointer', ['uptime']],
     )
     assert.equal(deathSigilHand(state, 4, 3).length, 3)
     assert.deepEqual(deathSigilHand(lost(state.rng), 4, 3), deathSigilHand(state, 4, 3), 'the same hand every replay')
@@ -192,11 +192,14 @@ describe('leaving a death card out', () => {
 
 describe('a run with a death card', () => {
   const start = (skipDeath?: boolean) =>
-    step(createRun({ seed: 5, death: DEATH }), {
-      type: 'start',
-      deck: 'hello-world',
-      ...(skipDeath ? { skipDeath } : {}),
-    })
+    step(
+      step(createRun({ seed: 5, death: DEATH }), {
+        type: 'start',
+        deck: 'hello-world',
+        ...(skipDeath ? { skipDeath } : {}),
+      }),
+      { type: 'leave' },
+    )
 
   it('can start with or without it', () => {
     const actions = legalRunActions(createRun({ seed: 5, death: DEATH }))
