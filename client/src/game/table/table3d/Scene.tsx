@@ -201,8 +201,8 @@ export function Scene({
                 // On touch every card is tappable, to read it; with a mouse, only one that can act.
                 selected || selectable || can({ type: 'draw' }) || COARSE
                   ? (_event, touch) => {
-                      // On touch, as at the text table, a tap plays a card; one that can't be played is read instead.
-                      if (touch && !selected && !selectable && !can({ type: 'draw' })) return reader.lift(unit)
+                      // On touch a tap only plays; reading is the magnifier's, by holding, so no panel covers the table.
+                      if (touch && !selected && !selectable && !can({ type: 'draw' })) return
                       reader.lift(null)
                       if (selected) act({ type: 'cancel' })
                       else if (selectable) act({ type: 'select', uid: unit.uid })

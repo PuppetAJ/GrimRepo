@@ -118,6 +118,26 @@ export const flipIn = (delay = 0): Move => ({
   transition: { delay, duration: 0.3, ease: 'easeOut' },
 })
 
+/** A starter pack's crimped top torn off: a tug, then it flies up and away; with reduced motion it only fades. */
+export const tearTop = (still: boolean): Move =>
+  still
+    ? { initial: { opacity: 1 }, animate: { opacity: 0 }, transition: { duration: 0.2 } }
+    : {
+        initial: { x: 0, y: 0, rotate: 0, opacity: 1 },
+        animate: { x: [0, -2, 24], y: [0, 3, -70], rotate: [0, -3, 18], opacity: [1, 1, 0] },
+        transition: { duration: 0.55, ease: 'easeOut', times: [0, 0.3, 1] },
+      }
+
+/** The rest of a torn pack: it shivers with the tug, then drops away; with reduced motion it only fades. */
+export const tearBody = (still: boolean): Move =>
+  still
+    ? { initial: { opacity: 1 }, animate: { opacity: 0 }, transition: { duration: 0.2, delay: 0.1 } }
+    : {
+        initial: { x: 0, y: 0, opacity: 1 },
+        animate: { x: [0, 2, -2, 0, 0], y: [0, 0, 0, 0, 60], opacity: [1, 1, 1, 1, 0] },
+        transition: { duration: 0.8, ease: 'easeIn', times: [0, 0.1, 0.2, 0.4, 1] },
+      }
+
 /** An uninstalled card shrinking out of its slot. */
 export const shrinkAway: Move = {
   initial: { scale: 1, opacity: 1 },

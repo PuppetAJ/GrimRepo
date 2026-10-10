@@ -20,7 +20,9 @@ export function BattleOver({ run, onSummary }: { run: RunReady; onSummary: () =>
         <Sentences
           text={
             !won
-              ? `You lose on turn ${visit.game.turn}. The run ends here.`
+              ? visit.game.integrity?.left === 0
+                ? `Your integrity ran out on turn ${visit.game.turn}. The run ends here.`
+                : `You lose on turn ${visit.game.turn}. The run ends here.`
               : state.status === 'won'
                 ? `${STAGES[state.stage]} is down. You cleared the run.`
                 : boss

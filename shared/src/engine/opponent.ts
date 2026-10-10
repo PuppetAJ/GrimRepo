@@ -1,5 +1,5 @@
 import { card, OPPONENT_POOL, type CardDef } from '../cards.ts'
-import { encounter } from '../encounters.ts'
+import { DESPERATE_CARDS, encounter } from '../encounters.ts'
 import type { Rng } from '../rng.ts'
 import { makeUnit } from './units.ts'
 import { LANES, type GameEvent, type GameState, type Slot } from './types.ts'
@@ -80,6 +80,11 @@ export function queue(state: GameState, rng: Rng, count: number, turn: number, e
   }
 }
 
+/** How far ahead P03 is when it eases off in a battle that isn't a boss's. */
+export const EASE_AT = 4
+/** How far behind P03 is when it makes its desperate play. */
+export const DESPERATE_AT = 16
+
 /** The planned lane, or the free one nearest it. */
 function nearestFree(state: GameState, lane: number): number | undefined {
   return [...Array(LANES).keys()]
@@ -89,7 +94,20 @@ function nearestFree(state: GameState, lane: number): number | undefined {
 
 /** Queues the encounter's next planned turn, and P03's usual picks once the plan runs out. */
 export function queuePlan(state: GameState, rng: Rng, events: GameEvent[]): void {
-  const plan = encounter(state.opponent.encounter as string).phases[state.opponent.phase] ?? []
+  const found = encounter(state.opponent.encounter as string)
+  // Well ahead in a battle that isn't a boss's, P03 eases off: its plan waits.
+  if (!found.boss && state.scale <= -EASE_AT) return
+  // Far behind, P03 makes one desperate play a battle: a strong card for the stage, in a free lane.
+  if (!state.opponent.desperate && state.scale >= DESPERATE_AT) {
+    const lane = [...Array(LANES).keys()].find((candidate) => !state.opponent.back[candidate])
+    if (lane !== undefined) {
+      state.opponent.desperate = true
+      const unit = makeUnit(state, rng.pick(DESPERATE_CARDS[found.stage] ?? []))
+      state.opponent.back[lane] = unit
+      events.push({ type: 'queued', lane, unit, desperate: true })
+    }
+  }
+  const plan = found.phases[state.opponent.phase] ?? []
   const turn = plan[state.opponent.step]
   state.opponent.step += 1
   if (!turn) {

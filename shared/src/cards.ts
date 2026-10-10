@@ -24,6 +24,7 @@ export type SigilId =
   | 'failover'
   | 'scale_out'
   | 'redundancy'
+  | 'uptime'
 
 /** What a card is, for the sigils that count cards of their own type. */
 export type CardType = 'bot' | 'exploit' | 'bug' | 'legacy' | 'dev'
@@ -75,7 +76,7 @@ export const SIGILS: Record<SigilId, { name: string; text: string }> = {
   popup: { name: 'Pop-up', text: 'The card opposite it has 1 more attack.' },
   refactor: {
     name: 'Refactor',
-    text: 'When sacrificed, gives its attack, health and Refactor to the card it pays for, and is gone for the battle.',
+    text: 'When sacrificed, gives its attack and health to the card it pays for, and is gone for the battle.',
   },
   hot_reload: { name: 'Hot Reload', text: 'When it dies, a fresh copy comes back to its owner, once.' },
   beta: { name: 'Beta', text: 'After a round on the table, it ships as a stronger card.' },
@@ -86,12 +87,16 @@ export const SIGILS: Record<SigilId, { name: string; text: string }> = {
     name: 'Redundancy',
     text: 'When it lands on the table, gains 1 health for each other card of its type on its side.',
   },
+  uptime: {
+    name: 'Uptime',
+    text: "Each time it blocks an attack, repairs 1 of the run's integrity, up to 3 a battle.",
+  },
 }
 
 // Order matters: reordering changes what every seed deals.
 const table: [string, string, Tier, number, number, number, SigilId[]?][] = [
-  ['OffCenterDiv', 'OffCenterDiv', 'E', 0, 6, 0, ['refactor']],
-  ['HelloWorld', 'Hello World', 'E', 1, 1, 0, ['broadcast']],
+  ['OffCenterDiv', 'OffCenterDiv', 'E', 0, 4, 0, ['refactor']],
+  ['HelloWorld', 'Hello World', 'E', 2, 2, 0, ['uptime']],
   ['CronJob', 'Cron Job', 'E', 1, 2, 0, ['try_catch']],
   ['InfiniteLoop', 'Infinite Loop', 'D', 1, 2, 0, ['retry']],
   ['SpamBot', 'Spam Bot', 'D', 2, 1, 0, ['packet_loss']],
@@ -134,6 +139,9 @@ const table: [string, string, Tier, number, number, number, SigilId[]?][] = [
   ['Monolith', 'Monolith', 'C', 2, 2, 1, ['redundancy']],
   ['ExploitChain', 'Exploit Chain', 'C', 2, 1, 1, ['scale_out']],
   ['PairProgramming', 'Pair Programming', 'C', 2, 3, 1, ['redundancy']],
+  // Broadcast's home since Hello World took Uptime, and Legacy's defender.
+  ['ReplyAll', 'Reply All', 'C', 1, 2, 1, ['broadcast']],
+  ['COBOL', 'COBOL', 'C', 2, 5, 1, ['uptime']],
 ]
 
 const TYPE_OF: Record<string, CardType> = {
@@ -172,6 +180,8 @@ const TYPE_OF: Record<string, CardType> = {
   Firewall: 'dev',
   Sandbox: 'dev',
   PairProgramming: 'dev',
+  ReplyAll: 'dev',
+  COBOL: 'legacy',
 }
 
 export const CARDS: Record<string, CardDef> = Object.fromEntries(
@@ -200,8 +210,10 @@ export const PLAYER_DECK: string[] = Object.keys(CARDS).filter(
     !EVENT_ONLY.includes(id),
 )
 
-/** No board wipe, or P03 could clear the player's side on a whim. */
-export const OPPONENT_POOL: string[] = PLAYER_DECK.filter((id) => !CARDS[id]?.sigils.includes('segfault'))
+/** No board wipe, or P03 could clear the player's side on a whim; no Uptime, which repairs only the player's integrity. */
+export const OPPONENT_POOL: string[] = PLAYER_DECK.filter(
+  (id) => !CARDS[id]?.sigils.includes('segfault') && !CARDS[id]?.sigils.includes('uptime'),
+)
 
 /** A death card's id carries the whole card, so battles, offers and replays need no catalog entry for it. */
 export const DEATH_PREFIX = 'death:'

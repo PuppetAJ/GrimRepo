@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { card, EVENT_ONLY, PLAYER_DECK } from '../cards.ts'
+import { deckCard } from '../engine/units.ts'
 import { Rng } from '../rng.ts'
 import { scoreRun } from '../scoring.ts'
 import { playRun } from './bot.ts'
@@ -9,13 +10,17 @@ import {
   applyRun,
   createRun,
   legalRunActions,
+  CHOICE_POOLS,
+  PACK_SIZE,
+  PACKS,
   PICKS,
+  REPAIR,
   reachable,
   replayRun,
   STARTER_DECKS,
   UNINSTALL_PRICE,
 } from './run.ts'
-import type { NodeKind, RunAction, RunCard, RunState, Visit } from './types.ts'
+import { INTEGRITY, type NodeKind, type RunAction, type RunCard, type RunState, type Visit } from './types.ts'
 
 const step = (state: RunState, action: RunAction) => {
   const result = applyRun(state, action)
@@ -29,10 +34,15 @@ const refused = (state: RunState, action: RunAction) => {
   return result.reason
 }
 
-const STARTER = STARTER_DECKS['hello-world']?.cards as string[]
+const STARTER = STARTER_DECKS['hello-world']?.core as string[]
 
-/** A fresh run past its first choice, on the Hello, World deck. */
-const started = ({ seed }: { seed: number }) => step(createRun({ seed }), { type: 'start', deck: 'hello-world' })
+/** Takes the first card of each starter pack. */
+const unpacked = (state: RunState): RunState =>
+  state.visit?.kind === 'pack' ? unpacked(step(state, { type: 'take', index: 0 })) : state
+
+/** A fresh run past its first choice, on the Hello, World deck, with a card taken from each pack. */
+const started = ({ seed }: { seed: number }) =>
+  unpacked(step(createRun({ seed }), { type: 'start', deck: 'hello-world' }))
 
 /** A fresh run standing on a node of the given kind, whatever the map says. */
 function at(kind: NodeKind, visit: Visit, seed = 1): RunState {
@@ -50,11 +60,16 @@ describe('a new run', () => {
     assert.equal(fresh.visit?.kind, 'start')
     assert.deepEqual(reachable(fresh), [], 'the map waits for the deck')
     assert.equal(refused(fresh, { type: 'start', deck: 'nope' }), 'No such starter deck')
-    const state = started({ seed: 9 })
+    const opened = step(fresh, { type: 'start', deck: 'hello-world' })
+    assert.equal(opened.visit?.kind, 'pack')
+    assert.deepEqual(reachable(opened), [], 'the map waits for the packs')
+    const state = unpacked(opened)
     assert.deepEqual(
-      state.deck.map((entry) => entry.card),
+      state.deck.slice(0, STARTER.length).map((entry) => entry.card),
       STARTER,
     )
+    assert.equal(state.deck.length, STARTER.length + PACKS)
+    assert.equal(state.integrity, INTEGRITY)
     assert.equal(state.stage, 0)
     assert.deepEqual(
       reachable(state),
@@ -72,6 +87,50 @@ describe('a new run', () => {
   })
 })
 
+describe('the starter packs', () => {
+  /** Each pack's offer, taking the card at `index` from each. */
+  const packs = (seed: number, deck: string, index = 0) => {
+    let state = step(createRun({ seed }), { type: 'start', deck })
+    const offers: string[][] = []
+    while (state.visit?.kind === 'pack') {
+      offers.push(state.visit.offer)
+      state = step(state, { type: 'take', index })
+    }
+    return { offers, state }
+  }
+
+  it("open one after another, three cards each from the deck's pool", () => {
+    for (const [id, deck] of Object.entries(STARTER_DECKS))
+      for (let seed = 1; seed <= 40; seed++) {
+        const { offers } = packs(seed, id)
+        assert.equal(offers.length, PACKS)
+        for (const offer of offers) {
+          assert.equal(offer.length, PACK_SIZE)
+          assert.ok(
+            offer.every((found) => Object.values(deck.pack).flat().includes(found)),
+            offer.join(),
+          )
+        }
+        assert.deepEqual(packs(seed, id).offers, offers, 'the same for a seed')
+      }
+  })
+
+  it('add only the card taken from each', () => {
+    const { offers, state } = packs(3, 'move-fast', 2)
+    assert.deepEqual(
+      state.deck.slice(-PACKS).map((entry) => entry.card),
+      offers.map((offer) => offer[2]),
+    )
+    assert.equal(state.visit, null)
+  })
+
+  it('hold a rare now and then', () => {
+    const rares = STARTER_DECKS['move-fast']?.pack.rare ?? []
+    const offers = Array.from({ length: 200 }, (_, seed) => packs(seed + 1, 'move-fast').offers).flat(2)
+    assert.ok(offers.some((found) => rares.includes(found)))
+  })
+})
+
 describe('a card choice', () => {
   it('adds one of three common cards to the deck', () => {
     const state = at('card', { kind: 'card', node: '0-0', offer: ['Bug', 'Cookie', 'HelloWorld'] })
@@ -81,18 +140,36 @@ describe('a card choice', () => {
     assert.equal(refused(state, { type: 'take', index: 3 }), 'No such card on offer')
   })
 
-  it('never offers a rare', () => {
+  const offered = (state: RunState) => {
+    const cardNode = reachable(state).find((id) => findNode(state.map, id)?.kind === 'card')
+    if (!cardNode) return null
+    const next = step(state, { type: 'go', node: cardNode })
+    return { state: next, offer: next.visit?.kind === 'card' ? next.visit.offer : [] }
+  }
+
+  it('offers no rare at first, while the pity offset holds the odds at 0, and never an A tier', () => {
     for (let seed = 0; seed < 100; seed++) {
-      let state = started({ seed })
-      const cardNode = reachable(state).find((id) => findNode(state.map, id)?.kind === 'card')
-      if (!cardNode) continue
-      state = step(state, { type: 'go', node: cardNode })
-      const offer = state.visit?.kind === 'card' ? state.visit.offer : []
-      assert.equal(offer.length, 3)
+      const found = offered(started({ seed }))
+      if (!found) continue
+      assert.equal(found.offer.length, 3)
       assert.ok(
-        offer.every((id) => !['A', 'B'].includes(card(id).tier)),
-        offer.join(', '),
+        found.offer.every((id) => [...CHOICE_POOLS.common, ...CHOICE_POOLS.uncommon].includes(id)),
+        found.offer.join(', '),
       )
+    }
+    assert.ok(
+      Object.values(CHOICE_POOLS)
+        .flat()
+        .every((id) => card(id).tier !== 'A'),
+    )
+  })
+
+  it('offers rares as the pity offset grows, and a rare resets it', () => {
+    for (let seed = 0; seed < 20; seed++) {
+      const found = offered({ ...started({ seed }), pity: 97 })
+      if (!found) continue
+      assert.ok(CHOICE_POOLS.rare.includes(found.offer.find((id) => card(id).tier === 'B') ?? ''), found.offer.join())
+      assert.ok(found.state.pity < 0, 'reset by the rare, then grown by any commons after it')
     }
   })
 })
@@ -124,6 +201,48 @@ describe('a campfire', () => {
       assert.equal(refused(twice, { type: 'buff', card: 1 }), 'The campfire has gone out')
     }
     assert.ok(burned > 30 && burned < 70, `burned ${burned} of 100`)
+  })
+
+  it('repairs integrity instead, up to full, and then goes out', () => {
+    const worn = { ...fire('attack'), integrity: 9 }
+    const repaired = step(worn, { type: 'repair' })
+    assert.equal(repaired.integrity, 9 + REPAIR)
+    assert.equal(repaired.visit, null)
+    assert.equal(step({ ...fire('attack'), integrity: INTEGRITY - 2 }, { type: 'repair' }).integrity, INTEGRITY)
+    assert.equal(refused(fire('attack'), { type: 'repair' }), 'Integrity is already full')
+    assert.ok(!legalRunActions(fire('attack')).some((action) => action.type === 'repair'))
+  })
+
+  it('repairs or warms, never both', () => {
+    const state = { ...fire('attack'), integrity: 9 }
+    assert.ok(legalRunActions(state).some((action) => action.type === 'repair'))
+    const warmed = step(state, { type: 'buff', card: 1 })
+    assert.equal(refused(warmed, { type: 'repair' }), 'The campfire is already warming a card')
+    assert.ok(!legalRunActions(warmed).some((action) => action.type === 'repair'))
+  })
+})
+
+describe('integrity', () => {
+  it('carries out of a battle, and ends the run when it runs out', () => {
+    let state = { ...started({ seed: 4 }), integrity: 1 }
+    const node = reachable(state).find((id) => findNode(state.map, id)?.kind === 'battle') ?? reachable(state)[0]
+    const found = findNode(state.map, node as string)
+    assert.ok(found)
+    found.kind = 'battle'
+    found.encounter = 'localhost-hello'
+    state = step(state, { type: 'go', node: found.id })
+    assert.ok(state.visit?.kind === 'battle')
+    assert.equal(state.visit.game.integrity?.left, 1)
+    // A Cron Job facing a Sandbox is destroyed on the bell.
+    const game = state.visit.game
+    game.drawn = true
+    game.player.board[0] = { uid: 900, card: 'CronJob', attack: 1, health: 2, maxHealth: 2, sigils: [] }
+    game.opponent.front[0] = { uid: 901, card: 'Sandbox', attack: 2, health: 5, maxHealth: 5, sigils: [] }
+    const result = applyRun(state, { type: 'play', action: { type: 'ringBell' } })
+    assert.ok(result.ok)
+    assert.equal(result.state.integrity, 0)
+    assert.equal(result.state.status, 'lost')
+    assert.ok(result.events.some((event) => event.type === 'runOver' && event.integrity))
   })
 })
 
@@ -295,9 +414,15 @@ describe('the merge request', () => {
 })
 
 describe('the code review', () => {
-  // The starter deck's three cards have 7 health and a sigil each: uptime always fails, coverage always passes.
+  // Three cards with 8 health and a sigil each: stability always fails, coverage always passes.
   const review = (option: number) => {
-    const result = applyRun(at('event', { kind: 'event', node: '0-0', event: 'review-trial' }), {
+    const state = at('event', { kind: 'event', node: '0-0', event: 'review-trial' })
+    state.deck = ['HelloWorld', 'CronJob', 'MergeConflict'].map((id, index) => ({
+      id: index + 1,
+      added: null,
+      ...deckCard(id),
+    }))
+    const result = applyRun(state, {
       type: 'choose',
       option,
     })
@@ -312,7 +437,7 @@ describe('the code review', () => {
   it('draws three cards and judges their total against the bar', () => {
     const { trial, rare } = review(1)
     assert.ok(trial?.type === 'trialled' && trial.cards.length === 3)
-    assert.equal(trial.total, 7)
+    assert.equal(trial.total, 8)
     assert.equal(trial.passed, false)
     assert.equal(rare, false, 'a failed review gives nothing')
   })
@@ -351,7 +476,7 @@ describe("a shop's tools", () => {
   it('are two different tools at every shop', () => {
     for (let seed = 1; seed <= 40; seed++) {
       let state = createRun({ seed })
-      state = step(state, { type: 'start', deck: 'hello-world' })
+      state = unpacked(step(state, { type: 'start', deck: 'hello-world' }))
       const node = state.map.rows[0]?.[0]
       assert.ok(node)
       node.kind = 'shop'
@@ -444,7 +569,8 @@ describe('battles', () => {
   it('deal the run’s deck, and a won one waits for the player to leave', () => {
     const state = battleAt(started({ seed: 4 }), 'battle')
     assert.ok(state.visit?.kind === 'battle')
-    assert.equal(state.visit.game.player.library.length, STARTER.length)
+    assert.equal(state.visit.game.player.library.length, STARTER.length + PACKS)
+    assert.deepEqual(state.visit.game.integrity, { left: INTEGRITY, max: INTEGRITY })
     const won = win(state)
     assert.equal(won.record.battles, 1)
     assert.equal(won.record.overkill, 13 + 23 - 24)
@@ -535,8 +661,8 @@ describe('two hundred random runs', () => {
 })
 
 describe('the run’s balance', () => {
-  // Measured at about 58% past the first boss and 3% cleared, over 300 greedy runs, with Out of Memory.
-  it('lets a simple bot clear stage one more often than not, and rarely the whole run', () => {
+  // Measured at about 48% past the first boss and 6% cleared, over 600 greedy runs, with integrity and the comebacks.
+  it('lets a simple bot clear stage one about half the time, and rarely the whole run', () => {
     let firstBoss = 0
     let cleared = 0
     for (let seed = 1; seed <= 200; seed++) {
@@ -544,7 +670,7 @@ describe('the run’s balance', () => {
       if (state.record.bosses >= 1) firstBoss += 1
       if (state.status === 'won') cleared += 1
     }
-    assert.ok(firstBoss > 100, `${firstBoss} of 200 beat the first boss`)
-    assert.ok(cleared < 60, `${cleared} of 200 cleared the run`)
+    assert.ok(firstBoss > 80, `${firstBoss} of 200 beat the first boss`)
+    assert.ok(cleared < 30, `${cleared} of 200 cleared the run`)
   })
 })

@@ -9,7 +9,7 @@ import {
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react'
-import { findNode, MAP_COLUMNS, reachable, type MapNode, type NodeKind, type StageMap } from 'shared'
+import { findNode, INTEGRITY, MAP_COLUMNS, reachable, type MapNode, type NodeKind, type StageMap } from 'shared'
 import { mapRows, sideOf, spots, type Spot } from '../layout.ts'
 import { NODE_ICONS, nodeIcon, nodeName } from '../nodes.ts'
 import { usePlan } from '../plan.ts'
@@ -17,6 +17,7 @@ import type { Layout } from '../../text/useTextTable.ts'
 import type { RunReady } from '../useRun.ts'
 import link from './link.svg'
 import { prefersReducedMotion } from '../../../lib/motion.ts'
+import { IntegrityBar } from '../../controls.tsx'
 import { fadeIn } from '../../moves.ts'
 import { PenLayer } from './PenLayer.tsx'
 import { ICON_BUTTON, ScreenActions, ScreenBar, useScreenMode } from './Screen.tsx'
@@ -341,8 +342,11 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
         </div>
       </ScreenActions>
       <ScreenBar>
-        {/* The tools carried and the bytes banked are in the inventory, so the map keeps to itself. */}
-        <div className="pb-1">{legend}</div>
+        {/* The tools carried and the bytes banked are in the inventory; only integrity, which ends runs, shows here. */}
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-1 pb-1">
+          <IntegrityBar left={state.integrity} max={INTEGRITY} compact className="gap-1 text-lg" />
+          {legend}
+        </div>
       </ScreenBar>
       {/* Padded, so the boss and the first row are never cut off at the top or bottom of the scroll. */}
       <div className={hologram ? 'py-5' : 'py-8'}>
@@ -405,7 +409,14 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
                     const face = (
                       <>
                         <Icon aria-hidden style={{ width: icon, height: icon }} className={gone ? 'opacity-25' : ''} />
-                        {gone ? <X aria-hidden strokeWidth={3} className="absolute inset-0 m-auto size-[90%]" /> : null}
+                        {/* Lucide's X spans the middle half of its box, so twice the node's size takes it to the corners. */}
+                        {gone ? (
+                          <X
+                            aria-hidden
+                            strokeWidth={1.5}
+                            className="pointer-events-none absolute top-1/2 left-1/2 size-[190%] -translate-1/2"
+                          />
+                        ) : null}
                       </>
                     )
                     const reading =

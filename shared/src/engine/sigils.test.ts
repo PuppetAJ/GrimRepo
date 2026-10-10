@@ -67,7 +67,7 @@ describe('the sigils', () => {
   })
 
   it('Broadcast attacks the lane opposite and both lanes beside it', () => {
-    const { events } = bell(table({ board: [null, 'HelloWorld'] }))
+    const { events } = bell(table({ board: [null, 'ReplyAll'] }))
     assert.equal(hits(events, 'opponent'), 3)
   })
 
@@ -82,8 +82,8 @@ describe('the sigils', () => {
     const placed = state.player.board[0]
     assert.equal(placed?.card, 'LegacyCode')
     assert.equal(placed?.attack, 3)
-    assert.equal(placed?.health, 4 + 6)
-    assert.ok(placed?.sigils.includes('refactor'), 'and Refactor with them')
+    assert.equal(placed?.health, 4 + 4)
+    assert.ok(!placed?.sigils.includes('refactor'), 'but not Refactor itself')
   })
 
   it('Refactor is gone for the battle once sacrificed, so a reshuffle never brings it back', () => {
@@ -103,7 +103,7 @@ describe('the sigils', () => {
     assert.ok(!back.includes(div), 'Off-Center Div stays out of the rebuilt deck')
   })
 
-  it('Refactor passed on stacks through a chain of sacrifices', () => {
+  it('Refactor is not passed on, so a chain of sacrifices gains nothing past the first', () => {
     const start = table({ hand: ['LegacyCode', 'Firewall'], board: ['OffCenterDiv'] })
     const { state } = play(
       start,
@@ -116,8 +116,8 @@ describe('the sigils', () => {
     )
     const placed = state.player.board[0]
     assert.equal(placed?.card, 'Firewall')
-    assert.equal(placed?.attack, 2 + 3 + 0)
-    assert.equal(placed?.health, 6 + 4 + 6)
+    assert.equal(placed?.attack, 2)
+    assert.equal(placed?.health, 6)
   })
 
   it('a shipped Beta card is worth 2 when sacrificed', () => {

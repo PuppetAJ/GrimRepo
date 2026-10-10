@@ -33,6 +33,7 @@ function targetFor(action) {
   if (action.type === 'go') return `[data-action="go"][data-node="${action.node}"]`
   if (action.type === 'take') return `[data-action="take"][data-index="${action.index}"]`
   if (action.type === 'buff') return `[data-action="buff"][data-card="${action.card}"]`
+  if (action.type === 'repair') return '[data-action="repair"]'
   if (action.type === 'choose') return `[data-action="choose"][data-option="${action.option}"]`
   if (action.type === 'start') return `[data-action="start"][data-deck="${action.deck}"]`
   if (action.type === 'buy') return `[data-action="buy"][data-index="${action.index}"]`
@@ -94,6 +95,10 @@ async function playRun(page, mirror, { pick = nextRunAction, done }) {
         await page.locator('[data-slot-for="uninstall"]').click()
         await page.locator(`[data-action="uninstall-card"][data-card="${action.card}"]`).click()
         await clickMove(page, '[data-action="uninstall"]', expected)
+      } else if (action.type === 'take' && state.visit.kind === 'pack') {
+        // A starter pack comes sealed, and is torn open before its cards can be taken.
+        await page.locator('[data-action="open-pack"]').first().click()
+        await clickMove(page, targetFor(action), expected)
       } else if (action.type === 'strip') {
         // The card, chosen in its slot's searchable list, its sigil, then the linter's button.
         await page.locator('[data-slot-for="lint"]').click()
@@ -140,6 +145,8 @@ check(
   (await view(page)) === 'start' && (await page.locator('[data-action="start"]').count()) === 3,
 )
 mirror = await playRun(page, mirror, { done: (state) => state.visit?.kind !== 'start' })
+check('then opens the starter packs, a card to take from each', (await view(page)) === 'pack')
+mirror = await playRun(page, mirror, { done: (state) => state.visit?.kind !== 'pack' })
 check('and then the map', (await view(page)) === 'map')
 check('in the first stage', (await visibleText(page)).includes('Stage 1 of 3: Localhost'))
 check(

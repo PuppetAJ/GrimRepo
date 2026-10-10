@@ -21,6 +21,7 @@ import {
   Forfeit,
   has,
   hasEnded,
+  IntegrityBar,
   overText,
   owed,
   phaseText,
@@ -102,12 +103,20 @@ export function Hud({
     <>
       {/* Stops above the prompt so the reader never runs over it. */}
       <div className="pointer-events-none absolute top-0 bottom-24 left-0 z-10 flex flex-col items-start p-3 font-terminal sm:p-4">
-        <ScaleBar scale={view.scale} className="text-xl sm:text-2xl" />
-        <span className="text-lg text-p03-dim sm:text-xl">
-          {/* Just where the battle stands; the deck and a reshuffle show on the table itself. */}
-          Turn {view.turn}
-          {phaseText(state, view.phase) ? ` · ${phaseText(state, view.phase)}` : null}
-        </span>
+        {/* On a dark backing, so the room's lights never wash the numbers out. */}
+        <div className="flex flex-col rounded-md bg-p03-ground/75 px-2 py-1 [text-shadow:0_0_4px_#000]">
+          <ScaleBar scale={view.scale} className="text-xl sm:text-2xl" />
+          <span className="flex items-center gap-3 text-lg text-p03-dim sm:text-xl">
+            {/* Just where the battle stands; the deck and a reshuffle show on the table itself. */}
+            <span>
+              Turn {view.turn}
+              {phaseText(state, view.phase) ? ` · ${phaseText(state, view.phase)}` : null}
+            </span>
+            {view.integrity ? (
+              <IntegrityBar left={view.integrity.left} max={view.integrity.max} compact className="gap-1" />
+            ) : null}
+          </span>
+        </div>
         {/* The rack is far off and out of view from the board, so the items are here too. */}
         {state.items?.length ? (
           <div role="group" aria-label="Your items" className="pointer-events-auto mt-1 flex gap-1.5">

@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog.tsx'
 import type { RunReady } from '../useRun.ts'
 import { DeckTable } from './DeckTable.tsx'
-import { Bytes, HeldTools } from './HeldTools.tsx'
+import { Bytes, HeldTools, RunIntegrity } from './HeldTools.tsx'
 
 /** The run's inventory over the 3D battle: the tools carried and the deck, as the run screens' panel shows them. */
 export function InventoryDialog({
@@ -27,6 +27,7 @@ export function InventoryDialog({
         <DialogDescription className="sr-only">
           The tools carried, and every card as it stands after this run&apos;s changes.
         </DialogDescription>
+        <RunIntegrity left={run.state.integrity} />
         <HeldTools items={run.state.items} label="Tools" />
         <Bytes count={run.state.bytes} />
         <h3 className="text-p03">Deck ({run.state.deck.length})</h3>

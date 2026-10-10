@@ -1,5 +1,5 @@
 import { m } from 'motion/react'
-import { X } from 'lucide-react'
+import { ShieldCheck, X } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
 import {
@@ -336,6 +336,71 @@ export function ScaleBar({
       </span>
       <span className="text-p03">P03</span>
       <span className={`relative w-8 shrink-0 tabular-nums ${tone}`}>{scale > 0 ? null : margin}</span>
+    </div>
+  )
+}
+
+/** Integrity this low shows in the death color. */
+const lowIntegrity = (left: number, max: number) => left <= max / 4
+
+/** A run's integrity: a bar, or a shield and the count with `compact`; each change drifts off the count. */
+export function IntegrityBar({
+  left,
+  max,
+  className = '',
+  fluid = false,
+  compact = false,
+}: {
+  left: number
+  max: number
+  className?: string
+  fluid?: boolean
+  compact?: boolean
+}) {
+  const [shown, setShown] = useState({ left, change: 0, key: 0 })
+  if (shown.left !== left) setShown({ left, change: left - shown.left, key: shown.key + 1 })
+  const tone = lowIntegrity(left, max) ? 'text-death' : 'text-p03'
+  return (
+    <div
+      role="meter"
+      aria-label="Integrity"
+      aria-valuemin={0}
+      aria-valuemax={max}
+      aria-valuenow={left}
+      aria-valuetext={`${left} of ${max} integrity left`}
+      title="Integrity: each card P03 destroys costs 1, and the run ends at 0"
+      className={`flex items-center gap-2 font-terminal ${className}`}
+    >
+      {compact ? (
+        <ShieldCheck aria-hidden className={`size-[1.1em] shrink-0 ${tone}`} />
+      ) : (
+        <span className="text-foreground">Integrity</span>
+      )}
+      {compact ? null : (
+        <span
+          className={`relative h-3 rounded-sm border border-p03-dim/60 ${fluid ? 'min-w-12 flex-1' : 'w-24 sm:w-32'}`}
+        >
+          <span
+            aria-hidden
+            className={`absolute inset-y-0 left-0 transition-all duration-300 motion-reduce:transition-none ${lowIntegrity(left, max) ? 'bg-death' : 'bg-p03'}`}
+            style={{ width: `${(100 * Math.max(0, left)) / max}%` }}
+          />
+        </span>
+      )}
+      <span className={`relative shrink-0 tabular-nums ${tone}`}>
+        {left}
+        <span className="text-p03-dim">/{max}</span>
+        {shown.change ? (
+          <m.span
+            key={shown.key}
+            aria-hidden
+            {...drift}
+            className={`absolute top-full left-0 ${shown.change < 0 ? 'text-death' : 'text-foreground'}`}
+          >
+            {shown.change > 0 ? `+${shown.change}` : shown.change}
+          </m.span>
+        ) : null}
+      </span>
     </div>
   )
 }

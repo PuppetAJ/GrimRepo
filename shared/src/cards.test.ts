@@ -10,16 +10,16 @@ describe('the cards', () => {
     assert.equal(CARDS['HelloWorld']?.name, 'Hello World')
   })
 
-  it("make a deck of 26: everything but the debug card, Boilerplate, a Beta card's shipped form and the event-only cards", () => {
-    assert.equal(PLAYER_DECK.length, 31)
+  it("make a deck of 33: everything but the debug card, Boilerplate, a Beta card's shipped form and the event-only cards", () => {
+    assert.equal(PLAYER_DECK.length, 33)
     assert.ok(!PLAYER_DECK.includes(DEBUG_CARD) && !PLAYER_DECK.includes(BOILERPLATE))
     assert.ok(!PLAYER_DECK.includes('ShippedFeature'))
-    assert.equal(new Set(PLAYER_DECK).size, 31)
+    assert.equal(new Set(PLAYER_DECK).size, 33)
   })
 
-  it('give the opponent every deck card but the board wipe', () => {
+  it('give the opponent every deck card but the board wipe and the Uptime cards', () => {
     assert.equal(OPPONENT_POOL.length, 30)
-    assert.ok(!OPPONENT_POOL.includes('FourOhFour'))
+    assert.ok(!['FourOhFour', 'HelloWorld', 'COBOL'].some((id) => OPPONENT_POOL.includes(id)))
   })
 
   it('only name sigils that exist', () => {

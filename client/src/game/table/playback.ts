@@ -48,6 +48,7 @@ const PACE: Record<GameEvent['type'], number> = {
   killed: 315,
   hit: 240,
   indebted: 240,
+  integrity: 240,
   retired: 315,
   advanced: 270,
   queued: 225,
@@ -129,10 +130,20 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
   switch (event.type) {
     case 'drew':
       next.spawns = new Map(next.spawns).set(event.unit.uid, event.from === 'deck' ? DECK : PILE)
+      if (event.catchUp) popup('catch-up draw', 'note', FACE.player, { face: 'player' })
       break
     case 'queued':
       next.spawns = new Map(next.spawns).set(event.unit.uid, P03_HAND)
+      if (event.desperate) popup('desperate', 'note', slot('back', event.lane, 0.5), { row: 'back', lane: event.lane })
       break
+    case 'integrity': {
+      // A lost card has already left the table, so its cost rises from the player's side; Uptime's repair from its card.
+      const found = where(view, event.uid)
+      const text = event.change < 0 ? `integrity ${event.change}` : `+${event.change} uptime`
+      if (found) popup(text, 'heal', slot(found.row, found.lane, 0.3), { row: found.row, lane: found.lane })
+      else popup(text, 'damage', FACE.player, { face: 'player' })
+      break
+    }
     case 'advanced':
       next.advances = new Map(next.advances).set(event.uid, now)
       break

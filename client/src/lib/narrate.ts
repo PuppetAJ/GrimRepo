@@ -58,7 +58,9 @@ export function narrate(before: GameState, events: GameEvent[]): string[] {
         return [
           event.from === 'boilerplate'
             ? `You took a Boilerplate from the side pile. Filler.`
-            : `You drew ${card(event.unit.card).name}.`,
+            : event.catchUp
+              ? `You're behind, so you get an extra card: ${card(event.unit.card).name}. Charity.`
+              : `You drew ${card(event.unit.card).name}.`,
         ]
       case 'reshuffled':
         return [`Your deck ran dry. ${event.cards} cards shuffled back in. Same weak cards, new order.`]
@@ -109,7 +111,17 @@ export function narrate(before: GameState, events: GameEvent[]): string[] {
               ? `I queued ${card(event.unit.card).name} behind ${lane(event.lane)}, a death card from ${event.haunt.by}'s lost run.`
               : event.haunt
                 ? `Root cause: ${card(event.unit.card).name}, behind ${lane(event.lane)}. You wrote this.`
-                : `I queued ${card(event.unit.card).name} behind ${lane(event.lane)}.`,
+                : event.desperate
+                  ? `Fine. Emergency deploy: ${card(event.unit.card).name}, behind ${lane(event.lane)}. Straight to production.`
+                  : `I queued ${card(event.unit.card).name} behind ${lane(event.lane)}.`,
+        ]
+      case 'integrity':
+        return [
+          event.change < 0
+            ? event.left === 0
+              ? 'That was the last of your integrity. Nothing left holding it together.'
+              : `That cost you ${-event.change} integrity. ${event.left} left.`
+            : `${name(event.uid)} kept the system up. Integrity ${event.left}.`,
         ]
       case 'healed':
         return [`${name(event.uid)} patched itself up to ${event.health}.`]

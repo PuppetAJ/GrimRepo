@@ -144,6 +144,7 @@ A clean-up runs every night at 04:00 UTC as its own Railway service. It clears t
 - **Five lanes.** P03's board in Inscryption's third act is five lanes wide. Grim Repo keeps four for now: every encounter and boss is tuned to four, and five cards across is tight on a phone. The rules engine counts lanes in one place, so a fifth is mostly a matter of the 3D board, the camera views and a rebalance.
 - **Conduits.** Act 3's conduit cards power the cards between them. A fifth lane would leave room for three cards between two conduits, where four lanes leaves two, so conduits would come with it.
 - **A challenge ladder.** Optional rules that make a run harder for a higher score, unlocked one level at a time, as in Kaycee's Mod. Designed, but set aside until enough players come back for more runs.
+- **Scarred cards.** Today a card P03 destroys costs the run 1 integrity and comes back whole for the next battle. A scarred card would come back with 1 less health instead, until a campfire repairs it, so a run would be about keeping its own cards alive. It would change the balance of every encounter, so it waits until integrity has been played for a while.
 
 ## Credits
 
@@ -157,6 +158,7 @@ Built by Adrian Jimenez, rewritten from his 2022 bootcamp project ([original rep
 - **The ceiling light:** [Weathered Fluorescent Light/Lamp](https://sketchfab.com/3d-models/weathered-fluorescent-lightlamp-07c2805b50b6476f8e0ad467fae00b82) by Mark Peters (CC BY 4.0).
 - **The items:** [Scissors](https://sketchfab.com/3d-models/scissors-6e0defc85edc4920a794fe9e82b5f16b) by sweedboy69, [Hourglass](https://sketchfab.com/3d-models/hourglass-a453e90d47b74260b5e5ccd5a965fe3e) by Less, [Hook](https://sketchfab.com/3d-models/hook-6f36616001cf4037b104cca4967f5027) by lakeap1, and the bottle from [Inscryption Goobert](https://sketchfab.com/3d-models/inscryption-goobert-2bac07d9276c4e38b1461951fe0d5ace) by p03_real_account, with Goobert taken out (all CC BY 4.0); each simplified and resized for the table. The Hammer and Pliers are P03's tools above.
 - **The run's projector:** [Hologram projector with hologram](https://sketchfab.com/3d-models/hologram-projector-with-hologram-ca0a3bc92a3d4a3f9b0fa19cbc73b420) by t.flores (CC BY 4.0), without its hologram, which the game draws itself.
+- **The starter packs:** from [Free Card Packs!](https://argametina.itch.io/free-card-packs) by Hanker (argametina), the green set.
 - **The factory's metal:** Metal029, DiamondPlate008C and CorrugatedSteel005 from [ambientCG](https://ambientcg.com) (CC0).
 - **The cards:** Adrian Jimenez's 1-bit pixel art, drawn for the rebuild in a sprite editor made for it; it replaced the 2022 card art.
 - **The name filter:** word lists from [obscenity](https://github.com/jo3-l/obscenity) (MIT) and [LDNOOBW](https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words) (CC BY 4.0).
