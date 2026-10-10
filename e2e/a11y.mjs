@@ -106,6 +106,7 @@ if (runs('run')) {
     ['card-types', 'battle'],
     ['type-cards', 'card'],
     ['pack', 'pack'],
+    ['pack-second', 'pack'],
     ['campfire-repair', 'campfire'],
     ['repaired', 'campfire'],
     ['low-integrity', 'battle'],

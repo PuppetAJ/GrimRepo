@@ -97,7 +97,7 @@ async function playRun(page, mirror, { pick = nextRunAction, done }) {
         await clickMove(page, '[data-action="uninstall"]', expected)
       } else if (action.type === 'take' && state.visit.kind === 'pack') {
         // A starter pack comes sealed, and is torn open before its cards can be taken.
-        await page.locator('[data-action="open-pack"]').click()
+        await page.locator('[data-action="open-pack"]').first().click()
         await clickMove(page, targetFor(action), expected)
       } else if (action.type === 'strip') {
         // The card, chosen in its slot's searchable list, its sigil, then the linter's button.

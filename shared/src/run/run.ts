@@ -51,7 +51,7 @@ export const STARTER_DECKS: Record<
     core: ['CopyPaste', 'SpamBot'],
     pack: {
       common: ['InfiniteLoop', 'CronJob', 'Prototype'],
-      uncommon: ['ZeroDay', 'Crawler', 'SQLInjection'],
+      uncommon: ['ZeroDay', 'SQLInjection', 'Cookie'],
       rare: ['ReplyAll', 'NullPointer'],
     },
   },
@@ -62,12 +62,9 @@ export const PACKS = 2
 /** How many cards each starter pack holds. */
 export const PACK_SIZE = 3
 
-/** A starter pack's cards: one uncommon or better, at the plain odds, since the pity offset would hold a rare at 0. */
+/** A starter pack's cards, at the plain odds, since the pity offset would hold a rare at 0. */
 const openPack = (state: RunState, rng: Rng, deck: string): string[] =>
-  offerCards(state, rng, PACK_SIZE, (STARTER_DECKS[deck] as (typeof STARTER_DECKS)[string]).pack, {
-    floored: 1,
-    pity: false,
-  })
+  offerCards(state, rng, PACK_SIZE, (STARTER_DECKS[deck] as (typeof STARTER_DECKS)[string]).pack, { pity: false })
 
 /** What a card costs at a shop, in bytes, by tier. */
 const PRICE: Record<string, number> = { E: 3, D: 5, C: 6, B: 12, A: 15 }
@@ -124,28 +121,28 @@ const PITY_CAP = 40
 /** What a campfire's repair restores. */
 export const REPAIR = 5
 
-/** Rolls one offered card's rarity; with `pity` the offset counts, and moves. `floor` lifts a common to uncommon. */
-function rollRarity(state: RunState, rng: Rng, floor: boolean, pity: boolean): Rarity {
+/** Rolls one offered card's rarity; with `pity` the offset counts, and moves. */
+function rollRarity(state: RunState, rng: Rng, pity: boolean): Rarity {
   const roll = rng.int(0, 99)
   const rare = Math.max(0, RARE_PERCENT + (pity ? state.pity : 0))
-  const rarity: Rarity = roll < rare ? 'rare' : roll < rare + UNCOMMON_PERCENT || floor ? 'uncommon' : 'common'
+  const rarity: Rarity = roll < rare ? 'rare' : roll < rare + UNCOMMON_PERCENT ? 'uncommon' : 'common'
   if (!pity) return rarity
   if (rarity === 'rare') state.pity = PITY_START
   else if (rarity === 'common') state.pity = Math.min(PITY_CAP, state.pity + 1)
   return rarity
 }
 
-/** Cards to offer, of rolled rarities, none twice while the pool allows; `floored` slots are uncommon or better. */
+/** Cards to offer, of rolled rarities, none twice while the pool allows. */
 function offerCards(
   state: RunState,
   rng: Rng,
   count: number,
   pools: Record<Rarity, string[]>,
-  { floored = 0, pity = true } = {},
+  { pity = true } = {},
 ): string[] {
   const offer: string[] = []
   for (let slot = 0; slot < count; slot++) {
-    const pool = pools[rollRarity(state, rng, slot < floored, pity)]
+    const pool = pools[rollRarity(state, rng, pity)]
     const fresh = pool.filter((id) => !offer.includes(id))
     offer.push(rng.pick(fresh.length ? fresh : pool))
   }

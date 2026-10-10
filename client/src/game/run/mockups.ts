@@ -266,23 +266,33 @@ export const MOCKUPS: Record<string, Entry> = {
   start: {
     title: 'The starter deck choice',
     group: 'reached',
-    revision: 7,
+    revision: 8,
     make: () => ({ state: createRun({ seed: 1 }), path: [] }),
   },
   pack: {
-    title: 'The first starter pack, sealed until clicked',
+    title: 'The starter packs, both sealed',
     group: 'reached',
-    revision: 4,
+    revision: 5,
     make: () => {
       const opened = applyRun(createRun({ seed: 1 }), { type: 'start', deck: 'move-fast' })
       return opened.ok ? { state: opened.state, path: [] } : null
+    },
+  },
+  'pack-second': {
+    title: 'The starter packs, one taken and one left',
+    group: 'reached',
+    revision: 1,
+    make: () => {
+      const opened = applyRun(createRun({ seed: 1 }), { type: 'start', deck: 'move-fast' })
+      const took = opened.ok && applyRun(opened.state, { type: 'take', index: 0 })
+      return took && took.ok ? { state: took.state, path: [] } : null
     },
   },
   card: { title: 'A card choice', group: 'reached', revision: 2, make: () => reached((s) => s.visit?.kind === 'card') },
   'death-start': {
     title: 'The starter deck choice, with a death card to leave out',
     group: 'reached',
-    revision: 11,
+    revision: 12,
     make: () => ({ state: createRun({ seed: 1, death: SAMPLE_DEATH }), path: [] }),
   },
   'death-offer': {

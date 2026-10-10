@@ -99,7 +99,7 @@ describe('the starter packs', () => {
     return { offers, state }
   }
 
-  it("open one after another, three cards each from the deck's pool, at least one uncommon or better", () => {
+  it("open one after another, three cards each from the deck's pool", () => {
     for (const [id, deck] of Object.entries(STARTER_DECKS))
       for (let seed = 1; seed <= 40; seed++) {
         const { offers } = packs(seed, id)
@@ -108,10 +108,6 @@ describe('the starter packs', () => {
           assert.equal(offer.length, PACK_SIZE)
           assert.ok(
             offer.every((found) => Object.values(deck.pack).flat().includes(found)),
-            offer.join(),
-          )
-          assert.ok(
-            offer.some((found) => !deck.pack.common.includes(found)),
             offer.join(),
           )
         }

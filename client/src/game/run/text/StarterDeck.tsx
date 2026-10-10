@@ -49,7 +49,7 @@ export function StarterDeck({ run }: { run: RunReady }) {
               <h3 className="text-2xl text-p03">{deck.name}</h3>
               <p className="font-sans text-base text-[#b8f5c4]">{deck.about}</p>
               <CardList units={deck.core.map((id, index) => asUnit(id, index + 1))} size="w-24 sm:w-28 @6xl:w-16" />
-              {/* What the pack can hold, by rarity; one of its cards is uncommon or better. */}
+              {/* What the packs can hold, by rarity. */}
               <div className="font-sans text-sm text-[#b8f5c4]">
                 <p className="font-terminal text-lg text-p03">
                   Plus one card from each of {PACKS} packs of {PACK_SIZE}, from:
@@ -80,71 +80,101 @@ export function StarterDeck({ run }: { run: RunReady }) {
   )
 }
 
-/** One of the starter deck's packs: sealed until clicked, then torn open on three cards, each with its rarity, to take one. */
+/** The starter deck's packs side by side: each sealed until torn open on three cards to take one, and then showing it. */
 export function PackOpening({ run }: { run: RunReady }) {
   const visit = run.state.visit
   const still = useReducedMotion() ?? false
-  // Which pack is open, and which is tearing; a new pack comes sealed.
-  const [opened, setOpened] = useState<number | null>(null)
-  const [tearing, setTearing] = useState<number | null>(null)
+  // Which place's pack is being torn open for the pack the run is on, and whether its cards are out yet.
+  const [torn, setTorn] = useState<{ pack: number; place: number; open: boolean } | null>(null)
   if (visit?.kind !== 'pack') return null
-  const open = opened === visit.opened
+  const current = torn?.pack === visit.opened ? torn : null
+  // The cards taken so far are the deck's last, one for each pack already opened.
+  const taken = run.state.deck.slice(run.state.deck.length - (visit.opened - 1))
   return (
     <div data-center className="flex flex-col items-center gap-4 text-center">
       <ScreenBar>
         <p className="pb-1 text-lg">
           <Sentences
             text={
-              open
+              current?.open
                 ? `Pack ${visit.opened} of ${PACKS}. Take one of the three.`
-                : `Pack ${visit.opened} of ${PACKS}. Open it.`
+                : visit.opened === 1
+                  ? `${PACKS} packs. Tear one open.`
+                  : 'One pack left. Tear it open.'
             }
           />
         </p>
       </ScreenBar>
-      {open ? (
-        // Remounted for each pack, so its cards turn over afresh.
-        <CardList
-          key={visit.opened}
-          units={visit.offer.map((id, index) => asUnit(id, index + 1))}
-          onPick={(unit) => run.act({ type: 'take', index: unit.uid - 1 })}
-          data={(unit) => ({ 'data-action': 'take', 'data-index': unit.uid - 1 })}
-          size="w-36 sm:w-44"
-          itemMove={(index) => flipIn(index * 0.15)}
-          badge={(unit) => (
-            <span className={`text-lg capitalize ${RARITY_TONE[packRarity(unit.card)]}`}>{packRarity(unit.card)}</span>
-          )}
-        />
-      ) : (
-        <m.button
-          key={visit.opened}
-          type="button"
-          data-action="open-pack"
-          aria-label={`Open pack ${visit.opened} of ${PACKS}`}
-          disabled={tearing === visit.opened}
-          onClick={() => setTearing(visit.opened)}
-          {...(tearing === visit.opened ? tearOpen(still) : {})}
-          onAnimationComplete={() => tearing === visit.opened && setOpened(visit.opened)}
-          // Shaped like a foil pack: taller than a card, sealed in a band at either end, as the face-down choices are drawn.
-          className="group flex h-80 w-48 flex-col rounded-md border-2 border-p03-edge bg-[#0b1f12] text-p03 shadow-[3px_3px_0_#1f3a26,6px_6px_0_#13261a] transition-transform hover:-translate-y-1 hover:border-p03 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03 motion-reduce:transition-none sm:h-96 sm:w-56"
-        >
-          <span aria-hidden className="h-6 shrink-0 border-b-2 border-dashed border-p03-edge group-hover:border-p03" />
-          <span className="flex flex-1 flex-col items-center justify-center gap-3 px-3">
-            <span aria-hidden className="text-6xl text-p03-dim group-hover:text-p03">
-              ?
-            </span>
-            <span className="text-2xl leading-tight">{STARTER_DECKS[visit.deck]?.name}</span>
-            <span className="text-lg text-p03-dim">
-              Pack {visit.opened} of {PACKS}
-            </span>
-            <span className="text-xl">Tear it open</span>
-          </span>
-          <span aria-hidden className="h-6 shrink-0 border-t-2 border-dashed border-p03-edge group-hover:border-p03" />
-        </m.button>
-      )}
+      <ul className="flex flex-wrap items-start justify-center gap-6">
+        {Array.from({ length: PACKS }, (_, place) => {
+          const card = taken[place]
+          if (card)
+            return (
+              <li key={`taken-${place}`} className="flex w-32 flex-col items-center gap-2 sm:w-40">
+                <ReadableCard unit={asUnit(card)} />
+                <span className="text-lg text-p03-dim">Taken</span>
+              </li>
+            )
+          const tearing = current?.place === place
+          // Once torn open, its three cards take its place in the row, remounted for each pack so they turn over afresh.
+          if (tearing && current.open)
+            return (
+              <li key={`open-${visit.opened}`}>
+                <CardList
+                  key={visit.opened}
+                  units={visit.offer.map((id, index) => asUnit(id, index + 1))}
+                  onPick={(unit) => run.act({ type: 'take', index: unit.uid - 1 })}
+                  data={(unit) => ({ 'data-action': 'take', 'data-index': unit.uid - 1 })}
+                  size="w-36 sm:w-44"
+                  itemMove={(index) => flipIn(index * 0.15)}
+                  badge={(unit) => (
+                    <span className={`text-lg capitalize ${RARITY_TONE[packRarity(unit.card)]}`}>
+                      {packRarity(unit.card)}
+                    </span>
+                  )}
+                />
+              </li>
+            )
+          return (
+            <li key={`pack-${visit.opened}-${place}`}>
+              <m.button
+                type="button"
+                data-action="open-pack"
+                aria-label={`Open a ${STARTER_DECKS[visit.deck]?.name} pack`}
+                disabled={Boolean(current)}
+                onClick={() => setTorn({ pack: visit.opened, place, open: false })}
+                {...(tearing ? tearOpen(still) : {})}
+                onAnimationComplete={() => tearing && setTorn({ pack: visit.opened, place, open: true })}
+                // Shaped like a foil pack: taller than a card, sealed in a band at either end, as the face-down choices are drawn.
+                className={`group flex flex-col rounded-md border-2 border-p03-edge bg-[#0b1f12] text-p03 shadow-[3px_3px_0_#1f3a26,6px_6px_0_#13261a] transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03 enabled:hover:-translate-y-1 enabled:hover:border-p03 disabled:opacity-60 motion-reduce:transition-none ${PACK_SIZE_CLASS}`}
+              >
+                <span
+                  aria-hidden
+                  className="h-6 shrink-0 border-b-2 border-dashed border-p03-edge group-enabled:group-hover:border-p03"
+                />
+                <span className="flex flex-1 flex-col items-center justify-center gap-3 px-3">
+                  <span aria-hidden className="text-6xl text-p03-dim group-enabled:group-hover:text-p03">
+                    ?
+                  </span>
+                  <span className="text-2xl leading-tight">{STARTER_DECKS[visit.deck]?.name}</span>
+                  <span className="text-lg text-p03-dim">{PACK_SIZE} cards</span>
+                  <span className="text-xl">Tear it open</span>
+                </span>
+                <span
+                  aria-hidden
+                  className="h-6 shrink-0 border-t-2 border-dashed border-p03-edge group-enabled:group-hover:border-p03"
+                />
+              </m.button>
+            </li>
+          )
+        })}
+      </ul>
     </div>
   )
 }
+
+/** A sealed pack's size. */
+const PACK_SIZE_CLASS = 'h-64 w-40 sm:h-80 sm:w-48'
 
 /** The death card, and a switch to bring it into the run or leave it out for more score. */
 function DeathOption({
