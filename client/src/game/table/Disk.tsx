@@ -23,7 +23,7 @@ function sheetGeometry(from: number, to: number, anchor: 'top' | 'bottom', mirro
 
 type Sheets = [THREE.BufferGeometry, THREE.BufferGeometry, THREE.BufferGeometry]
 let sheets: Record<'front' | 'back', Sheets> | null = null
-const sheetGeometries = () =>
+export const sheetGeometries = () =>
   (sheets ??= {
     front: [
       sheetGeometry(0, MT, 'top', false),
@@ -46,7 +46,7 @@ export const facePlanes = () =>
   })
 
 // open runs from 0 (closed) to 1; only the middle section compresses.
-function poseAt(open: number) {
+export function poseAt(open: number) {
   const height = h * (DISK.compact + (1 - DISK.compact) * open)
   const spare = height - h * (1 - MB + MT)
   const guides = height / 2 - HOUSING.bottom * h
