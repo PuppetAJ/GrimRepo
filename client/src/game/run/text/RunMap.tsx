@@ -345,6 +345,9 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
         {/* The tools carried and the bytes banked are in the inventory; only integrity, which ends runs, shows here. */}
         <div className="flex flex-wrap items-center gap-x-6 gap-y-1 pb-1">
           <IntegrityBar left={state.integrity} max={INTEGRITY} compact className="gap-1 text-lg" />
+          <span aria-hidden className="text-p03-dim">
+            |
+          </span>
           {legend}
         </div>
       </ScreenBar>

@@ -19,10 +19,11 @@ const mockupsSlash: Plugin = {
   },
 }
 
-// The /art page's editor saves a card's art (24x24) or an icon (8x8, the fire 16x16) as a PNG into src/game/art; development only.
+// The /art page's editor saves a card's art (24x24) or an icon (8x8, the fire and logs 16x16) as a PNG into src/game/art; development only.
 const ART_DIR = fileURLToPath(new URL('./src/game/art/', import.meta.url))
 const ART_SIZE = { cards: 24, icons: 8 } as const
-const LARGER_ICONS: Record<string, number> = { fire: 16 }
+// Must match the art editor's own sizes, or a save is refused, as the logs' once were.
+const LARGER_ICONS: Record<string, number> = { fire: 16, logs: 16 }
 // An animation's frames sit side by side in one strip, up to this many.
 const ANIMATED = new Set(['fire'])
 const MOST_FRAMES = 16

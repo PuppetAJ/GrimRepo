@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import { Link } from '@tanstack/react-router'
 import FaultyScreenShader from '../../components/p03/FaultyScreenShader.tsx'
-import { Forfeit, hasEnded, IntegrityBar, ScaleBar, SeatNote } from '../controls.tsx'
+import { encounterName, Forfeit, hasEnded, IntegrityBar, ScaleBar, SeatNote } from '../controls.tsx'
 import { Balance } from './Balance.tsx'
 import { Board } from './Board.tsx'
 import { CancelButton, ExecuteButton, SaveStatus } from './Buttons.tsx'
@@ -30,12 +30,12 @@ function Status() {
   return (
     <div className="flex items-center gap-2 text-lg">
       <TurnLabel />
-      {/* Just the count, since the line has little room. */}
-      {view.integrity ? (
+      {/* Just the count, since the line has little room; sideways, it's under the scale instead. */}
+      {view.integrity && !sideways ? (
         <IntegrityBar left={view.integrity.left} max={view.integrity.max} compact className="gap-1" />
       ) : null}
-      {/* Sideways the line is short, so the save note gives way to the turn. */}
-      {sideways ? <span className="ml-auto" /> : <SaveStatus className="ml-auto truncate text-sm text-p03-dim" />}
+      {/* The save note is in the menu, so the turn and phase keep the line. */}
+      <span className="ml-auto" />
       {/* A full fingertip to hit, though it looks small; negative margins keep the line's height. */}
       <button
         type="button"
@@ -53,6 +53,7 @@ function Status() {
 function Menu() {
   const { menu, setMenu, setLogOpen, setTerminalOpen, fullScreen, game, on3d, sideways, run, state } = useTable()
   if (!menu) return null
+  const name = encounterName(state)
   // Close the menu first so it doesn't cover what the choice opens.
   const choose = (then: () => void) => () => {
     setMenu(false)
@@ -63,6 +64,11 @@ function Menu() {
       {...dropIn}
       className={`absolute top-12 z-40 flex w-72 max-w-[calc(100%-1rem)] flex-col gap-3 rounded-md border-2 border-p03-edge bg-[#07130b] p-2 ${sideways ? 'left-2' : 'right-2'}`}
     >
+      {/* The battle's name and the save note, which the status line leaves out to keep the phase in view. */}
+      <p className="flex items-baseline justify-between gap-2 px-1 font-terminal text-base">
+        <span className="truncate text-p03">{name ?? 'Quick battle'}</span>
+        <SaveStatus className="shrink-0 text-p03-dim" />
+      </p>
       {/* Upright, the board has no room for the tools, so they're here. */}
       {sideways ? null : (
         <div className="flex flex-col items-center gap-1">
@@ -161,8 +167,11 @@ export function PhoneLayout() {
             <div className="rounded-md border-2 border-p03-edge bg-[#07130b] py-1 pr-1 pl-2">
               <Status />
             </div>
-            <Panel className="shrink-0 p-2">
+            <Panel className="flex shrink-0 flex-col gap-1 p-2">
               <Balance scale={view.scale} />
+              {view.integrity ? (
+                <IntegrityBar left={view.integrity.left} max={view.integrity.max} fluid className="gap-1 text-base" />
+              ) : null}
             </Panel>
             <section ref={setHandSection} aria-label="Your hand" className="flex min-h-0 flex-1 flex-col">
               <Hand />

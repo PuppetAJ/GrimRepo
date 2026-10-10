@@ -140,6 +140,17 @@ export function GameOver({ result, className = '' }: { result: Finished; classNa
 }
 
 /** A run battle's name, with "Phase 1 of 2" beside a boss's, which starts its next phase when the scale tips; null in a quick battle. */
+/** A boss's phase, "Phase 2 of 2"; null in a battle of one phase. */
+export function bossPhase(state: GameState, phase: number): string | null {
+  const id = state.opponent.encounter
+  const phases = id ? encounter(id).phases.length : 1
+  return phases > 1 ? `Phase ${phase + 1} of ${phases}` : null
+}
+
+/** A run battle's name; null in a quick battle. */
+export const encounterName = (state: GameState): string | null =>
+  state.opponent.encounter ? encounter(state.opponent.encounter).name : null
+
 export function phaseText(state: GameState, phase: number): string | null {
   const id = state.opponent.encounter
   if (!id) return null

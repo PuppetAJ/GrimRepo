@@ -1,6 +1,6 @@
 import { Backpack, Map as MapIcon, Menu } from 'lucide-react'
 import { useState } from 'react'
-import { INTEGRITY, STAGES } from 'shared'
+import { encounter, INTEGRITY, STAGES } from 'shared'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,6 +39,9 @@ export function BattleMenu({ run, onInventory, onMap }: { run: RunReady; onInven
             Stage {state.stage + 1} of {STAGES.length}: {STAGES[state.stage]}
           </span>
           <span className="block text-base text-p03">
+            {state.visit?.kind === 'battle' && state.visit.game.opponent.encounter
+              ? `${encounter(state.visit.game.opponent.encounter).name} · `
+              : null}
             Integrity {state.integrity}/{INTEGRITY}
           </span>
           <span className="block text-base text-p03-dim">
