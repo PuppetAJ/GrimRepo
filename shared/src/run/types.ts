@@ -55,8 +55,8 @@ export type Visit =
   | { kind: 'lint'; node: string }
   /** A run's first choice: which starter deck to take. */
   | { kind: 'start' }
-  /** The starter deck's pack, opened: the deck ids of the cards it held. */
-  | { kind: 'pack'; cards: number[] }
+  /** One of the starter deck's packs: three cards from its pool, one to take; `opened` counts this one. */
+  | { kind: 'pack'; deck: string; opened: number; offer: string[] }
   /** Cards for bytes; several may be bought before leaving. */
   /** `uninstalled` once a card has been removed for bytes, which a visit allows once. */
   /** `tools` are for sale this visit, with their prices; `toolsSold` holds the places bought. */

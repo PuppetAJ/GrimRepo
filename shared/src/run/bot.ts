@@ -129,7 +129,8 @@ export function nextRunAction(state: RunState, strategy: Strategy = 'greedy', de
         ? { type: 'leave' }
         : { type: 'play', action: nextBotAction(visit.game, strategy) }
     case 'card':
-    case 'reward': {
+    case 'reward':
+    case 'pack': {
       const scores = visit.offer.map(cardValue)
       return { type: 'take', index: scores.indexOf(Math.max(...scores)) }
     }
@@ -139,8 +140,6 @@ export function nextRunAction(state: RunState, strategy: Strategy = 'greedy', de
       const target = best(state.deck)
       return visit.buffs === 0 && target ? { type: 'buff', card: target.id } : { type: 'leave' }
     }
-    case 'pack':
-      return { type: 'leave' }
     case 'event': {
       // Picks the choice worth most, the first on a tie.
       const scores = scene(visit.event).options.map((option) =>

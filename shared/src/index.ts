@@ -80,6 +80,7 @@ export {
   reachable,
   replayRun,
   PACK_SIZE,
+  PACKS,
   PICKS,
   type Rarity,
   REPAIR,

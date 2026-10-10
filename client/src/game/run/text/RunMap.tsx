@@ -409,7 +409,14 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
                     const face = (
                       <>
                         <Icon aria-hidden style={{ width: icon, height: icon }} className={gone ? 'opacity-25' : ''} />
-                        {gone ? <X aria-hidden strokeWidth={3} className="absolute inset-0 m-auto size-[90%]" /> : null}
+                        {/* Lucide's X spans the middle half of its box, so twice the node's size takes it to the corners. */}
+                        {gone ? (
+                          <X
+                            aria-hidden
+                            strokeWidth={1.5}
+                            className="pointer-events-none absolute top-1/2 left-1/2 size-[190%] -translate-1/2"
+                          />
+                        ) : null}
                       </>
                     )
                     const reading =

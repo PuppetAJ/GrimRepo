@@ -1,3 +1,4 @@
+import { ShieldPlus } from 'lucide-react'
 import { useState } from 'react'
 import { m } from 'motion/react'
 import { warmPop } from '../../moves.ts'
@@ -12,7 +13,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog.tsx'
-import { IntegrityBar } from '../../controls.tsx'
 import { SIDE_BUTTON } from '../../text/Panel.tsx'
 import { Rising } from '../../text/Board.tsx'
 import { asUnit, boostText } from '../nodes.ts'
@@ -55,21 +55,6 @@ export function Campfire({ run }: { run: RunReady }) {
         </p>
       </ScreenBar>
       <FireOnLogs />
-      {visit.buffs === 0 ? (
-        <div className="flex flex-wrap items-center justify-center gap-4">
-          <IntegrityBar left={run.state.integrity} max={INTEGRITY} className="text-xl" />
-          {canRepair ? (
-            <button
-              type="button"
-              data-action="repair"
-              onClick={() => run.act({ type: 'repair' })}
-              className={`${SIDE_BUTTON} px-4 text-lg`}
-            >
-              Repair +{repairs} integrity
-            </button>
-          ) : null}
-        </div>
-      ) : null}
       {warmed ? (
         <div className="w-24 sm:w-28">
           {/* Pops with what it gained each time it comes out of the fire. */}
@@ -80,15 +65,30 @@ export function Campfire({ run }: { run: RunReady }) {
           </m.span>
         </div>
       ) : (
-        <CardSlot
-          label="Choose a card to warm"
-          units={deck}
-          can={(unit) => allowed.has(unit.uid)}
-          picked={null}
-          onPick={buff}
-          data={(unit) => ({ 'data-action': 'buff', 'data-card': unit.uid })}
-          slot="campfire"
-        />
+        // The card to warm, and beside it, like a tool, the repair to take instead.
+        <div className="flex items-start justify-center gap-4">
+          <CardSlot
+            label="Choose a card to warm"
+            units={deck}
+            can={(unit) => allowed.has(unit.uid)}
+            picked={null}
+            onPick={buff}
+            data={(unit) => ({ 'data-action': 'buff', 'data-card': unit.uid })}
+            slot="campfire"
+          />
+          {canRepair ? (
+            <button
+              type="button"
+              data-action="repair"
+              onClick={() => run.act({ type: 'repair' })}
+              title={`Integrity ${run.state.integrity} of ${INTEGRITY}`}
+              className="flex aspect-[5/7] w-24 flex-col items-center justify-center gap-2 rounded-md border-2 border-p03-edge bg-[#0b1f12] p-2 text-center text-p03 hover:border-p03 hover:bg-[#13261a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03 sm:w-28"
+            >
+              <ShieldPlus aria-hidden className="size-10" />
+              <span className="text-lg leading-tight">Repair {repairs} integrity</span>
+            </button>
+          ) : null}
+        </div>
       )}
       {warmed && allowed.size ? (
         <button

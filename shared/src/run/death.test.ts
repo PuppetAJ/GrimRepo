@@ -18,7 +18,7 @@ import {
   deathStatsHand,
   rivalAllowed,
 } from './death.ts'
-import { applyRun, createRun, legalRunActions, replayRun } from './run.ts'
+import { applyRun, createRun, legalRunActions, PACKS, replayRun } from './run.ts'
 import type { RunAction, RunCard, RunState } from './types.ts'
 
 const step = (state: RunState, action: RunAction) => {
@@ -192,13 +192,13 @@ describe('leaving a death card out', () => {
 
 describe('a run with a death card', () => {
   const start = (skipDeath?: boolean) =>
-    step(
+    Array.from({ length: PACKS }).reduce<RunState>(
+      (state) => step(state, { type: 'take', index: 0 }),
       step(createRun({ seed: 5, death: DEATH }), {
         type: 'start',
         deck: 'hello-world',
         ...(skipDeath ? { skipDeath } : {}),
       }),
-      { type: 'leave' },
     )
 
   it('can start with or without it', () => {

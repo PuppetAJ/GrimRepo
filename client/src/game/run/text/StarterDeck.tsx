@@ -1,8 +1,7 @@
-import { m } from 'motion/react'
-import { useEffect, useState } from 'react'
-import { card, deathSkipBonus, PACK_SIZE, STARTER_DECKS, type Rarity } from 'shared'
-import { flipIn } from '../../moves.ts'
-import { forTable } from '../../shortcuts.ts'
+import { m, useReducedMotion } from 'motion/react'
+import { useState } from 'react'
+import { card, deathSkipBonus, PACK_SIZE, PACKS, STARTER_DECKS, type Rarity } from 'shared'
+import { flipIn, tearOpen } from '../../moves.ts'
 import { Sentences } from '../../text/Sentences.tsx'
 import { asUnit } from '../nodes.ts'
 import type { RunReady } from '../useRun.ts'
@@ -52,7 +51,9 @@ export function StarterDeck({ run }: { run: RunReady }) {
               <CardList units={deck.core.map((id, index) => asUnit(id, index + 1))} size="w-24 sm:w-28 @6xl:w-16" />
               {/* What the pack can hold, by rarity; one of its cards is uncommon or better. */}
               <div className="font-sans text-sm text-[#b8f5c4]">
-                <p className="font-terminal text-lg text-p03">Plus a pack of {PACK_SIZE}, one uncommon or better:</p>
+                <p className="font-terminal text-lg text-p03">
+                  Plus one card from each of {PACKS} packs of {PACK_SIZE}, from:
+                </p>
                 <dl className="grid grid-cols-[auto_1fr] gap-x-2">
                   {RARITIES.map((rarity) => (
                     <div key={rarity} className="contents">
@@ -79,55 +80,68 @@ export function StarterDeck({ run }: { run: RunReady }) {
   )
 }
 
-/** The starter deck's pack, turning over one card at a time, each with its rarity, until the player moves on. */
+/** One of the starter deck's packs: sealed until clicked, then torn open on three cards, each with its rarity, to take one. */
 export function PackOpening({ run }: { run: RunReady }) {
   const visit = run.state.visit
-  const { act } = run
-  const open = visit?.kind === 'pack'
-  // Enter or Space moves on, as it does from a node's result.
-  useEffect(() => {
-    if (!open) return
-    const onKey = (event: KeyboardEvent) => {
-      if (!forTable(event) || event.repeat || (event.key !== 'Enter' && event.key !== ' ')) return
-      event.preventDefault()
-      act({ type: 'leave' })
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [open, act])
+  const still = useReducedMotion() ?? false
+  // Which pack is open, and which is tearing; a new pack comes sealed.
+  const [opened, setOpened] = useState<number | null>(null)
+  const [tearing, setTearing] = useState<number | null>(null)
   if (visit?.kind !== 'pack') return null
-  const opened = visit.cards.flatMap((id) => run.state.deck.filter((entry) => entry.id === id))
+  const open = opened === visit.opened
   return (
-    <div data-center className="flex flex-col items-center gap-5 text-center">
+    <div data-center className="flex flex-col items-center gap-4 text-center">
       <ScreenBar>
         <p className="pb-1 text-lg">
-          <Sentences text="Three more cards for the deck. Try not to waste them." />
+          <Sentences
+            text={
+              open
+                ? `Pack ${visit.opened} of ${PACKS}. Take one of the three.`
+                : `Pack ${visit.opened} of ${PACKS}. Open it.`
+            }
+          />
         </p>
       </ScreenBar>
-      {/* Each turns over in turn, its rarity with it. */}
-      <ul className="flex flex-wrap justify-center gap-6 pt-3">
-        {opened.map((entry, index) => (
-          <m.li
-            key={entry.id}
-            {...flipIn(0.2 + index * 0.25)}
-            className="flex w-32 shrink-0 flex-col items-center gap-2 sm:w-40"
-          >
-            <ReadableCard unit={asUnit(entry)} />
-            <span className={`text-lg capitalize ${RARITY_TONE[packRarity(entry.card)]}`}>
-              {packRarity(entry.card)}
+      {open ? (
+        // Remounted for each pack, so its cards turn over afresh.
+        <CardList
+          key={visit.opened}
+          units={visit.offer.map((id, index) => asUnit(id, index + 1))}
+          onPick={(unit) => run.act({ type: 'take', index: unit.uid - 1 })}
+          data={(unit) => ({ 'data-action': 'take', 'data-index': unit.uid - 1 })}
+          size="w-36 sm:w-44"
+          itemMove={(index) => flipIn(index * 0.15)}
+          badge={(unit) => (
+            <span className={`text-lg capitalize ${RARITY_TONE[packRarity(unit.card)]}`}>{packRarity(unit.card)}</span>
+          )}
+        />
+      ) : (
+        <m.button
+          key={visit.opened}
+          type="button"
+          data-action="open-pack"
+          aria-label={`Open pack ${visit.opened} of ${PACKS}`}
+          disabled={tearing === visit.opened}
+          onClick={() => setTearing(visit.opened)}
+          {...(tearing === visit.opened ? tearOpen(still) : {})}
+          onAnimationComplete={() => tearing === visit.opened && setOpened(visit.opened)}
+          // Shaped like a foil pack: taller than a card, sealed in a band at either end, as the face-down choices are drawn.
+          className="group flex h-80 w-48 flex-col rounded-md border-2 border-p03-edge bg-[#0b1f12] text-p03 shadow-[3px_3px_0_#1f3a26,6px_6px_0_#13261a] transition-transform hover:-translate-y-1 hover:border-p03 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03 motion-reduce:transition-none sm:h-96 sm:w-56"
+        >
+          <span aria-hidden className="h-6 shrink-0 border-b-2 border-dashed border-p03-edge group-hover:border-p03" />
+          <span className="flex flex-1 flex-col items-center justify-center gap-3 px-3">
+            <span aria-hidden className="text-6xl text-p03-dim group-hover:text-p03">
+              ?
             </span>
-          </m.li>
-        ))}
-      </ul>
-      <button
-        type="button"
-        data-action="continue"
-        aria-keyshortcuts="Enter"
-        onClick={() => act({ type: 'leave' })}
-        className="rounded-md border-2 border-p03 bg-[#07130b] px-4 py-2 text-xl text-p03 hover:bg-[#13261a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03"
-      >
-        On to the map
-      </button>
+            <span className="text-2xl leading-tight">{STARTER_DECKS[visit.deck]?.name}</span>
+            <span className="text-lg text-p03-dim">
+              Pack {visit.opened} of {PACKS}
+            </span>
+            <span className="text-xl">Tear it open</span>
+          </span>
+          <span aria-hidden className="h-6 shrink-0 border-t-2 border-dashed border-p03-edge group-hover:border-p03" />
+        </m.button>
+      )}
     </div>
   )
 }

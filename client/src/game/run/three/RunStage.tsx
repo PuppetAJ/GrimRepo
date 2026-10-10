@@ -26,6 +26,7 @@ function restView(state: RunState): View {
     summon: null,
     phase: 0,
     integrity: { left: state.integrity, max: INTEGRITY },
+    desperate: false,
   }
 }
 

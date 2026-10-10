@@ -141,7 +141,7 @@ const table: [string, string, Tier, number, number, number, SigilId[]?][] = [
   ['PairProgramming', 'Pair Programming', 'C', 2, 3, 1, ['redundancy']],
   // Broadcast's home since Hello World took Uptime, and Legacy's defender.
   ['ReplyAll', 'Reply All', 'C', 1, 2, 1, ['broadcast']],
-  ['COBOL', 'COBOL', 'C', 1, 5, 1, ['uptime']],
+  ['COBOL', 'COBOL', 'C', 2, 5, 1, ['uptime']],
 ]
 
 const TYPE_OF: Record<string, CardType> = {

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { card, EVENT_ONLY, PLAYER_DECK } from '../cards.ts'
+import { deckCard } from '../engine/units.ts'
 import { Rng } from '../rng.ts'
 import { scoreRun } from '../scoring.ts'
 import { playRun } from './bot.ts'
@@ -11,6 +12,7 @@ import {
   legalRunActions,
   CHOICE_POOLS,
   PACK_SIZE,
+  PACKS,
   PICKS,
   REPAIR,
   reachable,
@@ -34,9 +36,13 @@ const refused = (state: RunState, action: RunAction) => {
 
 const STARTER = STARTER_DECKS['hello-world']?.core as string[]
 
-/** A fresh run past its first choice, on the Hello, World deck, with its pack opened and put away. */
+/** Takes the first card of each starter pack. */
+const unpacked = (state: RunState): RunState =>
+  state.visit?.kind === 'pack' ? unpacked(step(state, { type: 'take', index: 0 })) : state
+
+/** A fresh run past its first choice, on the Hello, World deck, with a card taken from each pack. */
 const started = ({ seed }: { seed: number }) =>
-  step(step(createRun({ seed }), { type: 'start', deck: 'hello-world' }), { type: 'leave' })
+  unpacked(step(createRun({ seed }), { type: 'start', deck: 'hello-world' }))
 
 /** A fresh run standing on a node of the given kind, whatever the map says. */
 function at(kind: NodeKind, visit: Visit, seed = 1): RunState {
@@ -56,12 +62,13 @@ describe('a new run', () => {
     assert.equal(refused(fresh, { type: 'start', deck: 'nope' }), 'No such starter deck')
     const opened = step(fresh, { type: 'start', deck: 'hello-world' })
     assert.equal(opened.visit?.kind, 'pack')
-    assert.deepEqual(reachable(opened), [], 'the map waits for the pack to be put away')
-    const state = step(opened, { type: 'leave' })
+    assert.deepEqual(reachable(opened), [], 'the map waits for the packs')
+    const state = unpacked(opened)
     assert.deepEqual(
       state.deck.slice(0, STARTER.length).map((entry) => entry.card),
       STARTER,
     )
+    assert.equal(state.deck.length, STARTER.length + PACKS)
     assert.equal(state.integrity, INTEGRITY)
     assert.equal(state.stage, 0)
     assert.deepEqual(
@@ -80,34 +87,51 @@ describe('a new run', () => {
   })
 })
 
-describe('a starter pack', () => {
-  const opened = (seed: number, deck: string) => {
-    const state = step(createRun({ seed }), { type: 'start', deck })
-    const ids = state.visit?.kind === 'pack' ? state.visit.cards : []
-    return ids.map((id) => state.deck.find((entry) => entry.id === id)?.card as string)
+describe('the starter packs', () => {
+  /** Each pack's offer, taking the card at `index` from each. */
+  const packs = (seed: number, deck: string, index = 0) => {
+    let state = step(createRun({ seed }), { type: 'start', deck })
+    const offers: string[][] = []
+    while (state.visit?.kind === 'pack') {
+      offers.push(state.visit.offer)
+      state = step(state, { type: 'take', index })
+    }
+    return { offers, state }
   }
 
-  it("opens three cards from the deck's pool, at least one uncommon or better, the same for a seed", () => {
+  it("open one after another, three cards each from the deck's pool, at least one uncommon or better", () => {
     for (const [id, deck] of Object.entries(STARTER_DECKS))
       for (let seed = 1; seed <= 40; seed++) {
-        const cards = opened(seed, id)
-        assert.equal(cards.length, PACK_SIZE)
-        assert.ok(
-          cards.every((found) => Object.values(deck.pack).flat().includes(found)),
-          cards.join(),
-        )
-        assert.ok(
-          cards.some((found) => !deck.pack.common.includes(found)),
-          cards.join(),
-        )
-        assert.deepEqual(opened(seed, id), cards)
+        const { offers } = packs(seed, id)
+        assert.equal(offers.length, PACKS)
+        for (const offer of offers) {
+          assert.equal(offer.length, PACK_SIZE)
+          assert.ok(
+            offer.every((found) => Object.values(deck.pack).flat().includes(found)),
+            offer.join(),
+          )
+          assert.ok(
+            offer.some((found) => !deck.pack.common.includes(found)),
+            offer.join(),
+          )
+        }
+        assert.deepEqual(packs(seed, id).offers, offers, 'the same for a seed')
       }
   })
 
-  it('holds a rare now and then', () => {
+  it('add only the card taken from each', () => {
+    const { offers, state } = packs(3, 'move-fast', 2)
+    assert.deepEqual(
+      state.deck.slice(-PACKS).map((entry) => entry.card),
+      offers.map((offer) => offer[2]),
+    )
+    assert.equal(state.visit, null)
+  })
+
+  it('hold a rare now and then', () => {
     const rares = STARTER_DECKS['move-fast']?.pack.rare ?? []
-    const packs = Array.from({ length: 300 }, (_, seed) => opened(seed + 1, 'move-fast'))
-    assert.ok(packs.some((cards) => cards.some((found) => rares.includes(found))))
+    const offers = Array.from({ length: 200 }, (_, seed) => packs(seed + 1, 'move-fast').offers).flat(2)
+    assert.ok(offers.some((found) => rares.includes(found)))
   })
 })
 
@@ -394,9 +418,15 @@ describe('the merge request', () => {
 })
 
 describe('the code review', () => {
-  // The starter deck's three cards have 7 health and a sigil each: uptime always fails, coverage always passes.
+  // Three cards with 8 health and a sigil each: stability always fails, coverage always passes.
   const review = (option: number) => {
-    const result = applyRun(at('event', { kind: 'event', node: '0-0', event: 'review-trial' }), {
+    const state = at('event', { kind: 'event', node: '0-0', event: 'review-trial' })
+    state.deck = ['HelloWorld', 'CronJob', 'MergeConflict'].map((id, index) => ({
+      id: index + 1,
+      added: null,
+      ...deckCard(id),
+    }))
+    const result = applyRun(state, {
       type: 'choose',
       option,
     })
@@ -411,7 +441,7 @@ describe('the code review', () => {
   it('draws three cards and judges their total against the bar', () => {
     const { trial, rare } = review(1)
     assert.ok(trial?.type === 'trialled' && trial.cards.length === 3)
-    assert.equal(trial.total, 7)
+    assert.equal(trial.total, 8)
     assert.equal(trial.passed, false)
     assert.equal(rare, false, 'a failed review gives nothing')
   })
@@ -450,7 +480,7 @@ describe("a shop's tools", () => {
   it('are two different tools at every shop', () => {
     for (let seed = 1; seed <= 40; seed++) {
       let state = createRun({ seed })
-      state = step(step(state, { type: 'start', deck: 'hello-world' }), { type: 'leave' })
+      state = unpacked(step(state, { type: 'start', deck: 'hello-world' }))
       const node = state.map.rows[0]?.[0]
       assert.ok(node)
       node.kind = 'shop'
@@ -543,7 +573,7 @@ describe('battles', () => {
   it('deal the run’s deck, and a won one waits for the player to leave', () => {
     const state = battleAt(started({ seed: 4 }), 'battle')
     assert.ok(state.visit?.kind === 'battle')
-    assert.equal(state.visit.game.player.library.length, STARTER.length + PACK_SIZE)
+    assert.equal(state.visit.game.player.library.length, STARTER.length + PACKS)
     assert.deepEqual(state.visit.game.integrity, { left: INTEGRITY, max: INTEGRITY })
     const won = win(state)
     assert.equal(won.record.battles, 1)

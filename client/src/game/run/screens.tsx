@@ -37,7 +37,7 @@ export type RunView =
 
 const TITLES: Record<Exclude<RunView, 'battle' | 'map'>, string> = {
   start: 'Choose a starter deck',
-  pack: 'Your starter pack',
+  pack: 'Starter packs',
   card: 'Card choice',
   blind: 'Card choice, face down',
   shop: 'Package Registry',

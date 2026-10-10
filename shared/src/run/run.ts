@@ -24,7 +24,7 @@ import {
 
 export type Rarity = 'common' | 'uncommon' | 'rare'
 
-/** The decks a run can start with, chosen as its first action: a core, and a pack of three opened from its pool. */
+/** The decks a run can start with, chosen as its first action: a core, and a card taken from each of its packs. */
 export const STARTER_DECKS: Record<
   string,
   { name: string; about: string; core: string[]; pack: Record<Rarity, string[]> }
@@ -43,7 +43,7 @@ export const STARTER_DECKS: Record<
     name: 'Legacy Stack',
     about: 'Defense and sacrifices: Hold the line, and pay for high cost cards early.',
     core: ['OffCenterDiv', 'COBOL'],
-    pack: { common: ['CronJob', 'Heisenbug'], uncommon: ['LegacyCode', 'Monolith', 'Firewall'], rare: ['Bug'] },
+    pack: { common: ['CronJob', 'SpamBot'], uncommon: ['LegacyCode', 'Monolith', 'Firewall'], rare: ['Bug'] },
   },
   'move-fast': {
     name: 'Move Fast',
@@ -57,8 +57,17 @@ export const STARTER_DECKS: Record<
   },
 }
 
-/** How many cards a starter deck's pack holds. */
+/** How many packs a starter deck opens, one card taken from each. */
+export const PACKS = 2
+/** How many cards each starter pack holds. */
 export const PACK_SIZE = 3
+
+/** A starter pack's cards: one uncommon or better, at the plain odds, since the pity offset would hold a rare at 0. */
+const openPack = (state: RunState, rng: Rng, deck: string): string[] =>
+  offerCards(state, rng, PACK_SIZE, (STARTER_DECKS[deck] as (typeof STARTER_DECKS)[string]).pack, {
+    floored: 1,
+    pity: false,
+  })
 
 /** What a card costs at a shop, in bytes, by tier. */
 const PRICE: Record<string, number> = { E: 3, D: 5, C: 6, B: 12, A: 15 }
@@ -368,13 +377,7 @@ function step(state: RunState, rng: Rng, action: RunAction, events: RunEvent[]):
         state.death.skipped = true
       }
       for (const id of deck.core) state.deck.push(newCard(state, id))
-      // One card uncommon or better, at the plain odds, since the pity offset would hold a rare at 0.
-      const opened = offerCards(state, rng, PACK_SIZE, deck.pack, { floored: 1, pity: false }).map((id) =>
-        newCard(state, id),
-      )
-      state.deck.push(...opened)
-      events.push(...opened.map((entry): RunEvent => ({ type: 'added', card: entry })))
-      state.visit = { kind: 'pack', cards: opened.map((entry) => entry.id) }
+      state.visit = { kind: 'pack', deck: action.deck, opened: 1, offer: openPack(state, rng, action.deck) }
       return
     }
     case 'buy': {
@@ -391,6 +394,16 @@ function step(state: RunState, rng: Rng, action: RunAction, events: RunEvent[]):
       return
     }
     case 'take': {
+      if (visit?.kind === 'pack') {
+        const id = Number.isInteger(action.index) ? visit.offer[action.index] : undefined
+        if (id === undefined) return 'No such card in the pack'
+        const added = newCard(state, id)
+        state.deck.push(added)
+        events.push({ type: 'added', card: added })
+        state.visit =
+          visit.opened < PACKS ? { ...visit, opened: visit.opened + 1, offer: openPack(state, rng, visit.deck) } : null
+        return
+      }
       if (visit?.kind === 'blind') {
         if (!visit.revealed) {
           const pick = Number.isInteger(action.index) ? visit.picks[action.index] : undefined
@@ -552,7 +565,7 @@ function step(state: RunState, rng: Rng, action: RunAction, events: RunEvent[]):
       return
     }
     case 'leave': {
-      if (['campfire', 'stones', 'lint', 'shop', 'fuse', 'item', 'pack'].includes(visit?.kind ?? '')) {
+      if (['campfire', 'stones', 'lint', 'shop', 'fuse', 'item'].includes(visit?.kind ?? '')) {
         state.visit = null
         return
       }
@@ -593,6 +606,7 @@ export function legalRunActions(state: RunState): RunAction[] {
         : legalActions(visit.game).map((action) => ({ type: 'play', action }))
     case 'card':
     case 'reward':
+    case 'pack':
       return visit.offer.map((_, index) => ({ type: 'take', index }))
     case 'event':
       return scene(visit.event).options.map((_, option) => ({ type: 'choose', option }))
@@ -633,8 +647,6 @@ export function legalRunActions(state: RunState): RunAction[] {
       for (const entry of state.deck) if (duplicated(state, entry)) actions.push({ type: 'fuse', card: entry.id })
       return actions
     }
-    case 'pack':
-      return [{ type: 'leave' }]
     case 'campfire': {
       const actions: RunAction[] = [{ type: 'leave' }]
       if (visit.buffs === 0 && state.integrity < INTEGRITY) actions.push({ type: 'repair' })
