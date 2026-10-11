@@ -121,10 +121,10 @@ if (runs('run')) {
   ]) {
     await page.setViewportSize({ width, height })
     for (const [name, view] of MOCKED)
-      await audit(`the run's ${name}, ${layout}`, `/run/mockups/${name}?layout=${layout}&table=text`, screen(view))
+      await audit(`the run's ${name}, ${layout}`, `/mockups/${name}?layout=${layout}&table=text`, screen(view))
     await audit(
       `the run's summary after a loss, ${layout}`,
-      `/run/mockups/lost?layout=${layout}&table=text`,
+      `/mockups/lost?layout=${layout}&table=text`,
       async () => {
         await page.locator('[data-action="summary"]').click()
         await screen('summary')()
@@ -152,7 +152,7 @@ if (runs('tables')) {
     ['death-build', 'summary'],
     ['pack', 'pack'],
   ])
-    await audit(`the run's ${name} on the projector`, `/run/mockups/${name}?table=3d`, projected(view))
+    await audit(`the run's ${name} on the projector`, `/mockups/${name}?table=3d`, projected(view))
   await page.setViewportSize({ width: 1280, height: 800 })
 }
 

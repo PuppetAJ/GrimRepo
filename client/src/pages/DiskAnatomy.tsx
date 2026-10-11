@@ -284,7 +284,7 @@ export function DiskAnatomy() {
   return (
     <div className="flex max-w-6xl flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <Link to="/run/mockups" className="text-sm text-muted-foreground hover:underline">
+        <Link to="/mockups" className="text-sm text-muted-foreground hover:underline">
           ← Mockups
         </Link>
         <h1 className="text-3xl font-semibold">Disk anatomy</h1>
