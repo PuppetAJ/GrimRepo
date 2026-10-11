@@ -49,75 +49,136 @@ export function SealedPack({
       onPointerLeave={tilt.rest}
       className="group flex flex-col items-center gap-2 rounded-md p-2 text-p03 transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03 enabled:hover:-translate-y-1 disabled:opacity-60 motion-reduce:transition-none"
     >
-      {/* The pack in two layers, cut along the crimp, so tearing it open pulls the top away from the rest. */}
-      <m.span className={`relative block ${PACK_SIZE_CLASS}`} style={tilt.style}>
-        <m.img
-          src={src}
-          alt=""
-          draggable={false}
-          {...(tearing ? tearBody(still) : {})}
-          onAnimationComplete={() => tearing && onTorn()}
-          className="pixel-art absolute inset-0 size-full [clip-path:inset(11%_0_0_0)]"
-        />
-        <m.img
-          src={src}
-          alt=""
-          draggable={false}
-          {...(tearing ? tearTop(still) : {})}
-          className="pixel-art absolute inset-0 size-full [clip-path:inset(0_0_89%_0)]"
-        />
-        {/* The sheen is masked to the pack's own shape, and stays behind once it starts to tear. */}
-        {holo && !tearing ? (
-          <>
+      {/* Room below a tilting pack, so its lifted edge and shadow stay clear of the label. */}
+      <span className={`relative block ${PACK_SIZE_CLASS} ${holo ? 'mb-4' : ''}`}>
+        {tilt.on ? (
+          <m.span
+            aria-hidden
+            className="pointer-events-none absolute inset-0 bg-black blur-md"
+            style={{ maskImage: `url("${src}")`, maskSize: '100% 100%', ...tilt.shadow }}
+          />
+        ) : null}
+        <m.span className="absolute inset-0 block [transform-style:preserve-3d]" style={tilt.style}>
+          {/* The pack's thickness: darker copies behind it, showing as an edge once it tilts. */}
+          {tilt.on
+            ? DEPTH.map((z) => (
+                <img
+                  key={z}
+                  src={src}
+                  alt=""
+                  draggable={false}
+                  className="pixel-art absolute inset-0 size-full brightness-[0.4]"
+                  style={{ transform: `translateZ(${z}px)` }}
+                />
+              ))
+            : null}
+          {/* The pack in two layers, cut along the crimp, so tearing it open pulls the top away from the rest. */}
+          <m.img
+            src={src}
+            alt=""
+            draggable={false}
+            {...(tearing ? tearBody(still) : {})}
+            onAnimationComplete={() => tearing && onTorn()}
+            className="pixel-art absolute inset-0 size-full [clip-path:inset(11%_0_0_0)]"
+          />
+          <m.img
+            src={src}
+            alt=""
+            draggable={false}
+            {...(tearing ? tearTop(still) : {})}
+            className="pixel-art absolute inset-0 size-full [clip-path:inset(0_0_89%_0)]"
+          />
+          {tilt.on ? (
+            <>
+              {/* The art inside the frame drifts against the tilt, as if set back behind it. */}
+              <span className={`absolute overflow-hidden ${WINDOW}`} style={{ transform: 'translateZ(1px)' }}>
+                <m.img
+                  src={src}
+                  alt=""
+                  draggable={false}
+                  className="pixel-art absolute max-w-none"
+                  style={{ ...WINDOW_ART, ...tilt.inner }}
+                />
+                <span className="absolute inset-0 shadow-[inset_0_0_14px_6px_rgb(0_0_0/0.55)]" />
+              </span>
+              {/* The sheen is masked to the pack's own shape, and stays behind once it starts to tear. */}
+              <span
+                aria-hidden
+                className="holo-sheen pointer-events-none absolute inset-0"
+                style={{ maskImage: `url("${src}")`, maskSize: '100% 100%', transform: 'translateZ(2px)' }}
+              />
+              {/* The foil's colors slide against the tilt, and a glare sits where the pointer is. */}
+              <m.span
+                aria-hidden
+                className="holo-foil pointer-events-none absolute inset-0"
+                style={{ maskImage: `url("${src}")`, maskSize: '100% 100%', z: 3, ...tilt.light }}
+              />
+            </>
+          ) : holo && !tearing ? (
             <span
               aria-hidden
               className="holo-sheen pointer-events-none absolute inset-0"
               style={{ maskImage: `url("${src}")`, maskSize: '100% 100%' }}
             />
-            {/* The foil's colors slide against the tilt, and a glare sits where the pointer is. */}
-            <m.span
-              aria-hidden
-              className="holo-foil pointer-events-none absolute inset-0"
-              style={{ maskImage: `url("${src}")`, maskSize: '100% 100%', ...tilt.light }}
-            />
-          </>
-        ) : null}
-      </m.span>
-      <span className="max-w-[10rem] text-xl leading-tight">{label}</span>
+          ) : null}
+        </m.span>
+      </span>
+      <span className="relative max-w-[10rem] text-xl leading-tight">{label}</span>
       {note ? <span className="text-lg text-p03-dim group-enabled:group-hover:text-p03">{note}</span> : null}
     </button>
   )
 }
 
-/** Tilts a pack toward the pointer, with where it points as a light for the foil; flat when `on` is false. */
+/** How far behind the face the pack's thickness reaches, in pixels. */
+const DEPTH = [-12, -10, -8, -6, -4, -2]
+/** The art inside the pack's frame, as a share of the pack. */
+const WINDOW = 'top-[12%] right-[8.5%] bottom-[11.5%] left-[8.5%]'
+/** The whole pack at a tenth larger, centered so only its framed art shows through the window, with room to drift. */
+const WINDOW_ART = { width: '132.5%', height: '143.8%', left: '-16.25%', top: '-21.9%' }
+
+/** Tilts a pack toward the pointer and lifts it, with where it points as a light for the foil; flat when `on` is false. */
 function useTilt(on: boolean) {
   // Where the pointer is across the pack, 0 to 1 each way; the middle at rest.
   const x = useMotionValue(0.5)
   const y = useMotionValue(0.5)
+  const near = useMotionValue(0)
   const spring = { stiffness: 180, damping: 18 }
-  const rotateY = useSpring(useTransform(x, [0, 1], [-14, 14]), spring)
-  const rotateX = useSpring(useTransform(y, [0, 1], [12, -12]), spring)
+  const rotateY = useSpring(useTransform(x, [0, 1], [-16, 16]), spring)
+  const rotateX = useSpring(useTransform(y, [0, 1], [14, -14]), spring)
+  const lift = useSpring(useTransform(near, [0, 1], [0, 24]), spring)
   const glareX = useTransform(x, [0, 1], ['0%', '100%'])
   const glareY = useTransform(y, [0, 1], ['0%', '100%'])
   const foilX = useTransform(x, [0, 1], ['100%', '0%'])
   const foilY = useTransform(y, [0, 1], ['100%', '0%'])
   const background = useMotionTemplate`radial-gradient(circle at ${glareX} ${glareY}, rgb(220 255 230 / 0.3), transparent 35%), linear-gradient(115deg, transparent 20%, rgb(110 210 220 / 0.22) 40%, rgb(210 180 90 / 0.2) 55%, transparent 75%)`
   const backgroundPosition = useMotionTemplate`0 0, ${foilX} ${foilY}`
+  // The set-back art drifts the opposite way to the pointer; the shadow falls away from it and spreads as it lifts.
+  const innerX = useSpring(useTransform(x, [0, 1], ['3%', '-3%']), spring)
+  const innerY = useSpring(useTransform(y, [0, 1], ['3%', '-3%']), spring)
+  const shadowX = useSpring(useTransform(x, [0, 1], [14, -14]), spring)
+  const shadowY = useSpring(useTransform(y, [0, 1], [14, 2]), spring)
+  const shadowOpacity = useTransform(lift, [0, 24], [0.35, 0.65])
+  const shadowScale = useTransform(lift, [0, 24], [0.96, 1.04])
   const follow = (event: PointerEvent<HTMLElement>) => {
     if (!on) return
     const pack = event.currentTarget.firstElementChild?.getBoundingClientRect()
     if (!pack) return
     x.set(Math.min(1, Math.max(0, (event.clientX - pack.left) / pack.width)))
     y.set(Math.min(1, Math.max(0, (event.clientY - pack.top) / pack.height)))
+    near.set(1)
   }
   const rest = () => {
     x.set(0.5)
     y.set(0.5)
+    near.set(0)
   }
   return {
+    on,
     follow,
     rest,
-    style: on ? { rotateX, rotateY, transformPerspective: 700 } : {},
+    style: on ? { rotateX, rotateY, z: lift, transformPerspective: 700 } : {},
+    inner: { x: innerX, y: innerY },
+    shadow: { x: shadowX, y: shadowY, opacity: shadowOpacity, scale: shadowScale },
     light: { background, backgroundPosition, backgroundSize: '100% 100%, 300% 300%' },
   }
 }
