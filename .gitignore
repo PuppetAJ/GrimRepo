@@ -45,3 +45,6 @@ CLAUDE.md
 client/mockups/
 client/public/mockups/
 e2e-failure.png
+
+# Blender keeps its last save as a .blend1 backup beside the file.
+*.blend1

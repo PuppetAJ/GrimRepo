@@ -14,7 +14,7 @@ import { NotFound } from './NotFound.tsx'
 type Part = 'plastic' | 'dark' | 'metal' | 'base' | 'content' | 'lights' | 'back'
 
 const PARTS: { id: Part; name: string; about: string }[] = [
-  { id: 'plastic', name: 'Plastic body', about: 'The disk itself, built from outlines extruded into 3D.' },
+  { id: 'plastic', name: 'Plastic body', about: 'The disk itself, modeled in Blender: art/disk.blend.' },
   { id: 'dark', name: 'Dark recesses', about: 'Black floors under holes, so they read as dents.' },
   { id: 'metal', name: 'Metal', about: 'The shutter, its rails and the hub on the back.' },
   { id: 'base', name: 'Base sticker', about: 'The plastic colors and empty panels, shared by every card of a rarity.' },
@@ -289,8 +289,8 @@ export function DiskAnatomy() {
         </Link>
         <h1 className="text-3xl font-semibold">Disk anatomy</h1>
         <p className="text-muted-foreground">
-          How a card becomes a floppy disk on the 3D table: a shape built in code, wrapped in stickers the game draws
-          from image files. Turn pieces off, pull them apart and squash the disk to see each one alone.
+          How a card becomes a floppy disk on the 3D table: a shape modeled in Blender, wrapped in stickers the game
+          draws from image files. Turn pieces off, pull them apart and squash the disk to see each one alone.
         </p>
       </div>
       <div className="grid gap-6 md:grid-cols-[18rem_minmax(0,1fr)]">
