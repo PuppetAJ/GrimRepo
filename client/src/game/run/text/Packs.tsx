@@ -6,6 +6,7 @@ import { packArt } from '../../art.ts'
 import { Sigil } from '../../CardReader.tsx'
 import { fadeIn, flipIn, tearBody, tearTop } from '../../moves.ts'
 import { CardList } from './CardList.tsx'
+import { useScreenMode } from './Screen.tsx'
 
 /** A sealed pack's size: its art, 84 by 154, at one and a half times on a phone and twice beside it. */
 export const PACK_SIZE_CLASS = 'h-[231px] w-[126px] sm:h-[308px] sm:w-[168px]'
@@ -38,6 +39,8 @@ export function SealedPack({
   const still = useReducedMotion() ?? false
   const src = packArt(art)
   const tilt = useTilt(holo && !still && !tearing)
+  // On the terminal's near-black screen a shadow alone doesn't show, so the foil also spills a little light around it.
+  const spill = useScreenMode() === 'terminal' && tilt.on
   return (
     <button
       type="button"
@@ -51,27 +54,33 @@ export function SealedPack({
     >
       {/* Room below a tilting pack, so its lifted edge and shadow stay clear of the label. */}
       <span className={`relative block ${PACK_SIZE_CLASS} ${holo ? 'mb-4' : ''}`}>
-        {tilt.on ? (
+        {spill ? (
           <m.span
             aria-hidden
-            className="pointer-events-none absolute inset-0 bg-black blur-md"
-            style={{ maskImage: `url("${src}")`, maskSize: '100% 100%', ...tilt.shadow }}
+            className="pointer-events-none absolute -inset-[12%] rounded-[40%] bg-p03/10 blur-2xl"
+            style={tilt.glow}
           />
         ) : null}
+        {/* Blurred outside the mask, since a mask applies after a blur and would cut its soft edge back off. */}
+        {tilt.on ? (
+          <m.span aria-hidden className="pointer-events-none absolute inset-0 blur-xl" style={tilt.shadow}>
+            <span className="absolute inset-0 bg-black" style={{ maskImage: `url("${src}")`, maskSize: '100% 100%' }} />
+          </m.span>
+        ) : null}
         <m.span className="absolute inset-0 block [transform-style:preserve-3d]" style={tilt.style}>
-          {/* The pack's thickness: darker copies behind it, showing as an edge once it tilts. */}
-          {tilt.on
-            ? DEPTH.map((z) => (
-                <img
-                  key={z}
-                  src={src}
-                  alt=""
-                  draggable={false}
-                  className="pixel-art absolute inset-0 size-full brightness-[0.4]"
-                  style={{ transform: `translateZ(${z}px)` }}
-                />
-              ))
-            : null}
+          {/* The body's side walls, hinged at its edges and folded back, so a tilt shows the pack's thickness. */}
+          {tilt.on ? (
+            <>
+              <span
+                aria-hidden
+                className={`absolute left-[2.4%] origin-left bg-linear-to-r from-[#6fb071] to-[#356a3c] ${WALL}`}
+              />
+              <span
+                aria-hidden
+                className={`absolute right-[2.4%] origin-right bg-linear-to-l from-[#3a7446] to-[#1d4227] ${WALL} [--wall-turn:-90deg]`}
+              />
+            </>
+          ) : null}
           {/* The pack in two layers, cut along the crimp, so tearing it open pulls the top away from the rest. */}
           <m.img
             src={src}
@@ -90,17 +99,12 @@ export function SealedPack({
           />
           {tilt.on ? (
             <>
-              {/* The art inside the frame drifts against the tilt, as if set back behind it. */}
-              <span className={`absolute overflow-hidden ${WINDOW}`} style={{ transform: 'translateZ(1px)' }}>
-                <m.img
-                  src={src}
-                  alt=""
-                  draggable={false}
-                  className="pixel-art absolute max-w-none"
-                  style={{ ...WINDOW_ART, ...tilt.inner }}
-                />
-                <span className="absolute inset-0 shadow-[inset_0_0_14px_6px_rgb(0_0_0/0.55)]" />
-              </span>
+              {/* The body darkens toward whichever edge turns away, so its face reads as rounded. */}
+              <m.span
+                aria-hidden
+                className="pointer-events-none absolute inset-x-[2.4%] inset-y-[11%]"
+                style={{ background: tilt.shade, z: 1 }}
+              />
               {/* The sheen is masked to the pack's own shape, and stays behind once it starts to tear. */}
               <span
                 aria-hidden
@@ -129,12 +133,8 @@ export function SealedPack({
   )
 }
 
-/** How far behind the face the pack's thickness reaches, in pixels. */
-const DEPTH = [-12, -10, -8, -6, -4, -2]
-/** The art inside the pack's frame, as a share of the pack. */
-const WINDOW = 'top-[12%] right-[8.5%] bottom-[11.5%] left-[8.5%]'
-/** The whole pack at a tenth larger, centered so only its framed art shows through the window, with room to drift. */
-const WINDOW_ART = { width: '132.5%', height: '143.8%', left: '-16.25%', top: '-21.9%' }
+/** A side wall: as tall as the body between the crimps, and folded a quarter turn back from its edge. */
+const WALL = 'top-[11%] bottom-[11%] w-4 [backface-visibility:hidden] [transform:rotateY(var(--wall-turn,90deg))]'
 
 /** Tilts a pack toward the pointer and lifts it, with where it points as a light for the foil; flat when `on` is false. */
 function useTilt(on: boolean) {
@@ -143,8 +143,8 @@ function useTilt(on: boolean) {
   const y = useMotionValue(0.5)
   const near = useMotionValue(0)
   const spring = { stiffness: 180, damping: 18 }
-  const rotateY = useSpring(useTransform(x, [0, 1], [-16, 16]), spring)
-  const rotateX = useSpring(useTransform(y, [0, 1], [14, -14]), spring)
+  const rotateY = useSpring(useTransform(x, [0, 1], [-22, 22]), spring)
+  const rotateX = useSpring(useTransform(y, [0, 1], [16, -16]), spring)
   const lift = useSpring(useTransform(near, [0, 1], [0, 24]), spring)
   const glareX = useTransform(x, [0, 1], ['0%', '100%'])
   const glareY = useTransform(y, [0, 1], ['0%', '100%'])
@@ -152,13 +152,12 @@ function useTilt(on: boolean) {
   const foilY = useTransform(y, [0, 1], ['100%', '0%'])
   const background = useMotionTemplate`radial-gradient(circle at ${glareX} ${glareY}, rgb(220 255 230 / 0.3), transparent 35%), linear-gradient(115deg, transparent 20%, rgb(110 210 220 / 0.22) 40%, rgb(210 180 90 / 0.2) 55%, transparent 75%)`
   const backgroundPosition = useMotionTemplate`0 0, ${foilX} ${foilY}`
-  // The set-back art drifts the opposite way to the pointer; the shadow falls away from it and spreads as it lifts.
-  const innerX = useSpring(useTransform(x, [0, 1], ['3%', '-3%']), spring)
-  const innerY = useSpring(useTransform(y, [0, 1], ['3%', '-3%']), spring)
-  const shadowX = useSpring(useTransform(x, [0, 1], [14, -14]), spring)
-  const shadowY = useSpring(useTransform(y, [0, 1], [14, 2]), spring)
-  const shadowOpacity = useTransform(lift, [0, 24], [0.35, 0.65])
-  const shadowScale = useTransform(lift, [0, 24], [0.96, 1.04])
+  const away = useMotionTemplate`linear-gradient(90deg, rgb(0 0 0 / ${useTransform(rotateY, [-22, 22], [0.45, 0])}), transparent 14%, transparent 86%, rgb(0 0 0 / ${useTransform(rotateY, [-22, 22], [0, 0.45])}))`
+  // The shadow falls away from the pointer, and darkens and spreads as the pack lifts.
+  const shadowX = useSpring(useTransform(x, [0, 1], [16, -16]), spring)
+  const shadowY = useSpring(useTransform(y, [0, 1], [18, 6]), spring)
+  const shadowOpacity = useTransform(lift, [0, 24], [0.5, 0.95])
+  const shadowScale = useTransform(lift, [0, 24], [0.98, 1.06])
   const follow = (event: PointerEvent<HTMLElement>) => {
     if (!on) return
     const pack = event.currentTarget.firstElementChild?.getBoundingClientRect()
@@ -177,7 +176,8 @@ function useTilt(on: boolean) {
     follow,
     rest,
     style: on ? { rotateX, rotateY, z: lift, transformPerspective: 700 } : {},
-    inner: { x: innerX, y: innerY },
+    shade: away,
+    glow: { opacity: useTransform(lift, [0, 24], [0.4, 1]) },
     shadow: { x: shadowX, y: shadowY, opacity: shadowOpacity, scale: shadowScale },
     light: { background, backgroundPosition, backgroundSize: '100% 100%, 300% 300%' },
   }
