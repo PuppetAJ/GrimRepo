@@ -20,6 +20,7 @@ import { disposeFaces } from './faces.ts'
 import type { View } from '../view.ts'
 import { EndTurnButton, Factory, FactoryEffects, FactoryP03 } from './Factory.tsx'
 import { CAMERA, FOV } from './layout.ts'
+import { StatsPanel, StatsProbe, statsWanted } from './Stats.tsx'
 import type { Screen } from './reading.ts'
 import { createTunnel, type Tunnel } from './stage/tunnel.tsx'
 import { ItemRack } from './table3d/ItemRack.tsx'
@@ -110,6 +111,7 @@ export function TableStage({ children }: { children: ReactNode }) {
   const sharpest = Math.min(window.matchMedia('(pointer: coarse)').matches ? 1.5 : 2, window.devicePixelRatio || 1)
   // Effects get cheaper before sharpness goes, so cards stay readable.
   const [quality, setQuality] = useState(0)
+  const [stats] = useState(statsWanted)
   const dpr = quality >= 3 ? Math.min(1.5, sharpest) : sharpest
   const [attributes, setAttributes] = useState<Attributes>({})
   const missed = useRef(() => {})
@@ -193,6 +195,7 @@ export function TableStage({ children }: { children: ReactNode }) {
           <color attach="background" args={['#020203']} />
           <Exposure />
           <CursorSync />
+          {stats ? <StatsProbe /> : null}
           {/* Wait until settled: the slow first frames would lower the resolution for good. */}
           {settled ? (
             <PerformanceMonitor
@@ -226,6 +229,7 @@ export function TableStage({ children }: { children: ReactNode }) {
             </Suspense>
           </Selection>
         </Canvas>
+        {stats ? <StatsPanel quality={quality} /> : null}
         <Boot stage={warmed ? 'done' : active ? 'assets' : 'warming'} progress={progress} files={files} />
         <Suspense fallback={null}>{children}</Suspense>
       </div>
