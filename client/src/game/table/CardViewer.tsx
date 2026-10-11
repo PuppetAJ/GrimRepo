@@ -1,10 +1,10 @@
 import { Grid, OrbitControls } from '@react-three/drei'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { use, useMemo, useRef } from 'react'
+import { use, useEffect, useMemo, useRef } from 'react'
 import { card, type Unit } from 'shared'
 import * as THREE from 'three'
 import { Disk, type DiskHandle } from './Disk.tsx'
-import { backTexture, faceContent, faceLights, faceTexture, loadCardAssets } from './faces.ts'
+import { backTexture, faceContent, faceLights, faceTexture, holdFaces, loadCardAssets } from './faces.ts'
 import { FactoryEffects } from './Factory.tsx'
 import { kindOf } from './kind.ts'
 
@@ -46,9 +46,12 @@ function Card({ unit, open, turn }: { unit: Unit; open: boolean; turn: boolean }
     }),
     [],
   )
+  const words = faceContent(unit, assets)
+  const glow = faceLights(unit, assets)
+  useEffect(() => holdFaces(words, glow), [words, glow])
   materials.front.map = faceTexture(unit, assets)
-  materials.content.map = faceContent(unit, assets)
-  materials.content.emissiveMap = faceLights(unit, assets)
+  materials.content.map = words
+  materials.content.emissiveMap = glow
   materials.back.map = backTexture()
   useFrame((_, delta) => {
     if (turn && group.current) group.current.rotation.y += delta * 0.6
