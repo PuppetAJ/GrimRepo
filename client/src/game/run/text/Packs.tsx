@@ -1,4 +1,4 @@
-import { Diamond } from 'lucide-react'
+import { Star } from 'lucide-react'
 import { m, useReducedMotion } from 'motion/react'
 import type { ReactNode } from 'react'
 import { card, isDeathCard, STARTER_DECKS, type Rarity, type Unit } from 'shared'
@@ -137,7 +137,7 @@ const RARITY_MARKS: Record<Rarity, { count: number; tone: string }> = {
   rare: { count: 3, tone: 'text-[#ffb347]' },
 }
 
-/** A card's rarity as marks beside its sigils: one diamond for common, two for uncommon, three amber for rare. */
+/** A card's rarity as stars beside its sigils: one for common, two for uncommon, three in amber for rare. */
 export function RarityBadge({ rarity }: { rarity: Rarity | 'death' }) {
   if (rarity === 'death')
     return (
@@ -150,7 +150,7 @@ export function RarityBadge({ rarity }: { rarity: Rarity | 'death' }) {
   return (
     <span role="img" aria-label={name} title={name} className={`flex shrink-0 gap-0.5 ${tone}`}>
       {Array.from({ length: count }, (_, index) => (
-        <Diamond key={index} aria-hidden className="size-3.5" fill="currentColor" />
+        <Star key={index} aria-hidden className="size-3.5" fill="currentColor" />
       ))}
     </span>
   )

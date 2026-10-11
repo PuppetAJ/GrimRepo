@@ -344,36 +344,47 @@
   filter: drop-shadow(0 0 6px rgb(125 255 154 / 0.45));
 }
 
-/* The boss's rare pack: a holographic sheen drifting across it, in CSS since it loops for as long as the pack is shown. */
-/* The band sits in the middle third of a gradient three times the pack's width, so it's wholly off the pack at each end of a pass. */
+/* The boss's rare pack: a holographic sheen sweeping across it, in CSS since it loops for as long as the pack is shown. */
+/* The blend sits on the masked layer itself, since a mask isolates what's inside it from the pack beneath. */
 .holo-sheen {
-  background: linear-gradient(
-    115deg,
-    transparent 38%,
-    rgb(125 255 154 / 0.22) 45%,
-    rgb(150 235 255 / 0.28) 50%,
-    rgb(255 228 140 / 0.2) 55%,
-    transparent 62%
-  );
-  background-size: 300% 100%;
-  mix-blend-mode: soft-light;
-  animation: holo-drift 5s ease-in-out infinite;
+  overflow: hidden;
+  mix-blend-mode: screen;
 }
 
-/* A pass across, then a rest before the next. */
-@keyframes holo-drift {
+/* A tilted band; tilting leans its ends a pack's width aside, so it travels from well off the left to well off the right. */
+.holo-sheen::before {
+  content: '';
+  position: absolute;
+  top: -40%;
+  bottom: -40%;
+  left: 0;
+  width: 70%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(90 200 120 / 0.45) 30%,
+    rgb(110 210 220 / 0.55) 50%,
+    rgb(210 180 90 / 0.4) 70%,
+    transparent
+  );
+  transform: translateX(-200%) rotate(20deg);
+  animation: holo-sweep 5s linear infinite;
+}
+
+/* A pass across, then a rest off the pack before the next. */
+@keyframes holo-sweep {
   0% {
-    background-position: 100% 0;
+    transform: translateX(-200%) rotate(20deg);
   }
   60%,
   100% {
-    background-position: 0% 0;
+    transform: translateX(240%) rotate(20deg);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .holo-sheen {
+  .holo-sheen::before {
     animation: none;
-    background-position: 50% 0;
+    transform: translateX(40%) rotate(20deg);
   }
 }
