@@ -86,38 +86,10 @@ function Legend({
   onPick: (kind: NodeKind) => void
 }) {
   const mode = useScreenMode()
-  const terminal = mode === 'terminal'
-  // In the projector's window, and on a phone, it's a row of icons named by tooltip and label, so it never covers the map.
+  // A row of icons named by tooltip and label, so it never wraps or covers the map.
   const hologram = mode === 'hologram'
-  if (hologram || centered)
-    return (
-      <ul aria-label="What the icons mean" className={`flex gap-1 text-p03-dim ${centered ? 'justify-center' : ''}`}>
-        {KINDS.map((kind) => {
-          const Icon = NODE_ICONS[kind]
-          return (
-            <li key={kind}>
-              <button
-                type="button"
-                aria-pressed={shown === kind}
-                aria-label={nodeName({ kind })}
-                title={nodeName({ kind })}
-                onClick={() => onPick(kind)}
-                onPointerEnter={() => onHover(kind)}
-                onPointerLeave={() => onHover(null)}
-                className={`grid place-items-center rounded-sm hover:text-p03 hover:[filter:drop-shadow(0_0_6px_rgb(125_255_154/0.9))] focus-visible:outline-2 focus-visible:outline-p03 aria-pressed:text-p03 aria-pressed:outline-1 aria-pressed:outline-p03 ${hologram ? 'size-6' : 'size-9'}`}
-              >
-                <Icon aria-hidden className={hologram ? 'size-4' : 'size-5'} />
-              </button>
-            </li>
-          )
-        })}
-      </ul>
-    )
   return (
-    <ul
-      aria-label="What the icons mean"
-      className={`flex flex-wrap gap-1 text-base text-p03-dim ${centered ? 'justify-center' : ''}`}
-    >
+    <ul aria-label="What the icons mean" className={`flex gap-1 text-p03-dim ${centered ? 'justify-center' : ''}`}>
       {KINDS.map((kind) => {
         const Icon = NODE_ICONS[kind]
         return (
@@ -125,18 +97,19 @@ function Legend({
             <button
               type="button"
               aria-pressed={shown === kind}
+              aria-label={nodeName({ kind })}
+              title={nodeName({ kind })}
               onClick={() => onPick(kind)}
               onPointerEnter={() => onHover(kind)}
               onPointerLeave={() => onHover(null)}
-              className={`flex items-center gap-1 rounded-sm px-1.5 py-0.5 hover:text-p03 focus-visible:outline-2 focus-visible:outline-p03 aria-pressed:text-p03 ${
+              className={`grid place-items-center rounded-sm hover:text-p03 focus-visible:outline-2 focus-visible:outline-p03 aria-pressed:text-p03 ${
                 // Over the 3D table nothing gets a ground, so the room shows through; the light brightens instead.
-                terminal
+                mode === 'terminal'
                   ? 'hover:bg-[#13261a] aria-pressed:bg-[#13261a]'
-                  : 'hover:[text-shadow:0_0_8px_rgb(125_255_154/0.9)] aria-pressed:underline aria-pressed:underline-offset-4 aria-pressed:[text-shadow:0_0_8px_rgb(125_255_154/0.9)]'
-              }`}
+                  : 'hover:[filter:drop-shadow(0_0_6px_rgb(125_255_154/0.9))] aria-pressed:outline-1 aria-pressed:outline-p03'
+              } ${hologram ? 'size-6' : 'size-9'}`}
             >
-              <Icon aria-hidden className="size-4" />
-              {nodeName({ kind })}
+              <Icon aria-hidden className={hologram ? 'size-4' : 'size-5'} />
             </button>
           </li>
         )
