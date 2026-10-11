@@ -12,14 +12,23 @@ export function table({
   front = [],
   back = [],
   scale,
+  integrity,
+  encounter,
 }: {
   hand?: string[]
   board?: Row
   front?: Row
   back?: Row
   scale?: number
+  /** What's left of a run's integrity, out of 20. */
+  integrity?: number
+  encounter?: string
 }): GameState {
-  const state = createGame({ seed: 7 })
+  const state = createGame({
+    seed: 7,
+    encounter,
+    ...(integrity === undefined ? {} : { integrity: { left: integrity, max: 20 } }),
+  })
   // Taken from the library where the card is in it, as a drawn card would be.
   const unit = (id: string) => {
     const source = state.player.library.findIndex((entry) => entry.card === id)

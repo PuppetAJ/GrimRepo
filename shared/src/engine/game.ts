@@ -1,7 +1,7 @@
 import { BOILERPLATE, card, DEBUG_CARD, OUT_OF_MEMORY, PLAYER_DECK, SHIPS_AS } from '../cards.ts'
 import { encounter } from '../encounters.ts'
 import { Rng } from '../rng.ts'
-import { attack, perish, reinforce } from './combat.ts'
+import { attack, broken, perish, reinforce } from './combat.ts'
 import { ITEMS, type ItemId } from '../items.ts'
 import { queue, queueCountFor, queuePlan, retireDeadCode } from './opponent.ts'
 import {
@@ -35,6 +35,8 @@ export type GameOptions = {
   items?: ItemId[]
   /** A death card a boss adds to its last phase, on top of its plan; `by` is its maker, or null for the player's own. */
   haunt?: { card: string; by: string | null } | null
+  /** A run's integrity, which the cards P03 destroys wear down. */
+  integrity?: { left: number; max: number }
 }
 
 export function createGame({
@@ -46,6 +48,7 @@ export function createGame({
   outOfMemory = false,
   items,
   haunt = null,
+  integrity,
 }: GameOptions): GameState {
   const rng = new Rng(seed >>> 0)
   const library = deck ? structuredClone(deck) : PLAYER_DECK.map(deckCard)
@@ -64,6 +67,7 @@ export function createGame({
   }
   if (outOfMemory) state.rebuilds = 0
   if (items) state.items = [...items]
+  if (integrity) state.integrity = { ...integrity }
   if (haunt && encounter) state.opponent.haunt = { ...haunt, played: false }
   if (fairHand) dealFairly(state.player)
   const opening = state.player.deck.splice(0, 3)
@@ -204,7 +208,7 @@ export function apply(current: GameState, action: Action): Result {
       }
       if (!survived) perish(state, 'player', victim, lane, events)
     }
-    // A Refactor card hands its stats, and Refactor itself, to the card it pays for, so a chain of them stacks.
+    // A Refactor card hands its stats, but not Refactor itself, to the card it pays for, so no chain of them stacks.
     const refactored = summon.marked
       .map((lane) => victims.get(lane) as Unit)
       .filter((victim) => victim.sigils.includes('refactor'))
@@ -221,7 +225,6 @@ export function apply(current: GameState, action: Action): Result {
       unit.attack += victim.attack
       unit.health += victim.health
       unit.maxHealth += victim.health
-      if (!unit.sigils.includes('refactor') && unit.sigils.length < MAX_SIGILS) unit.sigils.push('refactor')
       events.push({ type: 'buffed', uid: unit.uid, attack: unit.attack, health: unit.health, sigils: [...unit.sigils] })
     }
 
@@ -313,6 +316,8 @@ function useItem(state: GameState, action: Extract<Action, { type: 'use' }>, eve
 
 function playTurn(state: GameState, rng: Rng, events: GameEvent[]): void {
   attack(state, 'player', events)
+  // A Rate Limiter striking back can wear the last of the run's integrity away, even as the player's attack lands.
+  if (broken(state)) return finish(state, 'loss', events)
   if (state.scale >= TIP) {
     if (!nextPhase(state, rng, events)) return finish(state, 'win', events)
   } else {
@@ -333,7 +338,7 @@ function playTurn(state: GameState, rng: Rng, events: GameEvent[]): void {
       events.push({ type: 'skipped' })
     } else {
       attack(state, 'opponent', events)
-      if (state.scale <= -TIP) return finish(state, 'loss', events)
+      if (state.scale <= -TIP || broken(state)) return finish(state, 'loss', events)
 
       if (state.opponent.encounter) queuePlan(state, rng, events)
       else queue(state, rng, queueCountFor(state.turn, rng), state.turn, events)
@@ -376,8 +381,19 @@ function playTurn(state: GameState, rng: Rng, events: GameEvent[]): void {
 
   if (state.turn >= TURN_LIMIT) return finish(state, 'loss', events)
   state.turn += 1
-  state.drawn = state.player.hand.length >= HAND_LIMIT
   events.push({ type: 'turnStarted', turn: state.turn })
+  // While P03 leads a run's battle, the player starts the turn with an extra card, if the deck has one.
+  if (
+    state.opponent.encounter &&
+    state.scale < 0 &&
+    state.player.hand.length < HAND_LIMIT &&
+    state.player.deck.length
+  ) {
+    const unit = drawUnit(state, state.player.deck.shift() as number)
+    state.player.hand.push(unit)
+    events.push({ type: 'drew', unit, from: 'deck', catchUp: true })
+  }
+  state.drawn = state.player.hand.length >= HAND_LIMIT
 }
 
 // From this Out of Memory card on, each one attacks the player over any card in the way.

@@ -1,6 +1,6 @@
 import { ZoomIn } from 'lucide-react'
 import { m } from 'motion/react'
-import { useEffect, useRef, useState, type MouseEvent, type PointerEvent } from 'react'
+import { useEffect, useRef, useState, type MouseEvent, type PointerEvent, type ReactNode } from 'react'
 import { card, SIGILS, type Unit } from 'shared'
 import { PixelCard } from '../../CardReader.tsx'
 import { describe } from '../../controls.tsx'
@@ -28,6 +28,8 @@ type Props = {
   filtered?: boolean
   /** A card that just changed: it pops, with `text` rising over it; a new `key` plays it again. */
   flash?: { uid: number; key: number; text: string }
+  /** Something under each card's name, such as its rarity. */
+  badge?: (unit: Unit) => ReactNode
 }
 
 function Caption({ unit, detail, onRead }: { unit: Unit; detail: boolean; onRead: () => void }) {
@@ -75,6 +77,7 @@ export function CardList({
   size = 'w-28',
   filtered = false,
   flash,
+  badge,
 }: Props) {
   const [reading, setReading] = useState<Unit | null>(null)
   const hold = useHoldToRead(setReading)
@@ -126,6 +129,7 @@ export function CardList({
                 </button>
               )}
               <Caption unit={unit} detail={detail} onRead={() => setReading(unit)} />
+              {badge?.(unit)}
             </m.li>
           )
         })}

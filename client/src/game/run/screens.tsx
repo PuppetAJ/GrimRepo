@@ -9,7 +9,7 @@ import { MergeRequest } from './text/MergeRequest.tsx'
 import { ItemNode } from './text/ItemNode.tsx'
 import { BlindPick } from './text/BlindPick.tsx'
 import { Shop } from './text/Shop.tsx'
-import { StarterDeck } from './text/StarterDeck.tsx'
+import { PackOpening, StarterDeck } from './text/StarterDeck.tsx'
 import { Offer } from './text/Offer.tsx'
 import { RunMap } from './text/RunMap.tsx'
 import { Stones } from './text/Stones.tsx'
@@ -22,6 +22,7 @@ export type RunView =
   | 'battle'
   | 'map'
   | 'start'
+  | 'pack'
   | 'card'
   | 'blind'
   | 'shop'
@@ -36,6 +37,7 @@ export type RunView =
 
 const TITLES: Record<Exclude<RunView, 'battle' | 'map'>, string> = {
   start: 'Choose a starter deck',
+  pack: 'Starter packs',
   card: 'Card choice',
   blind: 'Card choice, face down',
   shop: 'Package Registry',
@@ -115,6 +117,7 @@ export function ScreenBody({ run, view, layout }: { run: RunReady; view: RunView
   if (view === 'fuse') return <MergeRequest run={run} />
   if (view === 'item') return <ItemNode run={run} />
   if (view === 'start') return <StarterDeck run={run} />
+  if (view === 'pack') return <PackOpening run={run} />
   if (view === 'shop') return <Shop run={run} />
   if (view === 'blind') return <BlindPick run={run} />
   return <RunMap run={run} layout={layout} />

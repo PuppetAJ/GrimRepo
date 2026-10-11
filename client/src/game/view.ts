@@ -15,6 +15,10 @@ export type View = {
   summon: { uid: number; marked: number[] } | null
   /** A boss's phase, counted from 0. */
   phase: number
+  /** A run's integrity; null in a quick battle. */
+  integrity: { left: number; max: number } | null
+  /** P03 has made its one desperate play this battle. */
+  desperate: boolean
 }
 
 export function project(state: GameState): View {
@@ -30,6 +34,8 @@ export function project(state: GameState): View {
     back: state.opponent.back,
     summon: state.summon,
     phase: state.opponent.phase,
+    integrity: state.integrity ?? null,
+    desperate: Boolean(state.opponent.desperate),
   }
 }
 
@@ -122,12 +128,18 @@ export function step(view: View, event: GameEvent): View {
     case 'hit':
     case 'indebted':
       return { ...view, scale: event.scale }
+    case 'integrity':
+      return view.integrity ? { ...view, integrity: { ...view.integrity, left: event.left } } : view
     case 'advanced': {
       const unit = view.back[event.lane] ?? null
       return { ...view, front: setAt(view.front, event.lane, unit), back: setAt(view.back, event.lane, null) }
     }
     case 'queued':
-      return { ...view, back: setAt(view.back, event.lane, event.unit) }
+      return {
+        ...view,
+        back: setAt(view.back, event.lane, event.unit),
+        desperate: view.desperate || Boolean(event.desperate),
+      }
     case 'hooked': {
       const unit = view.front[event.lane] ?? null
       return { ...view, front: setAt(view.front, event.lane, null), board: setAt(view.board, event.lane, unit) }

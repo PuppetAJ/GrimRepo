@@ -50,10 +50,18 @@ export function narrateRun(before: RunState, events: RunEvent[]): string[] {
         return [`${named(event.card.card)} installed, for ${event.price} bytes. No refunds.`]
       case 'stripped':
         return [`The linter deleted ${SIGILS[event.sigil].name} from ${named(event.card.card)}. One warning down.`]
+      case 'repaired':
+        return [`Integrity repaired by ${event.amount}, to ${event.integrity}. The fire won't hold forever.`]
       case 'stageCleared':
         return [`${STAGES[event.stage]} is down. Don't get comfortable.`]
       case 'runOver':
-        return [event.outcome === 'win' ? 'You cleared the run. Impossible.' : 'And that is the end of your run.']
+        return [
+          event.outcome === 'win'
+            ? 'You cleared the run. Impossible.'
+            : event.integrity
+              ? 'Your integrity is gone. Nothing left holding the build together. The run is over.'
+              : 'And that is the end of your run.',
+        ]
       default:
         return []
     }

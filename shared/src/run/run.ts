@@ -1,6 +1,7 @@
 import { PLAYER_DECK, card, parseDeathCard, type SigilId } from '../cards.ts'
 import { STAGES } from '../encounters.ts'
 import { apply, createGame, legalActions } from '../engine/game.ts'
+import { broken } from '../engine/combat.ts'
 import { MAX_SIGILS, TIP, type DeckCard } from '../engine/types.ts'
 import { deckCard } from '../engine/units.ts'
 import { Rng } from '../rng.ts'
@@ -8,26 +9,62 @@ import { findNode, generateStage } from './map.ts'
 import { scene, type Effect } from './scenes.ts'
 import { rivalAllowed } from './death.ts'
 import { FOUND_ITEMS, ITEM_SLOTS, type ItemId } from '../items.ts'
-import type { MapNode, Pick, RunAction, RunCard, RunEvent, RunResult, RunState, Trial, Visit } from './types.ts'
+import {
+  INTEGRITY,
+  type MapNode,
+  type Pick,
+  type RunAction,
+  type RunCard,
+  type RunEvent,
+  type RunResult,
+  type RunState,
+  type Trial,
+  type Visit,
+} from './types.ts'
 
-/** The decks a run can start with, chosen as its first action. */
-export const STARTER_DECKS: Record<string, { name: string; about: string; cards: string[] }> = {
+export type Rarity = 'common' | 'uncommon' | 'rare'
+
+/** The decks a run can start with, chosen as its first action: a core, and a card taken from each of its packs. */
+export const STARTER_DECKS: Record<
+  string,
+  { name: string; about: string; core: string[]; pack: Record<Rarity, string[]> }
+> = {
   'hello-world': {
     name: 'Hello, World',
     about: 'Steady: Reliable and balanced between defense and offense.',
-    cards: ['HelloWorld', 'CronJob', 'MergeConflict'],
+    core: ['HelloWorld', 'CronJob'],
+    pack: {
+      common: ['Watchdog', 'SpamBot', 'InfiniteLoop'],
+      uncommon: ['MergeConflict', 'Sandbox', 'Cookie'],
+      rare: ['GrimRepo', 'ReplyAll'],
+    },
   },
   'legacy-stack': {
     name: 'Legacy Stack',
-    about: 'Sacrifices: Pay for high cost cards early.',
-    cards: ['CronJob', 'OffCenterDiv', 'LegacyCode', 'SpamBot'],
+    about: 'Defense and sacrifices: Hold the line, and pay for high cost cards early.',
+    core: ['OffCenterDiv', 'COBOL'],
+    pack: { common: ['CronJob', 'SpamBot'], uncommon: ['LegacyCode', 'Monolith', 'Firewall'], rare: ['Bug'] },
   },
   'move-fast': {
     name: 'Move Fast',
     about: 'Glass Cannon: Hit hard, and hope.',
-    cards: ['CopyPaste', 'SpamBot', 'CronJob'],
+    core: ['CopyPaste', 'SpamBot'],
+    pack: {
+      common: ['InfiniteLoop', 'CronJob', 'Prototype'],
+      uncommon: ['ZeroDay', 'SQLInjection', 'Cookie'],
+      rare: ['ReplyAll', 'NullPointer'],
+    },
   },
 }
+
+/** How many packs a starter deck opens, one card taken from each. */
+export const PACKS = 2
+/** How many cards each starter pack holds. */
+export const PACK_SIZE = 3
+
+/** A starter pack's cards, at the plain odds, since the pity offset would hold a rare at 0. */
+const openPack = (state: RunState, rng: Rng, deck: string): string[] =>
+  offerCards(state, rng, PACK_SIZE, (STARTER_DECKS[deck] as (typeof STARTER_DECKS)[string]).pack, { pity: false })
 
 /** What a card costs at a shop, in bytes, by tier. */
 const PRICE: Record<string, number> = { E: 3, D: 5, C: 6, B: 12, A: 15 }
@@ -62,10 +99,55 @@ const MAX_BUFFS = 2
 /** The chance that a second buff at the same campfire burns the card. */
 const BURN_CHANCE = 0.5
 
-// Tiers A and B are rares, offered only after a boss.
+// Tiers A and B are rares, offered after a boss; only B also turns up, rarely, at card choices.
 const isRare = (id: string) => ['A', 'B'].includes(card(id).tier)
 export const COMMONS = PLAYER_DECK.filter((id) => !isRare(id))
 const RARES = PLAYER_DECK.filter(isRare)
+
+/** What a card choice draws from for each rarity. */
+export const CHOICE_POOLS: Record<Rarity, string[]> = {
+  common: PLAYER_DECK.filter((id) => ['E', 'D'].includes(card(id).tier)),
+  uncommon: PLAYER_DECK.filter((id) => card(id).tier === 'C'),
+  rare: PLAYER_DECK.filter((id) => card(id).tier === 'B'),
+}
+
+/** Slay the Spire's odds, in percent, for each card offered: 3 rare and 37 uncommon, the rest common. */
+const RARE_PERCENT = 3
+const UNCOMMON_PERCENT = 37
+/** The pity offset added to the rare odds: it starts below 0, grows with each common and resets with a rare. */
+export const PITY_START = -5
+const PITY_CAP = 40
+
+/** What a campfire's repair restores. */
+export const REPAIR = 5
+
+/** Rolls one offered card's rarity; with `pity` the offset counts, and moves. */
+function rollRarity(state: RunState, rng: Rng, pity: boolean): Rarity {
+  const roll = rng.int(0, 99)
+  const rare = Math.max(0, RARE_PERCENT + (pity ? state.pity : 0))
+  const rarity: Rarity = roll < rare ? 'rare' : roll < rare + UNCOMMON_PERCENT ? 'uncommon' : 'common'
+  if (!pity) return rarity
+  if (rarity === 'rare') state.pity = PITY_START
+  else if (rarity === 'common') state.pity = Math.min(PITY_CAP, state.pity + 1)
+  return rarity
+}
+
+/** Cards to offer, of rolled rarities, none twice while the pool allows. */
+function offerCards(
+  state: RunState,
+  rng: Rng,
+  count: number,
+  pools: Record<Rarity, string[]>,
+  { pity = true } = {},
+): string[] {
+  const offer: string[] = []
+  for (let slot = 0; slot < count; slot++) {
+    const pool = pools[rollRarity(state, rng, pity)]
+    const fresh = pool.filter((id) => !offer.includes(id))
+    offer.push(rng.pick(fresh.length ? fresh : pool))
+  }
+  return rng.shuffle(offer)
+}
 
 const fail = (reason: string): RunResult => ({ ok: false, reason })
 
@@ -101,6 +183,8 @@ export function createRun({ seed, death = null, rival = null }: { seed: number }
     record: { battles: 0, bosses: 0, overkill: 0 },
     bytes: 0,
     items: [],
+    integrity: INTEGRITY,
+    pity: PITY_START,
     death: death && parseDeathCard(death) ? { card: death, skipped: false, offered: false } : null,
     rival: rival && rivalAllowed(rival.card) ? { card: rival.card, by: rival.by } : null,
   }
@@ -130,6 +214,7 @@ function enter(state: RunState, rng: Rng, node: MapNode): Visit {
           outOfMemory: true,
           items: state.items,
           haunt: node.kind === 'boss' ? haunting(state) : null,
+          integrity: { left: state.integrity, max: INTEGRITY },
         }),
       }
     case 'card':
@@ -140,10 +225,10 @@ function enter(state: RunState, rng: Rng, node: MapNode): Visit {
       // The death card takes one of the three places at the run's first card choice.
       if (state.death && !state.death.skipped && !state.death.offered) {
         state.death.offered = true
-        const offer = [state.death.card, ...rng.shuffle(COMMONS).slice(0, OFFER_SIZE - 1)]
+        const offer = [state.death.card, ...offerCards(state, rng, OFFER_SIZE - 1, CHOICE_POOLS)]
         return { kind: 'card', node: node.id, offer: rng.shuffle(offer) }
       }
-      return { kind: 'card', node: node.id, offer: rng.shuffle(COMMONS).slice(0, OFFER_SIZE) }
+      return { kind: 'card', node: node.id, offer: offerCards(state, rng, OFFER_SIZE, CHOICE_POOLS) }
     case 'shop': {
       // Two commons and a rare, priced by tier.
       const cards = [...rng.shuffle(COMMONS).slice(0, 2), ...rng.shuffle(RARES).slice(0, 1)]
@@ -238,9 +323,9 @@ function resolve(state: RunState, rng: Rng, effect: Effect, events: RunEvent[]):
   }
 }
 
-function end(state: RunState, outcome: 'win' | 'loss', events: RunEvent[]): void {
+function end(state: RunState, outcome: 'win' | 'loss', events: RunEvent[], integrity = false): void {
   state.status = outcome === 'win' ? 'won' : 'lost'
-  events.push({ type: 'runOver', outcome })
+  events.push({ type: 'runOver', outcome, ...(integrity ? { integrity } : {}) })
 }
 
 /** Counts a won battle; beating the last boss wins the run. */
@@ -274,8 +359,9 @@ function step(state: RunState, rng: Rng, action: RunAction, events: RunEvent[]):
       const result = apply(visit.game, action.action)
       if (!result.ok) return result.reason
       visit.game = result.state
+      state.integrity = result.state.integrity?.left ?? state.integrity
       events.push({ type: 'battle', events: result.events })
-      if (result.state.status === 'lost') end(state, 'loss', events)
+      if (result.state.status === 'lost') end(state, 'loss', events, broken(result.state))
       if (result.state.status === 'won') won(state, visit, events)
       return
     }
@@ -287,8 +373,8 @@ function step(state: RunState, rng: Rng, action: RunAction, events: RunEvent[]):
         if (!state.death) return 'There is no death card to leave out'
         state.death.skipped = true
       }
-      for (const id of deck.cards) state.deck.push(newCard(state, id))
-      state.visit = null
+      for (const id of deck.core) state.deck.push(newCard(state, id))
+      state.visit = { kind: 'pack', deck: action.deck, opened: 1, offer: openPack(state, rng, action.deck) }
       return
     }
     case 'buy': {
@@ -305,6 +391,16 @@ function step(state: RunState, rng: Rng, action: RunAction, events: RunEvent[]):
       return
     }
     case 'take': {
+      if (visit?.kind === 'pack') {
+        const id = Number.isInteger(action.index) ? visit.offer[action.index] : undefined
+        if (id === undefined) return 'No such card in the pack'
+        const added = newCard(state, id)
+        state.deck.push(added)
+        events.push({ type: 'added', card: added })
+        state.visit =
+          visit.opened < PACKS ? { ...visit, opened: visit.opened + 1, offer: openPack(state, rng, visit.deck) } : null
+        return
+      }
       if (visit?.kind === 'blind') {
         if (!visit.revealed) {
           const pick = Number.isInteger(action.index) ? visit.picks[action.index] : undefined
@@ -354,6 +450,16 @@ function step(state: RunState, rng: Rng, action: RunAction, events: RunEvent[]):
       visit.card = target.id
       visit.buffs += 1
       events.push({ type: 'changed', card: target })
+      return
+    }
+    case 'repair': {
+      if (visit?.kind !== 'campfire') return 'There is no campfire here'
+      if (visit.buffs > 0) return 'The campfire is already warming a card'
+      if (state.integrity >= INTEGRITY) return 'Integrity is already full'
+      const amount = Math.min(REPAIR, INTEGRITY - state.integrity)
+      state.integrity += amount
+      events.push({ type: 'repaired', amount, integrity: state.integrity })
+      state.visit = null
       return
     }
     case 'transfer': {
@@ -497,6 +603,7 @@ export function legalRunActions(state: RunState): RunAction[] {
         : legalActions(visit.game).map((action) => ({ type: 'play', action }))
     case 'card':
     case 'reward':
+    case 'pack':
       return visit.offer.map((_, index) => ({ type: 'take', index }))
     case 'event':
       return scene(visit.event).options.map((_, option) => ({ type: 'choose', option }))
@@ -539,6 +646,7 @@ export function legalRunActions(state: RunState): RunAction[] {
     }
     case 'campfire': {
       const actions: RunAction[] = [{ type: 'leave' }]
+      if (visit.buffs === 0 && state.integrity < INTEGRITY) actions.push({ type: 'repair' })
       if (visit.buffs >= MAX_BUFFS || (visit.buffs > 0 && state.deck.length <= 1)) return actions
       for (const entry of state.deck)
         if (visit.card === null || entry.id === visit.card) actions.push({ type: 'buff', card: entry.id })

@@ -63,6 +63,8 @@ function useMood(view: View, busy: boolean, outcome: 'win' | 'loss' | undefined,
   if (outcome === 'win') return 'whiteflag'
   if (outcome === 'loss') return 'happy'
   if (choking) return 'choking'
+  // Once he has made his desperate play, he glares for the rest of the battle, never dying or smug.
+  if (view.desperate) return 'impatient'
   if (scale >= TIP - 6) return 'dying'
   if (impatient) return 'impatient'
   return 'smug'

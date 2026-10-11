@@ -1,5 +1,5 @@
 import FaultyScreenShader from '../../components/p03/FaultyScreenShader.tsx'
-import { ScaleBar, SeatNote } from '../controls.tsx'
+import { IntegrityBar, ScaleBar, SeatNote } from '../controls.tsx'
 import { Board } from './Board.tsx'
 import { CancelButton, Controls, ExecuteButton, SaveStatus } from './Buttons.tsx'
 import { useTable } from './context.ts'
@@ -25,6 +25,9 @@ export function MidLayout() {
             <SaveStatus className="text-sm text-p03-dim" />
           </p>
           <ScaleBar scale={view.scale} fluid className="gap-1 text-base" />
+          {view.integrity ? (
+            <IntegrityBar left={view.integrity.left} max={view.integrity.max} fluid className="gap-1 text-base" />
+          ) : null}
         </div>
         <ExecuteButton />
       </div>

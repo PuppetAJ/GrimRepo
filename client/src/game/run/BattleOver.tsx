@@ -1,7 +1,6 @@
 import { findNode, STAGES, TIP } from 'shared'
 import { Button } from '@/components/ui/button.tsx'
 import type { RunReady } from './useRun.ts'
-import { Sentences } from '../text/Sentences.tsx'
 
 /** The panel over the board when a run's battle ends; both tables show it. */
 export function BattleOver({ run, onSummary }: { run: RunReady; onSummary: () => void }) {
@@ -14,20 +13,19 @@ export function BattleOver({ run, onSummary }: { run: RunReady; onSummary: () =>
   return (
     <section
       role="status"
-      className="flex w-full max-w-md flex-col gap-3 rounded border border-p03 bg-p03-ground/95 p-4 font-terminal text-xl"
+      className="flex w-full max-w-lg flex-col gap-3 rounded border border-p03 bg-p03-ground/95 p-4 font-terminal text-xl"
     >
+      {/* The sentences run on together, so the second shares the first's line where it fits; a turn never parts from its number. */}
       <p className="text-3xl text-p03">
-        <Sentences
-          text={
-            !won
-              ? `You lose on turn ${visit.game.turn}. The run ends here.`
-              : state.status === 'won'
-                ? `${STAGES[state.stage]} is down. You cleared the run.`
-                : boss
-                  ? `The boss is down. ${STAGES[state.stage]} is cleared.`
-                  : `You win in ${visit.game.turn} turns.`
-          }
-        />
+        {!won
+          ? visit.game.integrity?.left === 0
+            ? `Out of integrity on turn\u00a0${visit.game.turn}. The run ends here.`
+            : `You lose on turn\u00a0${visit.game.turn}. The run ends here.`
+          : state.status === 'won'
+            ? `${STAGES[state.stage]} is down. You cleared the run.`
+            : boss
+              ? `The boss is down. ${STAGES[state.stage]} is cleared.`
+              : `You win in ${visit.game.turn}\u00a0turns.`}
       </p>
       {won && overkill ? <p>{overkill} overkill, which counts toward the run's score.</p> : null}
       <div className="flex flex-wrap gap-3 font-sans text-base">

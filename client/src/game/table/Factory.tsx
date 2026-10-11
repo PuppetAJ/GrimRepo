@@ -35,8 +35,8 @@ export function Factory({
 }) {
   const lines = useMemo(() => logLines(log), [log])
   const status = useMemo(
-    () => statusLines({ scale: view.scale, turn: view.turn, deck: view.deck }),
-    [view.scale, view.turn, view.deck],
+    () => statusLines({ scale: view.scale, turn: view.turn, deck: view.deck, integrity: view.integrity }),
+    [view.scale, view.turn, view.deck, view.integrity],
   )
   return (
     <>
