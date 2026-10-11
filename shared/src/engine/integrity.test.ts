@@ -26,7 +26,7 @@ describe("a run's integrity", () => {
     assert.deepEqual(changes(bell(table({ board: ['CronJob'], front: ['Sandbox'] })).events), [])
   })
 
-  it('counts a card a P03 Rate Limiter strikes back at, but not one that dies of its own Deprecated', () => {
+  it('counts a card a P03 Backtrace strikes back at, but not one that dies of its own Deprecated', () => {
     assert.deepEqual(changes(bell(table({ board: ['CopyPaste'], front: ['Watchdog'], integrity: 20 })).events), [-1])
     assert.deepEqual(changes(bell(table({ board: ['DestroyEnemyYou'], integrity: 20 })).events), [])
   })

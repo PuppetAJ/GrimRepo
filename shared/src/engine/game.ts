@@ -316,7 +316,7 @@ function useItem(state: GameState, action: Extract<Action, { type: 'use' }>, eve
 
 function playTurn(state: GameState, rng: Rng, events: GameEvent[]): void {
   attack(state, 'player', events)
-  // A Rate Limiter striking back can wear the last of the run's integrity away, even as the player's attack lands.
+  // A Backtrace striking back can wear the last of the run's integrity away, even as the player's attack lands.
   if (broken(state)) return finish(state, 'loss', events)
   if (state.scale >= TIP) {
     if (!nextPhase(state, rng, events)) return finish(state, 'win', events)

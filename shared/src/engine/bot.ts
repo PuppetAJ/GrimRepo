@@ -28,7 +28,7 @@ function bestLane(state: GameState, allowed: number[], strategy: Strategy): numb
 const DANGEROUS: SigilId[] = [
   'fatal_error',
   'rollback',
-  'rate_limiter',
+  'backtrace',
   'fork',
   'broadcast',
   'retry',

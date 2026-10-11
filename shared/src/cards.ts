@@ -5,7 +5,7 @@ export type SigilId =
   | 'bypass'
   | 'technical_debt'
   | 'try_catch'
-  | 'rate_limiter'
+  | 'backtrace'
   | 'fork'
   | 'hotfix'
   | 'fatal_error'
@@ -56,7 +56,7 @@ export const SIGILS: Record<SigilId, { name: string; text: string }> = {
   bypass: { name: 'Bypass', text: 'Attacks the opponent directly, over any card in the way.' },
   technical_debt: { name: 'Technical Debt', text: 'Worth 3 when sacrificed, but tips the scale 1 against you.' },
   try_catch: { name: 'try/catch', text: 'Survives being sacrificed.' },
-  rate_limiter: { name: 'Rate Limiter', text: 'Deals 1 damage back to anything that attacks it.' },
+  backtrace: { name: 'Backtrace', text: 'Deals 1 damage back to anything that attacks it.' },
   fork: {
     name: 'Fork',
     text: 'Attacks the lanes on either side instead of the one opposite. Incompatible with Broadcast.',
@@ -100,12 +100,12 @@ const table: [string, string, Tier, number, number, number, SigilId[]?][] = [
   ['CronJob', 'Cron Job', 'E', 1, 2, 0, ['try_catch']],
   ['InfiniteLoop', 'Infinite Loop', 'D', 1, 2, 0, ['retry']],
   ['SpamBot', 'Spam Bot', 'D', 2, 1, 0, ['packet_loss']],
-  ['Watchdog', 'Watchdog', 'D', 2, 3, 0, ['rate_limiter']],
+  ['Watchdog', 'Watchdog', 'D', 2, 3, 0, ['backtrace']],
   ['CopyPaste', 'Copy Paste', 'D', 3, 1, 0],
   ['ZeroDay', 'Zero Day', 'C', 4, 1, 0, ['load_balancer']],
   ['GrimRepo', 'GrimRepo', 'C', 3, 2, 0, ['tech_lead']],
   ['MergeConflict', 'Merge Conflict', 'C', 2, 4, 1, ['failover']],
-  ['Firewall', 'Firewall', 'C', 2, 6, 1, ['rate_limiter']],
+  ['Firewall', 'Firewall', 'C', 2, 6, 1, ['backtrace']],
   ['SQLInjection', 'SQL Injection', 'C', 4, 2, 1, ['bypass']],
   ['NullPointer', 'NullPointer', 'C', 4, 2, 1, ['fatal_error']],
   ['Bug', 'Bug', 'C', 0, 8, 1, ['hot_reload']],

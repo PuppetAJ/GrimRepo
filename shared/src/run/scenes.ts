@@ -82,7 +82,7 @@ const list: Scene[] = [
     text: 'A request is blocked. P03 offers a header that lets anything through.',
     options: [
       { label: 'Allow every origin', effects: [{ type: 'addSigil', sigil: 'bypass' }] },
-      { label: 'Configure it properly', effects: [{ type: 'addSigil', sigil: 'rate_limiter' }] },
+      { label: 'Configure it properly', effects: [{ type: 'addSigil', sigil: 'backtrace' }] },
     ],
   },
   {
