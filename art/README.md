@@ -6,10 +6,12 @@ Files made in art tools, which the game loads in an exported form.
 
 Every card on the 3D table is this disk. It is exported to `client/public/models/disk.glb`, which the game loads in `client/src/game/table/diskGeometry.ts`.
 
-- **Parts:** one object for each section and material: `top_plastic`, `top_dark` and `top_metal`, the same for `middle` and `bottom`, and `rail_metal`. The game finds them by these names and draws each in its own material, so the materials in the file are only for looking at it in Blender.
+- **Parts:** one object for each section and material: `top_plastic`, `top_dark` and `top_metal`, the same for `middle` and `bottom`, and `rail_metal`. The game finds them by these names and draws each in its own material.
 - **Sections:** a closing disk squashes only the middle, so keep the top, middle and bottom as separate objects. Each part's origin is its section's anchor edge: the top's upper edge, the middle's upper edge, the bottom's lower edge. The objects are placed so the disk looks assembled; the game uses only each part's own shape.
 - **Size:** the faces are drawn to the disk's measurements in `client/src/game/table/layout.ts`. If you change the disk's width or the middle's height, change those too. `client/src/game/table/disk.test.ts` checks that they agree.
 - **UVs:** the worn plastic and metal textures are mapped straight off the face. Blender's glTF exporter flips V, so V is stored flipped in this file; keep it that way, and the test catches it if it isn't.
+- **Preview:** the materials in the file copy the game's, using its worn plastic textures from `client/public/textures/plastic/`, so the disk looks as it does on the table. The `Preview` collection holds `face_preview`, a plane carrying `disk-face-sample.png`: a card's face as the game draws it. The game draws faces itself at runtime, so the plane and its image are only for seeing how a face sits. The export leaves out both the materials and the plane.
+- **Shading:** the parts are flat-shaded, except the hub ring on the back, which is smooth.
 
 **To export:** select the objects in the `Disk` collection, then File → Export → glTF 2.0, with:
 
