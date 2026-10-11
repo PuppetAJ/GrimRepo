@@ -135,7 +135,7 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
           <SigilLine id={id} />
           {carriers.length ? (
             <p>
-              <Dim>Carried by </Dim>
+              <Dim>Carried by: </Dim>
               {carriers.map((card, index) => (
                 <span key={card.id}>
                   {index ? <Dim>, </Dim> : null}
@@ -329,20 +329,33 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
 
 const NAMES = [...HELP.map(([command]) => command.split(' ')[0] as string), 'next', 'back']
 
-/** Completes a command, card or sigil name when exactly one matches. */
-export function complete(input: string): string | null {
+/** The longest start every name shares, ignoring case, in the first name's own case. */
+function shared(names: string[]): string {
+  const [first = ''] = names
+  let length = first.length
+  for (const name of names)
+    while (length && name.slice(0, length).toLowerCase() !== first.slice(0, length).toLowerCase()) length--
+  return first.slice(0, length)
+}
+
+/** What Tab does: completes as far as every match agrees, and gives the matches when more than one is left. */
+export function complete(input: string): { text: string; options: string[] } {
   const [name = '', ...rest] = input.split(' ')
   if (rest.length === 0) {
-    const fits = NAMES.filter((command) => command.startsWith(name.toLowerCase()))
-    return fits.length === 1 ? `${fits[0]} ` : null
+    const fits = NAMES.filter((command) => command.startsWith(name.toLowerCase())).sort()
+    if (fits.length === 1) return { text: `${fits[0]} `, options: [] }
+    const common = shared(fits)
+    return { text: common.length > name.length ? common : input, options: fits }
   }
   const typed = rest.join(' ').toLowerCase()
   const names =
     name === 'card' || name === 'cat'
-      ? DECK.map((card) => card.name)
+      ? ALPHABETICAL.map((card) => card.name)
       : name === 'sigil'
         ? SIGIL_IDS.map((id) => SIGILS[id].name)
         : []
   const fits = names.filter((one) => one.toLowerCase().startsWith(typed))
-  return fits.length === 1 ? `${name} ${fits[0]}` : null
+  if (fits.length === 1) return { text: `${name} ${fits[0]}`, options: [] }
+  const common = shared(fits)
+  return { text: common.length > typed.length ? `${name} ${common}` : input, options: fits }
 }
