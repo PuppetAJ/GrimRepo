@@ -1,6 +1,6 @@
 import { Star } from 'lucide-react'
-import { m, useReducedMotion } from 'motion/react'
-import type { ReactNode } from 'react'
+import { m, useMotionTemplate, useMotionValue, useReducedMotion, useSpring, useTransform } from 'motion/react'
+import type { PointerEvent, ReactNode } from 'react'
 import { card, isDeathCard, STARTER_DECKS, type Rarity, type Unit } from 'shared'
 import { packArt } from '../../art.ts'
 import { Sigil } from '../../CardReader.tsx'
@@ -37,6 +37,7 @@ export function SealedPack({
 }) {
   const still = useReducedMotion() ?? false
   const src = packArt(art)
+  const tilt = useTilt(holo && !still && !tearing)
   return (
     <button
       type="button"
@@ -44,10 +45,12 @@ export function SealedPack({
       aria-label={aria}
       disabled={disabled || tearing}
       onClick={onTear}
+      onPointerMove={tilt.follow}
+      onPointerLeave={tilt.rest}
       className="group flex flex-col items-center gap-2 rounded-md p-2 text-p03 transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03 enabled:hover:-translate-y-1 disabled:opacity-60 motion-reduce:transition-none"
     >
       {/* The pack in two layers, cut along the crimp, so tearing it open pulls the top away from the rest. */}
-      <span className={`relative block ${PACK_SIZE_CLASS}`}>
+      <m.span className={`relative block ${PACK_SIZE_CLASS}`} style={tilt.style}>
         <m.img
           src={src}
           alt=""
@@ -65,17 +68,58 @@ export function SealedPack({
         />
         {/* The sheen is masked to the pack's own shape, and stays behind once it starts to tear. */}
         {holo && !tearing ? (
-          <span
-            aria-hidden
-            className="holo-sheen pointer-events-none absolute inset-0"
-            style={{ maskImage: `url("${src}")`, maskSize: '100% 100%' }}
-          />
+          <>
+            <span
+              aria-hidden
+              className="holo-sheen pointer-events-none absolute inset-0"
+              style={{ maskImage: `url("${src}")`, maskSize: '100% 100%' }}
+            />
+            {/* The foil's colors slide against the tilt, and a glare sits where the pointer is. */}
+            <m.span
+              aria-hidden
+              className="holo-foil pointer-events-none absolute inset-0"
+              style={{ maskImage: `url("${src}")`, maskSize: '100% 100%', ...tilt.light }}
+            />
+          </>
         ) : null}
-      </span>
+      </m.span>
       <span className="max-w-[10rem] text-xl leading-tight">{label}</span>
       {note ? <span className="text-lg text-p03-dim group-enabled:group-hover:text-p03">{note}</span> : null}
     </button>
   )
+}
+
+/** Tilts a pack toward the pointer, with where it points as a light for the foil; flat when `on` is false. */
+function useTilt(on: boolean) {
+  // Where the pointer is across the pack, 0 to 1 each way; the middle at rest.
+  const x = useMotionValue(0.5)
+  const y = useMotionValue(0.5)
+  const spring = { stiffness: 180, damping: 18 }
+  const rotateY = useSpring(useTransform(x, [0, 1], [-14, 14]), spring)
+  const rotateX = useSpring(useTransform(y, [0, 1], [12, -12]), spring)
+  const glareX = useTransform(x, [0, 1], ['0%', '100%'])
+  const glareY = useTransform(y, [0, 1], ['0%', '100%'])
+  const foilX = useTransform(x, [0, 1], ['100%', '0%'])
+  const foilY = useTransform(y, [0, 1], ['100%', '0%'])
+  const background = useMotionTemplate`radial-gradient(circle at ${glareX} ${glareY}, rgb(220 255 230 / 0.3), transparent 35%), linear-gradient(115deg, transparent 20%, rgb(110 210 220 / 0.22) 40%, rgb(210 180 90 / 0.2) 55%, transparent 75%)`
+  const backgroundPosition = useMotionTemplate`0 0, ${foilX} ${foilY}`
+  const follow = (event: PointerEvent<HTMLElement>) => {
+    if (!on) return
+    const pack = event.currentTarget.firstElementChild?.getBoundingClientRect()
+    if (!pack) return
+    x.set(Math.min(1, Math.max(0, (event.clientX - pack.left) / pack.width)))
+    y.set(Math.min(1, Math.max(0, (event.clientY - pack.top) / pack.height)))
+  }
+  const rest = () => {
+    x.set(0.5)
+    y.set(0.5)
+  }
+  return {
+    follow,
+    rest,
+    style: on ? { rotateX, rotateY, transformPerspective: 700 } : {},
+    light: { background, backgroundPosition, backgroundSize: '100% 100%, 300% 300%' },
+  }
 }
 
 /** A torn pack's cards, in a box where the pack was, turning over one by one to take one; `badge` captions each. */

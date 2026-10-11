@@ -388,3 +388,13 @@
     transform: translateX(40%) rotate(20deg);
   }
 }
+
+/* The boss pack's foil under the pointer; its colors and glare move with Motion, and it shows only while hovered. */
+.holo-foil {
+  mix-blend-mode: screen;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+button:hover .holo-foil {
+  opacity: 1;
+}
