@@ -4,7 +4,7 @@ import { api } from '../../lib/api.ts'
 import { number } from '../../lib/format.ts'
 import { Sigil } from '../../game/CardReader.tsx'
 import { DECK } from '../../game/deck.ts'
-import { find, HELP, PAGES, STEPS, type Page } from './commandData.ts'
+import { byName, find, findSigil, HELP, PAGES, STEPS, type Page } from './commandData.ts'
 import { CardUpClose, Cost, Dim, Lesson, SigilLine } from './CommandOutput.tsx'
 
 export type Context = {
@@ -18,6 +18,9 @@ export type Commands = typeof import('./commands.tsx')
 let step = 0
 
 // The text table's process list, as `ps` shows it, with a zombie of the last Scrybe.
+const ALPHABETICAL = [...DECK].sort(byName)
+const SIGIL_IDS = (Object.keys(SIGILS) as SigilId[]).sort((a, b) => byName(SIGILS[a], SIGILS[b]))
+
 const PROCESSES: [number, string][] = [
   [1, 'p03.core'],
   [42, 'scale.svc'],
@@ -83,7 +86,7 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
         )
       return (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-x-6">
-          {DECK.map((card) => (
+          {ALPHABETICAL.map((card) => (
             <p key={card.id} className="flex justify-between gap-3">
               <span className="flex min-w-0 items-center gap-1.5">
                 <span className="truncate text-p03">{card.name}</span>
@@ -116,11 +119,36 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
     case 'sigils':
       return (
         <div className="flex flex-col">
-          {(Object.keys(SIGILS) as SigilId[]).map((id) => (
+          {SIGIL_IDS.map((id) => (
             <SigilLine key={id} id={id} />
           ))}
+          <Dim>// sigil &lt;name&gt; for the cards that carry one</Dim>
         </div>
       )
+    case 'sigil': {
+      if (!argument) return <p>Which sigil? sigil &lt;name&gt;. Type sigils if you've forgotten them already.</p>
+      const id = findSigil(argument)
+      if (!id) return <p>No sigil called {argument}. Type sigils. Try reading.</p>
+      const carriers = ALPHABETICAL.filter((card) => card.sigils.includes(id))
+      return (
+        <div className="flex flex-col">
+          <SigilLine id={id} />
+          {carriers.length ? (
+            <p>
+              <Dim>Carried by: </Dim>
+              {carriers.map((card, index) => (
+                <span key={card.id}>
+                  {index ? <Dim>, </Dim> : null}
+                  <span className="text-p03">{card.name}</span>
+                </span>
+              ))}
+            </p>
+          ) : (
+            <Dim>No card starts with it. A run has to hand it out.</Dim>
+          )}
+        </div>
+      )
+    }
     case 'items':
     case 'tools':
       return (
@@ -270,7 +298,7 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
     case 'grep': {
       if (!argument) return <p>grep for what? grep &lt;word&gt;.</p>
       const wanted = argument.toLowerCase()
-      const found = DECK.filter(
+      const found = ALPHABETICAL.filter(
         (card) =>
           card.name.toLowerCase().includes(wanted) ||
           card.sigils.some((sigil) => SIGILS[sigil].name.toLowerCase().includes(wanted)),
@@ -299,17 +327,36 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
   }
 }
 
-const NAMES = [...HELP.map(([command]) => command.split(' ')[0] as string), 'next', 'back']
+// What help lists, plus help itself and the tutorial's own steps; the jokes stay hidden.
+const NAMES = ['help', ...HELP.map(([command]) => command.split(' ')[0] as string), 'next', 'back']
 
-/** Completes a command or card name when exactly one matches. */
-export function complete(input: string): string | null {
+/** The longest start every name shares, ignoring case, in the first name's own case. */
+function shared(names: string[]): string {
+  const [first = ''] = names
+  let length = first.length
+  for (const name of names)
+    while (length && name.slice(0, length).toLowerCase() !== first.slice(0, length).toLowerCase()) length--
+  return first.slice(0, length)
+}
+
+/** What Tab does: completes as far as every match agrees, and gives the matches when more than one is left. */
+export function complete(input: string): { text: string; options: string[] } {
   const [name = '', ...rest] = input.split(' ')
   if (rest.length === 0) {
-    const fits = NAMES.filter((command) => command.startsWith(name.toLowerCase()))
-    return fits.length === 1 ? `${fits[0]} ` : null
+    const fits = NAMES.filter((command) => command.startsWith(name.toLowerCase())).sort()
+    if (fits.length === 1) return { text: `${fits[0]} `, options: [] }
+    const common = shared(fits)
+    return { text: common.length > name.length ? common : input, options: fits }
   }
-  if (name !== 'card' && name !== 'cat') return null
   const typed = rest.join(' ').toLowerCase()
-  const fits = DECK.filter((card) => card.name.toLowerCase().startsWith(typed))
-  return fits.length === 1 ? `${name} ${fits[0]?.name}` : null
+  const names =
+    name === 'card' || name === 'cat'
+      ? ALPHABETICAL.map((card) => card.name)
+      : name === 'sigil'
+        ? SIGIL_IDS.map((id) => SIGILS[id].name)
+        : []
+  const fits = names.filter((one) => one.toLowerCase().startsWith(typed))
+  if (fits.length === 1) return { text: `${name} ${fits[0]}`, options: [] }
+  const common = shared(fits)
+  return { text: common.length > typed.length ? `${name} ${common}` : input, options: fits }
 }

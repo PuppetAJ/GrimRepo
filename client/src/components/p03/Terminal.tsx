@@ -32,6 +32,8 @@ export default function Terminal({ lines, user }: { lines: readonly string[]; us
   const mirror = useRef<HTMLParagraphElement>(null)
   const history = useRef<string[]>([])
   const recall = useRef(0)
+  // The text whose matches Tab just listed, until it changes, so a second Tab moves focus instead of listing again.
+  const listed = useRef<string | null>(null)
   const commands = useRef<Commands | null>(null)
   const scroller = useRef<HTMLDivElement>(null)
   const input = useRef<HTMLInputElement>(null)
@@ -92,6 +94,7 @@ export default function Terminal({ lines, user }: { lines: readonly string[]; us
 
   // Puts the caret at the end, as the browser does for set text.
   function type(next: string) {
+    listed.current = null
     setText(next)
     setCaret(next.length)
   }
@@ -128,11 +131,29 @@ export default function Terminal({ lines, user }: { lines: readonly string[]; us
       event.preventDefault()
       setEntries([])
     } else if (event.key === 'Tab' && text.trim()) {
-      // With nothing to complete, Tab moves focus as usual.
-      const completed = commands.current?.complete(text)
-      if (completed && completed !== text) {
+      // As a shell does: complete what the matches share, then list them; after that, Tab moves focus as usual.
+      const found = commands.current?.complete(text)
+      if (!found) return
+      if (found.text !== text) {
         event.preventDefault()
-        type(completed)
+        type(found.text)
+      } else if (found.options.length > 1 && listed.current !== text) {
+        event.preventDefault()
+        listed.current = text
+        add(
+          { id: nextId++, kind: 'input', who, path: pathOf(pathname), text },
+          {
+            id: nextId++,
+            kind: 'output',
+            node: (
+              <p className="flex flex-wrap gap-x-6">
+                {found.options.map((option) => (
+                  <span key={option}>{option}</span>
+                ))}
+              </p>
+            ),
+          },
+        )
       }
     }
   }
@@ -156,7 +177,8 @@ export default function Terminal({ lines, user }: { lines: readonly string[]; us
           const target = event.target as HTMLElement
           if (!window.getSelection()?.toString() && !target.closest('button, a, input')) input.current?.focus()
         }}
-        className="relative z-10 min-h-0 flex-1 overflow-y-auto px-3 py-2 text-lg leading-snug sm:px-6 sm:text-xl"
+        // Deeper at the bottom, so the prompt clears the frame and its cracks once the output scrolls.
+        className="relative z-10 min-h-0 flex-1 overflow-y-auto px-3 pt-2 pb-6 text-lg leading-snug sm:px-6 sm:pb-8 sm:text-xl"
       >
         <div role="log" aria-label="P03's terminal output" className="flex flex-col gap-1">
           {entries.map((entry) => (
@@ -188,6 +210,7 @@ export default function Terminal({ lines, user }: { lines: readonly string[]; us
               ref={input}
               value={text}
               onChange={(event) => {
+                listed.current = null
                 setText(event.target.value)
                 follow(event.target)
               }}

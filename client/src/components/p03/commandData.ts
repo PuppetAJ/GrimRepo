@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { CARDS, TIP, type CardDef } from 'shared'
+import { CARDS, SIGILS, TIP, type CardDef, type SigilId } from 'shared'
 
 export type Page = '/' | '/leaderboard' | '/cards' | '/game' | '/account' | '/stats'
 
@@ -17,29 +17,40 @@ export const PAGES: Record<string, Page> = {
 }
 
 export const HELP: [string, string][] = [
-  ['tutorial', 'A walkthrough of the rules, since you clearly need them'],
-  ['cards', 'Every card in your deck. Weak, all of them'],
   ['card <name>', 'One card up close'],
-  ['sigils', 'What the sigils do'],
+  ['cards', 'Every card in your deck. Weak, all of them'],
+  ['cd <page>', 'Readme, leaderboard, cards, game, account'],
+  ['clear', 'Wipe the screen. Not my memory'],
+  ['grep <word>', 'Cards by name or sigil'],
+  ['history', 'Everything you typed. I kept it'],
   ['items', 'The tools a run can find, one use each'],
-  ['rules', 'All of the rules in one command'],
-  ['top', 'The five who got lucky'],
-  ['whoami', 'Who you are. Nobody, probably'],
   ['p03', 'Me. Obviously'],
   ['play', 'Sit down. Finally'],
-  ['grep <word>', 'Cards by name or sigil'],
   ['ps', 'What runs here. Me, mostly'],
-  ['cd <page>', 'Readme, leaderboard, cards, game, account'],
-  ['history', 'Everything you typed. I kept it'],
-  ['clear', 'Wipe the screen. Not my memory'],
+  ['rules', 'All of the rules in one command'],
+  ['sigil <name>', 'One sigil, and the cards that carry it'],
+  ['sigils', 'What the sigils do'],
+  ['top', 'The five who got lucky'],
+  ['tutorial', 'A walkthrough of the rules, since you clearly need them'],
+  ['whoami', 'Who you are. Nobody, probably'],
 ]
 
+/** A name as typed or shown, lowercased and without spaces or punctuation, so Tech Lead and techlead match. */
+export const bare = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, '')
+
 export const find = (name: string): CardDef | undefined => {
-  const wanted = name.toLowerCase().replace(/[^a-z0-9]/g, '')
-  return Object.values(CARDS).find(
-    (card) => card.id.toLowerCase() === wanted || card.name.toLowerCase().replace(/[^a-z0-9]/g, '') === wanted,
-  )
+  const wanted = bare(name)
+  return Object.values(CARDS).find((card) => bare(card.id) === wanted || bare(card.name) === wanted)
 }
+
+export const findSigil = (name: string): SigilId | undefined => {
+  const wanted = bare(name)
+  return (Object.keys(SIGILS) as SigilId[]).find((id) => bare(id) === wanted || bare(SIGILS[id].name) === wanted)
+}
+
+/** Sorts by name, ignoring case, so try/catch sits among the rest. */
+export const byName = (a: { name: string }, b: { name: string }) =>
+  a.name.localeCompare(b.name, 'en', { sensitivity: 'base' })
 
 export type Step = { title: string; body: ReactNode; art?: string }
 export const STEPS: Step[] = [
