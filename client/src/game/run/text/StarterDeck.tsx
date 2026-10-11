@@ -42,7 +42,8 @@ export function StarterDeck({ run }: { run: RunReady }) {
       <ol className="grid w-full max-w-3xl gap-4 @6xl:max-w-none @6xl:grid-cols-3">
         {Object.entries(STARTER_DECKS).map(([id, deck]) => (
           <li key={id}>
-            <Box className="flex h-full flex-col gap-3">
+            {/* More below than the padding alone, to match the room the heading's line height leaves above it. */}
+            <Box className="flex h-full flex-col gap-3 pb-5 sm:pb-6">
               <h3 className="text-2xl text-p03">{deck.name}</h3>
               <p className="font-sans text-base text-[#b8f5c4]">{deck.about}</p>
               {/* The core's two cards, plus a stack of the packs a card is taken from each of, midway between words and button. */}

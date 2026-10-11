@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type PointerEvent } from 'react'
 import { CARD_TYPES, CARDS, ITEMS as TOOLS, SIGILS, type CardType } from 'shared'
 import { cardArt, hasArt, iconArt, SPRITE_FPS, type IconId } from '../game/art.ts'
+import { WORST_CARD } from '../game/fixtures.ts'
 import { FIRE, LOGS, LOGS_OUTLINE } from '../game/run/text/Fire.tsx'
 import { NotFound } from './NotFound.tsx'
 
@@ -15,7 +16,10 @@ const SIZE: Record<Kind, number> = { cards: 24, icons: 8 }
 const CELL: Record<Kind, number> = { cards: 18, icons: 44 }
 
 const ITEMS: Item[] = [
-  ...Object.values(CARDS).map((card): Item => ({ kind: 'cards', id: card.id, name: card.name })),
+  // The worst-case card is a layout test with no art of its own.
+  ...Object.values(CARDS)
+    .filter((card) => card.id !== WORST_CARD)
+    .map((card): Item => ({ kind: 'cards', id: card.id, name: card.name })),
   ...Object.entries(SIGILS).map(([id, sigil]): Item => ({ kind: 'icons', id, name: sigil.name })),
   ...Object.entries(TOOLS).map(([id, tool]): Item => ({ kind: 'icons', id, name: tool.name })),
   ...(Object.keys(CARD_TYPES) as CardType[]).map((type): Item => ({
@@ -31,7 +35,7 @@ const ITEMS: Item[] = [
 ]
 
 /** Art drafted for Adrian to redraw, or that he flagged for edits; each shows under Needs your look until ticked off. */
-const DRAFTS = ['cards:ReplyAll', 'cards:COBOL', 'icons:uptime', 'cards:Sandbox', 'cards:RubberDuck', 'icons:death']
+const DRAFTS = ['cards:ReplyAll', 'icons:uptime', 'cards:Sandbox', 'cards:RubberDuck', 'icons:death']
 const LOOKED_KEY = 'grimrepo:art-looked'
 
 function lookedAtFirst(): string[] {
