@@ -1,18 +1,19 @@
 import type { Shown } from '../shown.ts'
 import { CanvasTexture, SRGBColorSpace, type Texture } from 'three'
 import { loadArt } from '../art.ts'
+import { loadDisk } from './diskGeometry.ts'
 import { loadPlastic } from './diskMaterials.ts'
 import { drawBack, drawFace, H, W, type Layer } from './faceDrawing.ts'
 import { kindOf } from './kind.ts'
 
-// A token proving the font, art and plastic have loaded.
+// A token proving the font, art, plastic and the disk's model have loaded.
 type Assets = { font: 'VT323' }
 
 let assets: Promise<Assets> | null = null
 
 /** Loads once per page; later calls share the promise. */
 export function loadCardAssets(): Promise<Assets> {
-  assets ??= Promise.all([document.fonts.load('48px VT323'), loadArt(), loadPlastic()]).then(() => ({
+  assets ??= Promise.all([document.fonts.load('48px VT323'), loadArt(), loadPlastic(), loadDisk()]).then(() => ({
     font: 'VT323' as const,
   }))
   return assets
