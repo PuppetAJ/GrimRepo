@@ -111,6 +111,9 @@ if (runs('run')) {
     ['repaired', 'campfire'],
     ['low-integrity', 'battle'],
     ['new-cards', 'card'],
+    ['review-result', 'event'],
+    ['bug-hunt', 'event'],
+    ['bug-fixed', 'event'],
   ]
   for (const [layout, width, height] of [
     ['wide', 1440, 900],

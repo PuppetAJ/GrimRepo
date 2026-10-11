@@ -3,6 +3,7 @@ import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import { BACK_Z, diskGeometry, FACE_Z, HOUSING } from './diskGeometry.ts'
 import { diskMaterials } from './diskMaterials.ts'
+import type { Kind } from './kind.ts'
 import { CARD, DISK, SECTIONS } from './layout.ts'
 
 export { BACK_RELIEF, BACK_Z, diskGeometry, FACE_Z } from './diskGeometry.ts'
@@ -94,7 +95,7 @@ export const Disk = forwardRef<
   DiskHandle,
   {
     open?: number
-    kind?: 'common' | 'rare'
+    kind?: Kind
     front?: THREE.Material | null
     content?: THREE.Material | null
     back?: THREE.Material | null

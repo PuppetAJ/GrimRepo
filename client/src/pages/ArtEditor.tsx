@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type PointerEvent } from 'react'
 import { CARD_TYPES, CARDS, ITEMS as TOOLS, SIGILS, type CardType } from 'shared'
 import { cardArt, hasArt, iconArt, SPRITE_FPS, type IconId } from '../game/art.ts'
-import { FIRE, LOGS } from '../game/run/text/Fire.tsx'
+import { FIRE, LOGS, LOGS_OUTLINE } from '../game/run/text/Fire.tsx'
 import { NotFound } from './NotFound.tsx'
 
 type Kind = 'cards' | 'icons'
@@ -27,10 +27,11 @@ const ITEMS: Item[] = [
   { kind: 'icons', id: 'health', name: 'Health' },
   { kind: 'icons', id: 'fire', name: 'Fire (16 × 16, animated)', size: 16, frames: true },
   { kind: 'icons', id: 'logs', name: 'Campfire logs (16 × 16)', size: 16 },
+  { kind: 'icons', id: 'death', name: "Death card's skull" },
 ]
 
 /** Art drafted for Adrian to redraw, or that he flagged for edits; each shows under Needs your look until ticked off. */
-const DRAFTS = ['cards:ReplyAll', 'cards:COBOL', 'icons:uptime', 'cards:Sandbox', 'cards:RubberDuck']
+const DRAFTS = ['cards:ReplyAll', 'cards:COBOL', 'icons:uptime', 'cards:Sandbox', 'cards:RubberDuck', 'icons:death']
 const LOOKED_KEY = 'grimrepo:art-looked'
 
 function lookedAtFirst(): string[] {
@@ -463,7 +464,7 @@ function Playing({ frames, size }: { frames: boolean[][]; size: number }) {
   )
 }
 
-/** The fire playing over its logs, which sit three rows lower, in the game's colors and at its size. */
+/** The fire playing over its logs, which sit three rows lower, in the game's colors, outline and size. */
 function Campfire({ fire, logs }: { fire: boolean[][]; logs: boolean[] }) {
   const [at, setAt] = useState(0)
   useEffect(() => {
@@ -471,23 +472,31 @@ function Campfire({ fire, logs }: { fire: boolean[][]; logs: boolean[] }) {
     return () => clearInterval(tick)
   }, [])
   const flame = fire[at % Math.max(1, fire.length)] ?? []
-  const draw = (context: CanvasRenderingContext2D, pixels: boolean[], color: string, top: number) => {
+  // Each on a canvas of its own, so the logs can take their outline as the game draws it.
+  const layer = (pixels: boolean[], color: string, top: number) => (canvas: HTMLCanvasElement | null) => {
+    const context = canvas?.getContext('2d')
+    if (!canvas || !context) return
+    context.clearRect(0, 0, 16, 19)
     context.fillStyle = color
     pixels.forEach((on, index) => on && context.fillRect(index % 16, top + Math.floor(index / 16), 1, 1))
   }
+  const style = { width: 128, height: 152 }
   return (
-    <canvas
-      ref={(canvas) => {
-        const context = canvas?.getContext('2d')
-        if (!canvas || !context) return
-        context.clearRect(0, 0, 16, 19)
-        draw(context, flame, FIRE, 0)
-        draw(context, logs, LOGS, 3)
-      }}
-      width={16}
-      height={19}
-      className="bg-[#07130b] [image-rendering:pixelated]"
-      style={{ width: 128, height: 152 }}
-    />
+    <span className="relative block bg-[#07130b]" style={style}>
+      <canvas
+        ref={layer(flame, FIRE, 0)}
+        width={16}
+        height={19}
+        className="absolute inset-0 [image-rendering:pixelated]"
+        style={style}
+      />
+      <canvas
+        ref={layer(logs, LOGS, 3)}
+        width={16}
+        height={19}
+        className="absolute inset-0 [image-rendering:pixelated]"
+        style={{ ...style, filter: LOGS_OUTLINE }}
+      />
+    </span>
   )
 }

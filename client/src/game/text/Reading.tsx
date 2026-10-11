@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { card, CARD_TYPES, SIGILS, type Action } from 'shared'
 import { describe, has } from '../controls.tsx'
-import { FlatReaderBody, PixelCard, ReaderBody, Sigil } from '../CardReader.tsx'
+import { cardTones, FlatReaderBody, PixelCard, ReaderBody, Sigil } from '../CardReader.tsx'
 import { Dialog, DialogContent, DialogTitle } from '../../components/ui/dialog.tsx'
 import { useTable } from './context.ts'
 import { Panel } from './Panel.tsx'
@@ -43,7 +43,7 @@ export function ReaderPanel() {
   return (
     <Panel
       ref={readerBox}
-      className={`@container flex gap-2 bg-[#a9e7b8] text-[#0b1f12] ${readerFlat ? 'flex-row overflow-hidden p-2' : 'flex-col overflow-hidden'} ${compact ? (readerFlat ? 'h-[min(20rem,72%)] min-h-0' : 'max-h-[80%] min-h-0') : 'max-h-[70%] shrink-0'}`}
+      className={`@container flex gap-2 ${inspected ? cardTones(inspected.card).body : 'bg-[#a9e7b8]'} text-[#0b1f12] ${readerFlat ? 'flex-row overflow-hidden p-2' : 'flex-col overflow-hidden'} ${compact ? (readerFlat ? 'h-[min(20rem,72%)] min-h-0' : 'max-h-[80%] min-h-0') : 'max-h-[70%] shrink-0'}`}
     >
       {inspected ? (
         readerFlat ? (
@@ -126,7 +126,7 @@ export function Inspector() {
     <Dialog open={unit !== null} onOpenChange={(open) => !open && setReading(null)}>
       <DialogContent
         aria-describedby={undefined}
-        className="@container flex max-h-[85dvh] flex-col gap-2 overflow-y-auto border-2 border-[#0b1f12] bg-[#a9e7b8] p-3 pt-10 font-terminal text-[#0b1f12] ring-0 sm:max-w-sm"
+        className={`@container flex max-h-[85dvh] flex-col gap-2 overflow-y-auto border-2 border-[#0b1f12] ${unit ? cardTones(unit.card).body : 'bg-[#a9e7b8]'} p-3 pt-10 font-terminal text-[#0b1f12] ring-0 sm:max-w-sm`}
       >
         <DialogTitle className="sr-only">{unit ? describe(unit) : 'Card'}</DialogTitle>
         {unit ? <ReaderBody unit={unit} /> : null}

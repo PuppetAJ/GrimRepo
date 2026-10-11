@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import type { Kind } from './kind.ts'
 import { TINT } from './palette.ts'
 
 type Worn = Record<'map' | 'normalMap' | 'roughnessMap', THREE.Texture>
@@ -38,7 +39,12 @@ const plastics = (body: string, bodyGlow: string) => {
   }
 }
 type Plastics = ReturnType<typeof plastics>
-const sets: Partial<Record<'common' | 'rare', Plastics>> = {}
+const sets: Partial<Record<Kind, Plastics>> = {}
 /** Built on first use, which must come after loadPlastic() resolves. */
-export const diskMaterials = (kind: 'common' | 'rare' = 'common'): Plastics =>
-  (sets[kind] ??= kind === 'rare' ? plastics('#7a2030', '#2a0a10') : plastics(TINT.disk.body, TINT.disk.glow))
+export const diskMaterials = (kind: Kind = 'common'): Plastics =>
+  (sets[kind] ??=
+    kind === 'rare'
+      ? plastics('#7a2030', '#2a0a10')
+      : kind === 'death'
+        ? plastics('#5d625e', '#141614')
+        : plastics(TINT.disk.body, TINT.disk.glow))

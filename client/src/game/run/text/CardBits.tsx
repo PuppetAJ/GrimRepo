@@ -3,7 +3,7 @@ import { createContext, use, useState, type ReactNode } from 'react'
 import { card, CARD_TYPES, SIGILS, type CardType, type SigilId, type Unit } from 'shared'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog.tsx'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover.tsx'
-import { ReaderBody, Sigil } from '../../CardReader.tsx'
+import { cardTones, ReaderBody, Sigil } from '../../CardReader.tsx'
 import { describe } from '../../controls.tsx'
 
 const LIGHT = '#b8f5c4'
@@ -61,7 +61,7 @@ export function CardReader({ unit, onClose }: { unit: Unit | null; onClose: () =
     <Dialog open={unit !== null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         aria-describedby={undefined}
-        className="@container flex max-h-[85dvh] flex-col gap-2 overflow-y-auto border-2 border-[#0b1f12] bg-[#a9e7b8] p-3 pt-10 font-terminal text-[#0b1f12] ring-0 sm:max-w-sm"
+        className={`@container flex max-h-[85dvh] flex-col gap-2 overflow-y-auto border-2 border-[#0b1f12] ${unit ? cardTones(unit.card).body : 'bg-[#a9e7b8]'} p-3 pt-10 font-terminal text-[#0b1f12] ring-0 sm:max-w-sm`}
       >
         <DialogTitle className="sr-only">{unit ? describe(unit) : 'Card'}</DialogTitle>
         {unit ? <ReaderBody unit={unit} /> : null}

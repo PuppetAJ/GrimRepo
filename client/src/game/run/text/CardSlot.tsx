@@ -43,7 +43,7 @@ export function CardSlot({
         {chosen ? (
           <PixelCard unit={chosen} />
         ) : (
-          <span className="grid aspect-[5/7] w-full place-items-center rounded-md border-2 border-dashed border-p03-edge text-p03-dim hover:border-p03 hover:text-p03">
+          <span className="grid aspect-[5/7] w-full place-items-center rounded-md border-2 border-dashed border-p03 bg-[#0b1f12] text-p03 hover:bg-[#13261a]">
             <Plus aria-hidden className="size-10" />
           </span>
         )}

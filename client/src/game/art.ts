@@ -6,16 +6,18 @@ const byName = (files: Record<string, string>) =>
 
 const CARDS = byName(import.meta.glob<string>('./art/cards/*.png', { eager: true, import: 'default' }))
 const ICONS = byName(import.meta.glob<string>('./art/icons/*.png', { eager: true, import: 'default' }))
-// Full-color packs from argametina's Free Card Packs, one for each starter deck.
-const PACKS = byName(import.meta.glob<string>('./art/packs/*.png', { eager: true, import: 'default' }))
+// Packs from argametina's Free Card Packs, darkened into the site's greens; files of their own, not inlined, since only pack screens need them.
+const PACKS = byName(
+  import.meta.glob<string>('./art/packs/*.png', { eager: true, query: '?no-inline', import: 'default' }),
+)
 
-/** A starter deck's pack. */
-export const packArt = (deck: string): string | undefined => PACKS[deck]
+/** A pack's art: a starter deck's, a card choice's, a face-down trait's, or the rare one after a boss. */
+export const packArt = (id: string): string | undefined => PACKS[id]
 
 /** How fast an animated icon, such as the campfire's fire, plays its frames. */
 export const SPRITE_FPS = 8
 
-export type IconId = SigilId | ItemId | 'attack' | 'health' | 'fire' | 'logs' | `type-${CardType}`
+export type IconId = SigilId | ItemId | 'attack' | 'health' | 'fire' | 'logs' | 'death' | `type-${CardType}`
 
 /** Whether a card or icon has art of its own yet, rather than the stand-in. */
 export const hasArt = (kind: 'cards' | 'icons', id: string): boolean =>

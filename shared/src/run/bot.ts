@@ -60,6 +60,8 @@ function effectWorth(state: RunState, effect: Effect): number {
       return twins(state.deck).length ? 3 : 0
     case 'item':
       return state.items.length < ITEM_SLOTS ? 2 : 0
+    case 'integrity':
+      return effect.amount
     case 'trial':
       // A rare is worth about two average cards.
       return passChance(state.deck, effect.trial) * 6

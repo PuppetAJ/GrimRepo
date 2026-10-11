@@ -5,7 +5,7 @@ import { deckCard } from '../engine/units.ts'
 import { Rng } from '../rng.ts'
 import { scoreRun } from '../scoring.ts'
 import { playRun } from './bot.ts'
-import { findNode } from './map.ts'
+import { findNode, generateStage } from './map.ts'
 import {
   applyRun,
   createRun,
@@ -410,6 +410,36 @@ describe('the merge request', () => {
   it('opens only when the deck holds a duplicate', () => {
     const state = at('event', { kind: 'event', node: '0-0', event: 'merge-request' })
     assert.equal(step(state, { type: 'choose', option: 0 }).visit, null)
+  })
+})
+
+describe('a bug hunt', () => {
+  const hunt = (integrity: number, option: number) =>
+    step(
+      { ...at('event', { kind: 'event', node: '0-0', event: 'bug-assignment' }), integrity },
+      { type: 'choose', option },
+    )
+
+  it('repairs 3 integrity for the broken line, up to full', () => {
+    assert.equal(hunt(10, 2).integrity, 13)
+    assert.equal(hunt(INTEGRITY - 1, 2).integrity, INTEGRITY)
+  })
+
+  it('costs 1 for any other line, but never the last, and nothing for blaming the intern', () => {
+    assert.equal(hunt(10, 0).integrity, 9)
+    assert.equal(hunt(1, 0).integrity, 1)
+    assert.equal(hunt(10, 3).integrity, 10)
+  })
+
+  it('turns up as often as any one other event, sharing its place among them', () => {
+    const counts = new Map<string, number>()
+    for (let seed = 0; seed < 400; seed++)
+      for (const node of generateStage(seed % 3, new Rng(seed)).rows.flat())
+        if (node.event) counts.set(node.event, (counts.get(node.event) ?? 0) + 1)
+    const hunts = [...counts].filter(([id]) => id.startsWith('bug-')).reduce((sum, [, n]) => sum + n, 0)
+    const others = [...counts].filter(([id]) => !id.startsWith('bug-')).map(([, n]) => n)
+    const average = others.reduce((sum, n) => sum + n, 0) / others.length
+    assert.ok(hunts < average * 1.6 && hunts > average * 0.5, `${hunts} hunts against ${average} for each other event`)
   })
 })
 

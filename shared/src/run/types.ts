@@ -3,7 +3,7 @@ import type { ItemId } from '../items.ts'
 import type { Action, DeckCard, GameEvent, GameState } from '../engine/types.ts'
 
 /** Bumped whenever a change would make an old run replay differently. */
-export const RUN_RULES_VERSION = 19
+export const RUN_RULES_VERSION = 20
 
 /** The integrity a run starts with, and the most it can hold. */
 export const INTEGRITY = 20
@@ -139,6 +139,8 @@ export type RunEvent =
   /** A code review: the cards drawn, the trial's total and the bar, and whether it passed. */
   | { type: 'trialled'; trial: Trial; cards: RunCard[]; total: number; bar: number; passed: boolean }
   | { type: 'repaired'; amount: number; integrity: number }
+  /** An event changed the run's integrity, by `change`, to `integrity`. */
+  | { type: 'integrity'; change: number; integrity: number }
   | { type: 'stageCleared'; stage: number }
   /** `integrity` marks a run lost because its integrity ran out. */
   | { type: 'runOver'; outcome: 'win' | 'loss'; integrity?: boolean }

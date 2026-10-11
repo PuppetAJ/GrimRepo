@@ -95,9 +95,10 @@ async function playRun(page, mirror, { pick = nextRunAction, done }) {
         await page.locator('[data-slot-for="uninstall"]').click()
         await page.locator(`[data-action="uninstall-card"][data-card="${action.card}"]`).click()
         await clickMove(page, '[data-action="uninstall"]', expected)
-      } else if (action.type === 'take' && state.visit.kind === 'pack') {
-        // A starter pack comes sealed, and is torn open before its cards can be taken.
-        await page.locator('[data-action="open-pack"]').first().click()
+      } else if (action.type === 'take' && ['pack', 'card', 'reward'].includes(state.visit.kind)) {
+        // A pack comes sealed, and is torn open before its cards can be taken, unless it's open already.
+        const sealed = page.locator('[data-action="open-pack"]:not(:disabled)')
+        if (await sealed.count()) await sealed.first().click()
         await clickMove(page, targetFor(action), expected)
       } else if (action.type === 'strip') {
         // The card, chosen in its slot's searchable list, its sigil, then the linter's button.
@@ -156,7 +157,13 @@ check(
 
 section('A card choice')
 mirror = await playRun(page, mirror, { done: (state) => state.visit?.kind === 'card' })
-check('a card node offers three cards', (await page.locator('[data-action="take"]').count()) === 3)
+check('a card node offers a sealed pack', (await page.locator('[data-action="open-pack"]').count()) === 1)
+await page.locator('[data-action="open-pack"]').click()
+await page.locator('[data-action="take"]').first().waitFor()
+check(
+  'which tears open on three cards to take, in its place',
+  (await page.locator('[data-action="take"]').count()) === 3,
+)
 const before = mirror.state.deck.length
 mirror = await playRun(page, mirror, { done: (state) => state.deck.length === before + 1 })
 check(
