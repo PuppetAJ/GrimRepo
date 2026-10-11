@@ -50,6 +50,10 @@ export function narrateRun(before: RunState, events: RunEvent[]): string[] {
         return [`${named(event.card.card)} installed, for ${event.price} bytes. No refunds.`]
       case 'stripped':
         return [`The linter deleted ${SIGILS[event.sigil].name} from ${named(event.card.card)}. One warning down.`]
+      case 'integrity':
+        return [
+          `Integrity ${event.change > 0 ? `up ${event.change}` : `down ${-event.change}`}, to ${event.integrity}.`,
+        ]
       case 'repaired':
         return [`Integrity repaired by ${event.amount}, to ${event.integrity}. The fire won't hold forever.`]
       case 'stageCleared':

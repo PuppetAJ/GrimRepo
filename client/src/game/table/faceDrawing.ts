@@ -1,4 +1,4 @@
-import { card } from 'shared'
+import { card, isDeathCard } from 'shared'
 import type { Shown } from '../shown.ts'
 import { cardImage, iconImage } from '../art.ts'
 import { CORNER_HOLES, DISK, RECESS, SCREEN_DIVIDER, SECTIONS, SIGIL_BAND } from './layout.ts'
@@ -53,6 +53,18 @@ const RARE: Palette = {
   cost: '#ffb14a',
   hurt: '#ffd3d0',
   boost: '#fff2a8',
+}
+
+const DEATH: Palette = {
+  body: '#4a4f4b',
+  screen: '#161a17',
+  line: '#d8e0da',
+  fill: '#3a403c',
+  plate: '#b9bdb6',
+  plateInk: '#1a1c1a',
+  cost: '#ff9a2e',
+  hurt: '#ff4d5e',
+  boost: '#ffe14d',
 }
 
 const tints = new Map<string, HTMLCanvasElement>()
@@ -181,7 +193,8 @@ export type Layer = 'base' | 'content' | 'lights'
 /** base stays when the disk closes, content fades out with it, and lights is content on black for the emissive map. */
 export function drawFace(context: CanvasRenderingContext2D, unit: Shown, layer: Layer): void {
   const def = card(unit.card)
-  const palette = def.tier === 'S' ? RARE : COMMON
+  const dead = isDeathCard(unit.card)
+  const palette = dead ? DEATH : def.tier === 'S' ? RARE : COMMON
   context.clearRect(0, 0, W, H)
   if (layer !== 'content') {
     context.fillStyle = layer === 'lights' ? '#000000' : palette.body
@@ -194,14 +207,17 @@ export function drawFace(context: CanvasRenderingContext2D, unit: Shown, layer: 
   context.textBaseline = 'middle'
 
   const [lx, ly, lw, lh] = recess(RECESS.label)
+  // A death card's skull sits at the plate's left, and its name centers in the room beside it.
+  const skull = dead ? lh * 0.9 : 0
   if (layer === 'base') {
     context.fillStyle = palette.plate
     context.fillRect(lx, ly, lw, lh)
+    if (dead) pixels(context, iconImage('death'), lx + lh * 0.1, ly + (lh - 24) / 2, 3, palette.plateInk)
   }
   if (layer === 'content') {
     context.fillStyle = palette.plateInk
-    fitText(context, def.name.toUpperCase(), (size) => `bold ${size}px VT323`, 60, lw * 0.9)
-    centered(context, def.name.toUpperCase(), lx + lw / 2, ly + lh / 2)
+    fitText(context, def.name.toUpperCase(), (size) => `bold ${size}px VT323`, 60, lw * 0.9 - skull)
+    centered(context, def.name.toUpperCase(), lx + skull + (lw - skull) / 2, ly + lh / 2)
   }
 
   const [sx, sy, sw, sh] = recess(RECESS.screen)
