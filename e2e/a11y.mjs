@@ -122,14 +122,10 @@ if (runs('run')) {
     await page.setViewportSize({ width, height })
     for (const [name, view] of MOCKED)
       await audit(`the run's ${name}, ${layout}`, `/mockups/${name}?layout=${layout}&table=text`, screen(view))
-    await audit(
-      `the run's summary after a loss, ${layout}`,
-      `/mockups/lost?layout=${layout}&table=text`,
-      async () => {
-        await page.locator('[data-action="summary"]').click()
-        await screen('summary')()
-      },
-    )
+    await audit(`the run's summary after a loss, ${layout}`, `/mockups/lost?layout=${layout}&table=text`, async () => {
+      await page.locator('[data-action="summary"]').click()
+      await screen('summary')()
+    })
   }
   await page.setViewportSize({ width: 1280, height: 800 })
 }
