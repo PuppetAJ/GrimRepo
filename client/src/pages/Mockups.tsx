@@ -74,7 +74,7 @@ function List({
               className="size-4 translate-y-0.5 accent-primary"
             />
             <Link
-              to="/run/mockups/$name"
+              to="/mockups/$name"
               params={{ name }}
               className={`underline underline-offset-2 ${status === 'approved' ? 'text-muted-foreground' : 'text-primary'}`}
             >
@@ -90,7 +90,7 @@ function List({
               {LAYOUTS.map((layout) => (
                 <Link
                   key={layout}
-                  to="/run/mockups/$name"
+                  to="/mockups/$name"
                   params={{ name }}
                   search={{ layout, table: 'text' }}
                   className="mr-2 underline-offset-2 hover:underline"
@@ -100,7 +100,7 @@ function List({
               ))}
               ·{' '}
               <Link
-                to="/run/mockups/$name"
+                to="/mockups/$name"
                 params={{ name }}
                 search={{ table: '3d' }}
                 className="ml-1 font-medium text-primary underline-offset-2 hover:underline"
@@ -184,8 +184,8 @@ export function MockupIndex() {
 }
 
 export function MockupRun() {
-  const { name } = useParams({ from: '/run/mockups/$name' })
-  const { layout, table } = useSearch({ from: '/run/mockups/$name' })
+  const { name } = useParams({ from: '/mockups/$name' })
+  const { layout, table } = useSearch({ from: '/mockups/$name' })
   const mockup = useMemo(() => (FIXTURES_ON ? (MOCKUPS[name]?.make() ?? null) : null), [name])
   if (!mockup) return <NotFound />
   return (
