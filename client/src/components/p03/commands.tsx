@@ -327,7 +327,8 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
   }
 }
 
-const NAMES = [...HELP.map(([command]) => command.split(' ')[0] as string), 'next', 'back']
+// What help lists, plus help itself and the tutorial's own steps; the jokes stay hidden.
+const NAMES = ['help', ...HELP.map(([command]) => command.split(' ')[0] as string), 'next', 'back']
 
 /** The longest start every name shares, ignoring case, in the first name's own case. */
 function shared(names: string[]): string {
