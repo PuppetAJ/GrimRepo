@@ -101,6 +101,7 @@ client/   the web app
 server/   the API, auth, migrations and the nightly clean-up
 shared/   game rules and data, imported by both
 e2e/      browser suites, plain Playwright scripts
+art/      sources made in art tools, such as the floppy disk's Blender file
 ```
 
 Imports run one way, and oxlint enforces it: the client and the server may use `shared`, `shared` uses neither, and neither imports the other.
