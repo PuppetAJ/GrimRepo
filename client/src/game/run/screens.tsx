@@ -39,7 +39,7 @@ const TITLES: Record<Exclude<RunView, 'battle' | 'map'>, string> = {
   start: 'Choose a starter deck',
   pack: 'Starter packs',
   card: 'Card choice',
-  blind: 'Card choice, face down',
+  blind: 'Blind packs',
   shop: 'Package Registry',
   reward: "The boss's reward",
   campfire: 'Campfire',
@@ -55,7 +55,7 @@ const TITLES: Record<Exclude<RunView, 'battle' | 'map'>, string> = {
 export const BACK_TO: Partial<Record<RunView, string>> = {
   battle: 'the battle',
   card: 'the card choice',
-  blind: 'the card choice',
+  blind: 'the blind packs',
   shop: 'the registry',
   reward: 'the reward',
   campfire: 'the campfire',

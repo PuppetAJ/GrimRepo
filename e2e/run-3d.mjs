@@ -89,6 +89,9 @@ section('Into a battle from the map')
       await page.locator(`${ROOT}[data-run-view="map"]`).waitFor()
       continue
     }
+    // A card choice's pack is torn open first; its cards are then taken from a dialog.
+    const pack = page.locator('[data-action="open-pack"]')
+    if ((current === 'card' || current === 'reward') && (await pack.count())) await pack.first().click()
     const battle = page.locator('[data-action="go"][aria-label^="Battle"]')
     const target =
       current === 'map'

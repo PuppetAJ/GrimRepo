@@ -14,7 +14,7 @@ import type { ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
 import { ITEMS, legalActions, type Action, type ItemId, type Unit } from 'shared'
 import { Button } from '@/components/ui/button.tsx'
-import { FlatReaderBody } from '../../CardReader.tsx'
+import { cardTones, FlatReaderBody } from '../../CardReader.tsx'
 import { ItemButton } from '../../ItemButton.tsx'
 import {
   Ending,
@@ -152,7 +152,7 @@ export function Hud({
           <div
             role="region"
             aria-label="Card reader"
-            className="relative mt-2 flex h-40 max-h-full min-h-0 w-72 gap-2 overflow-hidden rounded-md border-2 border-p03-edge bg-[#a9e7b8] p-2 text-[#0b1f12]"
+            className={`relative mt-2 flex h-40 max-h-full min-h-0 w-72 gap-2 overflow-hidden rounded-md border-2 border-p03-edge ${cardTones(lifted.card).body} p-2 text-[#0b1f12]`}
           >
             <FlatReaderBody unit={lifted} />
             <span aria-hidden className="crt-glass pointer-events-none absolute inset-0" />

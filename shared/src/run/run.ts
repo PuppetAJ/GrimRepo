@@ -31,7 +31,7 @@ export const STARTER_DECKS: Record<
 > = {
   'hello-world': {
     name: 'Hello, World',
-    about: 'Steady: Reliable and balanced between defense and offense.',
+    about: 'Reliable: Balanced between offense and defense.',
     core: ['HelloWorld', 'CronJob'],
     pack: {
       common: ['Watchdog', 'SpamBot', 'InfiniteLoop'],
@@ -41,13 +41,13 @@ export const STARTER_DECKS: Record<
   },
   'legacy-stack': {
     name: 'Legacy Stack',
-    about: 'Defense and sacrifices: Hold the line, and pay for high cost cards early.',
+    about: 'Survive: Defensive based deck focused on sacrifice.',
     core: ['OffCenterDiv', 'COBOL'],
     pack: { common: ['CronJob', 'SpamBot'], uncommon: ['LegacyCode', 'Monolith', 'Firewall'], rare: ['Bug'] },
   },
   'move-fast': {
     name: 'Move Fast',
-    about: 'Glass Cannon: Hit hard, and hope.',
+    about: "Glass Cannon: Hit hard and hope you don't die.",
     core: ['CopyPaste', 'SpamBot'],
     pack: {
       common: ['InfiniteLoop', 'CronJob', 'Prototype'],
@@ -293,6 +293,12 @@ function resolve(state: RunState, rng: Rng, effect: Effect, events: RunEvent[]):
       const found = rng.pick(FOUND_ITEMS)
       state.items.push(found)
       events.push({ type: 'gotItem', item: found })
+    }
+  } else if (effect.type === 'integrity') {
+    const integrity = Math.max(1, Math.min(INTEGRITY, state.integrity + effect.amount))
+    if (integrity !== state.integrity) {
+      events.push({ type: 'integrity', change: integrity - state.integrity, integrity })
+      state.integrity = integrity
     }
   } else if (effect.type === 'trial') {
     const { bar, of } = TRIALS[effect.trial]

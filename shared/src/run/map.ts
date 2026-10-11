@@ -1,6 +1,6 @@
 import { ENCOUNTERS } from '../encounters.ts'
 import type { Rng } from '../rng.ts'
-import { SCENES } from './scenes.ts'
+import { BUG_HUNTS, SCENES } from './scenes.ts'
 import type { MapNode, NodeKind, StageMap } from './types.ts'
 
 /** Columns in a stage's grid; a node's `col` is its column in it. */
@@ -117,7 +117,8 @@ export function generateStage(stage: number, rng: Rng): StageMap {
   const fights = Object.values(ENCOUNTERS).filter((found) => found.stage === stage && !found.boss)
   const boss = Object.values(ENCOUNTERS).find((found) => found.stage === stage && found.boss)
   if (!fights.length || !boss) throw new Error(`Stage ${stage} has no encounters`)
-  const scenes = Object.keys(SCENES)
+  // The bug hunts share one place, so an event is a bug hunt no more often than it's any other scene.
+  const scenes = [...Object.keys(SCENES).filter((id) => !BUG_HUNTS.includes(id)), 'bug']
 
   // Walked again until it spreads out, keeping the last walk should it never.
   let links = walk(rng)
@@ -152,7 +153,10 @@ export function generateStage(stage: number, rng: Rng): StageMap {
     if (node.kind === 'card' && node.row > 0 && rng.float() < BLIND_SHARE) node.blind = true
     if (node.kind === 'battle') node.encounter = rng.pick(fights).id
     if (node.kind === 'campfire') node.boost = rng.pick(['attack', 'health'] as const)
-    if (node.kind === 'event') node.event = rng.pick(scenes)
+    if (node.kind === 'event') {
+      const picked = rng.pick(scenes)
+      node.event = picked === 'bug' ? rng.pick(BUG_HUNTS) : picked
+    }
   }
   return { stage, rows }
 }

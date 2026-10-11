@@ -16,9 +16,34 @@ export type Effect =
   | { type: 'trial'; trial: Trial }
   /** A random item, if there's a slot free. */
   | { type: 'item' }
+  /** Repairs the run's integrity, or wears it down, but never to 0: an event doesn't end a run. */
+  | { type: 'integrity'; amount: number }
 
-/** An event node's text and its choices. */
-export type Scene = { id: string; title: string; text: string; options: { label: string; effects: Effect[] }[] }
+/** An event node's text and its choices; `code` is a snippet shown under the text, and `says` P03's word on a choice. */
+export type Scene = {
+  id: string
+  title: string
+  text: string
+  code?: string[]
+  options: { label: string; effects: Effect[]; says?: string }[]
+}
+
+/** A bug hunt's choices: the broken line repairs integrity, any other costs some, and blaming the intern does nothing. */
+const hunt = (lines: number, broken: number, fixed: string): Scene['options'] => [
+  ...Array.from({ length: lines }, (_, index) =>
+    index + 1 === broken
+      ? { label: `Line ${index + 1}`, effects: [{ type: 'integrity', amount: 3 } as const], says: fixed }
+      : {
+          label: `Line ${index + 1}`,
+          effects: [{ type: 'integrity', amount: -1 } as const],
+          says: 'Wrong line. It shipped anyway.',
+        },
+  ),
+  { label: 'Blame the intern', effects: [], says: 'The intern quit. The bug stayed.' },
+]
+
+/** The bug hunts, which share one place among the events so they turn up no more often than any other. */
+export const BUG_HUNTS = ['bug-off-by-one', 'bug-assignment', 'bug-await']
 
 const list: Scene[] = [
   {
@@ -192,6 +217,27 @@ const list: Scene[] = [
       { label: 'Borrow something', effects: [{ type: 'item' }] },
       { label: 'Leave it be', effects: [{ type: 'boost', attack: 0, health: 1 }] },
     ],
+  },
+  {
+    id: 'bug-off-by-one',
+    title: 'Production is down',
+    text: 'Every attack crashes the board. P03 pulls up the diff and waits. Which line is broken?',
+    code: ['const lanes = 4', 'for (let lane = 0; lane <= lanes; lane++) {', '  attack(board[lane])', '}'],
+    options: hunt(3, 2, 'Five lanes? We have four. Fixed, somehow.'),
+  },
+  {
+    id: 'bug-assignment',
+    title: 'Production is down',
+    text: 'Every card that takes a hit dies, whatever its health. Which line is broken?',
+    code: ['function onHit(card, damage) {', '  card.health -= damage', '  if (card.health = 0) destroy(card)', '}'],
+    options: hunt(3, 3, "You didn't check its health. You set it. Fixed."),
+  },
+  {
+    id: 'bug-await',
+    title: 'Production is down',
+    text: 'The deck deals in the same order every time, and the logs say it was shuffled. Which line is broken?',
+    code: ['async function deal() {', '  const deck = loadDeck()', '  deck.shuffle()', '}'],
+    options: hunt(3, 2, 'It shuffled a promise. Awaited now.'),
   },
 ]
 
