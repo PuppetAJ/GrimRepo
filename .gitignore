@@ -41,8 +41,8 @@ docs/
 AGENTS.md
 CLAUDE.md
 
-# Local mockup pages and the models dropped in for them; served by `pnpm dev` at /mockups/.
-client/mockups/
+# A local model viewer and the models dropped in for it; served by `pnpm dev` at /viewer/.
+client/viewer/
 client/public/mockups/
 e2e-failure.png
 

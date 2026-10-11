@@ -8,12 +8,12 @@ import { defineConfig, type Plugin } from 'vite'
 // API_PORT points a second client at a second API.
 const api = `http://localhost:${process.env['API_PORT'] ?? 3001}`
 
-// Without the trailing slash Vite serves the app's 404 instead of the local mockups/ page.
-const mockupsSlash: Plugin = {
-  name: 'mockups-slash',
+// Without the trailing slash Vite serves the app instead of the local viewer/ page.
+const viewerSlash: Plugin = {
+  name: 'viewer-slash',
   configureServer(server) {
     server.middlewares.use((req, _res, next) => {
-      if (req.url === '/mockups') req.url = '/mockups/'
+      if (req.url === '/viewer') req.url = '/viewer/'
       next()
     })
   },
@@ -96,7 +96,7 @@ const budget: Plugin = {
 }
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), mockupsSlash, artEditor, budget],
+  plugins: [react(), tailwindcss(), viewerSlash, artEditor, budget],
 
   // Must match the "@/*" alias in tsconfig.json, which shadcn/ui's components use.
   resolve: {
