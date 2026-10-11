@@ -2,14 +2,14 @@ import { useState } from 'react'
 import { card, isDeathCard } from 'shared'
 import { asUnit } from '../nodes.ts'
 import type { RunReady } from '../useRun.ts'
-import { choiceRarity, PackReveal, RarityBadge, ReopenPack, SealedPack } from './Packs.tsx'
+import { choiceRarity, PackReveal, RarityBadge, SealedPack } from './Packs.tsx'
 import { ScreenBar } from './Screen.tsx'
 
-/** A card choice or a boss's reward: a pack, green or the rare red, torn open into three cards to take one. */
+/** A card choice or a boss's reward: a pack, plain or holographic, torn open on three cards to take one. */
 export function Offer({ run }: { run: RunReady }) {
   const visit = run.state.visit
-  // Torn per offer, so the next card choice comes sealed; `showing` is whether its dialog is up.
-  const [torn, setTorn] = useState<{ key: string; open: boolean; showing: boolean } | null>(null)
+  // Torn per offer, so the next card choice comes sealed.
+  const [torn, setTorn] = useState<{ key: string; open: boolean } | null>(null)
   if (visit?.kind !== 'card' && visit?.kind !== 'reward') return null
   const reward = visit.kind === 'reward'
   const key = `${run.state.stage}:${visit.kind === 'card' ? visit.node : 'reward'}`
@@ -25,31 +25,27 @@ export function Offer({ run }: { run: RunReady }) {
           {death ? ` ${card(death).name} is your death card, back from a lost run.` : null}
         </p>
       </ScreenBar>
-      {current?.open && !current.showing ? (
-        <ReopenPack onOpen={() => setTorn({ ...current, showing: true })} />
-      ) : current?.open ? null : (
-        <SealedPack
-          art={reward ? 'rare' : 'card'}
-          label={reward ? 'Rare pack' : 'Card pack'}
-          note="Tear it open"
-          tearing={Boolean(current)}
-          onTear={() => setTorn({ key, open: false, showing: false })}
-          onTorn={() => setTorn({ key, open: true, showing: true })}
-          data={{ 'data-action': 'open-pack' }}
-          aria={reward ? 'Open the rare pack' : 'Open the card pack'}
-        />
-      )}
       {current?.open ? (
         <PackReveal
-          open={current.showing}
-          onOpenChange={(showing) => setTorn({ ...current, showing })}
           title={reward ? "The boss's rare pack" : 'Card pack'}
           description="Take one of the three into your deck."
           units={visit.offer.map((id, index) => asUnit(id, index + 1))}
           onPick={(unit) => run.act({ type: 'take', index: unit.uid - 1 })}
           badge={(unit) => <RarityBadge rarity={choiceRarity(unit.card)} />}
         />
-      ) : null}
+      ) : (
+        <SealedPack
+          art={reward ? 'rare' : 'card'}
+          label={reward ? 'Rare pack' : 'Card pack'}
+          note="Tear it open"
+          holo={reward}
+          tearing={Boolean(current)}
+          onTear={() => setTorn({ key, open: false })}
+          onTorn={() => setTorn({ key, open: true })}
+          data={{ 'data-action': 'open-pack' }}
+          aria={reward ? 'Open the rare pack' : 'Open the card pack'}
+        />
+      )}
     </div>
   )
 }

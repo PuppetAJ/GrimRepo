@@ -343,3 +343,37 @@
   padding: 0.75rem 1rem;
   filter: drop-shadow(0 0 6px rgb(125 255 154 / 0.45));
 }
+
+/* The boss's rare pack: a holographic sheen drifting across it, in CSS since it loops for as long as the pack is shown. */
+/* The band sits in the middle third of a gradient three times the pack's width, so it's wholly off the pack at each end of a pass. */
+.holo-sheen {
+  background: linear-gradient(
+    115deg,
+    transparent 38%,
+    rgb(125 255 154 / 0.22) 45%,
+    rgb(150 235 255 / 0.28) 50%,
+    rgb(255 228 140 / 0.2) 55%,
+    transparent 62%
+  );
+  background-size: 300% 100%;
+  mix-blend-mode: soft-light;
+  animation: holo-drift 5s ease-in-out infinite;
+}
+
+/* A pass across, then a rest before the next. */
+@keyframes holo-drift {
+  0% {
+    background-position: 100% 0;
+  }
+  60%,
+  100% {
+    background-position: 0% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .holo-sheen {
+    animation: none;
+    background-position: 50% 0;
+  }
+}

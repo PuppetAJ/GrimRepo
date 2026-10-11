@@ -28,11 +28,21 @@ type Props = {
   filtered?: boolean
   /** A card that just changed: it pops, with `text` rising over it; a new `key` plays it again. */
   flash?: { uid: number; key: number; text: string }
-  /** Something under each card's name, such as its rarity. */
+  /** Something beside each card's sigils, such as its rarity. */
   badge?: (unit: Unit) => ReactNode
 }
 
-function Caption({ unit, detail, onRead }: { unit: Unit; detail: boolean; onRead: () => void }) {
+function Caption({
+  unit,
+  detail,
+  onRead,
+  badge,
+}: {
+  unit: Unit
+  detail: boolean
+  onRead: () => void
+  badge?: ReactNode
+}) {
   const name = card(unit.card).name
   return (
     <span className="flex min-w-0 flex-col gap-1 text-left leading-tight">
@@ -58,7 +68,11 @@ function Caption({ unit, detail, onRead }: { unit: Unit; detail: boolean; onRead
           </span>
         ))
       ) : (
-        <SigilIcons sigils={unit.sigils} size={14} />
+        // A badge, such as the card's rarity, sits to the right of its sigils, which number three at most.
+        <span className="flex items-center justify-between gap-2">
+          <SigilIcons sigils={unit.sigils} size={14} />
+          {badge}
+        </span>
       )}
     </span>
   )
@@ -128,8 +142,7 @@ export function CardList({
                   {face}
                 </button>
               )}
-              <Caption unit={unit} detail={detail} onRead={() => setReading(unit)} />
-              {badge?.(unit)}
+              <Caption unit={unit} detail={detail} onRead={() => setReading(unit)} badge={badge?.(unit)} />
             </m.li>
           )
         })}

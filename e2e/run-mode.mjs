@@ -96,9 +96,9 @@ async function playRun(page, mirror, { pick = nextRunAction, done }) {
         await page.locator(`[data-action="uninstall-card"][data-card="${action.card}"]`).click()
         await clickMove(page, '[data-action="uninstall"]', expected)
       } else if (action.type === 'take' && ['pack', 'card', 'reward'].includes(state.visit.kind)) {
-        // A pack comes sealed, and is torn open before its cards can be taken from its dialog, unless it's open already.
+        // A pack comes sealed, and is torn open before its cards can be taken, unless it's open already.
         const sealed = page.locator('[data-action="open-pack"]:not(:disabled)')
-        if (!(await page.getByRole('dialog').count()) && (await sealed.count())) await sealed.first().click()
+        if (await sealed.count()) await sealed.first().click()
         await clickMove(page, targetFor(action), expected)
       } else if (action.type === 'strip') {
         // The card, chosen in its slot's searchable list, its sigil, then the linter's button.
@@ -159,11 +159,11 @@ section('A card choice')
 mirror = await playRun(page, mirror, { done: (state) => state.visit?.kind === 'card' })
 check('a card node offers a sealed pack', (await page.locator('[data-action="open-pack"]').count()) === 1)
 await page.locator('[data-action="open-pack"]').click()
-await page.getByRole('dialog').locator('[data-action="take"]').first().waitFor()
-check('which tears open on three cards to take', (await page.locator('[data-action="take"]').count()) === 3)
-await page.keyboard.press('Escape')
-check('and closed, leaves a way back to them', await page.locator('[data-action="reopen-pack"]').isVisible())
-await page.locator('[data-action="reopen-pack"]').click()
+await page.locator('[data-action="take"]').first().waitFor()
+check(
+  'which tears open on three cards to take, in its place',
+  (await page.locator('[data-action="take"]').count()) === 3,
+)
 const before = mirror.state.deck.length
 mirror = await playRun(page, mirror, { done: (state) => state.deck.length === before + 1 })
 check(

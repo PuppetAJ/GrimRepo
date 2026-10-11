@@ -102,15 +102,22 @@ function Part({ pops, ...props }: { pops: boolean } & ComponentProps<'span'>) {
   return pops ? <m.span {...pop(0.4)} {...(props as HTMLMotionProps<'span'>)} /> : <span {...props} />
 }
 
+/** A card's colors on paper, its body and its screen: green, a rare's red, or a death card's ash. */
+export function cardTones(id: string): { body: string; screen: string } {
+  if (isDeathCard(id)) return { body: 'bg-[#c6ccc7]', screen: 'bg-[#a7afa9]' }
+  if (card(id).tier === 'S') return { body: 'bg-[#f3c6c0]', screen: 'bg-[#e8aea8]' }
+  return { body: 'bg-[#a9e7b8]', screen: 'bg-[#8fd3a0]' }
+}
+
 export function PixelCard({ unit, blank }: { unit: Shown; blank?: Blank }) {
   const def = card(unit.card)
-  const rare = def.tier === 'S'
+  const tones = cardTones(unit.card)
   // A death card is ash gray, with a skull by its shutter, so it reads apart from the cards it was made from.
   const dead = isDeathCard(unit.card)
   return (
     <span
       // Print is sized from the card's own width, so a small card on a short window stays legible.
-      className={`@container relative flex aspect-[5/7] w-full flex-col overflow-hidden text-[#0b1f12] [clip-path:polygon(0_0,86%_0,100%_9%,100%_100%,0_100%)] ${dead ? 'bg-[#c6ccc7]' : rare ? 'bg-[#f3c6c0]' : 'bg-[#a9e7b8]'} bg-[repeating-linear-gradient(0deg,rgb(0_0_0/0.07)_0_1px,transparent_1px_3px)]`}
+      className={`@container relative flex aspect-[5/7] w-full flex-col overflow-hidden text-[#0b1f12] [clip-path:polygon(0_0,86%_0,100%_9%,100%_100%,0_100%)] ${tones.body} bg-[repeating-linear-gradient(0deg,rgb(0_0_0/0.07)_0_1px,transparent_1px_3px)]`}
     >
       {dead ? (
         <span role="img" aria-label="A death card" className="absolute top-[1.5%] left-[5%] z-10 flex">
@@ -121,9 +128,7 @@ export function PixelCard({ unit, blank }: { unit: Shown; blank?: Blank }) {
         <span className="absolute top-[18%] right-[16%] h-[62%] w-[20%] bg-[#0b1f12]" />
       </span>
       <span className="h-[11%] shrink-0" />
-      <span
-        className={`mx-[6%] flex h-[50%] shrink-0 flex-col border-2 border-[#0b1f12]/70 ${dead ? 'bg-[#a7afa9]' : rare ? 'bg-[#e8aea8]' : 'bg-[#8fd3a0]'}`}
-      >
+      <span className={`mx-[6%] flex h-[50%] shrink-0 flex-col border-2 border-[#0b1f12]/70 ${tones.screen}`}>
         {/* Its own row, so the type and cost never overlap the art on a small card. */}
         <span className="flex h-[10cqw] shrink-0 items-start justify-between px-[3cqw] pt-[3cqw]">
           {def.type && !blank?.art ? <Sigil id={`type-${def.type}`} size="7cqw" /> : <span />}
@@ -206,7 +211,9 @@ export function ReaderBody({ unit }: { unit: Shown }) {
         <CostPips cost={card(unit.card).cost} pip="size-4 outline-2" className="gap-1 pt-1" />
       </p>
       {/* The art shrinks first when the reader is short. */}
-      <div className="grid h-[min(13rem,45cqi)] min-h-16 place-items-center overflow-hidden rounded-sm border-2 border-[#0b1f12] bg-[#8fd3a0] bg-[repeating-linear-gradient(0deg,rgb(0_0_0/0.06)_0_1px,transparent_1px_3px)]">
+      <div
+        className={`grid h-[min(13rem,45cqi)] min-h-16 place-items-center overflow-hidden rounded-sm border-2 border-[#0b1f12] ${cardTones(unit.card).screen} bg-[repeating-linear-gradient(0deg,rgb(0_0_0/0.06)_0_1px,transparent_1px_3px)]`}
+      >
         <Art id={unit.card} />
       </div>
       {/* Fixed height, so nothing moves between cards with and without sigils. */}
@@ -237,7 +244,9 @@ export function ReaderBody({ unit }: { unit: Shown }) {
 export function FlatReaderBody({ unit }: { unit: Shown }) {
   return (
     <>
-      <div className="grid w-[38%] shrink-0 place-items-center rounded-sm border-2 border-[#0b1f12] bg-[#8fd3a0]">
+      <div
+        className={`grid w-[38%] shrink-0 place-items-center rounded-sm border-2 border-[#0b1f12] ${cardTones(unit.card).screen}`}
+      >
         <Art id={unit.card} />
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-1">

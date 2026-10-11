@@ -3,7 +3,7 @@ import { legalActions, type Action } from 'shared'
 import { type Seat, has, hasEnded, outcomeOf } from '../controls.tsx'
 import { useFullScreen } from '../fullScreen.ts'
 import type { Ready } from '../useGame.ts'
-import { FlatReaderBody } from '../CardReader.tsx'
+import { cardTones, FlatReaderBody } from '../CardReader.tsx'
 import { forTable, useEscapeCancel } from '../shortcuts.ts'
 import { loadCardAssets } from './faces.ts'
 import type { CameraView } from './layout.ts'
@@ -233,7 +233,9 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
           }}
         >
           {'unit' in magnifiedRead ? (
-            <div className="relative flex min-h-40 gap-2 overflow-hidden rounded-md border-2 border-p03-edge bg-[#a9e7b8] p-2 font-terminal text-[#0b1f12]">
+            <div
+              className={`relative flex min-h-40 gap-2 overflow-hidden rounded-md border-2 border-p03-edge ${cardTones(magnifiedRead.unit.card).body} p-2 font-terminal text-[#0b1f12]`}
+            >
               <FlatReaderBody unit={magnifiedRead.unit} />
               <span aria-hidden className="crt-glass pointer-events-none absolute inset-0" />
             </div>

@@ -31,7 +31,7 @@ export const STARTER_DECKS: Record<
 > = {
   'hello-world': {
     name: 'Hello, World',
-    about: 'Steady: Reliable and balanced between defense and offense.',
+    about: 'Reliable: Balanced between offense and defense.',
     core: ['HelloWorld', 'CronJob'],
     pack: {
       common: ['Watchdog', 'SpamBot', 'InfiniteLoop'],
@@ -41,13 +41,13 @@ export const STARTER_DECKS: Record<
   },
   'legacy-stack': {
     name: 'Legacy Stack',
-    about: 'Defense and sacrifices: Hold the line, and pay for high cost cards early.',
+    about: 'Survive: Defensive based deck focused on sacrifice.',
     core: ['OffCenterDiv', 'COBOL'],
     pack: { common: ['CronJob', 'SpamBot'], uncommon: ['LegacyCode', 'Monolith', 'Firewall'], rare: ['Bug'] },
   },
   'move-fast': {
     name: 'Move Fast',
-    about: 'Glass Cannon: Hit hard, and hope.',
+    about: "Glass Cannon: Hit hard and hope you don't die.",
     core: ['CopyPaste', 'SpamBot'],
     pack: {
       common: ['InfiniteLoop', 'CronJob', 'Prototype'],

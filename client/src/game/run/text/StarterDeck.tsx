@@ -4,8 +4,9 @@ import { Sentences } from '../../text/Sentences.tsx'
 import { asUnit } from '../nodes.ts'
 import type { RunReady } from '../useRun.ts'
 import { Box } from './Box.tsx'
-import { CardList, ReadableCard } from './CardList.tsx'
-import { PACK_SIZE_CLASS, PackReveal, packRarity, RarityBadge, RARITY_TONE, ReopenPack, SealedPack } from './Packs.tsx'
+import { ReadableCard } from './CardList.tsx'
+import { packArt } from '../../art.ts'
+import { PackReveal, packRarity, RarityBadge, RARITY_TONE, SealedPack } from './Packs.tsx'
 import { ScreenBar, ScreenCenter, useScreenMode } from './Screen.tsx'
 
 const RARITIES: Rarity[] = ['common', 'uncommon', 'rare']
@@ -44,14 +45,39 @@ export function StarterDeck({ run }: { run: RunReady }) {
             <Box className="flex h-full flex-col gap-3">
               <h3 className="text-2xl text-p03">{deck.name}</h3>
               <p className="font-sans text-base text-[#b8f5c4]">{deck.about}</p>
-              <CardList units={deck.core.map((id, index) => asUnit(id, index + 1))} size="w-24 sm:w-28 @6xl:w-16" />
-              <p className="font-sans text-sm text-[#b8f5c4]">Plus a card from each of {PACKS} packs, opened next.</p>
+              {/* The core's two cards, plus a stack of the packs a card is taken from each of, midway between words and button. */}
+              <div className="flex flex-1 items-center justify-center gap-3 py-2">
+                {deck.core.map((core, index) => (
+                  <div key={`${core}-${index}`} className="w-16 shrink-0 sm:w-20">
+                    <ReadableCard unit={asUnit(core, index + 1)} />
+                  </div>
+                ))}
+                <span aria-hidden className="text-3xl text-p03-dim">
+                  +
+                </span>
+                <span
+                  role="img"
+                  aria-label={`and a card from each of ${PACKS} packs, opened next`}
+                  className="relative block h-[116px] w-[78px] shrink-0"
+                >
+                  {Array.from({ length: PACKS }, (_, index) => (
+                    <img
+                      key={index}
+                      src={packArt(id)}
+                      alt=""
+                      draggable={false}
+                      className="pixel-art absolute h-[104px] w-[57px]"
+                      style={{ left: index * 14, top: index * 10, zIndex: PACKS - index }}
+                    />
+                  ))}
+                </span>
+              </div>
               <button
                 type="button"
                 data-action="start"
                 data-deck={id}
                 onClick={() => run.act({ type: 'start', deck: id, ...(death && !include ? { skipDeath: true } : {}) })}
-                className="mt-auto self-center rounded-md border-2 border-p03 bg-[#07130b] px-4 py-2 text-xl text-p03 hover:bg-[#13261a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03"
+                className="self-center rounded-md border-2 border-p03 bg-[#07130b] px-4 py-2 text-xl text-p03 hover:bg-[#13261a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03"
               >
                 Start with {deck.name}
               </button>
@@ -63,11 +89,11 @@ export function StarterDeck({ run }: { run: RunReady }) {
   )
 }
 
-/** The starter deck's packs side by side, each torn open into a dialog of three cards to take one; what they hold below. */
+/** The starter deck's packs side by side, each torn open on three cards in its place to take one; what they hold below. */
 export function PackOpening({ run }: { run: RunReady }) {
   const visit = run.state.visit
-  // Which place's pack is torn for the pack the run is on, whether its cards are out, and whether their dialog is up.
-  const [torn, setTorn] = useState<{ pack: number; place: number; open: boolean; showing: boolean } | null>(null)
+  // Which place's pack is torn for the pack the run is on, and whether its cards are out yet.
+  const [torn, setTorn] = useState<{ pack: number; place: number; open: boolean } | null>(null)
   if (visit?.kind !== 'pack') return null
   const deck = STARTER_DECKS[visit.deck]
   const current = torn?.pack === visit.opened ? torn : null
@@ -88,44 +114,44 @@ export function PackOpening({ run }: { run: RunReady }) {
           />
         </p>
       </ScreenBar>
-      <ul className="flex flex-wrap items-start justify-center gap-6">
-        {Array.from({ length: PACKS }, (_, place) => {
-          const found = taken[place]
-          if (found)
+      {current?.open ? (
+        <PackReveal
+          key={visit.opened}
+          title={`${deck?.name ?? 'A'} pack, ${visit.opened} of ${PACKS}`}
+          description="Take one of the three into your deck."
+          units={visit.offer.map((id, index) => asUnit(id, index + 1))}
+          onPick={(unit) => run.act({ type: 'take', index: unit.uid - 1 })}
+          badge={(unit) => <RarityBadge rarity={packRarity(unit.card)} />}
+        />
+      ) : (
+        <ul className="flex flex-wrap items-center justify-center gap-6">
+          {Array.from({ length: PACKS }, (_, place) => {
+            const found = taken[place]
+            if (found)
+              return (
+                <li key={`taken-${place}`} className="flex w-32 flex-col items-center gap-2 sm:w-40">
+                  <ReadableCard unit={asUnit(found)} />
+                  <span className="text-lg text-p03-dim">Taken</span>
+                </li>
+              )
             return (
-              <li key={`taken-${place}`} className="flex w-32 flex-col items-center gap-2 sm:w-40">
-                <ReadableCard unit={asUnit(found)} />
-                <span className="text-lg text-p03-dim">Taken</span>
+              <li key={`pack-${visit.opened}-${place}`}>
+                <SealedPack
+                  art={visit.deck}
+                  label={deck?.name ?? 'A pack'}
+                  note="Tear it open"
+                  tearing={current?.place === place}
+                  disabled={Boolean(current)}
+                  onTear={() => setTorn({ pack: visit.opened, place, open: false })}
+                  onTorn={() => setTorn({ pack: visit.opened, place, open: true })}
+                  data={{ 'data-action': 'open-pack' }}
+                  aria={`Open a ${deck?.name ?? ''} pack`}
+                />
               </li>
             )
-          const here = current?.place === place
-          if (here && current.open)
-            return (
-              <li key={`open-${visit.opened}`}>
-                {current.showing ? (
-                  <span aria-hidden className={`block ${PACK_SIZE_CLASS}`} />
-                ) : (
-                  <ReopenPack onOpen={() => setTorn({ ...current, showing: true })} />
-                )}
-              </li>
-            )
-          return (
-            <li key={`pack-${visit.opened}-${place}`}>
-              <SealedPack
-                art={visit.deck}
-                label={deck?.name ?? 'A pack'}
-                note="Tear it open"
-                tearing={here}
-                disabled={Boolean(current)}
-                onTear={() => setTorn({ pack: visit.opened, place, open: false, showing: false })}
-                onTorn={() => setTorn({ pack: visit.opened, place, open: true, showing: true })}
-                data={{ 'data-action': 'open-pack' }}
-                aria={`Open a ${deck?.name ?? ''} pack`}
-              />
-            </li>
-          )
-        })}
-      </ul>
+          })}
+        </ul>
+      )}
       {deck ? (
         // What the packs can hold, and the odds for each card in them.
         <Box className="w-full max-w-2xl text-left">
@@ -136,24 +162,16 @@ export function PackOpening({ run }: { run: RunReady }) {
           <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 font-sans text-sm text-[#b8f5c4]">
             {RARITIES.map((rarity) => (
               <div key={rarity} className="contents">
-                <dt className={`font-terminal text-base capitalize ${RARITY_TONE[rarity]}`}>{rarity}</dt>
+                {/* The marks each card in a pack shows for its rarity, named here so they can be read anywhere. */}
+                <dt className={`flex items-center gap-2 font-terminal text-base capitalize ${RARITY_TONE[rarity]}`}>
+                  <RarityBadge rarity={rarity} />
+                  {rarity}
+                </dt>
                 <dd className="self-center">{deck.pack[rarity].map((id) => card(id).name).join(', ')}</dd>
               </div>
             ))}
           </dl>
         </Box>
-      ) : null}
-      {current?.open ? (
-        <PackReveal
-          key={visit.opened}
-          open={current.showing}
-          onOpenChange={(showing) => setTorn({ ...current, showing })}
-          title={`${deck?.name ?? 'A'} pack, ${visit.opened} of ${PACKS}`}
-          description="Take one of the three into your deck."
-          units={visit.offer.map((id, index) => asUnit(id, index + 1))}
-          onPick={(unit) => run.act({ type: 'take', index: unit.uid - 1 })}
-          badge={(unit) => <RarityBadge rarity={packRarity(unit.card)} />}
-        />
       ) : null}
     </div>
   )
