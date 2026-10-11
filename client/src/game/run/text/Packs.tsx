@@ -96,7 +96,7 @@ export function PackReveal({
     <m.section
       aria-label={title}
       {...fadeIn(0.15)}
-      className="flex w-full max-w-3xl flex-col items-center gap-2 rounded-md border-2 border-p03-edge bg-p03-ground/90 p-4 text-center"
+      className="flex w-full max-w-3xl flex-col items-center gap-2 rounded-md border-2 border-p03-edge bg-p03-ground/90 p-4 pb-6 text-center"
     >
       <h2 className="text-3xl text-p03">{title}</h2>
       <p className="text-lg text-p03-dim">{description}</p>
