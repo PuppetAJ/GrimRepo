@@ -176,7 +176,8 @@ export default function Terminal({ lines, user }: { lines: readonly string[]; us
           const target = event.target as HTMLElement
           if (!window.getSelection()?.toString() && !target.closest('button, a, input')) input.current?.focus()
         }}
-        className="relative z-10 min-h-0 flex-1 overflow-y-auto px-3 py-2 text-lg leading-snug sm:px-6 sm:text-xl"
+        // Deeper at the bottom, so the prompt clears the frame and its cracks once the output scrolls.
+        className="relative z-10 min-h-0 flex-1 overflow-y-auto px-3 pt-2 pb-6 text-lg leading-snug sm:px-6 sm:pb-8 sm:text-xl"
       >
         <div role="log" aria-label="P03's terminal output" className="flex flex-col gap-1">
           {entries.map((entry) => (
