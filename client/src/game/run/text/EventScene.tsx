@@ -1,8 +1,10 @@
-import { m } from 'motion/react'
+import { m, useReducedMotion } from 'motion/react'
 import { useEffect } from 'react'
-import { scene } from 'shared'
+import { scene, type RunEvent } from 'shared'
 import { forTable } from '../../shortcuts.ts'
-import { fadeIn } from '../../moves.ts'
+import { fadeIn, turnAway, turnUp } from '../../moves.ts'
+import { asUnit } from '../nodes.ts'
+import { ReadableCard } from './CardList.tsx'
 import type { RunReady } from '../useRun.ts'
 import { Box } from './Box.tsx'
 import { Sentences } from '../../text/Sentences.tsx'
@@ -32,28 +34,59 @@ export function EventScene({ run }: { run: RunReady }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [found, after, act, dismiss])
   if (!found) return null
+  const said = after ? found.options[after.option]?.says : undefined
+  const trial = after?.events.find((event) => event.type === 'trialled')
   return (
     // The scene's title is the screen's; a rule sets the scene off beneath it.
     <article className="flex max-w-3xl flex-col gap-4">
       {/* The scene sits apart from P03's question and the choices, in a box of its own. */}
-      <Box>
+      <Box className="flex flex-col gap-3">
         <p className="text-xl leading-relaxed text-[#b8f5c4]">{found.text}</p>
+        {/* A bug hunt's snippet, numbered as its choices name the lines. */}
+        {found.code ? (
+          // Focusable, since a long line scrolls sideways on a phone and a keyboard must reach it.
+          <pre
+            tabIndex={0}
+            aria-label="The code"
+            className="overflow-x-auto rounded border border-p03-edge bg-[#030805] p-3 text-lg leading-snug text-p03 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03"
+          >
+            {found.code.map((line, index) => (
+              <code key={index} className="block">
+                <span aria-hidden className="mr-3 inline-block w-4 text-right text-p03-dim select-none">
+                  {index + 1}
+                </span>
+                {line}
+              </code>
+            ))}
+          </pre>
+        ) : null}
       </Box>
       {after ? (
         <m.div {...fadeIn()} className="flex flex-col gap-3">
           <p className="text-p03-dim">&gt; {found.options[after.option]?.label}</p>
-          {/* Announced, so a screen reader hears what the choice did. */}
-          <div role="status" className="flex flex-col gap-1 text-xl text-p03">
+          {trial ? <ReviewedCards trial={trial} /> : null}
+          {/* Announced, so a screen reader hears what the choice did; a code review's verdict waits for its cards. */}
+          <m.div
+            role="status"
+            {...(trial ? fadeIn(0.3) : {})}
+            transition={trial ? { delay: REVIEW_VERDICT_DELAY, duration: 0.3 } : undefined}
+            className="flex flex-col gap-1 text-xl text-p03"
+          >
+            {said ? (
+              <p>
+                <Sentences text={`P03> ${said}`} />
+              </p>
+            ) : null}
             {after.lines.length ? (
               after.lines.map((line) => (
                 <p key={line}>
                   <Sentences text={`P03> ${line}`} />
                 </p>
               ))
-            ) : (
+            ) : said ? null : (
               <p>P03&gt; Nothing happened. Riveting.</p>
             )}
-          </div>
+          </m.div>
           <button
             type="button"
             data-action="continue"
@@ -89,5 +122,39 @@ export function EventScene({ run }: { run: RunReady }) {
         </>
       )}
     </article>
+  )
+}
+
+/** How long a code review's cards take to turn over, so its verdict comes after the last. */
+const REVIEW_VERDICT_DELAY = 1.6
+
+/** A code review's three cards, dealt face down and turned over one by one. */
+function ReviewedCards({ trial }: { trial: Extract<RunEvent, { type: 'trialled' }> }) {
+  const still = useReducedMotion() ?? false
+  return (
+    <ul aria-label="The cards P03 drew" className="flex flex-wrap gap-4 py-2">
+      {trial.cards.map((entry, index) => {
+        const delay = still ? 0 : 0.3 + index * 0.4
+        return (
+          <li key={entry.id} className="relative w-28 shrink-0 sm:w-32">
+            <m.div {...turnUp(delay)}>
+              <ReadableCard unit={asUnit(entry)} />
+            </m.div>
+            <m.span aria-hidden {...turnAway(delay)} className="absolute inset-0 block">
+              <FaceDown />
+            </m.span>
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
+/** A card lying face down, as the face-down choices draw one. */
+function FaceDown() {
+  return (
+    <span className="grid aspect-[5/7] w-full place-items-center rounded-md border-2 border-p03-edge bg-[#0b1f12] text-5xl text-p03-dim shadow-[3px_3px_0_#1f3a26,6px_6px_0_#13261a]">
+      ?
+    </span>
   )
 }

@@ -17,7 +17,7 @@ export type NodeResultView = (typeof NODE_RESULTS)[number]
  * such as a card burned at the campfire, with the events that show it.
  */
 export type Aftermath =
-  | { kind: 'event'; event: string; option: number; lines: string[] }
+  | { kind: 'event'; event: string; option: number; lines: string[]; events: RunEvent[] }
   | { kind: 'node'; view: NodeResultView; events: RunEvent[]; lines: string[] }
 
 export type Run =
@@ -242,7 +242,7 @@ export function useRun(mockup: Mockup | null = null): Run {
       const aftermath: Aftermath | null =
         // An event that opens a screen of its own, as the linter does, goes straight there.
         action.type === 'choose' && visit?.kind === 'event' && !outcome.state.visit
-          ? { kind: 'event', event: visit.event, option: action.option, lines: story.news }
+          ? { kind: 'event', event: visit.event, option: action.option, lines: story.news, events: outcome.events }
           : ended && (NODE_RESULTS as readonly string[]).includes(visit.kind)
             ? { kind: 'node', view: visit.kind as NodeResultView, events: outcome.events, lines: story.news }
             : null

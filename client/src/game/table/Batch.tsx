@@ -1,9 +1,9 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react'
-import { CARDS, type Unit } from 'shared'
+import { CARDS, deathCardId, type Unit } from 'shared'
 import * as THREE from 'three'
 import { bakedDisk, diskMaterials, facePlanes } from './Disk.tsx'
 import { backTexture, faceTexture, type loadCardAssets } from './faces.ts'
-import type { Kind } from './kind.ts'
+import { KINDS, type Kind } from './kind.ts'
 
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
 
@@ -25,34 +25,34 @@ export type Batch = {
 const BatchContext = createContext<Batch | null>(null)
 export const useBatch = () => useContext(BatchContext)
 
-// The shared face depends only on rarity, so any card of that tier will do.
-const sample = (rare: boolean): Unit => {
-  const id = Object.keys(CARDS).find((key) => (CARDS[key]?.tier === 'S') === rare) as string
+// The shared face depends only on the kind, so any card of it will do; a death card is made up for the purpose.
+const SAMPLE_DEATH = deathCardId({ name: 'sample', cost: 0, attack: 0, health: 1, art: 'HelloWorld', sigils: [] })
+const sample = (kind: Kind): Unit => {
+  const id =
+    kind === 'death'
+      ? SAMPLE_DEATH
+      : (Object.keys(CARDS).find((key) => (CARDS[key]?.tier === 'S') === (kind === 'rare')) as string)
   return { uid: 0, card: id, attack: 0, health: 1, maxHealth: 1, sigils: [] }
 }
 
 /** Instances resting cards: five draw calls per kind, however many cards are out. */
 export function CardBatch({ assets, children }: { assets: Assets; children: ReactNode }) {
-  const meshes = useRef<Record<Kind, Pieces>>({
-    common: { plastic: null, dark: null, metal: null, front: null, back: null },
-    rare: { plastic: null, dark: null, metal: null, front: null, back: null },
-  })
-  const used = useRef<Record<Kind, Set<number>>>({ common: new Set(), rare: new Set() })
+  const empty = (): Pieces => ({ plastic: null, dark: null, metal: null, front: null, back: null })
+  const meshes = useRef<Record<Kind, Pieces>>({ common: empty(), rare: empty(), death: empty() })
+  const used = useRef<Record<Kind, Set<number>>>({ common: new Set(), rare: new Set(), death: new Set() })
   const fit = (kind: Kind) => {
     const count = Math.max(-1, ...used.current[kind]) + 1
     for (const mesh of Object.values(meshes.current[kind])) if (mesh) mesh.count = count
   }
   const faces = useMemo(() => {
-    const face = (rare: boolean) =>
-      new THREE.MeshStandardMaterial({ map: faceTexture(sample(rare), assets), roughness: 0.85, alphaTest: 0.5 })
+    const face = (kind: Kind) =>
+      new THREE.MeshStandardMaterial({ map: faceTexture(sample(kind), assets), roughness: 0.85, alphaTest: 0.5 })
     const back = new THREE.MeshStandardMaterial({ map: backTexture(), roughness: 0.85, alphaTest: 0.5 })
-    return { common: face(false), rare: face(true), back }
+    return { common: face('common'), rare: face('rare'), death: face('death'), back }
   }, [assets])
   useEffect(
     () => () => {
-      faces.common.dispose()
-      faces.rare.dispose()
-      faces.back.dispose()
+      for (const face of Object.values(faces)) face.dispose()
     },
     [faces],
   )
@@ -109,7 +109,7 @@ export function CardBatch({ assets, children }: { assets: Assets; children: Reac
   const planes = facePlanes()
   return (
     <BatchContext value={batch}>
-      {(['common', 'rare'] as const).map((kind) => {
+      {KINDS.map((kind) => {
         const plastics = diskMaterials(kind)
         const parts: [keyof Pieces, THREE.BufferGeometry, THREE.Material][] = [
           ['plastic', shape.plastic, plastics.plastic],

@@ -1,6 +1,6 @@
 import { m, type HTMLMotionProps } from 'motion/react'
 import type { ComponentProps } from 'react'
-import { card, CARD_TYPES, SIGILS } from 'shared'
+import { card, CARD_TYPES, isDeathCard, SIGILS } from 'shared'
 import { cardArt, iconArt, type IconId } from './art.ts'
 import { pop } from './moves.ts'
 import type { Shown } from './shown.ts'
@@ -105,17 +105,24 @@ function Part({ pops, ...props }: { pops: boolean } & ComponentProps<'span'>) {
 export function PixelCard({ unit, blank }: { unit: Shown; blank?: Blank }) {
   const def = card(unit.card)
   const rare = def.tier === 'S'
+  // A death card is ash gray, with a skull by its shutter, so it reads apart from the cards it was made from.
+  const dead = isDeathCard(unit.card)
   return (
     <span
       // Print is sized from the card's own width, so a small card on a short window stays legible.
-      className={`@container relative flex aspect-[5/7] w-full flex-col overflow-hidden text-[#0b1f12] [clip-path:polygon(0_0,86%_0,100%_9%,100%_100%,0_100%)] ${rare ? 'bg-[#f3c6c0]' : 'bg-[#a9e7b8]'} bg-[repeating-linear-gradient(0deg,rgb(0_0_0/0.07)_0_1px,transparent_1px_3px)]`}
+      className={`@container relative flex aspect-[5/7] w-full flex-col overflow-hidden text-[#0b1f12] [clip-path:polygon(0_0,86%_0,100%_9%,100%_100%,0_100%)] ${dead ? 'bg-[#c6ccc7]' : rare ? 'bg-[#f3c6c0]' : 'bg-[#a9e7b8]'} bg-[repeating-linear-gradient(0deg,rgb(0_0_0/0.07)_0_1px,transparent_1px_3px)]`}
     >
+      {dead ? (
+        <span role="img" aria-label="A death card" className="absolute top-[1.5%] left-[5%] z-10 flex">
+          <Sigil id="death" size="8cqw" />
+        </span>
+      ) : null}
       <span aria-hidden className="absolute top-0 left-[22%] z-10 h-[7%] w-[46%] rounded-b-sm bg-[#b9c3c8]">
         <span className="absolute top-[18%] right-[16%] h-[62%] w-[20%] bg-[#0b1f12]" />
       </span>
       <span className="h-[11%] shrink-0" />
       <span
-        className={`mx-[6%] flex h-[50%] shrink-0 flex-col border-2 border-[#0b1f12]/70 ${rare ? 'bg-[#e8aea8]' : 'bg-[#8fd3a0]'}`}
+        className={`mx-[6%] flex h-[50%] shrink-0 flex-col border-2 border-[#0b1f12]/70 ${dead ? 'bg-[#a7afa9]' : rare ? 'bg-[#e8aea8]' : 'bg-[#8fd3a0]'}`}
       >
         {/* Its own row, so the type and cost never overlap the art on a small card. */}
         <span className="flex h-[10cqw] shrink-0 items-start justify-between px-[3cqw] pt-[3cqw]">

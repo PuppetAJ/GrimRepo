@@ -27,10 +27,11 @@ const ITEMS: Item[] = [
   { kind: 'icons', id: 'health', name: 'Health' },
   { kind: 'icons', id: 'fire', name: 'Fire (16 × 16, animated)', size: 16, frames: true },
   { kind: 'icons', id: 'logs', name: 'Campfire logs (16 × 16)', size: 16 },
+  { kind: 'icons', id: 'death', name: "Death card's skull" },
 ]
 
 /** Art drafted for Adrian to redraw, or that he flagged for edits; each shows under Needs your look until ticked off. */
-const DRAFTS = ['cards:ReplyAll', 'cards:COBOL', 'icons:uptime', 'cards:Sandbox', 'cards:RubberDuck']
+const DRAFTS = ['cards:ReplyAll', 'cards:COBOL', 'icons:uptime', 'cards:Sandbox', 'cards:RubberDuck', 'icons:death']
 const LOOKED_KEY = 'grimrepo:art-looked'
 
 function lookedAtFirst(): string[] {

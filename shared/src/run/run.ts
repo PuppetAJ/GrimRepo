@@ -294,6 +294,12 @@ function resolve(state: RunState, rng: Rng, effect: Effect, events: RunEvent[]):
       state.items.push(found)
       events.push({ type: 'gotItem', item: found })
     }
+  } else if (effect.type === 'integrity') {
+    const integrity = Math.max(1, Math.min(INTEGRITY, state.integrity + effect.amount))
+    if (integrity !== state.integrity) {
+      events.push({ type: 'integrity', change: integrity - state.integrity, integrity })
+      state.integrity = integrity
+    }
   } else if (effect.type === 'trial') {
     const { bar, of } = TRIALS[effect.trial]
     const cards = rng.shuffle([...state.deck]).slice(0, 3)
