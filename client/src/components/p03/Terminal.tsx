@@ -32,7 +32,7 @@ export default function Terminal({ lines, user }: { lines: readonly string[]; us
   const mirror = useRef<HTMLParagraphElement>(null)
   const history = useRef<string[]>([])
   const recall = useRef(0)
-  // The text whose matches Tab last listed, so a second Tab on it moves focus instead of listing them again.
+  // The text whose matches Tab just listed, until it changes, so a second Tab moves focus instead of listing again.
   const listed = useRef<string | null>(null)
   const commands = useRef<Commands | null>(null)
   const scroller = useRef<HTMLDivElement>(null)
@@ -94,6 +94,7 @@ export default function Terminal({ lines, user }: { lines: readonly string[]; us
 
   // Puts the caret at the end, as the browser does for set text.
   function type(next: string) {
+    listed.current = null
     setText(next)
     setCaret(next.length)
   }
@@ -209,6 +210,7 @@ export default function Terminal({ lines, user }: { lines: readonly string[]; us
               ref={input}
               value={text}
               onChange={(event) => {
+                listed.current = null
                 setText(event.target.value)
                 follow(event.target)
               }}
