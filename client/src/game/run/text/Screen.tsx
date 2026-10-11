@@ -4,7 +4,7 @@ import { Dialog as DialogPrimitive } from 'radix-ui'
 import { use, useEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, m, useReducedMotion } from 'motion/react'
-import { STAGES } from 'shared'
+import { INTEGRITY, STAGES } from 'shared'
 import { AlertDialog } from '@/components/ui/alert-dialog.tsx'
 import {
   DropdownMenu,
@@ -24,7 +24,7 @@ import type { Layout } from '../../text/useTextTable.ts'
 import type { RunReady } from '../useRun.ts'
 import { SearchContext } from './CardBits.tsx'
 import { DeckTable } from './DeckTable.tsx'
-import { Bytes, HeldTools } from './HeldTools.tsx'
+import { Bytes, HeldTools, RunIntegrity } from './HeldTools.tsx'
 import { SlotContext, type Mode } from './slots.ts'
 
 export const ICON_BUTTON =
@@ -172,6 +172,7 @@ function DeckDrawer({
           <DialogPrimitive.Description className="sr-only">
             The tools carried, and every card as it stands after this run's changes.
           </DialogPrimitive.Description>
+          <RunIntegrity left={run.state.integrity} />
           <HeldTools items={run.state.items} label="Tools" />
           <Bytes count={run.state.bytes} />
           <h3 className="text-p03">Deck ({count})</h3>
@@ -236,6 +237,9 @@ function RunMenu({
           <DropdownMenuLabel className="font-normal">
             <span className="block text-lg text-p03">
               Stage {state.stage + 1} of {STAGES.length}: {STAGES[state.stage]}
+            </span>
+            <span className="block text-base text-p03">
+              Integrity {state.integrity}/{INTEGRITY}
             </span>
             <span className="block text-base text-p03-dim">
               {state.record.battles} {state.record.battles === 1 ? 'battle' : 'battles'} won · {state.record.bosses}{' '}
@@ -524,6 +528,7 @@ export function Screen({
                         <X aria-hidden className="size-5" />
                       </button>
                     </div>
+                    <RunIntegrity left={state.integrity} />
                     <HeldTools items={state.items} label="Tools" />
                     <Bytes count={state.bytes} />
                     <h3 className="text-p03">Deck ({state.deck.length})</h3>

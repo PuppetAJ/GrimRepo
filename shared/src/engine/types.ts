@@ -2,7 +2,7 @@ import type { SigilId } from '../cards.ts'
 import type { ItemId } from '../items.ts'
 
 /** Bumped whenever a change would make an old game replay differently. */
-export const RULES_VERSION = 14
+export const RULES_VERSION = 15
 
 export const LANES = 4
 /** The most sigils a card carries. */
@@ -28,6 +28,8 @@ export type Unit = {
   source?: number
   /** A Rollback card has spent the one hit it shrugs off. */
   rolledBack?: boolean
+  /** How much integrity an Uptime card has repaired this battle. */
+  repaired?: number
   /** Which way a Load Balancer card moves next: 1 toward the higher lanes. */
   heading?: 1 | -1
 }
@@ -57,6 +59,8 @@ export type GameState = {
     phase: number
     step: number
     haunt?: { card: string; by: string | null; played: boolean }
+    /** P03 has made its one desperate play this battle. */
+    desperate?: boolean
   }
   /** The card being summoned and the lanes marked to pay for it. */
   summon: { uid: number; marked: number[] } | null
@@ -66,6 +70,8 @@ export type GameState = {
   items?: ItemId[]
   /** Set by the Hourglass: P03 sits out its next turn. */
   skipOpponent?: boolean
+  /** A run's integrity, carried into the battle: each card P03 destroys costs 1, and the run is lost at 0. */
+  integrity?: { left: number; max: number }
 }
 
 export type Action =
@@ -83,7 +89,8 @@ export type Side = 'player' | 'opponent'
 
 /** In order, for the table to play back. */
 export type GameEvent =
-  | { type: 'drew'; unit: Unit; from: 'deck' | 'boilerplate' }
+  /** `catchUp` marks the extra card drawn at turn start while P03 leads a run's battle. */
+  | { type: 'drew'; unit: Unit; from: 'deck' | 'boilerplate'; catchUp?: boolean }
   | { type: 'reshuffled'; cards: number }
   | { type: 'selected'; uid: number }
   | { type: 'marked'; lane: number }
@@ -103,8 +110,11 @@ export type GameEvent =
   | { type: 'retired'; lane: number; uid: number }
   | { type: 'advanced'; lane: number; uid: number }
   /** `haunt` marks a death card P03 brings into its last phase; `by` names its maker, or null for the player's own. */
-  | { type: 'queued'; lane: number; unit: Unit; haunt?: { by: string | null } }
+  /** `desperate` marks the strong card P03 queues once a battle, far behind. */
+  | { type: 'queued'; lane: number; unit: Unit; haunt?: { by: string | null }; desperate?: boolean }
   | { type: 'healed'; uid: number; amount: number; health: number }
+  /** The run's integrity changed: -1 for a card P03 destroyed, +1 for an Uptime card's block; `uid` is that card. */
+  | { type: 'integrity'; uid: number; change: number; left: number }
   | { type: 'shielded'; uid: number }
   | { type: 'buffed'; uid: number; attack: number; health: number; sigils?: SigilId[] }
   /** A card left in a lane, as a Deprecated card leaves a Boilerplate. */

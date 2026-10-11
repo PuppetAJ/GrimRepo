@@ -6,6 +6,11 @@ const byName = (files: Record<string, string>) =>
 
 const CARDS = byName(import.meta.glob<string>('./art/cards/*.png', { eager: true, import: 'default' }))
 const ICONS = byName(import.meta.glob<string>('./art/icons/*.png', { eager: true, import: 'default' }))
+// Full-color packs from argametina's Free Card Packs, one for each starter deck.
+const PACKS = byName(import.meta.glob<string>('./art/packs/*.png', { eager: true, import: 'default' }))
+
+/** A starter deck's pack. */
+export const packArt = (deck: string): string | undefined => PACKS[deck]
 
 /** How fast an animated icon, such as the campfire's fire, plays its frames. */
 export const SPRITE_FPS = 8

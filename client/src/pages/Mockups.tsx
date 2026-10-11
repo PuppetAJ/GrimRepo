@@ -133,6 +133,12 @@ export function MockupIndex() {
         each layout, or force one with the links beside each. Choices work, so a screen's next steps can be tried too.
         Tick a screen once you've approved it; one that changes afterwards is flagged for another look.
       </p>
+      <p className="text-sm">
+        <Link to="/anatomy" className="underline">
+          Disk anatomy
+        </Link>
+        : how a card becomes a floppy disk on the 3D table, piece by piece.
+      </p>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
         <span>
           {approvedCount} of {total} approved

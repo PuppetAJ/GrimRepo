@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { House, RotateCcw } from 'lucide-react'
-import { deathSkipBonus, scoreRun, STAGES } from 'shared'
+import { deathSkipBonus, INTEGRITY, scoreRun, STAGES } from 'shared'
 import { number } from '../../../lib/format.ts'
 import { Panel } from '../../text/Panel.tsx'
 import type { RunReady } from '../useRun.ts'
@@ -20,6 +20,7 @@ export function Summary({ run }: { run: RunReady }) {
     ['Reached', `stage ${state.stage + 1} of ${STAGES.length}, ${STAGES[state.stage]}`],
     ['Battles won', String(state.record.battles)],
     ['Bosses beaten', String(state.record.bosses)],
+    ['Integrity left', `${state.integrity} of ${INTEGRITY}`],
     ['Overkill', String(state.record.overkill)],
     ['Score', number(score)],
   ]
@@ -49,7 +50,9 @@ export function Summary({ run }: { run: RunReady }) {
           ? 'You cleared the run. P03 is checking the logs for cheats.'
           : over?.forfeited
             ? `You abandoned the run in ${STAGES[state.stage]}.`
-            : `The run ended in ${STAGES[state.stage]}.`}
+            : state.integrity === 0
+              ? `Your integrity ran out in ${STAGES[state.stage]}.`
+              : `The run ended in ${STAGES[state.stage]}.`}
       </p>
       <Panel>
         <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1">

@@ -1,6 +1,6 @@
 import express from 'express'
 import { rateLimit } from 'express-rate-limit'
-import { DEATH_NAME_LIMIT, RUN_SAVE_LIMIT, SIGILS, STARTER_DECKS, type SigilId } from 'shared'
+import { DEATH_NAME_LIMIT, RUN_SAVE_LIMIT, SIGILS, STARTER_DECKS, type RunAction, type SigilId } from 'shared'
 import { z } from 'zod'
 import { USERNAME_PATTERN } from '../auth/auth.ts'
 import { requireUser, type SignedIn } from '../auth/session.ts'
@@ -38,6 +38,7 @@ const runAction = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('play'), action }),
   z.strictObject({ type: z.literal('take'), index: small }),
   z.strictObject({ type: z.literal('buff'), card: cardId }),
+  z.strictObject({ type: z.literal('repair') }),
   z.strictObject({
     type: z.literal('transfer'),
     from: cardId,
@@ -62,6 +63,9 @@ const runAction = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('fuse'), card: cardId, with: cardId.optional() }),
   z.strictObject({ type: z.literal('leave') }),
 ])
+
+/** Fails to compile when the engine gains a run action the schema above would refuse, as Repair once was. */
+export const parsesEveryRunAction = (runMove: RunAction): z.infer<typeof runAction> => runMove
 
 const runMoves = z.strictObject({ from: z.number().int().min(0), actions: z.array(runAction).max(RUN_SAVE_LIMIT) })
 

@@ -1,9 +1,11 @@
 import { m, useReducedMotion } from 'motion/react'
 import { useEffect } from 'react'
-import { ITEMS, type RunCard, type RunEvent } from 'shared'
+import { INTEGRITY, ITEMS, type RunCard, type RunEvent } from 'shared'
 import { PixelCard, Sigil } from '../../CardReader.tsx'
+import { IntegrityBar } from '../../controls.tsx'
 import { burnFall, kindle, mergeIn, mergeOut, sacrificed, warmPop } from '../../moves.ts'
 import { forTable } from '../../shortcuts.ts'
+import { Rising } from '../../text/Board.tsx'
 import { asUnit } from '../nodes.ts'
 import { ReadableCard } from './CardList.tsx'
 import { FireOnLogs } from './Fire.tsx'
@@ -41,6 +43,7 @@ export function NodeResult({ run }: { run: RunReady }) {
   // A card changed twice, as the stones' receiver is, shows once, as it ended up.
   const shown = parts.filter((part, index) => parts.findIndex((other) => other.card.id === part.card.id) === index)
   const items = after.events.flatMap((event) => (event.type === 'gotItem' ? [event.item] : []))
+  const repaired = after.events.find((event) => event.type === 'repaired')
   return (
     <div data-center className="flex flex-col items-center gap-5 text-center">
       <LeaveButton label="Back to the map" onLeave={dismiss} />
@@ -96,6 +99,16 @@ export function NodeResult({ run }: { run: RunReady }) {
             </li>
           ))}
         </ul>
+      ) : null}
+      {repaired?.type === 'repaired' ? (
+        // The fire that did the repair, and the integrity it gave back rising off the meter.
+        <div className="flex flex-col items-center gap-3 pt-3">
+          <FireOnLogs />
+          <span className="relative">
+            <IntegrityBar left={repaired.integrity} max={INTEGRITY} className="text-2xl" />
+            <Rising text={`+${repaired.amount}`} tone="heal" className="top-0 right-0" />
+          </span>
+        </div>
       ) : null}
       {/* Not announced again: P03's news line already says it. */}
       <div className="flex flex-col gap-1 text-xl text-p03">

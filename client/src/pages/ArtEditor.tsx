@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type PointerEvent } from 'react'
 import { CARD_TYPES, CARDS, ITEMS as TOOLS, SIGILS, type CardType } from 'shared'
 import { cardArt, hasArt, iconArt, SPRITE_FPS, type IconId } from '../game/art.ts'
+import { FIRE, LOGS } from '../game/run/text/Fire.tsx'
 import { NotFound } from './NotFound.tsx'
 
 type Kind = 'cards' | 'icons'
@@ -27,6 +28,18 @@ const ITEMS: Item[] = [
   { kind: 'icons', id: 'fire', name: 'Fire (16 × 16, animated)', size: 16, frames: true },
   { kind: 'icons', id: 'logs', name: 'Campfire logs (16 × 16)', size: 16 },
 ]
+
+/** Art drafted for Adrian to redraw, or that he flagged for edits; each shows under Needs your look until ticked off. */
+const DRAFTS = ['cards:ReplyAll', 'cards:COBOL', 'icons:uptime', 'cards:Sandbox', 'cards:RubberDuck']
+const LOOKED_KEY = 'grimrepo:art-looked'
+
+function lookedAtFirst(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(LOOKED_KEY) ?? '[]') as string[]
+  } catch {
+    return []
+  }
+}
 
 const sizeOf = (item: Item) => item.size ?? SIZE[item.kind]
 const cellOf = (item: Item) =>
@@ -117,6 +130,32 @@ export function ArtEditor() {
     )
   const [status, setStatus] = useState('')
   const painting = useRef<boolean | null>(null)
+  const [looked, setLooked] = useState(lookedAtFirst)
+  const markLooked = (key: string, done: boolean) => {
+    const next = done ? [...new Set([...looked, key])] : looked.filter((one) => one !== key)
+    setLooked(next)
+    try {
+      localStorage.setItem(LOOKED_KEY, JSON.stringify(next))
+    } catch {
+      // Without storage the tick lasts until the page closes.
+    }
+  }
+  const needsLook = ITEMS.filter(
+    (item) => (!hasArt(item.kind, item.id) || DRAFTS.includes(keyOf(item))) && !looked.includes(keyOf(item)),
+  )
+  // The fire and its logs are drawn together in the game, so editing either shows both, with the other as saved.
+  const campfire = selected.id === 'fire' || selected.id === 'logs'
+  const [partner, setPartner] = useState<boolean[][] | null>(null)
+  useEffect(() => {
+    if (selected.id !== 'fire' && selected.id !== 'logs') return
+    let live = true
+    const read =
+      selected.id === 'fire' ? pixelsOf(iconArt('logs'), 16).then((one) => [one]) : framesOf(iconArt('fire'), 16)
+    void read.then((found) => live && setPartner(found))
+    return () => {
+      live = false
+    }
+  }, [selected])
 
   useEffect(() => {
     let live = true
@@ -178,6 +217,25 @@ export function ArtEditor() {
   return (
     <div className="grid gap-6 md:grid-cols-[16rem_1fr]">
       <nav aria-label="Art" className="flex max-h-[75dvh] flex-col gap-4 overflow-y-auto text-sm">
+        {needsLook.length ? (
+          <section className="flex flex-col gap-1 rounded border border-border p-1">
+            <h2 className="px-1 font-semibold">Needs your look ({needsLook.length})</h2>
+            {needsLook.map((item) => (
+              <button
+                key={keyOf(item)}
+                type="button"
+                aria-current={keyOf(item) === keyOf(selected) || undefined}
+                onClick={() => setSelected(item)}
+                className="flex items-center justify-between rounded px-2 py-1 text-left hover:bg-accent aria-current:bg-accent"
+              >
+                <span>{item.name}</span>
+                <span className="text-xs text-muted-foreground">
+                  {hasArt(item.kind, item.id) ? 'draft' : 'stand-in'}
+                </span>
+              </button>
+            ))}
+          </section>
+        ) : null}
         {(['cards', 'icons'] as const).map((kind) => (
           <section key={kind} className="flex flex-col gap-1">
             <h2 className="font-semibold">{kind === 'cards' ? 'Card art (24 × 24)' : 'Icons (8 × 8)'}</h2>
@@ -190,7 +248,11 @@ export function ArtEditor() {
                 className="flex items-center justify-between rounded px-2 py-1 text-left hover:bg-accent aria-current:bg-accent"
               >
                 <span>{item.name}</span>
-                {hasArt(item.kind, item.id) ? null : <span className="text-xs text-muted-foreground">stand-in</span>}
+                {!hasArt(item.kind, item.id) ? (
+                  <span className="text-xs text-muted-foreground">stand-in</span>
+                ) : DRAFTS.includes(keyOf(item)) && !looked.includes(keyOf(item)) ? (
+                  <span className="text-xs text-muted-foreground">draft</span>
+                ) : null}
               </button>
             ))}
           </section>
@@ -200,6 +262,17 @@ export function ArtEditor() {
         <h1 className="text-2xl font-semibold">
           {selected.name} <span className="text-base font-normal text-muted-foreground">{selected.id}</span>
         </h1>
+        {!hasArt(selected.kind, selected.id) || DRAFTS.includes(keyOf(selected)) ? (
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={looked.includes(keyOf(selected))}
+              onChange={(event) => markLooked(keyOf(selected), event.target.checked)}
+              className="size-4 accent-primary"
+            />
+            Looked at: take it off Needs your look
+          </label>
+        ) : null}
         <p className="text-sm text-muted-foreground">
           Click or drag to draw; start on a filled pixel to erase. Saving writes{' '}
           <code>
@@ -264,10 +337,19 @@ export function ArtEditor() {
               className="bg-[#07130b] [image-rendering:pixelated]"
               style={{ width: size * 4, height: size * 4 }}
             />
-            {selected.frames && frames.length > 1 ? (
+            {selected.frames && frames.length > 1 && !campfire ? (
               <>
                 <span className="text-muted-foreground">Playing, {SPRITE_FPS} frames a second</span>
                 <Playing frames={frames} size={size} />
+              </>
+            ) : null}
+            {campfire && partner ? (
+              <>
+                <span className="text-muted-foreground">The whole campfire, as the game draws it</span>
+                <Campfire
+                  fire={selected.id === 'fire' ? frames : partner}
+                  logs={(selected.id === 'logs' ? pixels : partner[0]) ?? []}
+                />
               </>
             ) : null}
           </div>
@@ -370,13 +452,42 @@ function Playing({ frames, size }: { frames: boolean[][]; size: number }) {
         const context = canvas?.getContext('2d')
         if (!canvas || !context) return
         context.clearRect(0, 0, size, size)
-        context.fillStyle = '#ffb454'
+        context.fillStyle = FIRE
         pixels.forEach((on, index) => on && context.fillRect(index % size, Math.floor(index / size), 1, 1))
       }}
       width={size}
       height={size}
       className="bg-[#07130b] [image-rendering:pixelated]"
       style={{ width: size * 4, height: size * 4 }}
+    />
+  )
+}
+
+/** The fire playing over its logs, which sit three rows lower, in the game's colors and at its size. */
+function Campfire({ fire, logs }: { fire: boolean[][]; logs: boolean[] }) {
+  const [at, setAt] = useState(0)
+  useEffect(() => {
+    const tick = setInterval(() => setAt((now) => now + 1), 1000 / SPRITE_FPS)
+    return () => clearInterval(tick)
+  }, [])
+  const flame = fire[at % Math.max(1, fire.length)] ?? []
+  const draw = (context: CanvasRenderingContext2D, pixels: boolean[], color: string, top: number) => {
+    context.fillStyle = color
+    pixels.forEach((on, index) => on && context.fillRect(index % 16, top + Math.floor(index / 16), 1, 1))
+  }
+  return (
+    <canvas
+      ref={(canvas) => {
+        const context = canvas?.getContext('2d')
+        if (!canvas || !context) return
+        context.clearRect(0, 0, 16, 19)
+        draw(context, flame, FIRE, 0)
+        draw(context, logs, LOGS, 3)
+      }}
+      width={16}
+      height={19}
+      className="bg-[#07130b] [image-rendering:pixelated]"
+      style={{ width: 128, height: 152 }}
     />
   )
 }

@@ -139,7 +139,8 @@ const list: Encounter[] = [
         [{ lane: 0, card: 'Crawler' }],
         [{ lane: 3, card: 'SQLInjection' }],
         [{ lane: 1, pick: ['Cookie', 'Sandbox'] }],
-        [{ lane: 2, card: 'Documentation' }],
+        [{ lane: 2, pick: ['Crawler', 'NullPointer'] }],
+        [{ lane: 0, card: 'LegacyCode' }],
       ],
     ],
   },
@@ -151,10 +152,11 @@ const list: Encounter[] = [
     boss: false,
     phases: [
       [
-        [{ lane: 2, card: 'JSONFoorhees' }],
+        [{ lane: 2, card: 'Sandbox' }],
         [{ lane: 1, card: 'CopyPaste' }],
         [{ lane: 0, pick: ['Firewall', 'Cookie'] }],
-        [{ lane: 3, pick: ['DestroyEnemyYou', 'ForkBomb'] }],
+        [{ lane: 3, pick: ['Crawler', 'SQLInjection'] }],
+        [{ lane: 2, pick: ['MergeConflict', 'LegacyCode'] }],
       ],
     ],
   },
@@ -182,6 +184,13 @@ const list: Encounter[] = [
       ],
     ],
   },
+]
+
+/** The cards P03 picks from for its desperate play, by stage; each stage's are stronger. */
+export const DESPERATE_CARDS: string[][] = [
+  ['LegacyCode', 'Firewall', 'Crawler'],
+  ['JSONFoorhees', 'ForkBomb', 'DestroyEnemyYou'],
+  ['Documentation', 'JSONFoorhees', 'RubberDuck'],
 ]
 
 export const ENCOUNTERS: Record<string, Encounter> = Object.fromEntries(list.map((found) => [found.id, found]))
