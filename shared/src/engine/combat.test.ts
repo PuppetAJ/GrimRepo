@@ -69,9 +69,9 @@ describe('combat', () => {
     )
   })
 
-  it('makes an attacker pay for hitting a Rate Limiter, even to death', () => {
+  it('makes an attacker pay for hitting a Backtrace, even to death', () => {
     const state = table({ board: ['ZeroDay'], front: ['Firewall'] })
-    ;(state.opponent.front[0] as { sigils: string[] }).sigils.push('rate_limiter')
+    ;(state.opponent.front[0] as { sigils: string[] }).sigils.push('backtrace')
     const { state: after, events } = bell(state)
     assert.ok(events.some((event) => event.type === 'struckBack'))
     assert.equal(cardAt(after.player.board, 0), null, 'ZeroDay has 1 health, so the strike back kills it')

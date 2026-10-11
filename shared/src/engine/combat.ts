@@ -160,7 +160,7 @@ export function attack(state: GameState, side: Side, events: GameEvent[]): void 
 
     for (let strike = 0; strike < strikes; strike++) {
       for (const aimed of lanes) {
-        // A Rate Limiter can kill an attacker partway through its attacks.
+        // A Backtrace can kill an attacker partway through its attacks.
         if (attackers[lane]?.uid !== attacker.uid) break
         const power = attackOf(state, side, lane)
         if (power <= 0) break
@@ -184,7 +184,7 @@ export function attack(state: GameState, side: Side, events: GameEvent[]): void 
 
         const left = damage(defender, power, attacker.sigils.includes('fatal_error'), events)
         if (side === 'opponent') uptime(state, defender, events)
-        if (defender.sigils.includes('rate_limiter')) strikeBack(state, side, attacker, events)
+        if (defender.sigils.includes('backtrace')) strikeBack(state, side, attacker, events)
 
         if (left <= 0) {
           remove(defenders, defender.uid)

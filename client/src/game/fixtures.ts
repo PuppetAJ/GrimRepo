@@ -29,7 +29,7 @@ function worst(): GameState {
     unit('DestroyEnemyYou', { sigils: MOST_SIGILS }),
     unit('Y2K'),
     unit('Mainframe', { hurt: 9 }),
-    unit('Documentation', { sigils: ['technical_debt', 'try_catch', 'rate_limiter'] }),
+    unit('Documentation', { sigils: ['technical_debt', 'try_catch', 'backtrace'] }),
     unit('JSONFoorhees'),
     unit('RubberDuck', { sigils: MOST_SIGILS }),
   ]
@@ -57,7 +57,7 @@ function worst(): GameState {
         unit('DestroyEnemyYou', { sigils: MOST_SIGILS }),
         unit('JSONFoorhees', { hurt: 7 }),
         unit('Documentation'),
-        unit('RubberDuck', { sigils: ['hotfix', 'rate_limiter'] }),
+        unit('RubberDuck', { sigils: ['hotfix', 'backtrace'] }),
       ],
       back: [unit('ForkBomb'), unit('Mainframe', { sigils: MOST_SIGILS }), unit('Sandbox'), unit('Bug')],
       encounter: null,
