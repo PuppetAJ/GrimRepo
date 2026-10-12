@@ -37,7 +37,47 @@ function texture(element: HTMLCanvasElement): Texture {
   return result
 }
 
+// Least recently used first. A run draws hundreds as stats change, each on a 300 × 504 canvas, and iOS caps canvas memory.
 const faces = new Map<string, Texture>()
+/** The most faces kept; a few dozen are ever on the table at once. */
+const KEPT = 96
+
+// How many cards on show use each face. A shown face is never dropped: three.js would upload it again, and leak it.
+const held = new Map<Texture, number>()
+
+/** Keeps faces while a card shows them; returns the release, for an effect's cleanup. */
+export function holdFaces(...shown: Texture[]): () => void {
+  for (const face of shown) held.set(face, (held.get(face) ?? 0) + 1)
+  return () => {
+    for (const face of shown) {
+      const left = (held.get(face) ?? 1) - 1
+      if (left) held.set(face, left)
+      else {
+        held.delete(face)
+        // Already dropped from the cache, so nothing else will ever dispose it.
+        if (![...faces.values()].includes(face)) face.dispose()
+      }
+    }
+  }
+}
+
+// Pruned a moment after drawing, once the cards that drew in the same render have held their faces.
+let sweep = 0
+function evictSoon(): void {
+  sweep ||= window.setTimeout(() => {
+    sweep = 0
+    evict()
+  }, 1000)
+}
+
+function evict(): void {
+  for (const [key, face] of faces) {
+    if (faces.size <= KEPT) return
+    if (key === 'back' || key.startsWith('base:') || held.has(face)) continue
+    faces.delete(key)
+    face.dispose()
+  }
+}
 
 function drawn(unit: Shown, loaded: Assets, layer: Layer): Texture {
   // The base depends only on rarity; the other layers on everything shown.
@@ -46,12 +86,14 @@ function drawn(unit: Shown, loaded: Assets, layer: Layer): Texture {
       ? `base:${kindOf(unit)}`
       : `${layer}:${unit.card}:${unit.attack}:${unit.aura ?? 0}:${unit.health}:${unit.maxHealth}:${unit.sigils.join(',')}`
   let found = faces.get(key)
-  if (!found) {
+  if (found) faces.delete(key)
+  else {
     const [element, context] = canvas()
     drawFace(context, unit, layer)
     found = texture(element)
-    faces.set(key, found)
   }
+  faces.set(key, found)
+  evictSoon()
   return found
 }
 
@@ -78,6 +120,9 @@ export function backTexture(): Texture {
 export const faceCount = (): number => faces.size
 
 export function disposeFaces(): void {
+  window.clearTimeout(sweep)
+  sweep = 0
   for (const face of faces.values()) face.dispose()
   faces.clear()
+  held.clear()
 }

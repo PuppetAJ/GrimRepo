@@ -10,7 +10,7 @@ import { STILL } from './factory/constants.ts'
 import { kindOf } from './kind.ts'
 import { MOOD } from './mood.ts'
 import { Disk, facePlanes, type DiskHandle } from './Disk.tsx'
-import { backTexture, faceContent, faceLights, faceTexture, type loadCardAssets } from './faces.ts'
+import { backTexture, faceContent, faceLights, faceTexture, holdFaces, type loadCardAssets } from './faces.ts'
 import { DECK, handPlace, LANE_GAP, slot, type Row, type Vec3 } from './layout.ts'
 import { LEAVE_MS, LUNGE_MS, SLIDE_MS, type Lunge, type Slide } from './playback.ts'
 import { holding, startHold } from './reading.ts'
@@ -110,10 +110,13 @@ export function Card({
     },
     [front, rear, content],
   )
+  const words = faceContent(unit, assets)
+  const glow = faceLights(unit, assets)
+  useEffect(() => holdFaces(words, glow), [words, glow])
   front.map = face
   rear.map = back
-  content.map = faceContent(unit, assets)
-  content.emissiveMap = faceLights(unit, assets)
+  content.map = words
+  content.emissiveMap = glow
   // A spawn at the deck means a draw, which starts closed and opens on the way to the hand.
   const fromDeck = Boolean(spawn && spawn[0] === DECK[0] && spawn[2] === DECK[2])
   const open = useRef(fromDeck ? 0 : 1)

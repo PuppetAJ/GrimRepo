@@ -27,6 +27,10 @@ import { ItemRack } from './table3d/ItemRack.tsx'
 import { COARSE } from './table3d/reader.ts'
 import { CursorSync, Exposure, Loaded } from './table3d/stage.tsx'
 
+/** The sharpest the table draws at each quality step, as a pixel ratio; unlisted steps draw as sharp as the screen allows. */
+const SHARPNESS: Record<number, number> = { 3: 1.5, 4: 1.5, 5: 1.25, 6: 1 }
+const LOWEST = 6
+
 type Attributes = Record<string, string | number>
 
 /** What the room shows: the factory's battery and monitors, and P03's mood. */
@@ -109,10 +113,11 @@ export function TableStage({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false)
   // Capped at 1.5 on touch screens, whose GPUs are weakest and pixels finest.
   const sharpest = Math.min(window.matchMedia('(pointer: coarse)').matches ? 1.5 : 2, window.devicePixelRatio || 1)
-  // Effects get cheaper before sharpness goes, so cards stay readable.
+  // Effects get cheaper before sharpness goes, so cards stay readable: 1 and 2 shrink the bloom, 3 drops the effects,
+  // then 4 to 6 step the resolution down to the screen's own pixels and no further.
   const [quality, setQuality] = useState(0)
   const [stats] = useState(statsWanted)
-  const dpr = quality >= 3 ? Math.min(1.5, sharpest) : sharpest
+  const dpr = Math.min(sharpest, SHARPNESS[quality] ?? Infinity)
   const [attributes, setAttributes] = useState<Attributes>({})
   const missed = useRef(() => {})
   const [room, setRoom] = useState<RoomState | null>(null)
@@ -198,11 +203,10 @@ export function TableStage({ children }: { children: ReactNode }) {
           {stats ? <StatsProbe /> : null}
           {/* Wait until settled: the slow first frames would lower the resolution for good. */}
           {settled ? (
+            // No flip-flop limit: drei counts each check at full quality as a flip, so a steady 60 fps fell back to lowest.
             <PerformanceMonitor
               factor={1}
-              flipflops={3}
-              onChange={({ factor }) => setQuality(Math.min(3, Math.round((1 - factor) * 10)))}
-              onFallback={() => setQuality(3)}
+              onChange={({ factor }) => setQuality(Math.min(LOWEST, Math.round((1 - factor) * 10)))}
             />
           ) : null}
           {/* One selection and one set of effects for the whole stage, so they never drop out as scenes swap. */}

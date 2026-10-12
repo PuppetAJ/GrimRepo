@@ -2,7 +2,7 @@ import { useFrame, type ThreeEvent } from '@react-three/fiber'
 import { easing } from 'maath'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import * as THREE from 'three'
-import { faceContent, faceLights, faceTexture, type loadCardAssets } from './faces.ts'
+import { faceContent, faceLights, faceTexture, holdFaces, type loadCardAssets } from './faces.ts'
 import { BACK_RELIEF, bakedDisk, Disk, diskMaterials } from './Disk.tsx'
 import { claimCursor, releaseCursor } from './cursor.ts'
 import { STILL } from './factory/constants.ts'
@@ -283,6 +283,7 @@ export function Pile({
     () => ({ content: faceContent(BOILERPLATE_UNIT, assets), lights: faceLights(BOILERPLATE_UNIT, assets) }),
     [assets],
   )
+  useEffect(() => holdFaces(lights.content, lights.lights), [lights])
   return (
     <group position={PILE}>
       <Nudge
