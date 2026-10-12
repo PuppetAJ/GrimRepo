@@ -203,11 +203,10 @@ export function TableStage({ children }: { children: ReactNode }) {
           {stats ? <StatsProbe /> : null}
           {/* Wait until settled: the slow first frames would lower the resolution for good. */}
           {settled ? (
+            // No flip-flop limit: drei counts each check at full quality as a flip, so a steady 60 fps fell back to lowest.
             <PerformanceMonitor
               factor={1}
-              flipflops={3}
               onChange={({ factor }) => setQuality(Math.min(LOWEST, Math.round((1 - factor) * 10)))}
-              onFallback={() => setQuality(LOWEST)}
             />
           ) : null}
           {/* One selection and one set of effects for the whole stage, so they never drop out as scenes swap. */}
