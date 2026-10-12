@@ -74,6 +74,9 @@ export function backTexture(): Texture {
   return found
 }
 
+/** How many face textures are drawn and held, for the stats overlay. */
+export const faceCount = (): number => faces.size
+
 export function disposeFaces(): void {
   for (const face of faces.values()) face.dispose()
   faces.clear()
