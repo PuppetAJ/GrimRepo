@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog.tsx'
 import { card, deathSkipBonus, PACK_ODDS, PACK_SIZE, PACKS, STARTER_DECKS, type Rarity } from 'shared'
 import { Sentences } from '../../text/Sentences.tsx'
 import { asUnit } from '../nodes.ts'
@@ -14,8 +15,8 @@ const RARITIES: Rarity[] = ['common', 'uncommon', 'rare']
 /** A run's first choice: one of the starter decks, each in its own box; side by side with room. */
 export function StarterDeck({ run }: { run: RunReady }) {
   const [include, setInclude] = useState(true)
-  // The deck whose packs are open to read, one at a time.
-  const [reading, setReading] = useState<string | null>(null)
+  // The deck whose packs were last opened to read, kept through the dialog's close so focus can go back to them.
+  const [reading, setReading] = useState<{ id: string; open: boolean } | null>(null)
   if (run.state.visit?.kind !== 'start') return null
   const death = run.state.death
   // The projector's header is short of room, so there it's a box above the decks.
@@ -57,15 +58,15 @@ export function StarterDeck({ run }: { run: RunReady }) {
                   +
                 </span>
                 <span className="sr-only">and a card from each of {PACKS} packs, opened next</span>
-                {/* The packs open what they can hold, and the odds, below. */}
+                {/* The packs open a dialog of what they can hold, and the odds. */}
                 <button
                   type="button"
                   data-action="read-packs"
-                  aria-expanded={reading === id}
-                  aria-controls={`packs-${id}`}
-                  aria-label={`${reading === id ? 'Hide odds' : 'Odds'} for the ${deck.name} packs`}
-                  onClick={() => setReading((now) => (now === id ? null : id))}
-                  className="group flex shrink-0 flex-col items-center gap-1 rounded-md text-sm text-p03-dim hover:text-p03 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03 aria-expanded:text-p03"
+                  aria-haspopup="dialog"
+                  aria-label={`Odds for the ${deck.name} packs`}
+                  data-deck={id}
+                  onClick={() => setReading({ id, open: true })}
+                  className="group flex shrink-0 flex-col items-center gap-1 rounded-md text-sm text-p03-dim hover:text-p03 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03"
                 >
                   <span className="relative block h-[116px] w-[78px] transition-transform group-hover:-translate-y-1 motion-reduce:transition-none">
                     {Array.from({ length: PACKS }, (_, index) => (
@@ -79,10 +80,9 @@ export function StarterDeck({ run }: { run: RunReady }) {
                       />
                     ))}
                   </span>
-                  {reading === id ? 'Hide odds' : 'Odds'}
+                  Odds
                 </button>
               </div>
-              {reading === id ? <PackOdds id={id} anchor={`packs-${id}`} /> : null}
               <button
                 type="button"
                 data-action="start"
@@ -96,7 +96,51 @@ export function StarterDeck({ run }: { run: RunReady }) {
           </li>
         ))}
       </ol>
+      {reading ? (
+        <PackDialog id={reading.id} open={reading.open} onClose={() => setReading({ id: reading.id, open: false })} />
+      ) : null}
     </div>
+  )
+}
+
+/** A starter deck's packs laid open in a dialog, like a pack torn open: each rarity's cards, and the odds. */
+function PackDialog({ id, open, onClose }: { id: string; open: boolean; onClose: () => void }) {
+  const deck = STARTER_DECKS[id]
+  return (
+    <Dialog open={open && Boolean(deck)} onOpenChange={(next) => !next && onClose()}>
+      <DialogContent
+        // Back to the packs that opened it, which a dialog without its own trigger can't find by itself.
+        onCloseAutoFocus={(event) => {
+          event.preventDefault()
+          document.querySelector<HTMLElement>(`[data-action="read-packs"][data-deck="${id}"]`)?.focus()
+        }}
+        className="flex max-h-[85dvh] flex-col items-center gap-3 overflow-y-auto border-2 border-p03-edge bg-p03-ground p-4 pb-6 text-center font-terminal text-[#b8f5c4] sm:max-w-2xl"
+      >
+        <DialogTitle className="font-terminal text-3xl text-p03">{deck?.name} packs</DialogTitle>
+        <DialogDescription className="text-lg text-p03-dim">
+          Each pack holds {PACK_SIZE} cards. Each card is common {PACK_ODDS.common}% of the time, uncommon{' '}
+          {PACK_ODDS.uncommon}%, rare {PACK_ODDS.rare}%.
+        </DialogDescription>
+        {deck
+          ? RARITIES.map((rarity, row) => (
+              <section key={rarity} aria-label={`${rarity} cards`} className="flex w-full flex-col items-center gap-2">
+                <h3 className={`flex items-center gap-2 text-xl capitalize ${RARITY_TONE[rarity]}`}>
+                  <RarityBadge rarity={rarity} />
+                  {rarity} {PACK_ODDS[rarity]}%
+                </h3>
+                <ul className="flex flex-wrap justify-center gap-3">
+                  {deck.pack[rarity].map((entry, index) => (
+                    <li key={entry} className="flex w-20 flex-col items-center gap-1 sm:w-24">
+                      <ReadableCard unit={asUnit(entry, row * 10 + index + 1)} />
+                      <span className="text-sm leading-tight">{card(entry).name}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))
+          : null}
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -173,11 +217,11 @@ export function PackOpening({ run }: { run: RunReady }) {
 }
 
 /** What a starter deck's packs can hold, and the odds for each card in them. */
-function PackOdds({ id, anchor }: { id: string; anchor?: string }) {
+function PackOdds({ id }: { id: string }) {
   const deck = STARTER_DECKS[id]
   if (!deck) return null
   return (
-    <div id={anchor} className="text-left">
+    <div className="text-left">
       <p className="text-lg text-p03">
         Each pack holds {PACK_SIZE} cards. Each card is common {PACK_ODDS.common}% of the time, uncommon{' '}
         {PACK_ODDS.uncommon}%, rare {PACK_ODDS.rare}%.
