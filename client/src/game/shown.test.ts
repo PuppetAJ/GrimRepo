@@ -29,14 +29,14 @@ describe('the attack a card shows', () => {
     const right = shown(rows, 'board', 2)
     assert.equal(left?.attack, 4)
     assert.equal(left?.aura, 1)
-    assert.equal(right?.aura, undefined, 'the Tech Lead and the Packet Loss cancel out')
+    assert.equal(right?.aura, -1, "the Packet Loss's 2 outweighs the Tech Lead's 1")
     const popped = shown({ board: row('CopyPaste'), front: row('Cookie'), back: row() }, 'board', 0)
     assert.equal(popped?.aura, 1)
   })
 
   it('works for P03 too, but not for its queue, which does not attack', () => {
     const rows = { board: row('SpamBot'), front: row('CopyPaste'), back: row('CopyPaste') }
-    assert.equal(shown(rows, 'front', 0)?.aura, -1)
+    assert.equal(shown(rows, 'front', 0)?.aura, -2)
     assert.equal(shown(rows, 'back', 0)?.aura, undefined)
   })
 })

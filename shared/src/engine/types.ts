@@ -28,8 +28,8 @@ export type Unit = {
   source?: number
   /** A Rollback card has spent the one hit it shrugs off. */
   rolledBack?: boolean
-  /** How much integrity an Uptime card has repaired this battle. */
-  repaired?: number
+  /** An Uptime card has used its one escape from destruction this battle. */
+  stayedUp?: boolean
   /** Which way a Load Balancer card moves next: 1 toward the higher lanes. */
   heading?: 1 | -1
 }
@@ -106,6 +106,7 @@ export type GameEvent =
   | { type: 'damaged'; uid: number; amount: number; health: number }
   | { type: 'overkill'; lane: number; amount: number }
   | { type: 'struckBack'; uid: number; amount: number }
+  | { type: 'stayedUp'; uid: number }
   | { type: 'killed'; uid: number; side: Side; lane: number; row: 'front' | 'back' }
   | { type: 'hit'; side: Side; amount: number; scale: number }
   | { type: 'indebted'; uid: number; amount: number; scale: number }

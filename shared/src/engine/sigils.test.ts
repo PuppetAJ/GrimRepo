@@ -36,10 +36,10 @@ describe('the sigils', () => {
     assert.equal(hits(events, 'opponent'), 3 + 4)
   })
 
-  it('Packet Loss takes 1 from the attack of the card opposite', () => {
+  it('Packet Loss takes 2 from the attack of the card opposite', () => {
     const { events } = bell(table({ board: ['CopyPaste'], front: ['SpamBot'] }))
     const hit = dealt(events)
-    assert.equal(hit?.type === 'damaged' && hit.amount, 2)
+    assert.equal(hit?.type === 'damaged' && hit.amount, 1)
   })
 
   it('Pop-up adds 1 to the attack of the card opposite', () => {
@@ -63,7 +63,7 @@ describe('the sigils', () => {
   })
 
   it('Scope Creep gains 1 attack for each card it destroys', () => {
-    const { state, events } = bell(table({ board: ['Crawler'], front: ['HelloWorld'] }))
+    const { state, events } = bell(table({ board: ['Crawler'], front: ['CronJob'] }))
     assert.ok(events.some((event) => event.type === 'buffed'))
     assert.equal(state.player.board[0]?.attack, 6)
   })
@@ -174,11 +174,12 @@ describe('the sigils that move cards', () => {
     assert.equal(hits(events, 'player'), 3, 'lane 1, left uncovered, hits the player')
   })
 
-  it('Failover moves to take an attack aimed at an empty lane', () => {
+  it('Failover moves to take an attack aimed at an empty lane, for half damage, rounded down', () => {
     const { state, events } = bell(table({ board: [null, null, null, 'MergeConflict'], front: ['CopyPaste'] }))
     assert.ok(events.some((event) => event.type === 'moved' && event.side === 'player' && event.to === 0))
     assert.equal(state.player.board[0]?.card, 'MergeConflict')
     assert.equal(hits(events, 'player'), 0, 'the attack hit the card, not the player')
+    assert.equal(state.player.board[0]?.health, 4 - 1, "Copy Paste's 3 is halved to 1")
   })
 
   it('Load Balancer moves on after it attacks, and attacks only once', () => {

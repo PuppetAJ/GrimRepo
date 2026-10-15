@@ -56,7 +56,7 @@ export const SIGILS: Record<SigilId, { name: string; text: string }> = {
   bypass: { name: 'Bypass', text: 'Attacks the opponent directly, over any card in the way.' },
   technical_debt: { name: 'Technical Debt', text: 'Worth 3 when sacrificed, but tips the scale 1 against you.' },
   try_catch: { name: 'try/catch', text: 'Survives being sacrificed.' },
-  backtrace: { name: 'Backtrace', text: 'Deals 1 damage back to anything that attacks it.' },
+  backtrace: { name: 'Backtrace', text: 'Deals 2 damage back to anything that attacks it.' },
   fork: {
     name: 'Fork',
     text: 'Attacks the lanes on either side instead of the one opposite. Incompatible with Broadcast.',
@@ -65,7 +65,7 @@ export const SIGILS: Record<SigilId, { name: string; text: string }> = {
   fatal_error: { name: 'Fatal Error', text: 'Destroys any card it damages.' },
   rollback: { name: 'Rollback', text: 'Shrugs off the first damage it takes.' },
   tech_lead: { name: 'Tech Lead', text: 'Cards beside it get +1 attack.' },
-  packet_loss: { name: 'Packet Loss', text: 'The card opposite it has 1 less attack.' },
+  packet_loss: { name: 'Packet Loss', text: 'The card opposite it has 2 less attack.' },
   retry: { name: 'Retry', text: 'Attacks twice.' },
   deprecated: { name: 'Deprecated', text: 'Dies after it attacks, leaving a Boilerplate in its lane.' },
   scope_creep: { name: 'Scope Creep', text: 'Gains 1 attack each time it destroys a card.' },
@@ -81,7 +81,10 @@ export const SIGILS: Record<SigilId, { name: string; text: string }> = {
   hot_reload: { name: 'Hot Reload', text: 'When it dies, a fresh copy comes back to its owner, once.' },
   beta: { name: 'Beta', text: 'After a round on the table, it ships as a stronger card.' },
   load_balancer: { name: 'Load Balancer', text: 'After it attacks, it moves to the next free lane.' },
-  failover: { name: 'Failover', text: 'Moves to take an attack aimed at an empty lane.' },
+  failover: {
+    name: 'Failover',
+    text: 'Moves to take an attack aimed at an empty lane, and takes half damage from it, rounded down.',
+  },
   scale_out: { name: 'Scale Out', text: 'Gets +1 attack for each other card of its type on its side of the table.' },
   redundancy: {
     name: 'Redundancy',
@@ -89,7 +92,7 @@ export const SIGILS: Record<SigilId, { name: string; text: string }> = {
   },
   uptime: {
     name: 'Uptime',
-    text: "Each time it blocks an attack, repairs 1 of the run's integrity, up to 3 a battle.",
+    text: 'The first time it would be destroyed in a battle, it stays up with 1 health.',
   },
 }
 
@@ -210,7 +213,7 @@ export const PLAYER_DECK: string[] = Object.keys(CARDS).filter(
     !EVENT_ONLY.includes(id),
 )
 
-/** No board wipe, or P03 could clear the player's side on a whim; no Uptime, which repairs only the player's integrity. */
+/** No board wipe, or P03 could clear the player's side on a whim; no Uptime, so P03's cards always fall to a finishing blow. */
 export const OPPONENT_POOL: string[] = PLAYER_DECK.filter(
   (id) => !CARDS[id]?.sigils.includes('segfault') && !CARDS[id]?.sigils.includes('uptime'),
 )
