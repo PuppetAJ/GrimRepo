@@ -126,6 +126,8 @@ const PITY_CAP = 40
 
 /** What a campfire's repair restores. */
 export const REPAIR = 5
+/** What beating a stage's boss restores, before the next stage. */
+export const BOSS_REPAIR = 5
 
 /** Rolls one offered card's rarity; with `pity` the offset counts, and moves. */
 function rollRarity(state: RunState, rng: Rng, pity: boolean): Rarity {
@@ -349,7 +351,11 @@ function won(state: RunState, visit: Extract<Visit, { kind: 'battle' }>, events:
   if (findNode(state.map, visit.node)?.kind !== 'boss') return
   state.record.bosses += 1
   events.push({ type: 'stageCleared', stage: state.stage })
-  if (state.stage === STAGES.length - 1) end(state, 'win', events)
+  if (state.stage === STAGES.length - 1) return end(state, 'win', events)
+  const repaired = Math.min(INTEGRITY, state.integrity + BOSS_REPAIR)
+  if (repaired > state.integrity)
+    events.push({ type: 'integrity', change: repaired - state.integrity, integrity: repaired })
+  state.integrity = repaired
 }
 
 function step(state: RunState, rng: Rng, action: RunAction, events: RunEvent[]): string | undefined {

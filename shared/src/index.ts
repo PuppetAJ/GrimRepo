@@ -84,6 +84,7 @@ export {
   PICKS,
   type Rarity,
   PACK_ODDS,
+  BOSS_REPAIR,
   REPAIR,
   type RunDealt,
   STARTER_DECKS,
