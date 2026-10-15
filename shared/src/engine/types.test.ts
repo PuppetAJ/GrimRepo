@@ -41,10 +41,10 @@ describe('Redundancy', () => {
     const board = row('LegacyCode', 'Monolith', 'Mainframe', 'SpamBot')
     const events: GameEvent[] = []
     reinforce(board, 1, events)
-    assert.deepEqual([board[1]?.health, board[1]?.maxHealth], [4, 4])
+    assert.deepEqual([board[1]?.health, board[1]?.maxHealth], [4 + 2, 4 + 2])
     assert.equal(events[0]?.type, 'buffed')
     board[0] = null
-    assert.equal(board[1]?.health, 4)
+    assert.equal(board[1]?.health, 4 + 2)
   })
 
   it('does nothing alone or on a card without it', () => {
@@ -52,7 +52,7 @@ describe('Redundancy', () => {
     const events: GameEvent[] = []
     reinforce(lonely, 0, events)
     reinforce(lonely, 1, events)
-    assert.equal(lonely[0]?.health, 2)
+    assert.equal(lonely[0]?.health, 4)
     assert.deepEqual(events, [])
   })
 })

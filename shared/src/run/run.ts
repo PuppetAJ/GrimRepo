@@ -43,7 +43,11 @@ export const STARTER_DECKS: Record<
     name: 'Legacy Stack',
     about: 'Survive: Defensive based deck focused on sacrifice.',
     core: ['OffCenterDiv', 'COBOL'],
-    pack: { common: ['CronJob', 'SpamBot'], uncommon: ['LegacyCode', 'Monolith', 'Firewall'], rare: ['Bug'] },
+    pack: {
+      common: ['CronJob', 'SpamBot', 'CircuitBreaker'],
+      uncommon: ['LegacyCode', 'Monolith', 'Firewall'],
+      rare: ['JSONFoorhees'],
+    },
   },
   'move-fast': {
     name: 'Move Fast',

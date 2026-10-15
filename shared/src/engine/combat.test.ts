@@ -23,7 +23,7 @@ describe('combat', () => {
 
   it('damages the card opposite instead, and leaves it wounded', () => {
     const { state } = bell(table({ board: ['CopyPaste'], front: ['Bug'] }))
-    assert.equal(state.opponent.front[0]?.health, 5)
+    assert.equal(state.opponent.front[0]?.health, 6 - 3)
     assert.equal(state.scale, 0)
   })
 
@@ -47,7 +47,7 @@ describe('combat', () => {
   })
 
   it('does nothing with a card that has no attack', () => {
-    const { events } = bell(table({ board: ['Bug'] }))
+    const { events } = bell(table({ board: ['OffCenterDiv'] }))
     assert.ok(!events.some((event) => event.type === 'attacked' && event.side === 'player'))
   })
 
@@ -56,7 +56,7 @@ describe('combat', () => {
     ;(state.player.board[0] as { sigils: string[] }).sigils.push('bypass')
     const after = bell(state).state
     assert.equal(after.scale, 3)
-    assert.equal(after.opponent.front[0]?.health, 8)
+    assert.equal(after.opponent.front[0]?.health, 6)
   })
 
   it('lets Fork strike the lanes either side instead of the one opposite, the second for half', () => {
@@ -65,7 +65,7 @@ describe('combat', () => {
     const after = bell(state).state
     assert.deepEqual(
       after.opponent.front.slice(0, 3).map((unit) => unit?.health),
-      [5, 8, 7],
+      [6 - 3, 6, 6 - 1],
     )
   })
 
@@ -88,6 +88,6 @@ describe('combat', () => {
     whole.sigils.push('hotfix')
     const after = bell(state).state
     assert.equal(after.player.board[0]?.health, 4)
-    assert.equal(after.player.board[1]?.health, 8)
+    assert.equal(after.player.board[1]?.health, 6)
   })
 })

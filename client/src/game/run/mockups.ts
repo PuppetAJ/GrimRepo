@@ -761,6 +761,28 @@ export const MOCKUPS: Record<string, Entry> = {
       return { ...found, state: { ...found.state, visit: { ...found.state.visit, game } } }
     },
   },
+  'defense-cards': {
+    title: 'A card choice of Rate Limiter, Honeypot and Circuit Breaker',
+    group: 'reached',
+    revision: 1,
+    make: () => {
+      const found = reached((s) => s.visit?.kind === 'card')
+      if (!found || found.state.visit?.kind !== 'card') return null
+      const offer = ['RateLimiter', 'Honeypot', 'CircuitBreaker']
+      return { ...found, state: { ...found.state, visit: { ...found.state.visit, offer } } }
+    },
+  },
+  'bypass-cards': {
+    title: 'A card choice of Health Check, Zombie Process, Phishing and Backdoor',
+    group: 'reached',
+    revision: 1,
+    make: () => {
+      const found = reached((s) => s.visit?.kind === 'card')
+      if (!found || found.state.visit?.kind !== 'card') return null
+      const offer = ['HealthCheck', 'ZombieProcess', 'Phishing', 'Backdoor']
+      return { ...found, state: { ...found.state, visit: { ...found.state.visit, offer } } }
+    },
+  },
   'new-cards': {
     title: 'A card choice of Hello World, Reply All and COBOL',
     group: 'reached',

@@ -109,9 +109,9 @@ const table: [string, string, Tier, number, number, number, SigilId[]?][] = [
   ['GrimRepo', 'GrimRepo', 'C', 3, 2, 0, ['tech_lead']],
   ['MergeConflict', 'Merge Conflict', 'C', 2, 4, 1, ['failover']],
   ['Firewall', 'Firewall', 'C', 2, 6, 1, ['backtrace']],
-  ['SQLInjection', 'SQL Injection', 'C', 4, 2, 1, ['bypass']],
+  ['SQLInjection', 'SQL Injection', 'C', 4, 3, 1, ['bypass']],
   ['NullPointer', 'NullPointer', 'C', 4, 2, 1, ['fatal_error']],
-  ['Bug', 'Bug', 'C', 0, 8, 1, ['hot_reload']],
+  ['Bug', 'Bug', 'C', 1, 6, 1, ['hot_reload']],
   ['LegacyCode', 'Legacy Code', 'C', 3, 4, 1, ['technical_debt']],
   ['Cookie', 'Cookie', 'C', 3, 4, 1, ['popup']],
   ['Crawler', 'Crawler', 'C', 5, 2, 1, ['scope_creep']],
@@ -139,12 +139,20 @@ const table: [string, string, Tier, number, number, number, SigilId[]?][] = [
   // One for each type, each growing with the cards of its type beside it.
   ['Botnet', 'Botnet', 'C', 1, 2, 1, ['scale_out']],
   ['Heisenbug', 'Heisenbug', 'D', 1, 1, 0, ['scale_out']],
-  ['Monolith', 'Monolith', 'C', 2, 2, 1, ['redundancy']],
+  ['Monolith', 'Monolith', 'C', 2, 4, 1, ['redundancy']],
   ['ExploitChain', 'Exploit Chain', 'C', 2, 1, 1, ['scale_out']],
   ['PairProgramming', 'Pair Programming', 'C', 2, 3, 1, ['redundancy']],
   // Broadcast's home since Hello World took Uptime, and Legacy's defender.
   ['ReplyAll', 'Reply All', 'C', 1, 2, 1, ['broadcast']],
   ['COBOL', 'COBOL', 'C', 2, 5, 1, ['uptime']],
+  // Walls that make a defensive deck work, and two more that slip past them.
+  ['RateLimiter', 'Rate Limiter', 'C', 1, 5, 1, ['packet_loss']],
+  ['HealthCheck', 'Health Check', 'C', 2, 4, 1, ['uptime']],
+  ['Honeypot', 'Honeypot', 'C', 1, 4, 1, ['backtrace']],
+  ['CircuitBreaker', 'Circuit Breaker', 'D', 0, 5, 0, ['failover']],
+  ['ZombieProcess', 'Zombie Process', 'C', 1, 3, 1, ['scale_out']],
+  ['Phishing', 'Phishing', 'D', 2, 1, 0, ['bypass']],
+  ['Backdoor', 'Backdoor', 'C', 3, 3, 1, ['bypass']],
 ]
 
 const TYPE_OF: Record<string, CardType> = {
@@ -154,6 +162,13 @@ const TYPE_OF: Record<string, CardType> = {
   Watchdog: 'bot',
   Daemon: 'bot',
   Botnet: 'bot',
+  RateLimiter: 'bot',
+  HealthCheck: 'bot',
+  ZombieProcess: 'bot',
+  Honeypot: 'exploit',
+  Phishing: 'exploit',
+  Backdoor: 'exploit',
+  CircuitBreaker: 'legacy',
   SQLInjection: 'exploit',
   ZeroDay: 'exploit',
   ForkBomb: 'exploit',

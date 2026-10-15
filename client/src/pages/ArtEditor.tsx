@@ -35,7 +35,16 @@ const ITEMS: Item[] = [
 ]
 
 /** Art drafted for Adrian to redraw, or that he flagged for edits; each shows under Needs your look until ticked off. */
-const DRAFTS: string[] = []
+const DRAFTS: string[] = [
+  'cards:RateLimiter',
+  'cards:HealthCheck',
+  'cards:Honeypot',
+  'cards:CircuitBreaker',
+  'cards:ZombieProcess',
+  'cards:Phishing',
+  'cards:Backdoor',
+  'icons:backtrace',
+]
 const LOOKED_KEY = 'grimrepo:art-looked'
 
 function lookedAtFirst(): string[] {

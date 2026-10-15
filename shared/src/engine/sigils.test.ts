@@ -192,7 +192,7 @@ describe('the sigils that move cards', () => {
     const start = table({ board: ['Bug'], front: ['NullPointer'] })
     const { state, events } = bell(start)
     assert.ok(events.some((event) => event.type === 'reloaded' && event.lane === null))
-    assert.ok(state.player.hand.some((unit) => unit.card === 'Bug' && unit.health === 8))
+    assert.ok(state.player.hand.some((unit) => unit.card === 'Bug' && unit.health === 6))
   })
 
   it('Hot Reload brings a card back only once', () => {
