@@ -114,6 +114,12 @@ export const CHOICE_POOLS: Record<Rarity, string[]> = {
 /** Slay the Spire's odds, in percent, for each card offered: 3 rare and 37 uncommon, the rest common. */
 const RARE_PERCENT = 3
 const UNCOMMON_PERCENT = 37
+/** Each card's odds in a starter pack, which rolls without the pity offset, in percent. */
+export const PACK_ODDS: Record<Rarity, number> = {
+  common: 100 - RARE_PERCENT - UNCOMMON_PERCENT,
+  uncommon: UNCOMMON_PERCENT,
+  rare: RARE_PERCENT,
+}
 /** The pity offset added to the rare odds: it starts below 0, grows with each common and resets with a rare. */
 export const PITY_START = -5
 const PITY_CAP = 40

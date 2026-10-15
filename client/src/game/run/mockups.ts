@@ -285,7 +285,7 @@ export const MOCKUPS: Record<string, Entry> = {
   start: {
     title: 'The starter deck choice',
     group: 'reached',
-    revision: 12,
+    revision: 13,
     make: () => ({ state: createRun({ seed: 1 }), path: [] }),
   },
   pack: {
@@ -311,7 +311,7 @@ export const MOCKUPS: Record<string, Entry> = {
   'death-start': {
     title: 'The starter deck choice, with a death card to leave out',
     group: 'reached',
-    revision: 16,
+    revision: 17,
     make: () => ({ state: createRun({ seed: 1, death: SAMPLE_DEATH }), path: [] }),
   },
   'death-offer': {

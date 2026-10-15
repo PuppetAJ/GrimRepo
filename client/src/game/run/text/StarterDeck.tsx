@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { card, deathSkipBonus, PACK_SIZE, PACKS, STARTER_DECKS, type Rarity } from 'shared'
+import { card, deathSkipBonus, PACK_ODDS, PACK_SIZE, PACKS, STARTER_DECKS, type Rarity } from 'shared'
 import { Sentences } from '../../text/Sentences.tsx'
 import { asUnit } from '../nodes.ts'
 import type { RunReady } from '../useRun.ts'
@@ -11,12 +11,11 @@ import { ScreenBar, ScreenCenter, useScreenMode } from './Screen.tsx'
 
 const RARITIES: Rarity[] = ['common', 'uncommon', 'rare']
 
-/** The odds of each rarity for each card in a starter pack, in percent. */
-const ODDS: Record<Rarity, number> = { common: 60, uncommon: 37, rare: 3 }
-
 /** A run's first choice: one of the starter decks, each in its own box; side by side with room. */
 export function StarterDeck({ run }: { run: RunReady }) {
   const [include, setInclude] = useState(true)
+  // The deck whose packs are open to read, one at a time.
+  const [reading, setReading] = useState<string | null>(null)
   if (run.state.visit?.kind !== 'start') return null
   const death = run.state.death
   // The projector's header is short of room, so there it's a box above the decks.
@@ -44,8 +43,9 @@ export function StarterDeck({ run }: { run: RunReady }) {
           <li key={id}>
             {/* More below than the padding alone, to match the room the heading's line height leaves above it. */}
             <Box className="flex h-full flex-col gap-3 pb-5 sm:pb-6">
-              <h3 className="text-2xl text-p03">{deck.name}</h3>
-              <p className="font-sans text-base text-[#b8f5c4]">{deck.about}</p>
+              {/* Centered while the decks stack, and left-aligned side by side. */}
+              <h3 className="text-center text-2xl text-p03 @6xl:text-left">{deck.name}</h3>
+              <p className="text-center font-sans text-base text-[#b8f5c4] @6xl:text-left">{deck.about}</p>
               {/* The core's two cards, plus a stack of the packs a card is taken from each of, midway between words and button. */}
               <div className="flex flex-1 items-center justify-center gap-3 py-2">
                 {deck.core.map((core, index) => (
@@ -56,23 +56,33 @@ export function StarterDeck({ run }: { run: RunReady }) {
                 <span aria-hidden className="text-3xl text-p03-dim">
                   +
                 </span>
-                <span
-                  role="img"
-                  aria-label={`and a card from each of ${PACKS} packs, opened next`}
-                  className="relative block h-[116px] w-[78px] shrink-0"
+                <span className="sr-only">and a card from each of {PACKS} packs, opened next</span>
+                {/* The packs open what they can hold, and the odds, below. */}
+                <button
+                  type="button"
+                  data-action="read-packs"
+                  aria-expanded={reading === id}
+                  aria-controls={`packs-${id}`}
+                  aria-label={`${reading === id ? 'Hide odds' : 'Odds'} for the ${deck.name} packs`}
+                  onClick={() => setReading((now) => (now === id ? null : id))}
+                  className="group flex shrink-0 flex-col items-center gap-1 rounded-md text-sm text-p03-dim hover:text-p03 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03 aria-expanded:text-p03"
                 >
-                  {Array.from({ length: PACKS }, (_, index) => (
-                    <img
-                      key={index}
-                      src={packArt(id)}
-                      alt=""
-                      draggable={false}
-                      className="pixel-art absolute h-[104px] w-[57px]"
-                      style={{ left: index * 14, top: index * 10, zIndex: PACKS - index }}
-                    />
-                  ))}
-                </span>
+                  <span className="relative block h-[116px] w-[78px] transition-transform group-hover:-translate-y-1 motion-reduce:transition-none">
+                    {Array.from({ length: PACKS }, (_, index) => (
+                      <img
+                        key={index}
+                        src={packArt(id)}
+                        alt=""
+                        draggable={false}
+                        className="pixel-art absolute h-[104px] w-[57px]"
+                        style={{ left: index * 14, top: index * 10, zIndex: PACKS - index }}
+                      />
+                    ))}
+                  </span>
+                  {reading === id ? 'Hide odds' : 'Odds'}
+                </button>
               </div>
+              {reading === id ? <PackOdds id={id} anchor={`packs-${id}`} /> : null}
               <button
                 type="button"
                 data-action="start"
@@ -154,26 +164,36 @@ export function PackOpening({ run }: { run: RunReady }) {
         </ul>
       )}
       {deck ? (
-        // What the packs can hold, and the odds for each card in them.
-        <Box className="w-full max-w-2xl text-left">
-          <p className="text-lg text-p03">
-            Each pack holds {PACK_SIZE} cards. Each card is common {ODDS.common}% of the time, uncommon {ODDS.uncommon}
-            %, rare {ODDS.rare}%.
-          </p>
-          <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 font-sans text-sm text-[#b8f5c4]">
-            {RARITIES.map((rarity) => (
-              <div key={rarity} className="contents">
-                {/* The marks each card in a pack shows for its rarity, named here so they can be read anywhere. */}
-                <dt className={`flex items-center gap-2 font-terminal text-base capitalize ${RARITY_TONE[rarity]}`}>
-                  <RarityBadge rarity={rarity} />
-                  {rarity}
-                </dt>
-                <dd className="self-center">{deck.pack[rarity].map((id) => card(id).name).join(', ')}</dd>
-              </div>
-            ))}
-          </dl>
+        <Box className="w-full max-w-2xl">
+          <PackOdds id={visit.deck} />
         </Box>
       ) : null}
+    </div>
+  )
+}
+
+/** What a starter deck's packs can hold, and the odds for each card in them. */
+function PackOdds({ id, anchor }: { id: string; anchor?: string }) {
+  const deck = STARTER_DECKS[id]
+  if (!deck) return null
+  return (
+    <div id={anchor} className="text-left">
+      <p className="text-lg text-p03">
+        Each pack holds {PACK_SIZE} cards. Each card is common {PACK_ODDS.common}% of the time, uncommon{' '}
+        {PACK_ODDS.uncommon}%, rare {PACK_ODDS.rare}%.
+      </p>
+      <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 font-sans text-sm text-[#b8f5c4]">
+        {RARITIES.map((rarity) => (
+          <div key={rarity} className="contents">
+            {/* The marks each card in a pack shows for its rarity, named here so they can be read anywhere. */}
+            <dt className={`flex items-center gap-2 font-terminal text-base capitalize ${RARITY_TONE[rarity]}`}>
+              <RarityBadge rarity={rarity} />
+              {rarity}
+            </dt>
+            <dd className="self-center">{deck.pack[rarity].map((entry) => card(entry).name).join(', ')}</dd>
+          </div>
+        ))}
+      </dl>
     </div>
   )
 }
