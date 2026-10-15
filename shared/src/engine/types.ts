@@ -2,7 +2,7 @@ import type { SigilId } from '../cards.ts'
 import type { ItemId } from '../items.ts'
 
 /** Bumped whenever a change would make an old game replay differently. */
-export const RULES_VERSION = 16
+export const RULES_VERSION = 17
 
 export const LANES = 4
 /** The most sigils a card carries. */
@@ -42,6 +42,8 @@ export type GameState = {
   turn: number
   /** Also true when a full hand at turn start skipped the draw. */
   drawn: boolean
+  /** While P03 leads a run's battle, one more card can be drawn from the deck this turn, after the first. */
+  catchUp?: boolean
   status: 'playing' | 'won' | 'lost'
   nextUid: number
   debug: boolean

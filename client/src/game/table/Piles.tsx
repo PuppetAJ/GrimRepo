@@ -176,6 +176,7 @@ export function Deck({
   active,
   hint,
   full,
+  extra = false,
 }: {
   count: number
   total: number
@@ -186,10 +187,13 @@ export function Deck({
   hint?: number
   /** The hand is full, so drawing is skipped. */
   full?: boolean
+  /** P03 leads, so a second card can be drawn this turn: the deck gets a gold dotted outline. */
+  extra?: boolean
 }) {
   const layers = count === 0 ? 0 : Math.max(1, Math.round((count / total) * 12))
   return (
     <group position={DECK}>
+      {extra ? <ExtraDraw /> : null}
       <Nudge
         active={active}
         onClick={onClick}
@@ -202,6 +206,43 @@ export function Deck({
         {layers ? <Stack layers={layers} /> : reshuffle ? <EmptyDeck cards={reshuffle} active={active} /> : null}
       </Nudge>
     </group>
+  )
+}
+
+// Gold, apart from the board's green, and pushed past 1 so it clears the bloom threshold and glows.
+const GOLD = new THREE.Color('#ffd24a').multiplyScalar(2.2)
+
+/** A gold dotted outline around the deck, pulsing while a catch-up draw is waiting. */
+function ExtraDraw() {
+  const depth = CARD.height * DISK.compact
+  const material = useMemo(() => {
+    const element = document.createElement('canvas')
+    element.width = 320
+    element.height = Math.round((320 * depth) / CARD.width)
+    const context = element.getContext('2d') as CanvasRenderingContext2D
+    context.strokeStyle = '#ffffff'
+    context.lineWidth = 14
+    context.lineCap = 'round'
+    context.setLineDash([1, 24])
+    context.strokeRect(10, 10, element.width - 20, element.height - 20)
+    const map = new THREE.CanvasTexture(element)
+    map.colorSpace = THREE.SRGBColorSpace
+    return new THREE.MeshBasicMaterial({ map, color: GOLD, transparent: true, depthWrite: false, toneMapped: false })
+  }, [depth])
+  useEffect(
+    () => () => {
+      material.map?.dispose()
+      material.dispose()
+    },
+    [material],
+  )
+  useFrame(({ clock }) => {
+    material.opacity = STILL ? 1 : 0.7 + 0.3 * Math.sin(clock.elapsedTime * 4)
+  })
+  return (
+    <mesh rotation-x={-Math.PI / 2} position-y={0.004} material={material}>
+      <planeGeometry args={[CARD.width * 1.12, depth * 1.12]} />
+    </mesh>
   )
 }
 

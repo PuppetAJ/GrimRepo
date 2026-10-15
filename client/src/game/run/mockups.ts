@@ -573,6 +573,17 @@ export const MOCKUPS: Record<string, Entry> = {
       return { ...found, state: { ...found.state, visit: { ...found.state.visit, game } } }
     },
   },
+  'catch-up': {
+    title: 'P03 ahead, with the turn drawn and an extra draw waiting',
+    group: 'reached',
+    revision: 1,
+    make: () => {
+      const found = reached((s) => s.visit?.kind === 'battle' && s.visit.game.turn > 2 && s.visit.game.drawn)
+      if (!found || found.state.visit?.kind !== 'battle') return null
+      const game = { ...found.state.visit.game, scale: -6, drawn: true, catchUp: true }
+      return { ...found, state: { ...found.state, visit: { ...found.state.visit, game } } }
+    },
+  },
   'battle-items': {
     title: 'A battle in a run, with three items to use',
     group: 'reached',

@@ -3,7 +3,8 @@ import { describe, it } from 'node:test'
 import { DESPERATE_CARDS } from '../encounters.ts'
 import { UPTIME_LIMIT } from './combat.ts'
 import { DESPERATE_AT, EASE_AT } from './opponent.ts'
-import { play, table, uidOf } from './test-support.ts'
+import { legalActions } from './game.ts'
+import { play, refused, table, uidOf } from './test-support.ts'
 import type { GameEvent, GameState } from './types.ts'
 
 const bell = (state: GameState) => play(state, { type: 'ringBell' })
@@ -55,13 +56,19 @@ describe("a run's integrity", () => {
 })
 
 describe('comebacks in a run battle', () => {
-  it('give the player an extra card at turn start while P03 leads', () => {
-    const behind = bell(table({ encounter: 'localhost-hello', scale: -2 }))
-    assert.ok(behind.events.some((event) => event.type === 'drew' && event.catchUp))
-    const level = bell(table({ encounter: 'localhost-hello', scale: 2 }))
-    assert.ok(!level.events.some((event) => event.type === 'drew'))
-    const quick = bell(table({ scale: -2 }))
-    assert.ok(!quick.events.some((event) => event.type === 'drew'), 'and only in a run battle')
+  it('let the player draw a second card from the deck while P03 leads, after the first', () => {
+    const behind = bell(table({ encounter: 'localhost-hello', scale: -2 })).state
+    assert.equal(behind.catchUp, true)
+    assert.ok(!legalActions(behind).some((action) => action.type === 'ringBell'), 'the turn still starts with a draw')
+    const drawn = play(behind, { type: 'draw', from: 'deck' }).state
+    assert.ok(legalActions(drawn).some((action) => action.type === 'draw' && action.from === 'deck'))
+    assert.match(refused(drawn, { type: 'draw', from: 'boilerplate' }), /No more draws/)
+    const { state: twice, events } = play(drawn, { type: 'draw', from: 'deck' })
+    assert.ok(events.some((event) => event.type === 'drew' && event.catchUp))
+    assert.equal(twice.player.hand.length, drawn.player.hand.length + 1)
+    assert.match(refused(twice, { type: 'draw', from: 'deck' }), /No more draws/, 'once a turn')
+    assert.ok(!bell(table({ encounter: 'localhost-hello', scale: 2 })).state.catchUp)
+    assert.ok(!bell(table({ scale: -2 })).state.catchUp, 'and only in a run battle')
   })
 
   it("make P03 ease off well ahead, but never in a boss's battle", () => {

@@ -92,6 +92,8 @@ export function Scene({
   // Legal moves come from the real state, not the view being played back.
   const legal = busy || hasEnded(game) ? [] : legalActions(state)
   const can = (match: Partial<Action>) => has(legal, match)
+  // The turn's own draw is owed; a catch-up draw after it is only offered.
+  const owesDraw = !state.drawn && can({ type: 'draw' })
   const count = view.hand.length
 
   const [aimed, setAimed] = useState<number | null>(null)
@@ -168,6 +170,7 @@ export function Scene({
             onClick={() => act({ type: 'draw', from: 'deck' })}
             hint={hint}
             full={handFull}
+            extra={state.drawn && Boolean(state.catchUp) && can({ type: 'draw', from: 'deck' } as Partial<Action>)}
           />
         </Arrive>
         <Arrive delay={at(SET.pile)} leave={leaving}>
@@ -199,14 +202,14 @@ export function Scene({
               onHold={(x, y) => reader.hold({ card: unit.uid }, x, y)}
               onClick={
                 // On touch every card is tappable, to read it; with a mouse, only one that can act.
-                selected || selectable || can({ type: 'draw' }) || COARSE
+                selected || selectable || owesDraw || COARSE
                   ? (_event, touch) => {
                       // On touch a tap only plays; reading is the magnifier's, by holding, so no panel covers the table.
-                      if (touch && !selected && !selectable && !can({ type: 'draw' })) return
+                      if (touch && !selected && !selectable && !owesDraw) return
                       reader.lift(null)
                       if (selected) act({ type: 'cancel' })
                       else if (selectable) act({ type: 'select', uid: unit.uid })
-                      else if (can({ type: 'draw' })) onHint(unit.uid)
+                      else if (owesDraw) onHint(unit.uid)
                     }
                   : undefined
               }

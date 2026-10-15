@@ -85,6 +85,8 @@ export function Piles() {
   const reshuffle = view.deck ? null : reshuffleNote(state)
   const size = sideways ? 'w-10' : phone ? 'w-8 tall:w-10' : compact ? 'w-12 sm:w-16' : 'w-20'
   const full = handFull ? `Your hand is full (${HAND_LIMIT})` : undefined
+  // While P03 leads, a second card can be drawn from the deck once the turn's draw is done.
+  const extra = !mustDraw && Boolean(state.catchUp) && deckDraws
   return (
     <div
       ref={shakeRef('piles')}
@@ -95,18 +97,23 @@ export function Piles() {
         data-action="draw-deck"
         disabled={!deckDraws}
         data-full={handFull || undefined}
-        title={full ?? reshuffle?.text}
+        data-extra={extra || undefined}
+        title={extra ? 'P03 leads: draw an extra card' : (full ?? reshuffle?.text)}
         onClick={() => act({ type: 'draw', from: 'deck' })}
         aria-label={
-          reshuffle
-            ? `Draw from the deck. ${reshuffle.text}`
-            : view.deck
-              ? `Draw from the deck, ${view.deck} left`
-              : 'The deck is empty, with nothing to shuffle back'
+          extra
+            ? `Draw an extra card from the deck, since P03 leads, ${view.deck} left`
+            : reshuffle
+              ? `Draw from the deck. ${reshuffle.text}`
+              : view.deck
+                ? `Draw from the deck, ${view.deck} left`
+                : 'The deck is empty, with nothing to shuffle back'
         }
         className={`flex flex-col items-center gap-1 text-p03 disabled:brightness-50 disabled:saturate-50 ${size}`}
       >
-        <span className="grid aspect-[5/7] w-full place-items-center rounded-md border-2 border-p03-edge bg-[#0b1f12] text-3xl shadow-[3px_3px_0_#1f3a26,6px_6px_0_#13261a]">
+        <span
+          className={`grid aspect-[5/7] w-full place-items-center rounded-md border-2 border-p03-edge bg-[#0b1f12] text-3xl shadow-[3px_3px_0_#1f3a26,6px_6px_0_#13261a] ${extra ? 'outline-2 outline-offset-4 outline-[#ffd24a] outline-dotted' : ''}`}
+        >
           ▦
         </span>
         <span className={`text-lg ${reshuffle && reshuffleCostsMemory(state) ? 'text-[#ffb454]' : ''}`}>

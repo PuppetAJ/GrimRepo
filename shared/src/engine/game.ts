@@ -136,9 +136,16 @@ export function apply(current: GameState, action: Action): Result {
   const rng = new Rng(state.rng)
   const events: GameEvent[] = []
 
-  if (action.type === 'draw') {
-    if (!mustDraw(state))
-      return fail(state.player.hand.length >= HAND_LIMIT ? 'The hand is full' : 'No more draws this turn')
+  if (action.type === 'draw' && !mustDraw(state)) {
+    // The turn's draw is done; only a catch-up draw from the deck is left, and it never reshuffles.
+    if (state.player.hand.length >= HAND_LIMIT) return fail('The hand is full')
+    if (!state.catchUp || action.from !== 'deck') return fail('No more draws this turn')
+    if (!state.player.deck.length) return fail('The deck is empty')
+    const unit = drawUnit(state, state.player.deck.shift() as number)
+    state.player.hand.push(unit)
+    state.catchUp = false
+    events.push({ type: 'drew', unit, from: 'deck', catchUp: true })
+  } else if (action.type === 'draw') {
     if (action.from === 'deck') {
       if (state.player.deck.length === 0) {
         // Rebuilt without cards in hand or on the table, so no card is ever in two places.
@@ -382,17 +389,8 @@ function playTurn(state: GameState, rng: Rng, events: GameEvent[]): void {
   if (state.turn >= TURN_LIMIT) return finish(state, 'loss', events)
   state.turn += 1
   events.push({ type: 'turnStarted', turn: state.turn })
-  // While P03 leads a run's battle, the player starts the turn with an extra card, if the deck has one.
-  if (
-    state.opponent.encounter &&
-    state.scale < 0 &&
-    state.player.hand.length < HAND_LIMIT &&
-    state.player.deck.length
-  ) {
-    const unit = drawUnit(state, state.player.deck.shift() as number)
-    state.player.hand.push(unit)
-    events.push({ type: 'drew', unit, from: 'deck', catchUp: true })
-  }
+  // While P03 leads a run's battle, the player may draw a second card from the deck this turn, after the first.
+  state.catchUp = Boolean(state.opponent.encounter) && state.scale < 0 && state.player.deck.length > 0
   state.drawn = state.player.hand.length >= HAND_LIMIT
 }
 
@@ -446,6 +444,8 @@ export function legalActions(state: GameState): Action[] {
   }
 
   const actions: Action[] = [{ type: 'ringBell' }]
+  if (state.catchUp && state.player.deck.length && state.player.hand.length < HAND_LIMIT)
+    actions.push({ type: 'draw', from: 'deck' })
   for (const unit of state.player.hand) {
     if (unit.uid !== state.summon?.uid && costOf(unit) <= onBoard(state))
       actions.push({ type: 'select', uid: unit.uid })

@@ -47,7 +47,8 @@ export function useTextTable({
   const view = playback.view
   const legal = busy || ended ? [] : legalActions(state)
   const summoning = state.summon ? state.player.hand.find((unit) => unit.uid === state.summon?.uid) : undefined
-  const mustDraw = has(legal, { type: 'draw' })
+  // The turn's own draw; a catch-up draw after it is offered at the deck, never owed.
+  const mustDraw = !state.drawn && has(legal, { type: 'draw' })
   // A turn that starts with a full hand skips its draw, so the piles need to say why.
   const handFull = !busy && !ended && skippedDraw(state)
   // Stores the place, not the card, so a card played into that lane shows at once.
