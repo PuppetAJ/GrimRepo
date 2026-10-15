@@ -17,7 +17,7 @@ const queuedBy = (state: GameState, count: number, turn = 12, seed = 1) => {
 
 describe('P03', () => {
   it('deletes a wall of its own that blocks its queue and guards nothing, so the queued card moves up', () => {
-    const { state, events } = play(table({ front: [null, null, 'Bug'], back: [null, null, 'CopyPaste'] }), {
+    const { state, events } = play(table({ front: [null, null, 'OffCenterDiv'], back: [null, null, 'CopyPaste'] }), {
       type: 'ringBell',
     })
     assert.ok(events.some((event) => event.type === 'retired' && event.lane === 2))
@@ -27,13 +27,17 @@ describe('P03', () => {
 
   it('keeps a wall that is holding back one of the player’s attackers', () => {
     const { state, events } = play(
-      table({ board: [null, null, 'CopyPaste'], front: [null, null, 'Bug'], back: [null, null, 'InfiniteLoop'] }),
+      table({
+        board: [null, null, 'CopyPaste'],
+        front: [null, null, 'OffCenterDiv'],
+        back: [null, null, 'InfiniteLoop'],
+      }),
       {
         type: 'ringBell',
       },
     )
     assert.ok(!events.some((event) => event.type === 'retired'))
-    assert.equal(state.opponent.front[2]?.card, 'Bug')
+    assert.equal(state.opponent.front[2]?.card, 'OffCenterDiv')
   })
 
   it('never queues behind a card that will not move while another lane is open', () => {
@@ -90,10 +94,14 @@ describe('P03', () => {
         const result = apply(state, action)
         assert.ok(result.ok)
         if (action.type === 'ringBell' && result.state.status === 'playing') {
-          // A Load Balancer moving in front of a wall gives it something to guard again.
+          // A Load Balancer moving in front of a wall gives it something to guard again, and a Failover wall that
+          // moves to cover a lane no longer blocks its queue.
           const guarded = (uid: number | undefined) => {
             const lane = dead[walls.indexOf(uid)]
-            return result.events.some((event) => event.type === 'moved' && event.side === 'player' && event.to === lane)
+            return result.events.some(
+              (event) =>
+                event.type === 'moved' && ((event.side === 'player' && event.to === lane) || event.uid === uid),
+            )
           }
           for (const uid of walls) {
             if (guarded(uid)) continue
