@@ -59,13 +59,13 @@ describe('combat', () => {
     assert.equal(after.opponent.front[0]?.health, 8)
   })
 
-  it('lets Fork strike the lanes either side instead of the one opposite', () => {
+  it('lets Fork strike the lanes either side instead of the one opposite, the second for half', () => {
     const state = table({ board: [null, 'CopyPaste'], front: ['Bug', 'Bug', 'Bug'] })
     ;(state.player.board[1] as { sigils: string[] }).sigils.push('fork')
     const after = bell(state).state
     assert.deepEqual(
       after.opponent.front.slice(0, 3).map((unit) => unit?.health),
-      [5, 8, 5],
+      [5, 8, 7],
     )
   })
 

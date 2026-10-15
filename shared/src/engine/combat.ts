@@ -126,6 +126,9 @@ function damage(unit: Unit, amount: number, fatal: boolean, events: GameEvent[])
   return left
 }
 
+/** What an extra hit does: Broadcast's side lanes, Fork's second lane and Retry's second strike. */
+export const extraHit = (power: number): number => Math.floor(power / 2)
+
 export function attack(state: GameState, side: Side, events: GameEvent[]): void {
   const attackers = side === 'player' ? state.player.board : state.opponent.front
   const defenders = side === 'player' ? state.opponent.front : state.player.board
@@ -156,14 +159,18 @@ export function attack(state: GameState, side: Side, events: GameEvent[]): void 
         ? within([lane - 1, lane + 1])
         : [lane]
     const strikes = attacker.sigils.includes('retry') ? 2 : 1
+    // Only the first strike at the main lane, opposite or Fork's first, hits in full; extra hits do half, rounded down.
+    const main = lanes.includes(lane) ? lane : lanes[0]
     let struck = false
 
     for (let strike = 0; strike < strikes; strike++) {
       for (const aimed of lanes) {
         // A Backtrace can kill an attacker partway through its attacks.
         if (attackers[lane]?.uid !== attacker.uid) break
-        const power = attackOf(state, side, lane)
-        if (power <= 0) break
+        const full = attackOf(state, side, lane)
+        if (full <= 0) break
+        const power = strike === 0 && aimed === main ? full : extraHit(full)
+        if (power <= 0) continue
         struck = true
         const defended = attacker.sigils.includes('bypass')
           ? null

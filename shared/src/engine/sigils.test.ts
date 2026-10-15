@@ -48,9 +48,11 @@ describe('the sigils', () => {
     assert.equal(hit?.type === 'damaged' && hit.amount, 4)
   })
 
-  it('Retry attacks twice', () => {
-    const { events } = bell(table({ board: ['InfiniteLoop'] }))
-    assert.equal(hits(events, 'opponent'), 2)
+  it('Retry attacks twice, the second time for half, rounded down', () => {
+    const state = table({ board: ['ZeroDay'] })
+    ;(state.player.board[0] as { sigils: string[] }).sigils.push('retry')
+    assert.equal(hits(bell(state).events, 'opponent'), 4 + 2)
+    assert.equal(hits(bell(table({ board: ['InfiniteLoop'] })).events, 'opponent'), 1, 'half of 1 is nothing')
   })
 
   it('Deprecated dies after it attacks, and leaves a Boilerplate in its lane', () => {
@@ -66,9 +68,10 @@ describe('the sigils', () => {
     assert.equal(state.player.board[0]?.attack, 6)
   })
 
-  it('Broadcast attacks the lane opposite and both lanes beside it', () => {
-    const { events } = bell(table({ board: [null, 'ReplyAll'] }))
-    assert.equal(hits(events, 'opponent'), 3)
+  it('Broadcast attacks the lane opposite in full, and both lanes beside it for half', () => {
+    const state = table({ board: [null, 'CopyPaste'] })
+    ;(state.player.board[1] as { sigils: string[] }).sigils.push('broadcast')
+    assert.equal(hits(bell(state).events, 'opponent'), 3 + 1 + 1)
   })
 
   it('Refactor hands its stats to the card it pays for', () => {
