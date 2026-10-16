@@ -204,9 +204,13 @@ export function createRun({ seed, death = null, rival = null }: { seed: number }
   return state
 }
 
-/** The node ids the player can move to next; none while a node is being resolved. */
+/** Visits the player may walk out of at any time, by leaving or by heading for the next node. */
+const WALK_OUT: readonly Visit['kind'][] = ['campfire', 'stones', 'lint', 'shop', 'fuse', 'item']
+const canWalkOut = (visit: Visit | null) => visit !== null && WALK_OUT.includes(visit.kind)
+
+/** The node ids the player can move to next; none while a node must still be resolved. */
 export function reachable(state: RunState): string[] {
-  if (state.status !== 'playing' || state.visit) return []
+  if (state.status !== 'playing' || (state.visit && !canWalkOut(state.visit))) return []
   if (state.at === null) return (state.map.rows[0] ?? []).map((node) => node.id)
   return findNode(state.map, state.at)?.next ?? []
 }
@@ -368,7 +372,8 @@ function step(state: RunState, rng: Rng, action: RunAction, events: RunEvent[]):
 
   switch (action.type) {
     case 'go': {
-      if (visit) return 'Finish this node first'
+      // Heading on from a node that can be left leaves it, as its Leave button would.
+      if (visit && !canWalkOut(visit)) return 'Finish this node first'
       if (!reachable(state).includes(action.node)) return 'That node is not reachable from here'
       const node = findNode(state.map, action.node) as MapNode
       state.at = node.id
@@ -584,7 +589,7 @@ function step(state: RunState, rng: Rng, action: RunAction, events: RunEvent[]):
       return
     }
     case 'leave': {
-      if (['campfire', 'stones', 'lint', 'shop', 'fuse', 'item'].includes(visit?.kind ?? '')) {
+      if (canWalkOut(visit)) {
         state.visit = null
         return
       }
