@@ -37,7 +37,7 @@ function loadFaces(): Promise<Record<Face, THREE.Texture>> {
   return faces
 }
 
-/** How far one move must swing the scale toward the player to upset him. */
+/** How far a turn's hits, added up, must swing the scale toward the player to upset him. */
 const UPSET_AT = 8
 /** How long he screams as the player's lead first nears his tip point, in milliseconds. */
 const SCREAM_MS = 3000
@@ -48,13 +48,18 @@ function useMood(view: View, outcome: 'win' | 'loss' | undefined): Mood {
   const [screaming, setScreaming] = useState(false)
   const scale = view.scale
   const danger = scale >= TIP - 6
-  const last = useRef({ scale, turn: view.turn })
+  // The turn's lowest point so far, so 4, 4 and 2 in one turn upset him as much as one hit of 10. Once a turn is enough.
+  const turn = useRef({ turn: view.turn, low: scale, upset: false })
   useEffect(() => {
-    const hit = scale - last.current.scale
+    const now = turn.current
     // Turn 0 is the room's view between battles, so going to or from it is no hit, as when looking back from the map.
-    const between = view.turn === 0 || last.current.turn === 0
-    last.current = { scale, turn: view.turn }
-    if (hit < UPSET_AT || between) return
+    if (view.turn !== now.turn || view.turn === 0) {
+      turn.current = { turn: view.turn, low: scale, upset: false }
+      return
+    }
+    now.low = Math.min(now.low, scale)
+    if (now.upset || scale - now.low < UPSET_AT) return
+    now.upset = true
     const start = setTimeout(() => setChoking(true), 0)
     setTimeout(() => setChoking(false), 1600)
     return () => clearTimeout(start)
