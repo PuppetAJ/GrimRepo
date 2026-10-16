@@ -54,6 +54,7 @@ const PACE: Record<GameEvent['type'], number> = {
   queued: 225,
   healed: 150,
   shielded: 180,
+  stayedUp: 180,
   buffed: 180,
   leftBehind: 240,
   used: 200,
@@ -137,11 +138,8 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
       if (event.desperate) popup('desperate', 'note', slot('back', event.lane, 0.5), { row: 'back', lane: event.lane })
       break
     case 'integrity': {
-      // A lost card has already left the table, so its cost rises from the player's side; Uptime's repair from its card.
-      const found = where(view, event.uid)
-      const text = event.change < 0 ? `integrity ${event.change}` : `+${event.change} uptime`
-      if (found) popup(text, 'heal', slot(found.row, found.lane, 0.3), { row: found.row, lane: found.lane })
-      else popup(text, 'damage', FACE.player, { face: 'player' })
+      // A lost card has already left the table, so its cost rises from the player's side.
+      popup(`integrity ${event.change}`, 'damage', FACE.player, { face: 'player' })
       break
     }
     case 'advanced':
@@ -187,16 +185,19 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
     }
     case 'damaged':
     case 'shielded':
+    case 'stayedUp':
     case 'buffed': {
       const found = where(view, event.uid)
       if (found)
         popup(
           event.type === 'shielded'
             ? 'rolled back'
-            : // The Pliers leave a card with no sigils.
-              event.type === 'buffed' && event.sigils?.length === 0
-              ? 'sigils pulled'
-              : 'buffed',
+            : event.type === 'stayedUp'
+              ? 'stayed up'
+              : // The Pliers leave a card with no sigils.
+                event.type === 'buffed' && event.sigils?.length === 0
+                ? 'sigils pulled'
+                : 'buffed',
           'note',
           slot(found.row, found.lane, 0.3),
           {

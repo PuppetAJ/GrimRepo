@@ -67,6 +67,8 @@ export function nextBotAction(state: GameState, strategy: Strategy = 'greedy'): 
   const legal = legalActions(state)
   const allowed = (type: Action['type']) => legal.filter((action) => action.type === type)
 
+  // A catch-up draw is always worth taking, once the turn's own draw is done.
+  if (state.drawn && allowed('draw').length) return { type: 'draw', from: 'deck' }
   if (allowed('draw').length) {
     // Boilerplate only when something in hand can't be paid for yet.
     const short = state.player.hand.some((unit) => costOf(unit) > units(state.player.board).length)

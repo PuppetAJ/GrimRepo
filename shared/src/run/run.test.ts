@@ -14,6 +14,7 @@ import {
   PACK_SIZE,
   PACKS,
   PICKS,
+  BOSS_REPAIR,
   REPAIR,
   reachable,
   replayRun,
@@ -625,6 +626,14 @@ describe('battles', () => {
     const lost = step(state, { type: 'play', action: { type: 'ringBell' } })
     assert.equal(lost.status, 'lost')
     assert.deepEqual(legalRunActions(lost), [])
+  })
+
+  it('a beaten boss repairs integrity, never past full', () => {
+    const worn = battleAt(started({ seed: 4 }), 'boss')
+    worn.integrity = 10
+    if (worn.visit?.kind === 'battle' && worn.visit.game.integrity) worn.visit.game.integrity.left = 10
+    assert.equal(step(win(worn), { type: 'leave' }).integrity, 10 + BOSS_REPAIR)
+    assert.equal(step(win(battleAt(started({ seed: 4 }), 'boss')), { type: 'leave' }).integrity, INTEGRITY)
   })
 
   it('a beaten boss offers a rare, then the next stage', () => {

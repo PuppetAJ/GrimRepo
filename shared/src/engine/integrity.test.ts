@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { DESPERATE_CARDS } from '../encounters.ts'
-import { UPTIME_LIMIT } from './combat.ts'
 import { DESPERATE_AT, EASE_AT } from './opponent.ts'
-import { play, table, uidOf } from './test-support.ts'
+import { legalActions } from './game.ts'
+import { play, refused, table, uidOf } from './test-support.ts'
 import type { GameEvent, GameState } from './types.ts'
 
 const bell = (state: GameState) => play(state, { type: 'ringBell' })
@@ -37,31 +37,35 @@ describe("a run's integrity", () => {
     assert.equal(state.integrity?.left, 0)
     assert.ok(events.some((event) => event.type === 'gameOver' && event.outcome === 'loss'))
   })
+})
 
-  it('is repaired by an Uptime card blocking an attack, up to its limit a battle and never past full', () => {
-    // Sandbox heals what COBOL deals it, and COBOL is made tough enough to outlast every turn.
-    let state = table({ board: ['COBOL'], front: ['Sandbox'], integrity: 10 })
-    Object.assign(state.player.board[0] ?? {}, { health: 50, maxHealth: 50 })
-    const repairs: number[] = []
-    for (let turn = 0; turn < UPTIME_LIMIT + 2; turn++) {
-      const result = bell({ ...state, drawn: true, scale: 0 })
-      repairs.push(...changes(result.events))
-      state = result.state
-    }
-    assert.deepEqual(repairs, Array(UPTIME_LIMIT).fill(1))
-    assert.equal(state.integrity?.left, 10 + UPTIME_LIMIT)
-    assert.deepEqual(changes(bell(table({ board: ['COBOL'], front: ['Sandbox'], integrity: 20 })).events), [])
+describe('Uptime', () => {
+  it('stays up with 1 health the first time it would be destroyed in a battle, and only the first', () => {
+    // Mainframe hits for 13, far past COBOL's 5.
+    const first = bell(table({ board: ['COBOL'], front: ['Mainframe'], integrity: 20 }))
+    assert.equal(first.state.player.board[0]?.health, 1)
+    assert.ok(first.events.some((event) => event.type === 'stayedUp'))
+    assert.deepEqual(changes(first.events), [], 'standing, so no integrity is lost')
+    const second = bell({ ...first.state, drawn: true, scale: 0 })
+    assert.equal(second.state.player.board[0], null)
+    assert.deepEqual(changes(second.events), [-1])
   })
 })
 
 describe('comebacks in a run battle', () => {
-  it('give the player an extra card at turn start while P03 leads', () => {
-    const behind = bell(table({ encounter: 'localhost-hello', scale: -2 }))
-    assert.ok(behind.events.some((event) => event.type === 'drew' && event.catchUp))
-    const level = bell(table({ encounter: 'localhost-hello', scale: 2 }))
-    assert.ok(!level.events.some((event) => event.type === 'drew'))
-    const quick = bell(table({ scale: -2 }))
-    assert.ok(!quick.events.some((event) => event.type === 'drew'), 'and only in a run battle')
+  it('let the player draw a second card from the deck while P03 leads, after the first', () => {
+    const behind = bell(table({ encounter: 'localhost-hello', scale: -2 })).state
+    assert.equal(behind.catchUp, true)
+    assert.ok(!legalActions(behind).some((action) => action.type === 'ringBell'), 'the turn still starts with a draw')
+    const drawn = play(behind, { type: 'draw', from: 'deck' }).state
+    assert.ok(legalActions(drawn).some((action) => action.type === 'draw' && action.from === 'deck'))
+    assert.match(refused(drawn, { type: 'draw', from: 'boilerplate' }), /No more draws/)
+    const { state: twice, events } = play(drawn, { type: 'draw', from: 'deck' })
+    assert.ok(events.some((event) => event.type === 'drew' && event.catchUp))
+    assert.equal(twice.player.hand.length, drawn.player.hand.length + 1)
+    assert.match(refused(twice, { type: 'draw', from: 'deck' }), /No more draws/, 'once a turn')
+    assert.ok(!bell(table({ encounter: 'localhost-hello', scale: 2 })).state.catchUp)
+    assert.ok(!bell(table({ scale: -2 })).state.catchUp, 'and only in a run battle')
   })
 
   it("make P03 ease off well ahead, but never in a boss's battle", () => {

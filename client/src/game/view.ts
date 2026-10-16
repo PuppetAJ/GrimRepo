@@ -107,6 +107,8 @@ export function step(view: View, event: GameEvent): View {
       }))
     case 'shielded':
       return withUnit(view, event.uid, (unit) => ({ ...unit, rolledBack: true }))
+    case 'stayedUp':
+      return withUnit(view, event.uid, (unit) => ({ ...unit, health: 1, stayedUp: true }))
     case 'shipped':
       return withUnit(view, event.uid, () => event.unit)
     case 'moved': {

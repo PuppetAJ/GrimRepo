@@ -43,7 +43,11 @@ export const STARTER_DECKS: Record<
     name: 'Legacy Stack',
     about: 'Survive: Defensive based deck focused on sacrifice.',
     core: ['OffCenterDiv', 'COBOL'],
-    pack: { common: ['CronJob', 'SpamBot'], uncommon: ['LegacyCode', 'Monolith', 'Firewall'], rare: ['Bug'] },
+    pack: {
+      common: ['CronJob', 'SpamBot', 'CircuitBreaker'],
+      uncommon: ['LegacyCode', 'Monolith', 'Firewall'],
+      rare: ['JSONFoorhees'],
+    },
   },
   'move-fast': {
     name: 'Move Fast',
@@ -114,12 +118,20 @@ export const CHOICE_POOLS: Record<Rarity, string[]> = {
 /** Slay the Spire's odds, in percent, for each card offered: 3 rare and 37 uncommon, the rest common. */
 const RARE_PERCENT = 3
 const UNCOMMON_PERCENT = 37
+/** Each card's odds in a starter pack, which rolls without the pity offset, in percent. */
+export const PACK_ODDS: Record<Rarity, number> = {
+  common: 100 - RARE_PERCENT - UNCOMMON_PERCENT,
+  uncommon: UNCOMMON_PERCENT,
+  rare: RARE_PERCENT,
+}
 /** The pity offset added to the rare odds: it starts below 0, grows with each common and resets with a rare. */
 export const PITY_START = -5
 const PITY_CAP = 40
 
 /** What a campfire's repair restores. */
 export const REPAIR = 5
+/** What beating a stage's boss restores, before the next stage. */
+export const BOSS_REPAIR = 5
 
 /** Rolls one offered card's rarity; with `pity` the offset counts, and moves. */
 function rollRarity(state: RunState, rng: Rng, pity: boolean): Rarity {
@@ -343,7 +355,11 @@ function won(state: RunState, visit: Extract<Visit, { kind: 'battle' }>, events:
   if (findNode(state.map, visit.node)?.kind !== 'boss') return
   state.record.bosses += 1
   events.push({ type: 'stageCleared', stage: state.stage })
-  if (state.stage === STAGES.length - 1) end(state, 'win', events)
+  if (state.stage === STAGES.length - 1) return end(state, 'win', events)
+  const repaired = Math.min(INTEGRITY, state.integrity + BOSS_REPAIR)
+  if (repaired > state.integrity)
+    events.push({ type: 'integrity', change: repaired - state.integrity, integrity: repaired })
+  state.integrity = repaired
 }
 
 function step(state: RunState, rng: Rng, action: RunAction, events: RunEvent[]): string | undefined {

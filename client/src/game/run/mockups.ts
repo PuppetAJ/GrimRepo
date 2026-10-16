@@ -285,7 +285,7 @@ export const MOCKUPS: Record<string, Entry> = {
   start: {
     title: 'The starter deck choice',
     group: 'reached',
-    revision: 12,
+    revision: 13,
     make: () => ({ state: createRun({ seed: 1 }), path: [] }),
   },
   pack: {
@@ -311,7 +311,7 @@ export const MOCKUPS: Record<string, Entry> = {
   'death-start': {
     title: 'The starter deck choice, with a death card to leave out',
     group: 'reached',
-    revision: 16,
+    revision: 17,
     make: () => ({ state: createRun({ seed: 1, death: SAMPLE_DEATH }), path: [] }),
   },
   'death-offer': {
@@ -573,6 +573,17 @@ export const MOCKUPS: Record<string, Entry> = {
       return { ...found, state: { ...found.state, visit: { ...found.state.visit, game } } }
     },
   },
+  'catch-up': {
+    title: 'P03 ahead, with the turn drawn and an extra draw waiting',
+    group: 'reached',
+    revision: 1,
+    make: () => {
+      const found = reached((s) => s.visit?.kind === 'battle' && s.visit.game.turn > 2 && s.visit.game.drawn)
+      if (!found || found.state.visit?.kind !== 'battle') return null
+      const game = { ...found.state.visit.game, scale: -6, drawn: true, catchUp: true }
+      return { ...found, state: { ...found.state, visit: { ...found.state.visit, game } } }
+    },
+  },
   'battle-items': {
     title: 'A battle in a run, with three items to use',
     group: 'reached',
@@ -748,6 +759,28 @@ export const MOCKUPS: Record<string, Entry> = {
       const game: GameState = { ...found.state.visit.game, scale: 20, opponent: { ...found.state.visit.game.opponent } }
       delete game.opponent.desperate
       return { ...found, state: { ...found.state, visit: { ...found.state.visit, game } } }
+    },
+  },
+  'defense-cards': {
+    title: 'A card choice of Rate Limiter, Honeypot and Circuit Breaker',
+    group: 'reached',
+    revision: 1,
+    make: () => {
+      const found = reached((s) => s.visit?.kind === 'card')
+      if (!found || found.state.visit?.kind !== 'card') return null
+      const offer = ['RateLimiter', 'Honeypot', 'CircuitBreaker']
+      return { ...found, state: { ...found.state, visit: { ...found.state.visit, offer } } }
+    },
+  },
+  'bypass-cards': {
+    title: 'A card choice of Health Check, Zombie Process, Phishing and Backdoor',
+    group: 'reached',
+    revision: 1,
+    make: () => {
+      const found = reached((s) => s.visit?.kind === 'card')
+      if (!found || found.state.visit?.kind !== 'card') return null
+      const offer = ['HealthCheck', 'ZombieProcess', 'Phishing', 'Backdoor']
+      return { ...found, state: { ...found.state, visit: { ...found.state.visit, offer } } }
     },
   },
   'new-cards': {

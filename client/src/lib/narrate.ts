@@ -59,7 +59,7 @@ export function narrate(before: GameState, events: GameEvent[]): string[] {
           event.from === 'boilerplate'
             ? `You took a Boilerplate from the side pile. Filler.`
             : event.catchUp
-              ? `You're behind, so you get an extra card: ${card(event.unit.card).name}. Charity.`
+              ? `You're behind, so you take an extra card: ${card(event.unit.card).name}. Charity.`
               : `You drew ${card(event.unit.card).name}.`,
         ]
       case 'reshuffled':
@@ -127,6 +127,8 @@ export function narrate(before: GameState, events: GameEvent[]): string[] {
         return [`${name(event.uid)} patched itself up to ${event.health}.`]
       case 'shielded':
         return [`${name(event.uid)} rolled the damage back. Annoying.`]
+      case 'stayedUp':
+        return [`${name(event.uid)} stayed up with 1 health. Five nines, apparently.`]
       case 'buffed':
         return [`${name(event.uid)} is now ${event.attack}/${event.health}.`]
       case 'shipped':

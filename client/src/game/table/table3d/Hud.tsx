@@ -93,7 +93,8 @@ export function Hud({
   const { state, act } = game
   const finished = hasEnded(game)
   const legal = busy || finished ? [] : legalActions(state)
-  const mustDraw = has(legal, { type: 'draw' })
+  // The turn's own draw; a catch-up draw after it gets its own button, never owed.
+  const mustDraw = !state.drawn && has(legal, { type: 'draw' })
   const summoning = view.summon ? view.hand.find((unit) => unit.uid === view.summon?.uid) : undefined
   // An empty deck says what a draw would shuffle back in, and what it costs in a run.
   const reshuffle = view.deck ? null : reshuffleNote(state)
@@ -316,6 +317,17 @@ export function Hud({
                     aria-keyshortcuts="Escape"
                   >
                     Cancel
+                  </Button>
+                ) : null}
+                {/* While P03 leads, a second draw from the deck, framed in the deck's gold. */}
+                {state.catchUp && has(legal, { type: 'draw', from: 'deck' } as Partial<Action>) ? (
+                  <Button
+                    data-action="draw-extra"
+                    variant="outline"
+                    onClick={() => act({ type: 'draw', from: 'deck' })}
+                    className="outline-2 outline-offset-2 outline-[#ffd24a] outline-dotted"
+                  >
+                    Draw an extra card
                   </Button>
                 ) : null}
                 <Button

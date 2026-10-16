@@ -2,7 +2,7 @@ import type { SigilId } from '../cards.ts'
 import type { ItemId } from '../items.ts'
 
 /** Bumped whenever a change would make an old game replay differently. */
-export const RULES_VERSION = 16
+export const RULES_VERSION = 17
 
 export const LANES = 4
 /** The most sigils a card carries. */
@@ -28,8 +28,8 @@ export type Unit = {
   source?: number
   /** A Rollback card has spent the one hit it shrugs off. */
   rolledBack?: boolean
-  /** How much integrity an Uptime card has repaired this battle. */
-  repaired?: number
+  /** An Uptime card has used its one escape from destruction this battle. */
+  stayedUp?: boolean
   /** Which way a Load Balancer card moves next: 1 toward the higher lanes. */
   heading?: 1 | -1
 }
@@ -42,6 +42,8 @@ export type GameState = {
   turn: number
   /** Also true when a full hand at turn start skipped the draw. */
   drawn: boolean
+  /** While P03 leads a run's battle, one more card can be drawn from the deck this turn, after the first. */
+  catchUp?: boolean
   status: 'playing' | 'won' | 'lost'
   nextUid: number
   debug: boolean
@@ -104,6 +106,7 @@ export type GameEvent =
   | { type: 'damaged'; uid: number; amount: number; health: number }
   | { type: 'overkill'; lane: number; amount: number }
   | { type: 'struckBack'; uid: number; amount: number }
+  | { type: 'stayedUp'; uid: number }
   | { type: 'killed'; uid: number; side: Side; lane: number; row: 'front' | 'back' }
   | { type: 'hit'; side: Side; amount: number; scale: number }
   | { type: 'indebted'; uid: number; amount: number; scale: number }

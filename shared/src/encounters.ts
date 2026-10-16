@@ -83,7 +83,7 @@ const list: Encounter[] = [
     phases: [
       [
         [{ lane: 1, card: 'CopyPaste' }],
-        [{ lane: 3, pick: ['Firewall', 'Bug'] }],
+        [{ lane: 3, pick: ['Firewall', 'Honeypot'] }],
         [{ lane: 0, card: 'NullPointer' }],
         [{ lane: 2, pick: ['Crawler', 'SQLInjection'] }],
       ],
@@ -99,7 +99,7 @@ const list: Encounter[] = [
       [
         [{ lane: 2, card: 'LegacyCode' }],
         [{ lane: 0, card: 'Watchdog' }],
-        [{ lane: 1, pick: ['CronJob', 'MergeConflict'] }],
+        [{ lane: 1, pick: ['RateLimiter', 'MergeConflict'] }],
         [{ lane: 3, card: 'ZeroDay' }],
       ],
     ],
@@ -123,7 +123,7 @@ const list: Encounter[] = [
           // A stranger's death card, capped near a Firewall's threat, stands in for it, so the fight stays as hard.
           { lane: 3, card: 'Firewall', orRival: true },
         ],
-        [{ lane: 2, card: 'Sandbox' }],
+        [{ lane: 2, pick: ['Sandbox', 'Honeypot'] }],
         [{ lane: 0, pick: ['Crawler', 'ZeroDay'] }],
       ],
     ],
@@ -138,9 +138,9 @@ const list: Encounter[] = [
       [
         [{ lane: 0, card: 'Crawler' }],
         [{ lane: 3, card: 'SQLInjection' }],
-        [{ lane: 1, pick: ['Cookie', 'Sandbox'] }],
+        [{ lane: 1, pick: ['Honeypot', 'Sandbox'] }],
         [{ lane: 2, pick: ['Crawler', 'NullPointer'] }],
-        [{ lane: 0, card: 'LegacyCode' }],
+        [{ lane: 0, pick: ['LegacyCode', 'RateLimiter'] }],
       ],
     ],
   },
@@ -154,7 +154,7 @@ const list: Encounter[] = [
       [
         [{ lane: 2, card: 'Sandbox' }],
         [{ lane: 1, card: 'CopyPaste' }],
-        [{ lane: 0, pick: ['Firewall', 'Cookie'] }],
+        [{ lane: 0, pick: ['Firewall', 'Honeypot'] }],
         [{ lane: 3, pick: ['Crawler', 'SQLInjection'] }],
         [{ lane: 2, pick: ['MergeConflict', 'LegacyCode'] }],
       ],
@@ -179,7 +179,7 @@ const list: Encounter[] = [
           { lane: 2, card: 'JSONFoorhees' },
           { lane: 3, card: 'Firewall' },
         ],
-        [{ lane: 1, card: 'Cookie' }],
+        [{ lane: 1, pick: ['Cookie', 'Honeypot'] }],
         [{ lane: 2, pick: ['Documentation', 'ForkBomb'] }],
       ],
     ],

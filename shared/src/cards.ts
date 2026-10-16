@@ -56,7 +56,7 @@ export const SIGILS: Record<SigilId, { name: string; text: string }> = {
   bypass: { name: 'Bypass', text: 'Attacks the opponent directly, over any card in the way.' },
   technical_debt: { name: 'Technical Debt', text: 'Worth 3 when sacrificed, but tips the scale 1 against you.' },
   try_catch: { name: 'try/catch', text: 'Survives being sacrificed.' },
-  backtrace: { name: 'Backtrace', text: 'Deals 1 damage back to anything that attacks it.' },
+  backtrace: { name: 'Backtrace', text: 'Deals 2 damage back to anything that attacks it.' },
   fork: {
     name: 'Fork',
     text: 'Attacks the lanes on either side instead of the one opposite. Incompatible with Broadcast.',
@@ -65,7 +65,7 @@ export const SIGILS: Record<SigilId, { name: string; text: string }> = {
   fatal_error: { name: 'Fatal Error', text: 'Destroys any card it damages.' },
   rollback: { name: 'Rollback', text: 'Shrugs off the first damage it takes.' },
   tech_lead: { name: 'Tech Lead', text: 'Cards beside it get +1 attack.' },
-  packet_loss: { name: 'Packet Loss', text: 'The card opposite it has 1 less attack.' },
+  packet_loss: { name: 'Packet Loss', text: 'The card opposite it has 2 less attack.' },
   retry: { name: 'Retry', text: 'Attacks twice.' },
   deprecated: { name: 'Deprecated', text: 'Dies after it attacks, leaving a Boilerplate in its lane.' },
   scope_creep: { name: 'Scope Creep', text: 'Gains 1 attack each time it destroys a card.' },
@@ -81,7 +81,10 @@ export const SIGILS: Record<SigilId, { name: string; text: string }> = {
   hot_reload: { name: 'Hot Reload', text: 'When it dies, a fresh copy comes back to its owner, once.' },
   beta: { name: 'Beta', text: 'After a round on the table, it ships as a stronger card.' },
   load_balancer: { name: 'Load Balancer', text: 'After it attacks, it moves to the next free lane.' },
-  failover: { name: 'Failover', text: 'Moves to take an attack aimed at an empty lane.' },
+  failover: {
+    name: 'Failover',
+    text: 'Moves to take an attack aimed at an empty lane, and takes half damage from it, rounded down.',
+  },
   scale_out: { name: 'Scale Out', text: 'Gets +1 attack for each other card of its type on its side of the table.' },
   redundancy: {
     name: 'Redundancy',
@@ -89,7 +92,7 @@ export const SIGILS: Record<SigilId, { name: string; text: string }> = {
   },
   uptime: {
     name: 'Uptime',
-    text: "Each time it blocks an attack, repairs 1 of the run's integrity, up to 3 a battle.",
+    text: 'The first time it would be destroyed in a battle, it stays up with 1 health.',
   },
 }
 
@@ -106,9 +109,9 @@ const table: [string, string, Tier, number, number, number, SigilId[]?][] = [
   ['GrimRepo', 'GrimRepo', 'C', 3, 2, 0, ['tech_lead']],
   ['MergeConflict', 'Merge Conflict', 'C', 2, 4, 1, ['failover']],
   ['Firewall', 'Firewall', 'C', 2, 6, 1, ['backtrace']],
-  ['SQLInjection', 'SQL Injection', 'C', 4, 2, 1, ['bypass']],
+  ['SQLInjection', 'SQL Injection', 'C', 4, 3, 1, ['bypass']],
   ['NullPointer', 'NullPointer', 'C', 4, 2, 1, ['fatal_error']],
-  ['Bug', 'Bug', 'C', 0, 8, 1, ['hot_reload']],
+  ['Bug', 'Bug', 'C', 1, 6, 1, ['hot_reload']],
   ['LegacyCode', 'Legacy Code', 'C', 3, 4, 1, ['technical_debt']],
   ['Cookie', 'Cookie', 'C', 3, 4, 1, ['popup']],
   ['Crawler', 'Crawler', 'C', 5, 2, 1, ['scope_creep']],
@@ -136,12 +139,20 @@ const table: [string, string, Tier, number, number, number, SigilId[]?][] = [
   // One for each type, each growing with the cards of its type beside it.
   ['Botnet', 'Botnet', 'C', 1, 2, 1, ['scale_out']],
   ['Heisenbug', 'Heisenbug', 'D', 1, 1, 0, ['scale_out']],
-  ['Monolith', 'Monolith', 'C', 2, 2, 1, ['redundancy']],
+  ['Monolith', 'Monolith', 'C', 2, 4, 1, ['redundancy']],
   ['ExploitChain', 'Exploit Chain', 'C', 2, 1, 1, ['scale_out']],
   ['PairProgramming', 'Pair Programming', 'C', 2, 3, 1, ['redundancy']],
   // Broadcast's home since Hello World took Uptime, and Legacy's defender.
   ['ReplyAll', 'Reply All', 'C', 1, 2, 1, ['broadcast']],
   ['COBOL', 'COBOL', 'C', 2, 5, 1, ['uptime']],
+  // Walls that make a defensive deck work, and two more that slip past them.
+  ['RateLimiter', 'Rate Limiter', 'C', 1, 5, 1, ['packet_loss']],
+  ['HealthCheck', 'Health Check', 'C', 2, 4, 1, ['uptime']],
+  ['Honeypot', 'Honeypot', 'C', 1, 4, 1, ['backtrace']],
+  ['CircuitBreaker', 'Circuit Breaker', 'D', 0, 5, 0, ['failover']],
+  ['ZombieProcess', 'Zombie Process', 'C', 1, 3, 1, ['scale_out']],
+  ['Phishing', 'Phishing', 'D', 2, 1, 0, ['bypass']],
+  ['Backdoor', 'Backdoor', 'C', 3, 3, 1, ['bypass']],
 ]
 
 const TYPE_OF: Record<string, CardType> = {
@@ -151,6 +162,13 @@ const TYPE_OF: Record<string, CardType> = {
   Watchdog: 'bot',
   Daemon: 'bot',
   Botnet: 'bot',
+  RateLimiter: 'bot',
+  HealthCheck: 'bot',
+  ZombieProcess: 'bot',
+  Honeypot: 'exploit',
+  Phishing: 'exploit',
+  Backdoor: 'exploit',
+  CircuitBreaker: 'legacy',
   SQLInjection: 'exploit',
   ZeroDay: 'exploit',
   ForkBomb: 'exploit',
@@ -210,7 +228,7 @@ export const PLAYER_DECK: string[] = Object.keys(CARDS).filter(
     !EVENT_ONLY.includes(id),
 )
 
-/** No board wipe, or P03 could clear the player's side on a whim; no Uptime, which repairs only the player's integrity. */
+/** No board wipe, or P03 could clear the player's side on a whim; no Uptime, so P03's cards always fall to a finishing blow. */
 export const OPPONENT_POOL: string[] = PLAYER_DECK.filter(
   (id) => !CARDS[id]?.sigils.includes('segfault') && !CARDS[id]?.sigils.includes('uptime'),
 )

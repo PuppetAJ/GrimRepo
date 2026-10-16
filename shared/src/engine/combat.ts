@@ -65,7 +65,7 @@ export function attackIn(row: Slot[], facing: Slot[], lane: number): number {
   if (!unit) return 0
   const leads = [lane - 1, lane + 1].filter((beside) => row[beside]?.sigils.includes('tech_lead')).length
   const opposite = facing[lane]
-  const loss = opposite?.sigils.includes('packet_loss') ? 1 : 0
+  const loss = opposite?.sigils.includes('packet_loss') ? 2 : 0
   const popup = opposite?.sigils.includes('popup') ? 1 : 0
   const scale = unit.sigils.includes('scale_out') ? kin(row, lane) : 0
   return Math.max(0, unit.attack + leads - loss + popup + scale)
@@ -89,9 +89,6 @@ export function reinforce(row: Slot[], lane: number, events: GameEvent[]): void 
   events.push({ type: 'buffed', uid: unit.uid, attack: unit.attack, health: unit.health, sigils: [...unit.sigils] })
 }
 
-/** How much integrity one Uptime card repairs a battle. */
-export const UPTIME_LIMIT = 3
-
 /** A run's card destroyed by P03 costs 1 integrity; a Boilerplate costs nothing. */
 function lost(state: GameState, unit: Unit, events: GameEvent[]): void {
   const integrity = state.integrity
@@ -100,20 +97,19 @@ function lost(state: GameState, unit: Unit, events: GameEvent[]): void {
   events.push({ type: 'integrity', uid: unit.uid, change: -1, left: integrity.left })
 }
 
-/** An Uptime card that blocks an attack repairs 1 integrity, up to its limit a battle. */
-function uptime(state: GameState, unit: Unit, events: GameEvent[]): void {
-  const integrity = state.integrity
-  if (!integrity || !unit.sigils.includes('uptime') || (unit.repaired ?? 0) >= UPTIME_LIMIT) return
-  if (integrity.left >= integrity.max) return
-  unit.repaired = (unit.repaired ?? 0) + 1
-  integrity.left += 1
-  events.push({ type: 'integrity', uid: unit.uid, change: 1, left: integrity.left })
+/** An Uptime card's first destruction in a battle leaves it standing at 1 health instead. */
+function stayUp(unit: Unit, events: GameEvent[]): boolean {
+  if (!unit.sigils.includes('uptime') || unit.stayedUp) return false
+  unit.stayedUp = true
+  unit.health = 1
+  events.push({ type: 'stayedUp', uid: unit.uid })
+  return true
 }
 
 /** Whether the run's integrity has run out, which loses the battle and the run. */
 export const broken = (state: GameState): boolean => state.integrity !== undefined && state.integrity.left <= 0
 
-/** Deals damage to a card: a Rollback card shrugs off the first, and Fatal Error makes any damage deadly. */
+/** Deals damage to a card: a Rollback card shrugs off the first, Fatal Error makes any damage deadly, and Uptime stays up once. */
 function damage(unit: Unit, amount: number, fatal: boolean, events: GameEvent[]): number {
   if (unit.sigils.includes('rollback') && !unit.rolledBack) {
     unit.rolledBack = true
@@ -123,8 +119,11 @@ function damage(unit: Unit, amount: number, fatal: boolean, events: GameEvent[])
   const left = unit.health - (fatal ? Math.max(amount, unit.health) : amount)
   unit.health = Math.max(0, left)
   events.push({ type: 'damaged', uid: unit.uid, amount, health: unit.health })
-  return left
+  return left <= 0 && stayUp(unit, events) ? unit.health : left
 }
+
+/** What an extra hit does: Broadcast's side lanes, Fork's second lane and Retry's second strike. */
+export const extraHit = (power: number): number => Math.floor(power / 2)
 
 export function attack(state: GameState, side: Side, events: GameEvent[]): void {
   const attackers = side === 'player' ? state.player.board : state.opponent.front
@@ -144,6 +143,8 @@ export function attack(state: GameState, side: Side, events: GameEvent[]): void 
           : [lane],
   )
   const covers = failoverPlan(defenders, aims)
+  // Failover cards that moved to cover a lane this attack, which take half damage, rounded down, for it.
+  const covering = new Set<number>()
 
   // Each card attacks once, in the lane order it began in, even if a Load Balancer moves on into a later lane.
   for (const attacker of attackers.slice()) {
@@ -156,19 +157,26 @@ export function attack(state: GameState, side: Side, events: GameEvent[]): void 
         ? within([lane - 1, lane + 1])
         : [lane]
     const strikes = attacker.sigils.includes('retry') ? 2 : 1
+    // Only the first strike at the main lane, opposite or Fork's first, hits in full; extra hits do half, rounded down.
+    const main = lanes.includes(lane) ? lane : lanes[0]
     let struck = false
 
     for (let strike = 0; strike < strikes; strike++) {
       for (const aimed of lanes) {
         // A Backtrace can kill an attacker partway through its attacks.
         if (attackers[lane]?.uid !== attacker.uid) break
-        const power = attackOf(state, side, lane)
-        if (power <= 0) break
+        const full = attackOf(state, side, lane)
+        if (full <= 0) break
+        const power = strike === 0 && aimed === main ? full : extraHit(full)
+        if (power <= 0) continue
         struck = true
-        const defended = attacker.sigils.includes('bypass')
-          ? null
-          : (defenders[aimed] ?? failover(defenders, aimed, side === 'player' ? 'opponent' : 'player', covers, events))
-        const defender = defended
+        const occupant = attacker.sigils.includes('bypass') ? null : defenders[aimed]
+        const moved =
+          attacker.sigils.includes('bypass') || occupant
+            ? null
+            : failover(defenders, aimed, side === 'player' ? 'opponent' : 'player', covers, events)
+        if (moved) covering.add(moved.uid)
+        const defender = occupant ?? moved
         events.push({ type: 'attacked', side, lane, target: defender ? aimed : 'face', aimed })
 
         if (!defender) {
@@ -182,8 +190,8 @@ export function attack(state: GameState, side: Side, events: GameEvent[]): void 
           continue
         }
 
-        const left = damage(defender, power, attacker.sigils.includes('fatal_error'), events)
-        if (side === 'opponent') uptime(state, defender, events)
+        const taken = covering.has(defender.uid) ? Math.floor(power / 2) : power
+        const left = damage(defender, taken, attacker.sigils.includes('fatal_error'), events)
         if (defender.sigils.includes('backtrace')) strikeBack(state, side, attacker, events)
 
         if (left <= 0) {
@@ -235,15 +243,18 @@ export function attack(state: GameState, side: Side, events: GameEvent[]): void 
   }
 }
 
+/** What a Backtrace deals back to anything that attacks it. */
+export const BACKTRACE = 2
+
 function strikeBack(state: GameState, side: Side, attacker: Unit, events: GameEvent[]): void {
   if (attacker.sigils.includes('rollback') && !attacker.rolledBack) {
     attacker.rolledBack = true
     events.push({ type: 'shielded', uid: attacker.uid })
     return
   }
-  attacker.health = Math.max(0, attacker.health - 1)
-  events.push({ type: 'struckBack', uid: attacker.uid, amount: 1 })
-  if (attacker.health > 0) return
+  attacker.health = Math.max(0, attacker.health - BACKTRACE)
+  events.push({ type: 'struckBack', uid: attacker.uid, amount: BACKTRACE })
+  if (attacker.health > 0 || stayUp(attacker, events)) return
   const row = side === 'player' ? state.player.board : state.opponent.front
   const lane = remove(row, attacker.uid)
   events.push({ type: 'killed', uid: attacker.uid, side, lane, row: 'front' })

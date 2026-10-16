@@ -48,7 +48,7 @@ export {
   type Slot,
   type Unit,
 } from './engine/types.ts'
-export { attackIn, kin, UPTIME_LIMIT } from './engine/combat.ts'
+export { attackIn, kin } from './engine/combat.ts'
 export { DESPERATE_AT, EASE_AT } from './engine/opponent.ts'
 export { FOUND_ITEMS, ITEM_SLOTS, ITEMS, type ItemId, type ItemTarget } from './items.ts'
 export { canOwe, costOf, deckCard, indebted, worthOf } from './engine/units.ts'
@@ -83,6 +83,8 @@ export {
   PACKS,
   PICKS,
   type Rarity,
+  PACK_ODDS,
+  BOSS_REPAIR,
   REPAIR,
   type RunDealt,
   STARTER_DECKS,

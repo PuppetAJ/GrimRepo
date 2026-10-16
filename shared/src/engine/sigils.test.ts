@@ -36,10 +36,10 @@ describe('the sigils', () => {
     assert.equal(hits(events, 'opponent'), 3 + 4)
   })
 
-  it('Packet Loss takes 1 from the attack of the card opposite', () => {
+  it('Packet Loss takes 2 from the attack of the card opposite', () => {
     const { events } = bell(table({ board: ['CopyPaste'], front: ['SpamBot'] }))
     const hit = dealt(events)
-    assert.equal(hit?.type === 'damaged' && hit.amount, 2)
+    assert.equal(hit?.type === 'damaged' && hit.amount, 1)
   })
 
   it('Pop-up adds 1 to the attack of the card opposite', () => {
@@ -48,9 +48,11 @@ describe('the sigils', () => {
     assert.equal(hit?.type === 'damaged' && hit.amount, 4)
   })
 
-  it('Retry attacks twice', () => {
-    const { events } = bell(table({ board: ['InfiniteLoop'] }))
-    assert.equal(hits(events, 'opponent'), 2)
+  it('Retry attacks twice, the second time for half, rounded down', () => {
+    const state = table({ board: ['ZeroDay'] })
+    ;(state.player.board[0] as { sigils: string[] }).sigils.push('retry')
+    assert.equal(hits(bell(state).events, 'opponent'), 4 + 2)
+    assert.equal(hits(bell(table({ board: ['InfiniteLoop'] })).events, 'opponent'), 1, 'half of 1 is nothing')
   })
 
   it('Deprecated dies after it attacks, and leaves a Boilerplate in its lane', () => {
@@ -61,14 +63,15 @@ describe('the sigils', () => {
   })
 
   it('Scope Creep gains 1 attack for each card it destroys', () => {
-    const { state, events } = bell(table({ board: ['Crawler'], front: ['HelloWorld'] }))
+    const { state, events } = bell(table({ board: ['Crawler'], front: ['CronJob'] }))
     assert.ok(events.some((event) => event.type === 'buffed'))
     assert.equal(state.player.board[0]?.attack, 6)
   })
 
-  it('Broadcast attacks the lane opposite and both lanes beside it', () => {
-    const { events } = bell(table({ board: [null, 'ReplyAll'] }))
-    assert.equal(hits(events, 'opponent'), 3)
+  it('Broadcast attacks the lane opposite in full, and both lanes beside it for half', () => {
+    const state = table({ board: [null, 'CopyPaste'] })
+    ;(state.player.board[1] as { sigils: string[] }).sigils.push('broadcast')
+    assert.equal(hits(bell(state).events, 'opponent'), 3 + 1 + 1)
   })
 
   it('Refactor hands its stats to the card it pays for', () => {
@@ -171,11 +174,12 @@ describe('the sigils that move cards', () => {
     assert.equal(hits(events, 'player'), 3, 'lane 1, left uncovered, hits the player')
   })
 
-  it('Failover moves to take an attack aimed at an empty lane', () => {
+  it('Failover moves to take an attack aimed at an empty lane, for half damage, rounded down', () => {
     const { state, events } = bell(table({ board: [null, null, null, 'MergeConflict'], front: ['CopyPaste'] }))
     assert.ok(events.some((event) => event.type === 'moved' && event.side === 'player' && event.to === 0))
     assert.equal(state.player.board[0]?.card, 'MergeConflict')
     assert.equal(hits(events, 'player'), 0, 'the attack hit the card, not the player')
+    assert.equal(state.player.board[0]?.health, 4 - 1, "Copy Paste's 3 is halved to 1")
   })
 
   it('Load Balancer moves on after it attacks, and attacks only once', () => {
@@ -188,7 +192,7 @@ describe('the sigils that move cards', () => {
     const start = table({ board: ['Bug'], front: ['NullPointer'] })
     const { state, events } = bell(start)
     assert.ok(events.some((event) => event.type === 'reloaded' && event.lane === null))
-    assert.ok(state.player.hand.some((unit) => unit.card === 'Bug' && unit.health === 8))
+    assert.ok(state.player.hand.some((unit) => unit.card === 'Bug' && unit.health === 6))
   })
 
   it('Hot Reload brings a card back only once', () => {
