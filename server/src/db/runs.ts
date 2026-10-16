@@ -15,7 +15,15 @@ import {
 import { demoAccount } from '../auth/demo.ts'
 import { isOffensive, NAME_REFUSED } from '../auth/names.ts'
 import { pool } from '../config/db.ts'
-import { BOARD_PAGE, GameError, type BoardPage, type LeaderboardRow } from './games.ts'
+import { GameError } from './games.ts'
+import { runCardsPlayed } from './players.ts'
+
+export type LeaderboardRow = { rank: number; username: string; bestScore: number; runs: number; wins: number }
+
+export const BOARD_PAGE = 20
+
+/** top is first place's score, for scale. */
+export type BoardPage = { players: LeaderboardRow[]; page: number; pages: number; total: number; top: number }
 
 export type OpenRun = {
   id: number
@@ -145,7 +153,7 @@ export async function recordRunMoves(
       throw new GameError(400, { error: 'Illegal move', index: replayed.index, reason: replayed.reason })
 
     const state = replayed.state
-    if (state.status !== 'playing') return finish(client, run.id, all, state, false)
+    if (state.status !== 'playing') return finish(client, run.id, all, state, false, runCardsPlayed(replayed.events))
     await client.query(`UPDATE runs SET actions = $1, stage = $2, battles = $3, bosses = $4 WHERE id = $5`, [
       JSON.stringify(all),
       state.stage,
@@ -162,7 +170,14 @@ export async function forfeitRun(userId: string, runId: number): Promise<RunMove
   return withOpenRun(userId, runId, async (client, run) => {
     const replayed = replayRun(Number(run.seed), run.actions, dealtOf(run))
     if (!replayed.ok) throw new GameError(409, { error: 'The run no longer replays', rulesChanged: true })
-    return finish(client, run.id, run.actions, { ...replayed.state, status: 'lost' }, true)
+    return finish(
+      client,
+      run.id,
+      run.actions,
+      { ...replayed.state, status: 'lost' },
+      true,
+      runCardsPlayed(replayed.events),
+    )
   })
 }
 
@@ -172,15 +187,26 @@ async function finish(
   actions: RunAction[],
   state: RunState,
   forfeited: boolean,
+  cards: Record<string, number>,
 ): Promise<RunMovesResult> {
   const status = state.status === 'won' ? 'won' : 'lost'
   const bonus = state.death?.skipped ? deathSkipBonus(state.death.card) : 1
   const score = scoreRun(state.record, status === 'won', bonus)
   await client.query(
     `UPDATE runs SET status = $1, actions = $2, stage = $3, battles = $4, bosses = $5, score = $6, forfeited = $7,
-       finished_at = now()
-     WHERE id = $8`,
-    [status, JSON.stringify(actions), state.stage, state.record.battles, state.record.bosses, score, forfeited, runId],
+       cards = $8, finished_at = now()
+     WHERE id = $9`,
+    [
+      status,
+      JSON.stringify(actions),
+      state.stage,
+      state.record.battles,
+      state.record.bosses,
+      score,
+      forfeited,
+      JSON.stringify(cards),
+      runId,
+    ],
   )
   return { status, score, stage: state.stage, bosses: state.record.bosses, forfeited }
 }
@@ -229,7 +255,7 @@ export async function buildRunDeathCard(userId: string, runId: number, choice: D
   }
 }
 
-/** Ranks players by their best run as leaderboard() ranks games; `wins` counts runs cleared, and guests are left off. */
+/** Ranks players by their best run across all pages; ties share a rank, `wins` counts runs cleared, and guests are left off. */
 export async function runLeaderboard(page = 1): Promise<BoardPage> {
   const { rows: sizes } = await pool.query<{ total: number; top: number }>(
     `SELECT COUNT(DISTINCT r.user_id)::int AS total, COALESCE(MAX(r.score), 0)::int AS top
@@ -243,7 +269,7 @@ export async function runLeaderboard(page = 1): Promise<BoardPage> {
     `SELECT RANK() OVER (ORDER BY MAX(r.score) DESC)::int AS rank,
             u.display_username AS username,
             MAX(r.score)::int AS "bestScore",
-            COUNT(*)::int AS games,
+            COUNT(*)::int AS runs,
             COUNT(*) FILTER (WHERE r.status = 'won')::int AS wins
      FROM runs r JOIN users u ON u.id = r.user_id
      WHERE r.status <> 'playing' AND NOT u.is_anonymous

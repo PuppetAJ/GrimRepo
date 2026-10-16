@@ -1,33 +1,42 @@
 import type { Action, DeathChoice, Outcome, RunAction } from 'shared'
 
-export type LeaderboardRow = { rank: number; username: string; bestScore: number; games: number; wins: number }
+/** Players by their best run; `wins` counts the runs they cleared. */
+export type LeaderboardRow = { rank: number; username: string; bestScore: number; runs: number; wins: number }
 /** `top` is first place's score, for scaling the bars. */
 export type BoardPage = { players: LeaderboardRow[]; page: number; pages: number; total: number; top: number }
 
 export type PlayerStats = {
   username: string
   joinedAt: string
-  games: number
+  runs: number
   wins: number
   losses: number
   winRate: number | null
   bestScore: number
-  bestWinTurns: number | null
-  averageTurns: number | null
-  days: { date: string; games: number; losses: number }[]
-  recent: FinishedGame[]
-  // The first game that reached their best score.
-  best: FinishedGame | null
-  // Null for a guest or before a finished game.
+  averageBattles: number | null
+  days: { date: string; runs: number; losses: number }[]
+  recent: FinishedRun[]
+  // The first run that reached their best score.
+  best: FinishedRun | null
+  // Null for a guest or before a finished run.
   rank: number | null
-  // Id of the card played most, excluding Boilerplate.
+  // Id of the card played most across their runs, excluding Boilerplate.
   favoriteCard: string | null
   // Built from a lost run's deck; never kept for a guest or the demo account.
   deathCard: string | null
 }
 
-export type FinishedGame = { outcome: Outcome; turns: number; score: number; forfeited: boolean; playedAt: string }
-export type GamesPage = { games: FinishedGame[]; page: number; pages: number; total: number }
+/** A finished run; a win cleared it, and `stage` is the index of the stage it ended on. */
+export type FinishedRun = {
+  outcome: Outcome
+  stage: number
+  battles: number
+  bosses: number
+  score: number
+  forfeited: boolean
+  playedAt: string
+}
+export type RunsPage = { runs: FinishedRun[]; page: number; pages: number; total: number }
 
 export type OpenGame = { id: number; seed: number; actions: Action[]; resumed: boolean; rulesChanged: boolean }
 
@@ -81,10 +90,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   leaderboard: (page = 1) => request<BoardPage>(`/api/leaderboard?page=${page}`),
-  runLeaderboard: (page = 1) => request<BoardPage>(`/api/leaderboard/runs?page=${page}`),
   stats: (username: string) => request<PlayerStats>(`/api/players/${encodeURIComponent(username)}/stats`),
-  games: (username: string, page: number) =>
-    request<GamesPage>(`/api/players/${encodeURIComponent(username)}/games?page=${page}`),
+  runs: (username: string, page: number) =>
+    request<RunsPage>(`/api/players/${encodeURIComponent(username)}/runs?page=${page}`),
   startGame: () => request<OpenGame>('/api/games', { method: 'POST' }),
   saveMoves: (id: number, from: number, actions: Action[]) =>
     request<Saved>(`/api/games/${id}/moves`, { method: 'POST', body: JSON.stringify({ from, actions }) }),

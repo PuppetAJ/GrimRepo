@@ -18,6 +18,7 @@ import {
   type RunState,
 } from 'shared'
 import { pool } from '../config/db.ts'
+import { runCardsPlayed } from '../db/players.ts'
 import { newPlayer, startApp } from '../test/http.ts'
 import { resetDatabase } from '../test/support.ts'
 
@@ -94,8 +95,15 @@ describe('a run', () => {
     const last = await submit(player.cookie, run.id, actions)
     assert.equal(last?.body.status, state.status)
     assert.equal(last?.body.score, scoreRun(state.record, state.status === 'won'))
-    const { rows } = await pool.query('SELECT status, score, bosses FROM runs WHERE id = $1', [run.id])
-    assert.deepEqual(rows[0], { status: state.status, score: last?.body.score, bosses: state.record.bosses })
+    const { rows } = await pool.query('SELECT status, score, bosses, cards FROM runs WHERE id = $1', [run.id])
+    const replayed = replayRun(run.seed, actions)
+    assert.ok(replayed.ok)
+    assert.deepEqual(rows[0], {
+      status: state.status,
+      score: last?.body.score,
+      bosses: state.record.bosses,
+      cards: runCardsPlayed(replayed.events),
+    })
   })
 
   it('refuses an illegal action and saves nothing from that request', async () => {
@@ -294,7 +302,7 @@ describe('a death card', () => {
     assert.equal(reply.status, 200)
     assert.deepEqual([reply.body.saved, reply.body.guest], [true, true])
     const board = async () =>
-      (await app.call('GET', '/api/leaderboard/runs')).body.players.map((row: { username: string }) => row.username)
+      (await app.call('GET', '/api/leaderboard')).body.players.map((row: { username: string }) => row.username)
     assert.deepEqual(await board(), [], 'a guest stays off the leaderboard')
 
     const player = newPlayer('keeper')
@@ -346,15 +354,15 @@ describe("another player's death card", () => {
 describe('the runs leaderboard', () => {
   it('ranks players by their best finished run, counting the runs they cleared', async () => {
     const player = await signedIn()
-    assert.deepEqual((await app.call('GET', '/api/leaderboard/runs')).body.players, [])
+    assert.deepEqual((await app.call('GET', '/api/leaderboard')).body.players, [])
     const run = await start(player.cookie)
     const { state, actions } = playRun(createRun({ seed: run.seed }), step)
-    assert.deepEqual((await app.call('GET', '/api/leaderboard/runs')).body.players, [], 'an open run is not ranked')
+    assert.deepEqual((await app.call('GET', '/api/leaderboard')).body.players, [], 'an open run is not ranked')
     await submit(player.cookie, run.id, actions)
-    const { body } = await app.call('GET', '/api/leaderboard/runs')
+    const { body } = await app.call('GET', '/api/leaderboard')
     assert.equal(body.players.length, 1)
     assert.equal(body.players[0].bestScore, scoreRun(state.record, state.status === 'won'))
-    assert.equal(body.players[0].games, 1)
+    assert.equal(body.players[0].runs, 1)
     assert.equal(body.players[0].wins, state.status === 'won' ? 1 : 0)
     assert.equal(body.top, body.players[0].bestScore)
   })

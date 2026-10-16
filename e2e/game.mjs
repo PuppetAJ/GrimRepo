@@ -65,33 +65,14 @@ section('A whole game')
   )
   check('P03 narrated it', /P03> /.test(await visibleText(page)))
 
-  await page.getByRole('link', { name: 'See the leaderboard' }).click()
-  await page.getByRole('heading', { name: 'Contributors' }).waitFor()
   check(
-    'the result greets the player on the leaderboard',
-    /You (win|lose)/.test(await page.getByRole('status').first().innerText()),
+    'the result points the way to a run, since only runs rank',
+    await page.getByRole('link', { name: 'Start a run' }).isVisible(),
   )
-  // The list loads after the heading, so wait for the row rather than counting too early.
-  const onBoard = await page
-    .getByRole('link', { name: player.username })
-    .waitFor()
-    .then(() => true)
-    .catch(() => false)
-  check('and the player is on it', onBoard)
-
   await page.goto(`${BASE}/players/${player.username}`)
   await page.getByRole('heading', { name: player.username }).waitFor()
-  // The history loads after the page, and its loading placeholders are a list too.
-  const rows = page.locator('section ol:not([aria-hidden]) > li')
-  await rows.first().waitFor()
-  const history = await rows.first().innerText()
-  check(
-    'their record has the game',
-    expected.outcome === 'win'
-      ? history.includes(`Won in ${expected.turns} ${expected.turns === 1 ? 'turn' : 'turns'}`)
-      : history.includes(`Lost on turn ${expected.turns}`),
-    history,
-  )
+  await page.getByText('No runs yet.').waitFor()
+  check('and their record keeps to runs, leaving the quick battle out', true)
   check('and the test player is removed afterwards', await deletePlayer(page, player))
   await context.close()
 }

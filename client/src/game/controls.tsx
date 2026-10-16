@@ -126,10 +126,9 @@ export function GameOver({ result, className = '' }: { result: Finished; classNa
             : `. Your best is ${number(result.best)}.`}
       </p>
       <div className="flex flex-wrap gap-3 font-sans text-base">
+        {/* Only runs rank, so a quick battle points the way to one. */}
         <Button asChild>
-          <Link to="/leaderboard" state={{ result }}>
-            See the leaderboard
-          </Link>
+          <Link to="/run">Start a run</Link>
         </Button>
         <Button variant="outline" onClick={() => window.location.reload()}>
           Play again
@@ -267,7 +266,7 @@ export function SeatNote({ seat }: { seat: Exclude<Seat, null> }) {
           <Link to="/signup" className="text-primary underline underline-offset-2">
             Sign up
           </Link>{' '}
-          to keep this game and put your scores on the leaderboard.
+          to keep your runs and put your scores on the leaderboard.
         </p>
       )}
       <button

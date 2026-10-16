@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { after, beforeEach, describe, it } from 'node:test'
 import { pool } from '../config/db.ts'
 import { newPlayer, startApp } from '../test/http.ts'
-import { insertGame, resetDatabase } from '../test/support.ts'
+import { insertRun, resetDatabase } from '../test/support.ts'
 import { auth } from './auth.ts'
 import { demoAccount } from './demo.ts'
 
@@ -33,13 +33,13 @@ describe('a guest', () => {
 
   it('stays off the leaderboard', async () => {
     const visitor = await guest()
-    await insertGame(visitor.username, 'win', 5)
+    await insertRun(visitor.username, { battles: 3 })
     assert.deepEqual(await boardNames(), [])
   })
 
-  it('brings their games to the account they sign up for, open game included', async () => {
+  it('brings their runs and games to the account they sign up for, open game included', async () => {
     const visitor = await guest()
-    await insertGame(visitor.username, 'win', 5)
+    await insertRun(visitor.username, { battles: 3 })
     const open = await app.call('POST', '/api/games', { cookie: visitor.cookie })
     const player = newPlayer()
     const signedUp = await app.call('POST', '/api/auth/sign-up/email', { body: player, cookie: visitor.cookie })
@@ -67,17 +67,17 @@ describe('a guest', () => {
     assert.equal(open.body.id, theirs.body.id)
   })
 
-  it('never brings their games into the shared demo account', async () => {
+  it('never brings their runs into the shared demo account', async () => {
     await auth.api.signUpEmail({ body: demoAccount })
     const visitor = await guest()
-    await insertGame(visitor.username, 'win', 5)
+    await insertRun(visitor.username, { battles: 3 })
     const demo = await app.call('POST', '/api/auth/sign-in/username', {
       body: { username: demoAccount.username, password: demoAccount.password },
       cookie: visitor.cookie,
     })
     assert.equal(demo.status, 200)
     const stats = await app.call('GET', `/api/players/${demoAccount.username}/stats`)
-    assert.equal(stats.body.games, 0)
+    assert.equal(stats.body.runs, 0)
   })
 
   it('cannot rename themselves, and nobody can sign up with a guest name', async () => {

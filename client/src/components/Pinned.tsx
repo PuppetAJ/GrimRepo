@@ -4,6 +4,7 @@ import { parseDeathCard, SIGILS } from 'shared'
 import { PixelCard } from '../game/CardReader.tsx'
 import { asUnit } from '../game/run/nodes.ts'
 import type { PlayerStats } from '../lib/api.ts'
+import { ending } from './charts/chart.ts'
 import { ago, number } from '../lib/format.ts'
 
 // The most the card's height may exceed the text beside it, as a ratio.
@@ -93,15 +94,13 @@ function DeathCardPin({ id }: { id: string | null }) {
 }
 
 export function Pinned({ player, className = '' }: { player: PlayerStats; className?: string }) {
-  // Any win outscores every loss, so the best game is a win unless there are none.
   const best = player.best
-  const turns = (n: number) => `${n} ${n === 1 ? 'turn' : 'turns'}`
   return (
     <section aria-labelledby="pinned" className={`@container flex min-w-0 flex-col gap-3 ${className}`}>
       <h2 id="pinned" className="font-semibold">
         Pinned
       </h2>
-      {/* 3:2 because the best game's few lines need less room than the card. */}
+      {/* 3:2 because the best run's few lines need less room than the card. */}
       <div className="grid gap-4 @[30rem]:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <DeathCardPin id={player.deathCard} />
         <PinBox>
@@ -109,21 +108,15 @@ export function Pinned({ player, className = '' }: { player: PlayerStats; classN
             name={
               <>
                 <Star aria-hidden className="size-3.5 shrink-0" />
-                Best game
+                Best run
               </>
             }
-            about={
-              !best
-                ? 'Nothing to beat yet.'
-                : best.outcome === 'win'
-                  ? `${number(best.score)} points. Beat P03 in ${turns(best.turns)}.`
-                  : `${number(best.score)} points, the most in any game.`
-            }
+            about={best ? `${number(best.score)} points. ${ending(best)}.` : 'Nothing to beat yet.'}
             details={
               best
                 ? [
                     ['score', number(best.score)],
-                    ['turns', String(best.turns)],
+                    ['bosses', String(best.bosses)],
                     ['played', ago(best.playedAt)],
                   ]
                 : []

@@ -1,4 +1,4 @@
-import { Gamepad2, Heart, Medal, Percent, Timer, Trophy } from 'lucide-react'
+import { Heart, Map as MapIcon, Medal, Percent, Swords, Trophy } from 'lucide-react'
 import { lazy, Suspense } from 'react'
 import { useParams } from '@tanstack/react-router'
 import { card } from 'shared'
@@ -16,7 +16,7 @@ import { History } from './player/History.tsx'
 // The charts bring Recharts, so they load lazily into a box their size.
 const ScoreChart = lazy(() => import('../components/Charts.tsx').then((charts) => ({ default: charts.ScoreChart })))
 const StreakChart = lazy(() => import('../components/Charts.tsx').then((charts) => ({ default: charts.StreakChart })))
-const TurnsChart = lazy(() => import('../components/Charts.tsx').then((charts) => ({ default: charts.TurnsChart })))
+const BattlesChart = lazy(() => import('../components/Charts.tsx').then((charts) => ({ default: charts.BattlesChart })))
 const chartBox = <div className="h-full min-h-72 rounded-lg border bg-card" />
 const chartFailed = (
   <p
@@ -43,12 +43,16 @@ export function Player() {
   }
 
   const player = stats.data
-  const facts: { icon: typeof Gamepad2; label: string; short?: string; shortest?: string; value: string }[] = [
-    { icon: Gamepad2, label: 'Games', value: number(player.games) },
-    { icon: Trophy, label: 'Wins', value: number(player.wins) },
+  const facts: { icon: typeof MapIcon; label: string; short?: string; shortest?: string; value: string }[] = [
+    { icon: MapIcon, label: 'Runs', value: number(player.runs) },
+    { icon: Trophy, label: 'Cleared', value: number(player.wins) },
     { icon: Percent, label: 'Win rate', value: player.winRate === null ? '-' : `${Math.round(player.winRate * 100)}%` },
     { icon: Medal, label: 'Rank', value: player.rank === null ? '-' : `#${number(player.rank)}` },
-    { icon: Timer, label: 'Avg. game', value: player.averageTurns === null ? '-' : `${player.averageTurns} turns` },
+    {
+      icon: Swords,
+      label: 'Avg. run',
+      value: player.averageBattles === null ? '-' : `${player.averageBattles} battles`,
+    },
     {
       icon: Heart,
       label: 'Favorite card',
@@ -130,19 +134,19 @@ export function Player() {
         {player.recent.length ? (
           <section aria-labelledby="recent" className="flex flex-col gap-3">
             <h2 id="recent" className="font-semibold">
-              Recent games
+              Recent runs
             </h2>
             <div className="grid gap-5 md:grid-cols-2">
               <div className="md:col-span-2">
                 <LoadFailed fallback={chartFailed}>
                   <Suspense fallback={chartBox}>
-                    <ScoreChart games={[...player.recent].reverse()} />
+                    <ScoreChart runs={[...player.recent].reverse()} />
                   </Suspense>
                 </LoadFailed>
               </div>
               <LoadFailed fallback={chartFailed}>
                 <Suspense fallback={chartBox}>
-                  <TurnsChart games={[...player.recent].reverse()} />
+                  <BattlesChart runs={[...player.recent].reverse()} />
                 </Suspense>
               </LoadFailed>
               <Outcomes
@@ -152,7 +156,7 @@ export function Player() {
                 chart={
                   <LoadFailed fallback={null}>
                     <Suspense fallback={<div className="min-h-24 flex-1" />}>
-                      <StreakChart games={[...player.recent].reverse()} />
+                      <StreakChart runs={[...player.recent].reverse()} />
                     </Suspense>
                   </LoadFailed>
                 }
@@ -160,7 +164,7 @@ export function Player() {
             </div>
           </section>
         ) : null}
-        <History username={player.username} lastLoss={player.recent.find((game) => game.outcome === 'loss')} />
+        <History username={player.username} lastLoss={player.recent.find((run) => run.outcome === 'loss')} />
       </div>
     </div>
   )

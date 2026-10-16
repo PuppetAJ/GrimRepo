@@ -226,15 +226,22 @@ section('Accounts and scores')
     JSON.stringify(scored),
   )
 
+  const ranked = async () =>
+    (await (await page.request.get(`${BASE}/api/leaderboard`)).json()).players.some(
+      (row) => row.username === player.username,
+    )
+  check('a quick battle stays off the leaderboard, which ranks runs', !(await ranked()))
+
+  // Abandoning a run at once finishes it, scored on how far it got.
+  const run = await (await page.request.post(`${BASE}/api/runs`)).json()
+  const abandoned = await page.request.post(`${BASE}/api/runs/${run.id}/forfeit`)
+  check('an abandoned run is finished as lost', (await abandoned.json()).status === 'lost')
   const board = await (await page.request.get(`${BASE}/api/leaderboard`)).json()
-  check(
-    'the player appears on the leaderboard',
-    board.players.some((row) => row.username === player.username),
-  )
+  check('and puts the player on the leaderboard', await ranked())
   check('which shows no email addresses', !JSON.stringify(board).includes('@'))
 
   const stats = await (await page.request.get(`${BASE}/api/players/${player.username}/stats`)).json()
-  check('their stats count the game', stats.games === 1, JSON.stringify(stats))
+  check('their stats count the run and not the quick battle', stats.runs === 1, JSON.stringify(stats))
 
   // A browser always sends Origin on a POST; one without it is how a cross-site forgery looks.
   const forged = await page.request.post(`${BASE}/api/auth/sign-out`, { data: {} })

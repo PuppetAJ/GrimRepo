@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { after, beforeEach, describe, it } from 'node:test'
 import { pool } from '../config/db.ts'
-import { insertGame, resetDatabase } from '../test/support.ts'
+import { insertRun, resetDatabase } from '../test/support.ts'
 import { newPlayer, startApp } from '../test/http.ts'
 import { flaggedAccounts, recentAccounts, removeAccount, renameAccount } from './moderation.ts'
 
@@ -19,14 +19,14 @@ const signUp = async (prefix?: string) => {
 }
 
 describe('moderation', () => {
-  it('renames an account to a neutral name, locks it, and keeps its games', async () => {
+  it('renames an account to a neutral name, locks it, and keeps its runs', async () => {
     const player = await signUp('Rude')
-    await insertGame(player.username, 'win', 10)
+    await insertRun(player.username, { battles: 3 })
     const { from, to } = await renameAccount(player.username)
     assert.equal(from, player.username)
     assert.match(to, /^player_\d+$/)
     const stats = await app.call('GET', `/api/players/${to}/stats`)
-    assert.equal(stats.body.games, 1)
+    assert.equal(stats.body.runs, 1)
     const { rows } = await pool.query<{ name_locked: boolean }>('SELECT name_locked FROM users WHERE username = $1', [
       to,
     ])
@@ -41,11 +41,11 @@ describe('moderation', () => {
     await assert.rejects(() => renameAccount('chosen_name', 'f_u_c_k'.replaceAll('_', '')), /name filter/)
   })
 
-  it('removes an account and its games', async () => {
+  it('removes an account and its runs', async () => {
     const player = await signUp()
-    await insertGame(player.username, 'loss', 4)
+    await insertRun(player.username, { battles: 1 })
     await removeAccount(player.username)
-    assert.equal((await pool.query('SELECT 1 FROM games')).rowCount, 0)
+    assert.equal((await pool.query('SELECT 1 FROM runs')).rowCount, 0)
     assert.equal((await app.call('GET', `/api/players/${player.username}/stats`)).status, 404)
   })
 

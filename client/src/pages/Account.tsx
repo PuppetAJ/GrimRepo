@@ -58,7 +58,7 @@ export function Account() {
   async function remove() {
     const { error } = await settled(authClient.deleteUser({ password }))
     if (error) return setDeleteError(authError(error, 'That did not work'))
-    toast.success('Your account and its games are gone')
+    toast.success('Your account and its runs are gone')
     navigate({ to: '/', replace: true })
   }
 
@@ -89,7 +89,7 @@ export function Account() {
           aria-describedby="username-note"
         />
         <p id="username-note" className={`text-sm ${renameError ? 'text-death' : 'text-muted-foreground'}`}>
-          {renameError ?? 'Your games and scores come with you.'}
+          {renameError ?? 'Your runs and scores come with you.'}
         </p>
         <Button type="submit" className="self-start" disabled={renaming}>
           Rename
@@ -99,7 +99,7 @@ export function Account() {
       <section className="flex flex-col gap-3 border-t pt-6">
         <h2 className="text-xl font-semibold">Delete your account</h2>
         <p className="text-sm text-muted-foreground">
-          Your account, your games and your place on the leaderboard go for good.
+          Your account, your runs and your place on the leaderboard go for good.
         </p>
         <AlertDialog>
           <AlertDialogTrigger asChild>
@@ -154,7 +154,7 @@ function DemoNotice() {
       <section className="flex flex-col gap-3 rounded-lg border bg-card p-6">
         <h2 className="text-xl font-semibold">You are using the demo account</h2>
         <p className="text-muted-foreground">
-          Everyone shares it, so it can&apos;t be renamed or deleted. Make your own to keep your games and scores.
+          Everyone shares it, so it can&apos;t be renamed or deleted. Make your own to keep your runs and scores.
         </p>
         <Button asChild className="self-start">
           <Link to="/signup">Create an account</Link>
