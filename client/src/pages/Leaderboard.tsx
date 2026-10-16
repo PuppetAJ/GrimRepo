@@ -226,17 +226,18 @@ function FirstPlace({ row, mine, rowRef }: { row: LeaderboardRow; mine: boolean;
           >
             {initials(row.username)}
           </span>
-          <div className="flex min-w-0 flex-col">
-            <div className="flex flex-wrap items-center gap-x-2.5">
+          <div className="flex flex-col max-sm:min-w-0">
+            {/* One line: past a phone the name and tag set the column's width, so the tag never drops beneath. */}
+            <div className="flex items-center gap-x-2.5">
               <Link
                 to="/players/$username"
                 params={{ username: row.username }}
-                className="truncate text-3xl leading-none text-p03 hover:underline"
+                className="text-3xl leading-none whitespace-nowrap text-p03 hover:underline max-sm:min-w-0 max-sm:truncate sm:shrink-0"
               >
                 {row.username}
                 {mine ? <span className="sr-only"> (you)</span> : null}
               </Link>
-              <span className="hidden bg-p03 px-1.5 text-base leading-snug text-p03-ground [text-shadow:none] md:inline">
+              <span className="hidden shrink-0 bg-p03 px-1.5 text-base leading-snug whitespace-nowrap text-p03-ground [text-shadow:none] md:inline">
                 FOR NOW
               </span>
             </div>
