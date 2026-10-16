@@ -35,6 +35,28 @@ describe('playback', () => {
     assert.ok(deaths > 5, `only ${deaths} deaths`)
   })
 
+  it('shows each hit on a card as the damage it did, never as a buff', () => {
+    let hits = 0
+    for (const seed of [5, 6, 7, 8]) {
+      let state = createGame({ seed })
+      let playback: Playback = start(state)
+      while (state.status === 'playing') {
+        const { state: after, events } = move(state, nextBotAction(state))
+        for (const event of events) {
+          const before = playback.popups.length
+          playback = advance(playback, event, 0)
+          if (event.type !== 'damaged' || playback.popups.length === before) continue
+          hits++
+          const shown = playback.popups.at(-1)
+          assert.equal(shown?.text, `-${event.amount}`)
+          assert.equal(shown?.tone, 'damage')
+        }
+        state = after
+      }
+    }
+    assert.ok(hits > 5, `only ${hits} hits shown`)
+  })
+
   it('brings drawn cards from the deck, P03’s from its side, and lunges the attacker', () => {
     // A deal whose hand has a free card that can attack, so it can be played and ring the bell at once.
     const free = (unit: { card: string; attack: number }) => card(unit.card).cost === 0 && unit.attack > 0

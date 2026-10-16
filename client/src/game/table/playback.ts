@@ -183,7 +183,6 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
         })
       break
     }
-    case 'damaged':
     case 'shielded':
     case 'stayedUp':
     case 'buffed': {
@@ -207,6 +206,7 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
         )
       break
     }
+    case 'damaged':
     case 'struckBack':
     case 'healed': {
       const found = where(view, event.uid)
