@@ -1,5 +1,6 @@
-import { ArrowDown, ArrowRight } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { ArrowDown, ArrowRight, ZoomIn } from 'lucide-react'
+import { useState, type ReactNode } from 'react'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover.tsx'
 import { SIGILS, type SigilId } from 'shared'
 import { Sigil } from '../../CardReader.tsx'
 import { Box } from './Box.tsx'
@@ -28,7 +29,7 @@ export function Arrow({ on }: { on: boolean }) {
   )
 }
 
-/** A card's sigils to choose one from, as buttons with their icons. */
+/** A card's sigils to choose one from, as buttons with their icons; the magnifier beside each, or a right-click, reads it. */
 export function SigilChoice({
   sigils,
   chosen,
@@ -41,22 +42,43 @@ export function SigilChoice({
   /** For tests to find each choice. */
   action: string
 }) {
+  const [reading, setReading] = useState<SigilId | null>(null)
   return (
     <div className="flex flex-wrap justify-center gap-2 @4xl:flex-col">
       {sigils.map((id) => (
-        <button
-          key={id}
-          type="button"
-          data-action={action}
-          data-sigil={id}
-          aria-pressed={chosen === id}
-          title={SIGILS[id].text}
-          onClick={() => onChoose(id)}
-          className="flex items-center gap-2 rounded-md border-2 border-p03-edge bg-[#07130b] px-3 py-2 text-left text-lg text-p03 hover:border-p03 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03 aria-pressed:border-p03 aria-pressed:bg-[#13261a]"
-        >
-          <Sigil id={id} size={28} color="currentColor" />
-          {SIGILS[id].name}
-        </button>
+        <div key={id} className="flex items-stretch gap-1">
+          <button
+            type="button"
+            data-action={action}
+            data-sigil={id}
+            aria-pressed={chosen === id}
+            title={SIGILS[id].text}
+            onClick={() => onChoose(id)}
+            onContextMenu={(event) => {
+              event.preventDefault()
+              setReading(id)
+            }}
+            className="flex flex-1 items-center gap-2 rounded-md border-2 border-p03-edge bg-[#07130b] px-3 py-2 text-left text-lg text-p03 hover:border-p03 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03 aria-pressed:border-p03 aria-pressed:bg-[#13261a]"
+          >
+            <Sigil id={id} size={28} color="currentColor" />
+            {SIGILS[id].name}
+          </button>
+          <Popover open={reading === id} onOpenChange={(open) => setReading(open ? id : null)}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                aria-label={`${SIGILS[id].name}: what it does`}
+                className="grid w-9 place-items-center rounded-md border-2 border-p03-edge bg-[#07130b] text-p03 hover:border-p03 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03"
+              >
+                <ZoomIn aria-hidden className="size-4" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="border-p03-edge bg-p03-ground font-terminal text-lg text-[#b8f5c4]">
+              <p className="text-p03">{SIGILS[id].name}</p>
+              <p className="font-sans text-sm">{SIGILS[id].text}</p>
+            </PopoverContent>
+          </Popover>
+        </div>
       ))}
     </div>
   )
