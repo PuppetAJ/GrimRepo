@@ -24,8 +24,6 @@ export type PlayerStats = {
   games: number
   wins: number
   losses: number
-  // Counted among the losses too.
-  forfeits: number
   winRate: number | null
   bestScore: number
   bestWinTurns: number | null
@@ -284,7 +282,6 @@ export async function playerStats(username: string): Promise<PlayerStats | null>
     joinedAt: Date
     games: number
     wins: number
-    forfeits: number
     bestScore: number
     bestWinTurns: number | null
     averageTurns: number | null
@@ -293,7 +290,6 @@ export async function playerStats(username: string): Promise<PlayerStats | null>
     `SELECT u.id, u.display_username AS username, u.created_at AS "joinedAt", u.death_card AS "deathCard",
             COUNT(g.id)::int AS games,
             COUNT(g.id) FILTER (WHERE g.outcome = 'win')::int AS wins,
-            COUNT(g.id) FILTER (WHERE g.forfeited)::int AS forfeits,
             COALESCE(MAX(g.score), 0)::int AS "bestScore",
             MIN(g.turns) FILTER (WHERE g.outcome = 'win')::int AS "bestWinTurns",
             ROUND(AVG(g.turns), 1)::float AS "averageTurns"
@@ -355,7 +351,6 @@ export async function playerStats(username: string): Promise<PlayerStats | null>
     games: player.games,
     wins: player.wins,
     losses: player.games - player.wins,
-    forfeits: player.forfeits,
     winRate: player.games ? Math.round((player.wins / player.games) * 1000) / 1000 : null,
     bestScore: player.bestScore,
     bestWinTurns: player.bestWinTurns,

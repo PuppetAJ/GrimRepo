@@ -42,7 +42,7 @@ export function Contributions({ stats, cells }: { stats: PlayerStats; cells: Cel
       icon: GitPullRequestClosed,
       tone: 'text-death',
       title: `${plural(lost, 'loss', 'losses')} reverted`,
-      note: 'forfeits included',
+      note: 'games lost',
     },
     {
       icon: Flame,

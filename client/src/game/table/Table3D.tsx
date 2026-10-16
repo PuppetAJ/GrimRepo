@@ -151,7 +151,6 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
     stage.room({
       view: playback.view,
       log: game.log,
-      busy,
       outcome: busy ? undefined : outcomeOf(game),
       onHold: (screen, x, y) => reader.hold({ screen }, x, y),
       onPin: (screen) => reader.pin(screen),

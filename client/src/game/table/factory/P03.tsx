@@ -37,36 +37,49 @@ function loadFaces(): Promise<Record<Face, THREE.Texture>> {
   return faces
 }
 
-function useMood(view: View, busy: boolean, outcome: 'win' | 'loss' | undefined, patient: boolean): Mood {
+/** How far a turn's hits, added up, must swing the scale toward the player to upset him. */
+const UPSET_AT = 8
+/** How long he screams as the player's lead first nears his tip point, in milliseconds. */
+const SCREAM_MS = 3000
+
+// Only big moments move him: a big hit, the player's lead nearing his tip point, his desperate play, and the end.
+function useMood(view: View, outcome: 'win' | 'loss' | undefined): Mood {
   const [choking, setChoking] = useState(false)
-  const [impatient, setImpatient] = useState(false)
+  const [screaming, setScreaming] = useState(false)
   const scale = view.scale
-  const last = useRef({ scale, turn: view.turn })
+  const danger = scale >= TIP - 6
+  // The turn's lowest point so far, so 4, 4 and 2 in one turn upset him as much as one hit of 10. Once a turn is enough.
+  const turn = useRef({ turn: view.turn, low: scale, upset: false })
   useEffect(() => {
-    const hit = scale - last.current.scale
+    const now = turn.current
     // Turn 0 is the room's view between battles, so going to or from it is no hit, as when looking back from the map.
-    const between = view.turn === 0 || last.current.turn === 0
-    last.current = { scale, turn: view.turn }
-    if (hit < 4 || between) return
+    if (view.turn !== now.turn || view.turn === 0) {
+      turn.current = { turn: view.turn, low: scale, upset: false }
+      return
+    }
+    now.low = Math.min(now.low, scale)
+    if (now.upset || scale - now.low < UPSET_AT) return
+    now.upset = true
     const start = setTimeout(() => setChoking(true), 0)
     setTimeout(() => setChoking(false), 1600)
     return () => clearTimeout(start)
   }, [scale, view.turn])
+  // A scream as the lead first crosses into danger, settling into a glare for as long as it stays there.
   useEffect(() => {
-    const calm = setTimeout(() => setImpatient(false), 0)
-    const waiting = busy || patient ? undefined : setTimeout(() => setImpatient(true), 25_000)
+    if (!danger) return
+    const start = setTimeout(() => setScreaming(true), 0)
+    const stop = setTimeout(() => setScreaming(false), SCREAM_MS)
     return () => {
-      clearTimeout(calm)
-      clearTimeout(waiting)
+      clearTimeout(start)
+      clearTimeout(stop)
     }
-  }, [view, busy, patient])
+  }, [danger])
   if (outcome === 'win') return 'whiteflag'
   if (outcome === 'loss') return 'happy'
   if (choking) return 'choking'
-  // Once he has made his desperate play, he glares for the rest of the battle, never dying or smug.
+  // Once he has made his desperate play, he glares for the rest of the battle.
   if (view.desperate) return 'impatient'
-  if (scale >= TIP - 6) return 'dying'
-  if (impatient) return 'impatient'
+  if (danger) return screaming ? 'dying' : 'impatient'
   return 'smug'
 }
 
@@ -154,19 +167,8 @@ function P03({ mood }: { mood: Mood }) {
   return <primitive object={scene} position={[CENTER_X, 9.06, -16]} rotation={[0, -Math.PI / 2, 0]} />
 }
 
-export function FactoryP03({
-  view,
-  busy,
-  outcome,
-  patient = false,
-}: {
-  view: View
-  busy: boolean
-  outcome?: 'win' | 'loss'
-  /** Off the board P03 isn't waiting on a move, so it never grows impatient. */
-  patient?: boolean
-}) {
-  const mood = useMood(view, busy, outcome, patient)
+export function FactoryP03({ view, outcome }: { view: View; outcome?: 'win' | 'loss' }) {
+  const mood = useMood(view, outcome)
   return (
     <>
       <P03 mood={mood} />

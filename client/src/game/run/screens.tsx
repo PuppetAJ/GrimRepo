@@ -16,24 +16,10 @@ import { Stones } from './text/Stones.tsx'
 import { Summary } from './text/Summary.tsx'
 import { NodeResult } from './text/NodeResult.tsx'
 import type { RunReady } from './useRun.ts'
+import { runView, type RunView } from './runView.ts'
 import { useRunBattle } from './useRunBattle.ts'
 
-export type RunView =
-  | 'battle'
-  | 'map'
-  | 'start'
-  | 'pack'
-  | 'card'
-  | 'blind'
-  | 'shop'
-  | 'reward'
-  | 'campfire'
-  | 'stones'
-  | 'event'
-  | 'lint'
-  | 'fuse'
-  | 'item'
-  | 'summary'
+export type { RunView }
 
 const TITLES: Record<Exclude<RunView, 'battle' | 'map'>, string> = {
   start: 'Choose a starter deck',
@@ -77,18 +63,8 @@ export function useRunScreen(run: RunReady) {
   const visit = run.state.visit
   const decided = visit?.kind === 'battle' && visit.game.status !== 'playing'
   const battle = useRunBattle(run, decided ? <BattleOver run={run} onSummary={() => setReviewing(true)} /> : null)
-  // A decided event stays up, saying what happened, until the player moves on.
   const after = run.state.status === 'playing' ? run.aftermath : null
-  const view: RunView =
-    run.state.status !== 'playing' && (reviewing || !battle)
-      ? 'summary'
-      : battle
-        ? 'battle'
-        : after
-          ? after.kind === 'event'
-            ? 'event'
-            : after.view
-          : (visit?.kind ?? 'map')
+  const view = runView(run.state, run.aftermath, reviewing)
   const eventId = after?.kind === 'event' ? after.event : visit?.kind === 'event' ? visit.event : null
   // The map's title is the stage itself; an event's is its scene's, under a caption saying what it is.
   const title =

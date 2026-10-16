@@ -361,9 +361,9 @@ export function BetweenBattles({
   const stage = useStage()
   const view = useMemo(() => restView(state), [state])
   const corners = useMemo(() => windowCorners(), [])
-  // P03 gloats over a lost run and gives up over a cleared one, and never grows impatient off the board.
+  // P03 gloats over a lost run and gives up over a cleared one.
   const outcome = state.status === 'won' ? 'win' : state.status === 'lost' ? 'loss' : undefined
-  useLayoutEffect(() => stage.room({ view, log: lines, busy: false, outcome, patient: true }))
+  useLayoutEffect(() => stage.room({ view, log: lines, outcome }))
   // Between battles the button is locked and the run's items hang out of reach.
   useLayoutEffect(() => stage.bench({ items: state.items, usable: [], aiming: null, active: false, rung: 0 }))
   // When the projector may start: once the loading screen has faded, or the camera has nearly glided back.

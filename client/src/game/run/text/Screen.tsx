@@ -21,6 +21,7 @@ import { useFullScreen } from '../../fullScreen.ts'
 import { Panel } from '../../text/Panel.tsx'
 import { useFit } from '../../text/sizing.ts'
 import type { Layout } from '../../text/useTextTable.ts'
+import { DebugItem } from '../RunDebug.tsx'
 import type { RunReady } from '../useRun.ts'
 import { SearchContext } from './CardBits.tsx'
 import { DeckTable } from './DeckTable.tsx'
@@ -274,6 +275,7 @@ function RunMenu({
               Abandon run
             </DropdownMenuItem>
           ) : null}
+          <DebugItem />
           <DropdownMenuItem onSelect={() => void navigate({ to: '/' })} className="text-lg">
             <LogOut aria-hidden />
             Leave, saving the run

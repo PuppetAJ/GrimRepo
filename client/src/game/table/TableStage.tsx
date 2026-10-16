@@ -34,7 +34,7 @@ const LOWEST = 6
 type Attributes = Record<string, string | number>
 
 /** What the room shows: the factory's battery and monitors, and P03's mood. */
-type RoomState = { view: View; log: string[]; busy: boolean; outcome?: 'win' | 'loss'; patient?: boolean }
+type RoomState = { view: View; log: string[]; outcome?: 'win' | 'loss' }
 type RoomHandlers = {
   onHold?: (screen: Screen, x: number, y: number) => void
   onPin?: (screen: Screen) => void
@@ -79,9 +79,7 @@ const same = (a: Attributes, b: Attributes) =>
   Object.keys(a).length === Object.keys(b).length && Object.entries(a).every(([key, value]) => b[key] === value)
 const sameRoom = (a: RoomState, b: RoomState) =>
   a.view === b.view &&
-  a.busy === b.busy &&
   a.outcome === b.outcome &&
-  a.patient === b.patient &&
   a.log.length === b.log.length &&
   a.log.every((line, index) => b.log[index] === line)
 const sameList = <T,>(a: T[], b: T[]) => a.length === b.length && a.every((entry, index) => b[index] === entry)
@@ -216,7 +214,7 @@ export function TableStage({ children }: { children: ReactNode }) {
               {room ? (
                 <>
                   <Factory view={room.view} log={room.log} onHold={onHold} onPin={onPin} />
-                  <FactoryP03 view={room.view} busy={room.busy} outcome={room.outcome} patient={room.patient} />
+                  <FactoryP03 view={room.view} outcome={room.outcome} />
                 </>
               ) : null}
               {bench ? (

@@ -6,7 +6,7 @@ import type { View } from '../view.ts'
 import { Battery } from './factory/Battery.tsx'
 import { DUST, lamp, STILL } from './factory/constants.ts'
 import { Monitor } from './factory/Monitor.tsx'
-import { logLines, statusLines } from './factory/monitorLines.ts'
+import { logLines, MONITOR_COLUMNS, MONITOR_ROWS, statusLines } from './factory/monitorLines.ts'
 import { DrumRack, GemModule, Lamp, Props } from './factory/Props.tsx'
 import { Room } from './factory/Room.tsx'
 import { GRIMY_TABLE, surfaces } from './factory/surfaces.ts'
@@ -33,7 +33,8 @@ export function Factory({
   onPin?: (screen: Screen) => void
   onHold?: (screen: Screen, x: number, y: number) => void
 }) {
-  const lines = useMemo(() => logLines(log), [log])
+  // Wrapped to the screen's width, so a long line never runs off its edge.
+  const lines = useMemo(() => logLines(log, MONITOR_ROWS - 1, MONITOR_COLUMNS), [log])
   const status = useMemo(
     () => statusLines({ scale: view.scale, turn: view.turn, deck: view.deck, integrity: view.integrity }),
     [view.scale, view.turn, view.deck, view.integrity],

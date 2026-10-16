@@ -164,10 +164,9 @@ const TYPE_OF: Record<string, CardType> = {
   Botnet: 'bot',
   RateLimiter: 'bot',
   HealthCheck: 'bot',
-  ZombieProcess: 'bot',
-  Honeypot: 'exploit',
   Phishing: 'exploit',
   Backdoor: 'exploit',
+  ZombieProcess: 'exploit',
   CircuitBreaker: 'legacy',
   SQLInjection: 'exploit',
   ZeroDay: 'exploit',
@@ -199,6 +198,7 @@ const TYPE_OF: Record<string, CardType> = {
   Sandbox: 'dev',
   PairProgramming: 'dev',
   ReplyAll: 'dev',
+  Honeypot: 'dev',
   COBOL: 'legacy',
 }
 

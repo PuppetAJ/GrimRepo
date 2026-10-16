@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { number } from '../../lib/format.ts'
 import type { Game } from './chart.ts'
 import { Frame } from './parts.tsx'
@@ -21,77 +22,88 @@ function streaks(recent: Game[]): { current: number; winning: boolean; wins: num
   return { current, winning, wins: longest('win'), losses: longest('loss') }
 }
 
+const runOf = (count: number, win: boolean) =>
+  `${count} ${win ? (count === 1 ? 'win' : 'wins') : count === 1 ? 'loss' : 'losses'}`
+
 function Streak({ label, count, win }: { label: string; count: number; win: boolean }) {
   return (
-    <div className="flex items-baseline justify-between gap-3 @[16rem]:flex-col @[16rem]:justify-start @[16rem]:gap-0">
-      <dt className="text-xs whitespace-nowrap text-muted-foreground">{label}</dt>
+    <div className="flex items-baseline gap-1.5">
+      <dt className="text-muted-foreground">{label}</dt>
+      {/* The color says win or loss; the words stay for screen readers and on hover. */}
       <dd
-        className={`font-mono text-lg @[16rem]:text-xl ${count ? (win ? 'text-primary' : 'text-death') : 'text-muted-foreground'}`}
+        title={count ? runOf(count, win) : undefined}
+        className={`font-mono ${count ? (win ? 'text-primary' : 'text-death') : 'text-muted-foreground'}`}
       >
-        {count ? `${win ? 'W' : 'L'}${count}` : '-'}
+        {count || '-'}
+        {count ? (
+          <span className="sr-only"> {win ? (count === 1 ? 'win' : 'wins') : count === 1 ? 'loss' : 'losses'}</span>
+        ) : null}
       </dd>
     </div>
+  )
+}
+
+/** Wins on the left, losses on the right, in one bar. */
+function Split({ wins, losses }: { wins: number; losses: number }) {
+  const total = wins + losses
+  return (
+    <div aria-hidden className="flex h-4 gap-0.5 overflow-hidden rounded-full bg-accent">
+      {wins ? <div className="bg-primary" style={{ width: `${(wins / total) * 100}%` }} /> : null}
+      {losses ? <div className="flex-1 bg-death" /> : null}
+    </div>
+  )
+}
+
+function Streaks({ recent }: { recent: Game[] }) {
+  const streak = streaks(recent)
+  return (
+    <dl className="flex flex-wrap gap-x-3.5 gap-y-1 text-sm">
+      <Streak label="Current" count={streak.current} win={streak.winning} />
+      <Streak label="Longest win" count={streak.wins} win />
+      <Streak label="Longest loss" count={streak.losses} win={false} />
+    </dl>
   )
 }
 
 export function Outcomes({
   wins,
   losses,
-  forfeits,
   recent,
+  chart,
 }: {
   wins: number
   losses: number
-  forfeits: number
   recent: Game[]
+  /** The streak chart, loaded apart from the page like the other charts. */
+  chart?: ReactNode
 }) {
-  const total = wins + losses + forfeits
-  const parts = [
-    { label: 'Won', count: wins, color: 'bg-primary' },
-    { label: 'Lost', count: losses, color: 'bg-death' },
-    { label: 'Forfeited', count: forfeits, color: 'bg-muted-foreground' },
-  ]
-  const share = (count: number) => (total ? Math.round((count / total) * 100) : 0)
-  const lost = losses + forfeits
-  const streak = streaks(recent)
+  const total = wins + losses
+  const rate = total ? Math.round((wins / total) * 100) : 0
   return (
     <Frame title="Wins and losses" note={`${number(total)} ${total === 1 ? 'game' : 'games'}`}>
-      <div className="flex flex-wrap items-end gap-x-8 gap-y-2">
-        <p className="flex flex-col">
-          <span className="font-mono text-4xl leading-none">{share(wins)}%</span>
-          <span className="text-sm text-muted-foreground">win rate</span>
-        </p>
-        <p className="flex flex-col">
-          <span className="font-mono text-2xl leading-none">
-            {lost ? (wins / lost).toFixed(2) : wins ? `${wins}:0` : '-'}
+      <p className="flex items-baseline gap-2">
+        <span className="font-mono text-4xl leading-none">{total ? `${rate}%` : '-'}</span>
+        <span className="text-sm text-muted-foreground">win rate</span>
+      </p>
+      <div className="flex flex-col gap-1.5">
+        <Split wins={wins} losses={losses} />
+        <p className="flex justify-between text-sm">
+          <span>
+            <span className="font-mono text-primary">{number(wins)}</span>{' '}
+            <span className="text-muted-foreground">won</span>
           </span>
-          <span className="text-sm text-muted-foreground">
-            W/L, {number(wins)} to {number(lost)}
+          <span>
+            <span className="font-mono text-death">{number(losses)}</span>{' '}
+            <span className="text-muted-foreground">lost</span>
           </span>
         </p>
       </div>
-      <dl className="flex flex-col gap-2.5">
-        {parts.map((part) => (
-          <div key={part.label} className="grid grid-cols-[5.5rem_minmax(0,1fr)_4.5rem] items-center gap-3">
-            <dt className="text-sm text-muted-foreground">{part.label}</dt>
-            <dd aria-hidden className="h-2.5 rounded-full bg-accent">
-              <div className={`h-2.5 rounded-full ${part.color}`} style={{ width: `${share(part.count)}%` }} />
-            </dd>
-            <dd className="text-right font-mono text-sm">
-              {number(part.count)} <span className="text-muted-foreground">{share(part.count)}%</span>
-            </dd>
-          </div>
-        ))}
-      </dl>
       {recent.length ? (
-        <dl
-          // 16rem is where three across keeps each label on one line.
-          className="mt-auto grid gap-1.5 border-t pt-3 @[16rem]:grid-cols-3 @[16rem]:gap-3"
-        >
-          <Streak label="Current streak" count={streak.current} win={streak.winning} />
-          <Streak label="Longest win" count={streak.wins} win />
-          <Streak label="Longest loss" count={streak.losses} win={false} />
-        </dl>
+        <div className="flex flex-1 flex-col gap-2 border-t pt-3">
+          <p className="text-xs text-muted-foreground">Recent streaks</p>
+          {chart && recent.length > 1 ? chart : null}
+          <Streaks recent={recent} />
+        </div>
       ) : null}
     </Frame>
   )

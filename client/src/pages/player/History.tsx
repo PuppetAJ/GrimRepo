@@ -12,6 +12,9 @@ import { Trace } from './Trace.tsx'
 const HISTORY = 10
 
 /** The page lives in the URL, so Back returns to it. */
+// Under the header's own divider, the first row needs none; under a pinned trace it keeps one.
+const FIRST_ROW_OPEN = '[&>li:first-child]:border-t-0'
+
 export function History({ username, lastLoss }: { username: string; lastLoss: Game | undefined }) {
   const page = useSearch({ from: '/players/$username', select: (search) => search.page ?? 1 })
   const navigate = useNavigate({ from: '/players/$username' })
@@ -44,7 +47,7 @@ export function History({ username, lastLoss }: { username: string; lastLoss: Ga
       {/* Placeholder rows hold the list's height, so nothing below it jumps. */}
       {history.status === 'loading' ? (
         <div role="status" aria-label="Loading games">
-          <ol aria-hidden className={pinned ? '' : 'mt-3'}>
+          <ol aria-hidden className={pinned ? '' : FIRST_ROW_OPEN}>
             {[...Array(HISTORY).keys()].map((row) => (
               <li key={row} className="flex items-center gap-4 border-t px-6 py-3.5">
                 <Skeleton className="size-2.5 rounded-full" />
@@ -59,12 +62,12 @@ export function History({ username, lastLoss }: { username: string; lastLoss: Ga
         </div>
       ) : null}
       {games.length ? (
-        <ol className={pinned ? '' : 'mt-3'}>
+        <ol className={pinned ? '' : FIRST_ROW_OPEN}>
           {games.map((game) => (
             <li key={game.playedAt} className="flex items-center gap-4 border-t px-6 py-3.5">
               <span
                 aria-hidden
-                className={`size-2.5 shrink-0 rounded-full ${game.forfeited ? 'bg-muted-foreground' : game.outcome === 'win' ? 'bg-primary' : 'bg-death'}`}
+                className={`size-2.5 shrink-0 rounded-full ${game.outcome === 'win' ? 'bg-primary' : 'bg-death'}`}
               />
               <div className="flex min-w-0 flex-1 flex-col">
                 <span>{messageOf(game)}</span>
