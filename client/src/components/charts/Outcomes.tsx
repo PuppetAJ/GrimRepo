@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { number } from '../../lib/format.ts'
-import { TREND_GAMES, type Game } from './chart.ts'
+import type { Game } from './chart.ts'
 import { Frame } from './parts.tsx'
 
 function streaks(recent: Game[]): { current: number; winning: boolean; wins: number; losses: number } {
@@ -22,18 +22,21 @@ function streaks(recent: Game[]): { current: number; winning: boolean; wins: num
   return { current, winning, wins: longest('win'), losses: longest('loss') }
 }
 
+const runOf = (count: number, win: boolean) =>
+  `${count} ${win ? (count === 1 ? 'win' : 'wins') : count === 1 ? 'loss' : 'losses'}`
+
 function Streak({ label, count, win }: { label: string; count: number; win: boolean }) {
   return (
-    <div className="flex items-baseline justify-between gap-3 @[16rem]:flex-col @[16rem]:justify-start @[16rem]:gap-0">
-      <dt className="text-xs whitespace-nowrap text-muted-foreground">{label}</dt>
+    <div className="flex items-baseline gap-1.5">
+      <dt className="text-muted-foreground">{label}</dt>
       {/* The color says win or loss; the words stay for screen readers and on hover. */}
       <dd
-        title={count ? `${count} ${win ? (count === 1 ? 'win' : 'wins') : count === 1 ? 'loss' : 'losses'}` : undefined}
-        className={`font-mono text-lg @[16rem]:text-xl ${count ? (win ? 'text-primary' : 'text-death') : 'text-muted-foreground'}`}
+        title={count ? runOf(count, win) : undefined}
+        className={`font-mono ${count ? (win ? 'text-primary' : 'text-death') : 'text-muted-foreground'}`}
       >
         {count || '-'}
         {count ? (
-          <span className="sr-only">{win ? (count === 1 ? ' win' : ' wins') : count === 1 ? ' loss' : ' losses'}</span>
+          <span className="sr-only"> {win ? (count === 1 ? 'win' : 'wins') : count === 1 ? 'loss' : 'losses'}</span>
         ) : null}
       </dd>
     </div>
@@ -54,10 +57,7 @@ function Split({ wins, losses }: { wins: number; losses: number }) {
 function Streaks({ recent }: { recent: Game[] }) {
   const streak = streaks(recent)
   return (
-    <dl
-      // 16rem is where three across keeps each label on one line.
-      className="mt-auto grid gap-1.5 border-t pt-3 @[16rem]:grid-cols-3 @[16rem]:gap-3"
-    >
+    <dl className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
       <Streak label="Current streak" count={streak.current} win={streak.winning} />
       <Streak label="Longest win" count={streak.wins} win />
       <Streak label="Longest loss" count={streak.losses} win={false} />
@@ -69,13 +69,13 @@ export function Outcomes({
   wins,
   losses,
   recent,
-  trend,
+  chart,
 }: {
   wins: number
   losses: number
   recent: Game[]
-  /** The win trend chart, loaded apart from the page like the other charts. */
-  trend?: ReactNode
+  /** The streak chart, loaded apart from the page like the other charts. */
+  chart?: ReactNode
 }) {
   const total = wins + losses
   const rate = total ? Math.round((wins / total) * 100) : 0
@@ -98,13 +98,17 @@ export function Outcomes({
           </span>
         </p>
       </div>
-      {trend && recent.length > 1 ? (
-        <div className="flex flex-1 flex-col gap-1 border-t pt-3">
-          <p className="text-xs text-muted-foreground">Win rate across {TREND_GAMES} games at a time, oldest first</p>
-          {trend}
+      {recent.length ? (
+        <div className="flex flex-1 flex-col gap-2 border-t pt-3">
+          {chart && recent.length > 1 ? (
+            <>
+              <p className="text-xs text-muted-foreground">Streaks, oldest first: wins above the line, losses below</p>
+              {chart}
+            </>
+          ) : null}
+          <Streaks recent={recent} />
         </div>
       ) : null}
-      {recent.length ? <Streaks recent={recent} /> : null}
     </Frame>
   )
 }

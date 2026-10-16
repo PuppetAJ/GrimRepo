@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { ago, number } from '../../lib/format.ts'
 import type { TooltipContentProps } from 'recharts'
 import type { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent'
@@ -6,7 +6,7 @@ import { colorOf, ending, resultOf, type Game } from './chart.ts'
 
 export function Frame({ title, note, children }: { title: string; note?: string; children: ReactNode }) {
   return (
-    <figure className="@container flex h-full min-w-0 flex-col gap-3 rounded-lg border bg-card p-5">
+    <figure className="@container flex h-full min-w-0 flex-col gap-3 rounded-lg border bg-card p-4 sm:p-5">
       <figcaption className="flex flex-wrap items-baseline justify-between gap-2">
         <span className="font-semibold">{title}</span>
         {note ? <span className="text-sm text-muted-foreground">{note}</span> : null}
@@ -44,6 +44,26 @@ export function AsTable({ games, caption }: { games: Game[]; caption: string }) 
       </table>
     </div>
   )
+}
+
+/**
+ * Recharts puts a tip away when the mouse leaves the chart, which a touch never does, so a tapped chart kept its tip
+ * up. A press anywhere else now tells the chart the pointer left.
+ */
+export function useTip() {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const press = (event: PointerEvent) => {
+      const box = ref.current
+      if (!box || box.contains(event.target as Node)) return
+      box
+        .querySelector('.recharts-wrapper')
+        ?.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, relatedTarget: document.body }))
+    }
+    document.addEventListener('pointerdown', press)
+    return () => document.removeEventListener('pointerdown', press)
+  }, [])
+  return ref
 }
 
 export function Tip({

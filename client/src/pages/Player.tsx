@@ -15,7 +15,7 @@ import { History } from './player/History.tsx'
 
 // The charts bring Recharts, so they load lazily into a box their size.
 const ScoreChart = lazy(() => import('../components/Charts.tsx').then((charts) => ({ default: charts.ScoreChart })))
-const WinTrend = lazy(() => import('../components/Charts.tsx').then((charts) => ({ default: charts.WinTrend })))
+const StreakChart = lazy(() => import('../components/Charts.tsx').then((charts) => ({ default: charts.StreakChart })))
 const TurnsChart = lazy(() => import('../components/Charts.tsx').then((charts) => ({ default: charts.TurnsChart })))
 const chartBox = <div className="h-full min-h-72 rounded-lg border bg-card" />
 const chartFailed = (
@@ -149,10 +149,10 @@ export function Player() {
                 wins={player.wins}
                 losses={player.losses}
                 recent={player.recent}
-                trend={
+                chart={
                   <LoadFailed fallback={null}>
                     <Suspense fallback={<div className="min-h-24 flex-1" />}>
-                      <WinTrend games={[...player.recent].reverse()} />
+                      <StreakChart games={[...player.recent].reverse()} />
                     </Suspense>
                   </LoadFailed>
                 }
