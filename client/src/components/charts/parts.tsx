@@ -51,10 +51,16 @@ export function Tip({
   active,
   payload,
   activeIndex,
-}: Pick<TooltipContentProps<ValueType, NameType>, 'active' | 'payload' | 'activeIndex'> & { count: number }) {
+  detail = (game) => `${number(game.score)} points`,
+}: Pick<TooltipContentProps<ValueType, NameType>, 'active' | 'payload' | 'activeIndex'> & {
+  count: number
+  /** The tip's last line, the game's score unless a chart says otherwise. */
+  detail?: (game: Game) => string
+}) {
   const point = payload?.[0]
-  if (!active || !point) return null
-  const game = point.payload as Game
+  const game = point?.payload as Game | undefined
+  // The turns chart's empty slots have no game to tell of.
+  if (!active || !game?.playedAt) return null
   const index = Number(activeIndex)
   return (
     <div className="w-max rounded-md border bg-popover px-3 py-2 text-sm whitespace-nowrap shadow-lg">
@@ -65,7 +71,7 @@ export function Tip({
         <span className="size-2 shrink-0 rounded-full" style={{ background: colorOf(game) }} />
         {ending(game)}
       </p>
-      <p className="font-mono text-base">{number(game.score)} points</p>
+      <p className="font-mono text-base">{detail(game)}</p>
     </div>
   )
 }
@@ -78,9 +84,6 @@ export function Legend() {
       </span>
       <span className="flex items-center gap-1.5">
         <span className="size-2 rounded-full bg-death" /> lost
-      </span>
-      <span className="flex items-center gap-1.5">
-        <span className="size-2 rounded-full bg-muted-foreground" /> forfeited
       </span>
     </p>
   )

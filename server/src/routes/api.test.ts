@@ -219,7 +219,7 @@ describe('a game', () => {
 
     const stats = await app.call('GET', `/api/players/${player.username}/stats`)
     assert.equal(stats.body.recent[0].forfeited, true)
-    assert.equal(stats.body.forfeits, 1)
+    assert.equal(stats.body.losses, 1)
     const fresh = await start(player.cookie)
     assert.notEqual(fresh.id, game.id)
   })

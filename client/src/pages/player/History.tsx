@@ -67,7 +67,7 @@ export function History({ username, lastLoss }: { username: string; lastLoss: Ga
             <li key={game.playedAt} className="flex items-center gap-4 border-t px-6 py-3.5">
               <span
                 aria-hidden
-                className={`size-2.5 shrink-0 rounded-full ${game.forfeited ? 'bg-muted-foreground' : game.outcome === 'win' ? 'bg-primary' : 'bg-death'}`}
+                className={`size-2.5 shrink-0 rounded-full ${game.outcome === 'win' ? 'bg-primary' : 'bg-death'}`}
               />
               <div className="flex min-w-0 flex-1 flex-col">
                 <span>{messageOf(game)}</span>
