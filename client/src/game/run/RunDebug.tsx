@@ -1,10 +1,11 @@
-import { useState } from 'react'
-import { debugWanted, downloadRunLog } from './debug.ts'
+import { Bug } from 'lucide-react'
+import { DropdownMenuCheckboxItem } from '@/components/ui/dropdown-menu.tsx'
+import { downloadRunLog, setDebugging, useDebugging } from './debug.ts'
 import type { RunReady } from './useRun.ts'
 
-/** With ?debug, a button over either table that saves the run so far, to replay it exactly. */
+/** With debugging on, a button over either table that saves the run so far, to replay it exactly. */
 export function RunDebug({ run }: { run: RunReady }) {
-  const [wanted] = useState(debugWanted)
+  const wanted = useDebugging()
   if (!wanted || !run.origin) return null
   const origin = run.origin
   return (
@@ -15,5 +16,21 @@ export function RunDebug({ run }: { run: RunReady }) {
     >
       Download run log ({run.history.length} moves)
     </button>
+  )
+}
+
+/** The run menus' switch for debugging, for testers until the beta settles. */
+export function DebugItem() {
+  const on = useDebugging()
+  return (
+    <DropdownMenuCheckboxItem
+      checked={on}
+      onCheckedChange={setDebugging}
+      onSelect={(event) => event.preventDefault()}
+      className="text-lg"
+    >
+      <Bug aria-hidden />
+      Debug log
+    </DropdownMenuCheckboxItem>
   )
 }

@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import { api, ApiError, type OpenRun, type RunOver } from '../../lib/api.ts'
 import { narrate, opening } from '../../lib/narrate.ts'
 import type { Mockup } from './mockups.ts'
-import { debugWanted, type RunOrigin } from './debug.ts'
+import { debugging, type RunOrigin } from './debug.ts'
 import { narrateRun } from './narrate.ts'
 
 type Listener = (events: RunEvent[]) => void
@@ -72,8 +72,6 @@ type Table = {
 }
 
 const LOG_LINES = 2_000
-// Read once a page load; ?debug logs every move and what it did to the console.
-const debugging = typeof window !== 'undefined' && debugWanted()
 const p03 = (lines: string[]) => lines.map((line) => `P03> ${line}`)
 
 let generations = 0
@@ -265,7 +263,8 @@ export function useRun(mockup: Mockup | null = null): Run {
           : ended && (NODE_RESULTS as readonly string[]).includes(visit.kind)
             ? { kind: 'node', view: visit.kind as NodeResultView, events: outcome.events, lines: story.news }
             : null
-      if (debugging) console.debug('[run]', table.moves + 1, action, outcome.events)
+      // With debugging on, every move and what it did goes to the console.
+      if (debugging()) console.debug('[run]', table.moves + 1, action, outcome.events)
       setTable({ ...table, moves: table.moves + 1, history: [...table.history, action], ...story, aftermath })
       // On the board, saves wait for a draw or the bell, as a quick battle's do, or a reload could peek at a draw.
       const quiet = action.type === 'play' && action.action.type !== 'draw' && action.action.type !== 'ringBell'

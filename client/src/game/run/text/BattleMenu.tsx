@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu.tsx'
 import { MENU_BUTTON } from '../../text/Panel.tsx'
+import { DebugItem } from '../RunDebug.tsx'
 import type { RunReady } from '../useRun.ts'
 import { saveWords } from './Screen.tsx'
 
@@ -62,6 +63,7 @@ export function BattleMenu({ run, onInventory, onMap }: { run: RunReady; onInven
           Look at the map
           <DropdownMenuShortcut>M</DropdownMenuShortcut>
         </DropdownMenuItem>
+        <DebugItem />
       </DropdownMenuContent>
     </DropdownMenu>
   )
