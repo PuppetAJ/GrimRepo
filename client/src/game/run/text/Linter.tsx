@@ -6,7 +6,7 @@ import { asUnit } from '../nodes.ts'
 import type { RunReady } from '../useRun.ts'
 import { NothingHere } from './CardBits.tsx'
 import { CardSlot } from './CardSlot.tsx'
-import { Arrow, FLOW, SigilChoice, Step, Waiting } from './Flow.tsx'
+import { Arrow, FLOW, SigilChoice, SigilName, Step, Waiting } from './Flow.tsx'
 import { LeaveButton, ScreenBar } from './Screen.tsx'
 
 /** The linter: pick a card, then the one sigil of its to delete, and see the card it leaves. */
@@ -59,7 +59,18 @@ export function Linter({ run }: { run: RunReady }) {
             )}
           </Step>
           <Arrow on={Boolean(chosen)} />
-          <Step title="The card after" on={Boolean(chosen)}>
+          <Step
+            title={
+              target && chosen ? (
+                <>
+                  <SigilName id={chosen} /> is removed from {card(target.card).name}
+                </>
+              ) : (
+                'The sigil is removed'
+              )
+            }
+            on={Boolean(chosen)}
+          >
             {target && chosen ? (
               <div className="w-24 sm:w-28">
                 <PixelCard unit={{ ...target, sigils: target.sigils.filter((id) => id !== chosen) }} />

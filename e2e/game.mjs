@@ -150,15 +150,16 @@ section('Resuming')
   } else console.log('  (no playable card in this hand, so Escape is skipped)')
 
   // With nothing being played, a right-click on a card magnifies it until the next click, which plays nothing.
+  // Forced, since a card too dear to play is dimmed and marked disabled, yet still read.
   const magnifier = page.locator('[data-magnifier]')
-  await page.locator('[data-action="select"]').first().click({ button: 'right' })
+  await page.locator('[data-action="select"]').first().click({ button: 'right', force: true })
   const magnified = await magnifier
     .waitFor({ timeout: 5_000 })
     .then(() => true)
     .catch(() => false)
   await page.waitForTimeout(300)
   check('a right-click on a card magnifies it, and it stays up', magnified && (await magnifier.isVisible()))
-  await page.locator('[data-action="select"]').first().click()
+  await page.locator('[data-action="select"]').first().click({ force: true })
   await magnifier.waitFor({ state: 'detached', timeout: 5_000 })
   check('until the next click, which plays nothing', (await page.locator('[data-action="cancel"]').count()) === 0)
 
