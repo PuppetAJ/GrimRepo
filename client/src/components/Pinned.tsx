@@ -41,13 +41,11 @@ function PinText({
   return (
     <div ref={ref} className="flex min-w-0 flex-1 flex-col justify-center gap-1.5">
       <p className="flex min-w-0 items-center gap-2">
-        <span className="flex min-w-0 items-center gap-1.5 truncate font-mono text-sm font-semibold text-primary">
-          {name}
-        </span>
+        <span className="flex min-w-0 items-center gap-1.5 truncate text-sm font-semibold text-primary">{name}</span>
         <Pin aria-hidden className="ml-auto size-3.5 shrink-0 rotate-45 text-muted-foreground" />
       </p>
       <p className="text-muted-foreground">{about}</p>
-      <dl className="flex flex-wrap gap-x-3 gap-y-0.5 font-mono">
+      <dl className="flex flex-wrap gap-x-3 gap-y-0.5 tabular-nums">
         {details.map(([key, value]) => (
           <div key={key} className="flex gap-1 whitespace-nowrap">
             <dt className="text-muted-foreground">{key}</dt>

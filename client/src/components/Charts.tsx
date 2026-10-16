@@ -94,7 +94,7 @@ export function TurnsChart({ games }: { games: Game[] }) {
               cursor={{ fill: 'var(--muted-foreground)', fillOpacity: 0.12 }}
               isAnimationActive={false}
             />
-            <Bar dataKey="turns" radius={1.5} minPointSize={2} isAnimationActive={false}>
+            <Bar dataKey="turns" radius={1.5} minPointSize={2} maxBarSize={28} isAnimationActive={false}>
               {games.map((game) => (
                 <Cell key={game.playedAt} fill={colorOf(game)} />
               ))}

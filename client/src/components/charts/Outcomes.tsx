@@ -25,10 +25,15 @@ function Streak({ label, count, win }: { label: string; count: number; win: bool
   return (
     <div className="flex items-baseline justify-between gap-3 @[16rem]:flex-col @[16rem]:justify-start @[16rem]:gap-0">
       <dt className="text-xs whitespace-nowrap text-muted-foreground">{label}</dt>
+      {/* The color says win or loss; the words stay for screen readers and on hover. */}
       <dd
+        title={count ? `${count} ${win ? (count === 1 ? 'win' : 'wins') : count === 1 ? 'loss' : 'losses'}` : undefined}
         className={`font-mono text-lg @[16rem]:text-xl ${count ? (win ? 'text-primary' : 'text-death') : 'text-muted-foreground'}`}
       >
-        {count ? `${win ? 'W' : 'L'}${count}` : '-'}
+        {count || '-'}
+        {count ? (
+          <span className="sr-only">{win ? (count === 1 ? ' win' : ' wins') : count === 1 ? ' loss' : ' losses'}</span>
+        ) : null}
       </dd>
     </div>
   )
