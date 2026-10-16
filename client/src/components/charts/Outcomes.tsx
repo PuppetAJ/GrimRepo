@@ -57,8 +57,8 @@ function Split({ wins, losses }: { wins: number; losses: number }) {
 function Streaks({ recent }: { recent: Game[] }) {
   const streak = streaks(recent)
   return (
-    <dl className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-      <Streak label="Current streak" count={streak.current} win={streak.winning} />
+    <dl className="flex flex-wrap gap-x-3.5 gap-y-1 text-sm">
+      <Streak label="Current" count={streak.current} win={streak.winning} />
       <Streak label="Longest win" count={streak.wins} win />
       <Streak label="Longest loss" count={streak.losses} win={false} />
     </dl>
@@ -100,12 +100,8 @@ export function Outcomes({
       </div>
       {recent.length ? (
         <div className="flex flex-1 flex-col gap-2 border-t pt-3">
-          {chart && recent.length > 1 ? (
-            <>
-              <p className="text-xs text-muted-foreground">Streaks, oldest first: wins above the line, losses below</p>
-              {chart}
-            </>
-          ) : null}
+          <p className="text-xs text-muted-foreground">Recent streaks</p>
+          {chart && recent.length > 1 ? chart : null}
           <Streaks recent={recent} />
         </div>
       ) : null}
