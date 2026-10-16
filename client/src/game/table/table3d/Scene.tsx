@@ -95,6 +95,10 @@ export function Scene({
   // The turn's own draw is owed; a catch-up draw after it is only offered.
   const owesDraw = !state.drawn && can({ type: 'draw' })
   const count = view.hand.length
+  // What an empty deck's draw would shuffle back, held while a turn plays out, so it never shows ahead of the table.
+  const reshuffleNow = view.deck ? 0 : reshuffleSize(state)
+  const [reshuffle, setReshuffle] = useState(reshuffleNow)
+  if (!busy && reshuffle !== reshuffleNow) setReshuffle(reshuffleNow)
 
   const [aimed, setAimed] = useState<number | null>(null)
   // The item in hand, used on whichever card the player clicks that it can reach.
@@ -165,7 +169,7 @@ export function Scene({
           <Deck
             count={view.deck}
             total={PLAYER_DECK.length}
-            reshuffle={view.deck ? 0 : reshuffleSize(state)}
+            reshuffle={view.deck ? 0 : reshuffle}
             active={can({ type: 'draw', from: 'deck' } as Partial<Action>)}
             onClick={() => act({ type: 'draw', from: 'deck' })}
             hint={hint}

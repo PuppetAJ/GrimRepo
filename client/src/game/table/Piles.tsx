@@ -23,6 +23,7 @@ export function Nudge({
   still = false,
   cursor,
   blocked,
+  onHover,
   children,
 }: {
   active: boolean
@@ -37,6 +38,8 @@ export function Nudge({
   cursor?: 'draw' | 'boilerplate' | 'press'
   /** Cursor shown while inactive for a reason worth showing, such as a full hand. */
   blocked?: 'full'
+  /** Told when the pointer arrives and leaves, for whatever lies flat beside the lifted part. */
+  onHover?: (hovered: boolean) => void
   children: ReactNode
 }) {
   const group = useRef<THREE.Group>(null)
@@ -72,10 +75,14 @@ export function Nudge({
     onPointerOver: (event: ThreeEvent<PointerEvent>) => {
       event.stopPropagation()
       setHovered(true)
+      onHover?.(true)
       since.current = performance.now()
     },
     onPointerMove: (event: ThreeEvent<PointerEvent>) => event.stopPropagation(),
-    onPointerOut: () => setHovered(false),
+    onPointerOut: () => {
+      setHovered(false)
+      onHover?.(false)
+    },
   }
   return (
     <group>
@@ -191,9 +198,12 @@ export function Deck({
   extra?: boolean
 }) {
   const layers = count === 0 ? 0 : Math.max(1, Math.round((count / total) * 12))
+  const [hovered, setHovered] = useState(false)
   return (
     <group position={DECK}>
       {extra ? <ExtraDraw /> : null}
+      {/* Flat on the table, outside the part that lifts on hover, so it never floats off it. */}
+      {!layers && reshuffle ? <EmptyDeck cards={reshuffle} active={active} hovered={hovered} /> : null}
       <Nudge
         active={active}
         onClick={onClick}
@@ -202,8 +212,9 @@ export function Deck({
         hint={hint}
         cursor="draw"
         blocked={full ? 'full' : undefined}
+        onHover={setHovered}
       >
-        {layers ? <Stack layers={layers} /> : reshuffle ? <EmptyDeck cards={reshuffle} active={active} /> : null}
+        {layers ? <Stack layers={layers} /> : null}
       </Nudge>
     </group>
   )
@@ -246,8 +257,12 @@ function ExtraDraw() {
   )
 }
 
-/** Where the empty deck was: an outline that says a draw reshuffles, pulsing while drawing is the player's move. */
-function EmptyDeck({ cards, active }: { cards: number; active: boolean }) {
+// The empty deck's outline at rest, a little under the board's glow, and brighter under the pointer.
+const DIM_OUTLINE = new THREE.Color(...TINT.glowHdr).multiplyScalar(0.65)
+const LIT_OUTLINE = new THREE.Color(...TINT.glowHdr)
+
+/** Where the empty deck was: an outline that says a draw reshuffles, pulsing while drawing is the player's move and lit solid under the pointer. */
+function EmptyDeck({ cards, active, hovered }: { cards: number; active: boolean; hovered: boolean }) {
   const depth = CARD.height * DISK.compact
   const material = useMemo(() => {
     const element = document.createElement('canvas')
@@ -295,7 +310,9 @@ function EmptyDeck({ cards, active }: { cards: number; active: boolean }) {
     [material],
   )
   useFrame(({ clock }) => {
-    material.opacity = active && !STILL ? 0.65 + 0.35 * Math.sin(clock.elapsedTime * 4) : active ? 1 : 0.45
+    const lit = hovered && active
+    material.color.copy(lit ? LIT_OUTLINE : DIM_OUTLINE)
+    material.opacity = lit ? 1 : active && !STILL ? 0.65 + 0.35 * Math.sin(clock.elapsedTime * 4) : active ? 1 : 0.45
   })
   return (
     <mesh rotation-x={-Math.PI / 2} position-y={0.003} material={material}>
