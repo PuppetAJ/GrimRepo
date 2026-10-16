@@ -1,3 +1,4 @@
+import { MouseRight } from 'lucide-react'
 import { Forfeit } from '../controls.tsx'
 import { useTable } from './context.ts'
 import { SIDE_BUTTON } from './Panel.tsx'
@@ -51,8 +52,11 @@ export function CancelButton() {
       disabled={!state.summon}
       onClick={() => act({ type: 'cancel' })}
       aria-keyshortcuts="Escape"
-      className={`${SIDE_BUTTON} w-full disabled:opacity-40 disabled:hover:bg-[#07130b] ${layout === 'mid' ? 'mt-1' : ''}`}
+      title="Cancel, or right-click anywhere"
+      className={`${SIDE_BUTTON} flex w-full items-center justify-center gap-2 disabled:opacity-40 disabled:hover:bg-[#07130b] ${layout === 'mid' ? 'mt-1' : ''}`}
     >
+      {/* A right-click cancels too; touch has no right-click to point at. */}
+      <MouseRight aria-hidden className="size-5 shrink-0 pointer-coarse:hidden" />
       Cancel
     </button>
   )

@@ -8,6 +8,7 @@ import {
   Map as MapIcon,
   Maximize,
   Minimize,
+  MouseRight,
   MoveDown,
   Type,
   UnfoldHorizontal,
@@ -340,7 +341,10 @@ export function Hud({
                     variant="outline"
                     onClick={() => act({ type: 'cancel' })}
                     aria-keyshortcuts="Escape"
+                    title="Cancel, or right-click anywhere"
                   >
+                    {/* A right-click cancels too; touch has no right-click to point at. */}
+                    <MouseRight aria-hidden className="pointer-coarse:hidden" />
                     Cancel
                   </Button>
                 ) : null}
