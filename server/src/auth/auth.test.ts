@@ -3,7 +3,7 @@ import { after, before, beforeEach, describe, it } from 'node:test'
 import { pool } from '../config/db.ts'
 import { newPlayer, startApp } from '../test/http.ts'
 import { renameAccount } from '../admin/moderation.ts'
-import { insertGame, resetDatabase } from '../test/support.ts'
+import { insertRun, resetDatabase } from '../test/support.ts'
 import { auth } from './auth.ts'
 
 const app = await startApp()
@@ -136,17 +136,17 @@ describe('changing an account', () => {
   const rename = (cookie: string, username: string) =>
     app.call('POST', '/api/auth/update-user', { cookie, body: { username } })
 
-  it('lets a player change their username and keeps their games', async () => {
+  it('lets a player change their username and keeps their runs', async () => {
     const player = newPlayer('Before')
     const { cookie } = await signUp(player)
-    await insertGame(player.username, 'win', 10)
+    await insertRun(player.username, { battles: 3 })
 
     const reply = await rename(cookie, 'After_Name')
     assert.equal(reply.status, 200, JSON.stringify(reply.body))
 
     const stats = await app.call('GET', '/api/players/after_name/stats')
     assert.equal(stats.body.username, 'After_Name', 'shown as typed')
-    assert.equal(stats.body.games, 1, 'the games follow the account, not the name')
+    assert.equal(stats.body.runs, 1, 'the runs follow the account, not the name')
     assert.equal((await app.call('GET', `/api/players/${player.username}/stats`)).status, 404)
   })
 
@@ -169,7 +169,7 @@ describe('changing an account', () => {
     await signUp(victim)
     const impostor = newPlayer('Impostor')
     const { cookie } = await signUp(impostor)
-    await insertGame(impostor.username, 'win', 10)
+    await insertRun(impostor.username, { battles: 3 })
 
     await app.call('POST', '/api/auth/update-user', { cookie, body: { displayUsername: victim.username } })
     const board = await app.call('GET', '/api/leaderboard')
@@ -188,14 +188,14 @@ describe('changing an account', () => {
   it('lets a player delete their account, and their scores with it', async () => {
     const player = newPlayer('Leaving')
     const { cookie } = await signUp(player)
-    await insertGame(player.username, 'win', 10)
+    await insertRun(player.username, { battles: 3 })
 
     const reply = await app.call('POST', '/api/auth/delete-user', { cookie, body: { password: player.password } })
     assert.equal(reply.status, 200, JSON.stringify(reply.body))
 
     assert.equal((await app.call('GET', '/api/me', { cookie })).status, 401)
     assert.deepEqual((await app.call('GET', '/api/leaderboard')).body.players, [])
-    const { rows } = await pool.query('SELECT 1 FROM games UNION ALL SELECT 1 FROM accounts')
+    const { rows } = await pool.query('SELECT 1 FROM runs UNION ALL SELECT 1 FROM accounts')
     assert.equal(rows.length, 0, 'nothing of theirs is left behind')
   })
 

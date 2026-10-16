@@ -1,6 +1,6 @@
 /** Resets to the demo state; `--if-empty` only seeds an empty database, and production needs SEED_ALLOW_PRODUCTION=1. */
 import { randomUUID } from 'node:crypto'
-import { scoreBattle, type Outcome } from 'shared'
+import { RULES_VERSION, RUN_RULES_VERSION, scoreRun } from 'shared'
 import { auth } from '../auth/auth.ts'
 import { demoAccount } from '../auth/demo.ts'
 import { pool } from '../config/db.ts'
@@ -8,33 +8,19 @@ import { isProduction } from '../config/env.ts'
 
 const ifEmpty = process.argv.includes('--if-empty')
 
-// Each pair is one game: [outcome, turns].
-const histories: Record<string, [Outcome, number][]> = {
-  JohanH: [
-    ['win', 9],
-    ['loss', 14],
-    ['win', 12],
-    ['win', 18],
-    ['loss', 6],
-  ],
-  PuppetAJ: [
-    ['loss', 11],
-    ['win', 15],
-    ['loss', 4],
-    ['win', 21],
-  ],
-  kwm0304: [
-    ['loss', 8],
-    ['win', 24],
-    ['loss', 13],
-  ],
-  demo: [
-    ['loss', 7],
-    ['win', 19],
-  ],
+// One run each: how far it got, and whether it cleared Production.
+type SeededRun = { cleared: boolean; stage: number; battles: number; bosses: number }
+const cleared = (battles: number): SeededRun => ({ cleared: true, stage: 2, battles, bosses: 3 })
+const lost = (stage: number, battles: number): SeededRun => ({ cleared: false, stage, battles, bosses: stage })
+
+const histories: Record<string, SeededRun[]> = {
+  JohanH: [cleared(9), lost(1, 5), cleared(11), lost(2, 8), lost(0, 2)],
+  PuppetAJ: [lost(1, 4), cleared(10), lost(0, 1), cleared(9)],
+  kwm0304: [lost(0, 2), cleared(12), lost(1, 6)],
+  demo: [lost(0, 3), cleared(9)],
 }
 
-// Seeded games have no moves to count cards from, so favorites are set here.
+// Seeded runs have no moves to count cards from, so favorites are set here.
 const favorites: Record<string, string> = {
   JohanH: 'RubberDuck',
   PuppetAJ: 'ForkBomb',
@@ -60,25 +46,32 @@ async function main(): Promise<void> {
   } else if (isProduction && process.env['SEED_ALLOW_PRODUCTION'] !== '1') {
     throw new Error('Refusing to wipe a production database without SEED_ALLOW_PRODUCTION=1')
   } else {
-    await pool.query('TRUNCATE games, rate_limits, verifications, users RESTART IDENTITY CASCADE')
+    await pool.query('TRUNCATE games, runs, rate_limits, verifications, users RESTART IDENTITY CASCADE')
   }
 
   for (const player of players) {
     // Through Better Auth, so the password is hashed as a real sign-up hashes it.
     const { user } = await auth.api.signUpEmail({ body: player })
-    const games = histories[player.username] ?? []
-    for (const [index, [outcome, turns]] of games.entries()) {
+    const runs = histories[player.username] ?? []
+    for (const [index, run] of runs.entries()) {
       // Spread over recent days so the stats page has history to show.
       const favorite = favorites[player.username]
       await pool.query(
-        `INSERT INTO games (user_id, outcome, turns, score, played_at, cards)
-         VALUES ($1, $2, $3, $4, now() - make_interval(days => $5), $6)`,
+        `INSERT INTO runs (user_id, seed, rules_version, run_version, status, stage, battles, bosses, score,
+                           started_at, finished_at, cards)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, now() - make_interval(days => $10), now() - make_interval(days => $10),
+                 $11)`,
         [
           user.id,
-          outcome,
-          turns,
-          scoreBattle(outcome, turns),
-          (games.length - index) * 2,
+          index + 1,
+          RULES_VERSION,
+          RUN_RULES_VERSION,
+          run.cleared ? 'won' : 'lost',
+          run.stage,
+          run.battles,
+          run.bosses,
+          scoreRun({ battles: run.battles, bosses: run.bosses, overkill: 0 }, run.cleared),
+          (runs.length - index) * 2,
           JSON.stringify(favorite ? { [favorite]: 2, Boilerplate: 3 } : {}),
         ],
       )

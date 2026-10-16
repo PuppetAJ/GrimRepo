@@ -4,7 +4,8 @@ import { DEATH_NAME_LIMIT, RUN_SAVE_LIMIT, SIGILS, STARTER_DECKS, type RunAction
 import { z } from 'zod'
 import { USERNAME_PATTERN } from '../auth/auth.ts'
 import { requireUser, type SignedIn } from '../auth/session.ts'
-import { forfeitGame, GameError, leaderboard, playerGames, playerStats, recordMoves, startGame } from '../db/games.ts'
+import { forfeitGame, GameError, recordMoves, startGame } from '../db/games.ts'
+import { playerRuns, playerStats } from '../db/players.ts'
 import { buildRunDeathCard, forfeitRun, recordRunMoves, runLeaderboard, startRun } from '../db/runs.ts'
 
 export const api = express.Router()
@@ -99,18 +100,15 @@ const idOf = (raw: unknown): number | null => {
 
 const pageQuery = z.coerce.number().int().min(1).catch(1)
 
+// Runs only: quick battles are giving way to the tutorial, so they no longer rank.
 api.get('/leaderboard', async (req, res) => {
-  res.json(await leaderboard(pageQuery.parse(req.query['page'] ?? 1)))
-})
-
-api.get('/leaderboard/runs', async (req, res) => {
   res.json(await runLeaderboard(pageQuery.parse(req.query['page'] ?? 1)))
 })
 
 api.get('/me', requireUser, async (_req, res) => {
   const user = res.locals['user'] as SignedIn
   const stats = await playerStats(user.username)
-  res.json({ username: user.displayUsername, bestScore: stats?.bestScore ?? 0, games: stats?.games ?? 0 })
+  res.json({ username: user.displayUsername, bestScore: stats?.bestScore ?? 0, runs: stats?.runs ?? 0 })
 })
 
 api.post('/games', requireUser, startLimiter, async (_req, res) => {
@@ -198,14 +196,14 @@ api.post('/runs/:id/death-card', requireUser, movesLimiter, async (req, res) => 
   }
 })
 
-api.get('/players/:username/games', async (req, res) => {
+api.get('/players/:username/runs', async (req, res) => {
   const page = pageQuery.parse(req.query['page'] ?? 1)
-  const games = USERNAME_PATTERN.test(req.params.username) ? await playerGames(req.params.username, page) : null
-  if (!games) {
+  const runs = USERNAME_PATTERN.test(req.params.username) ? await playerRuns(req.params.username, page) : null
+  if (!runs) {
     res.status(404).json({ error: 'No such player' })
     return
   }
-  res.json(games)
+  res.json(runs)
 })
 
 api.get('/players/:username/stats', async (req, res) => {

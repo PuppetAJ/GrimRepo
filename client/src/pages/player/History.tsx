@@ -5,7 +5,8 @@ import { Skeleton } from '@/components/ui/skeleton.tsx'
 import { api } from '../../lib/api.ts'
 import { ago, number } from '../../lib/format.ts'
 import { useAsync } from '../../lib/useAsync.ts'
-import { hashOf, messageOf, type Game } from './games.ts'
+import { ending, type Run } from '../../components/charts/chart.ts'
+import { hashOf } from './runs.ts'
 import { Trace } from './Trace.tsx'
 
 // Must match the server's page size.
@@ -15,38 +16,38 @@ const HISTORY = 10
 // Under the header's own divider, the first row needs none; under a pinned trace it keeps one.
 const FIRST_ROW_OPEN = '[&>li:first-child]:border-t-0'
 
-export function History({ username, lastLoss }: { username: string; lastLoss: Game | undefined }) {
+export function History({ username, lastLoss }: { username: string; lastLoss: Run | undefined }) {
   const page = useSearch({ from: '/players/$username', select: (search) => search.page ?? 1 })
   const navigate = useNavigate({ from: '/players/$username' })
-  const history = useAsync(() => api.games(username, page), `${username}:${page}`)
+  const history = useAsync(() => api.runs(username, page), `${username}:${page}`)
   const turn = (to: number) =>
     void navigate({ search: (now) => ({ ...now, page: to > 1 ? to : undefined }), resetScroll: false })
-  const games = history.status === 'ready' ? history.data.games : []
+  const runs = history.status === 'ready' ? history.data.runs : []
   const pinned = lastLoss && page === 1
   return (
     <section className="overflow-hidden rounded-lg border bg-card">
       <div className="flex items-baseline justify-between gap-3 border-b px-6 py-3.5">
-        <h2 className="font-semibold">Game history</h2>
+        <h2 className="font-semibold">Run history</h2>
         {history.status === 'ready' && history.data.total ? (
           <span className="text-sm text-muted-foreground">
-            {number(history.data.total)} {history.data.total === 1 ? 'game' : 'games'}
+            {number(history.data.total)} {history.data.total === 1 ? 'run' : 'runs'}
           </span>
         ) : null}
       </div>
       {history.status === 'error' ? <p className="px-6 py-5 text-muted-foreground">{history.error.message}</p> : null}
       {history.status === 'ready' && history.data.total === 0 ? (
         <p className="px-6 py-5 text-muted-foreground">
-          No games yet.{' '}
-          <Link to="/game" className="text-primary underline underline-offset-2">
-            Play one
+          No runs yet.{' '}
+          <Link to="/run" className="text-primary underline underline-offset-2">
+            Start one
           </Link>
           .
         </p>
       ) : null}
-      {pinned ? <Trace game={lastLoss} /> : null}
+      {pinned ? <Trace run={lastLoss} /> : null}
       {/* Placeholder rows hold the list's height, so nothing below it jumps. */}
       {history.status === 'loading' ? (
-        <div role="status" aria-label="Loading games">
+        <div role="status" aria-label="Loading runs">
           <ol aria-hidden className={pinned ? '' : FIRST_ROW_OPEN}>
             {[...Array(HISTORY).keys()].map((row) => (
               <li key={row} className="flex items-center gap-4 border-t px-6 py-3.5">
@@ -61,28 +62,28 @@ export function History({ username, lastLoss }: { username: string; lastLoss: Ga
           </ol>
         </div>
       ) : null}
-      {games.length ? (
+      {runs.length ? (
         <ol className={pinned ? '' : FIRST_ROW_OPEN}>
-          {games.map((game) => (
-            <li key={game.playedAt} className="flex items-center gap-4 border-t px-6 py-3.5">
+          {runs.map((run) => (
+            <li key={run.playedAt} className="flex items-center gap-4 border-t px-6 py-3.5">
               <span
                 aria-hidden
-                className={`size-2.5 shrink-0 rounded-full ${game.outcome === 'win' ? 'bg-primary' : 'bg-death'}`}
+                className={`size-2.5 shrink-0 rounded-full ${run.outcome === 'win' ? 'bg-primary' : 'bg-death'}`}
               />
               <div className="flex min-w-0 flex-1 flex-col">
-                <span>{messageOf(game)}</span>
-                <span className="text-sm text-muted-foreground">{ago(game.playedAt)}</span>
+                <span>{ending(run)}</span>
+                <span className="text-sm text-muted-foreground">{ago(run.playedAt)}</span>
               </div>
               <span className="hidden rounded-md border border-input px-2 py-0.5 font-mono text-sm text-muted-foreground sm:inline">
-                {hashOf(game)}
+                {hashOf(run)}
               </span>
-              <span className="w-16 text-right font-mono">{number(game.score)}</span>
+              <span className="w-16 text-right font-mono">{number(run.score)}</span>
             </li>
           ))}
         </ol>
       ) : null}
       {history.status === 'ready' && history.data.pages > 1 ? (
-        <nav aria-label="Game history pages" className="flex items-center justify-between gap-3 border-t px-6 py-3">
+        <nav aria-label="Run history pages" className="flex items-center justify-between gap-3 border-t px-6 py-3">
           <Button
             variant="outline"
             size="sm"

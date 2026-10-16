@@ -2,7 +2,7 @@ import { useEffect, useRef, type ReactNode } from 'react'
 import { ago, number } from '../../lib/format.ts'
 import type { TooltipContentProps } from 'recharts'
 import type { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent'
-import { colorOf, ending, resultOf, type Game } from './chart.ts'
+import { colorOf, ending, resultOf, type Run } from './chart.ts'
 
 export function Frame({ title, note, children }: { title: string; note?: string; children: ReactNode }) {
   return (
@@ -17,7 +17,7 @@ export function Frame({ title, note, children }: { title: string; note?: string;
 }
 
 /** The chart's data as a table for screen readers. */
-export function AsTable({ games, caption }: { games: Game[]; caption: string }) {
+export function AsTable({ runs, caption }: { runs: Run[]; caption: string }) {
   return (
     // Hidden by a wrapper: Firefox still draws a hidden table's caption.
     <div className="sr-only">
@@ -25,19 +25,19 @@ export function AsTable({ games, caption }: { games: Game[]; caption: string }) 
         <caption>{caption}</caption>
         <thead>
           <tr>
-            <th scope="col">Game</th>
+            <th scope="col">Run</th>
             <th scope="col">Result</th>
-            <th scope="col">Turns</th>
+            <th scope="col">Battles won</th>
             <th scope="col">Score</th>
           </tr>
         </thead>
         <tbody>
-          {games.map((game, index) => (
-            <tr key={game.playedAt}>
+          {runs.map((run, index) => (
+            <tr key={run.playedAt}>
               <td>{index + 1}</td>
-              <td>{resultOf(game)}</td>
-              <td>{game.turns}</td>
-              <td>{game.score}</td>
+              <td>{resultOf(run)}</td>
+              <td>{run.battles}</td>
+              <td>{run.score}</td>
             </tr>
           ))}
         </tbody>
@@ -71,27 +71,27 @@ export function Tip({
   active,
   payload,
   activeIndex,
-  detail = (game) => `${number(game.score)} points`,
+  detail = (run) => `${number(run.score)} points`,
 }: Pick<TooltipContentProps<ValueType, NameType>, 'active' | 'payload' | 'activeIndex'> & {
   count: number
-  /** The tip's last line, the game's score unless a chart says otherwise. */
-  detail?: (game: Game) => string
+  /** The tip's last line, the run's score unless a chart says otherwise. */
+  detail?: (run: Run) => string
 }) {
   const point = payload?.[0]
-  const game = point?.payload as Game | undefined
-  // The turns chart's empty slots have no game to tell of.
-  if (!active || !game?.playedAt) return null
+  const run = point?.payload as Run | undefined
+  // The battles chart's empty slots have no run to tell of.
+  if (!active || !run?.playedAt) return null
   const index = Number(activeIndex)
   return (
     <div className="w-max rounded-md border bg-popover px-3 py-2 text-sm whitespace-nowrap shadow-lg">
       <p className="text-muted-foreground">
-        Game {index + 1} of {count} · {ago(game.playedAt)}
+        Run {index + 1} of {count} · {ago(run.playedAt)}
       </p>
       <p className="flex items-center gap-2">
-        <span className="size-2 shrink-0 rounded-full" style={{ background: colorOf(game) }} />
-        {ending(game)}
+        <span className="size-2 shrink-0 rounded-full" style={{ background: colorOf(run) }} />
+        {ending(run)}
       </p>
-      <p className="font-mono text-base">{detail(game)}</p>
+      <p className="font-mono text-base">{detail(run)}</p>
     </div>
   )
 }

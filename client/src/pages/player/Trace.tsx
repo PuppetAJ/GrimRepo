@@ -1,18 +1,18 @@
 import { Suspense } from 'react'
-import { TURN_LIMIT } from 'shared'
+import { STAGES } from 'shared'
 import { Corruption } from '../../components/p03/Corruption.tsx'
 import { FrameDamage } from '../../components/p03/FrameDamage.tsx'
 import { Glass } from '../../components/p03/Glass.tsx'
 import { number } from '../../lib/format.ts'
 import { FaultyScreen } from '../../components/p03/FaultyScreen.ts'
-import { hashOf, type Game } from './games.ts'
+import type { Run } from '../../components/charts/chart.ts'
+import { hashOf } from './runs.ts'
 
-export function Trace({ game }: { game: Game }) {
-  const frames = game.forfeited
-    ? ['at you.forfeit()', `at factory.table (turn ${game.turns})`]
-    : game.turns >= TURN_LIMIT
-      ? [`at turn.limit(${TURN_LIMIT})`, 'at factory.table (ran out of time)']
-      : ['at scale.tip(p03)', `at factory.table (turn ${game.turns})`, 'at deck.synergy() -> null']
+export function Trace({ run }: { run: Run }) {
+  const stage = STAGES[run.stage] ?? STAGES[0]
+  const frames = run.forfeited
+    ? ['at you.abandon()', `at ${stage.toLowerCase()}.map (${run.battles} won)`]
+    : ['at integrity.check() -> 0', `at ${stage.toLowerCase()}.battle(${run.battles + 1})`, 'at deck.synergy() -> null']
   return (
     // The margins leave room for the corruption outside the frame.
     <div className="relative mx-6 mt-4 mb-5">
@@ -30,10 +30,10 @@ export function Trace({ game }: { game: Game }) {
         <Corruption dense cols={2} rows={5} corner="bottom-right" seed={29} className="right-0 bottom-0" />
         <p className="flex flex-wrap justify-between gap-x-4">
           <span className="text-[#ff7a6b]">
-            {game.forfeited ? 'SIGTERM' : 'FATAL'} game {game.forfeited ? 'abandoned' : 'lost'} on turn {game.turns}
+            {run.forfeited ? 'SIGTERM' : 'FATAL'} run {run.forfeited ? 'abandoned' : 'lost'} in {stage}
           </span>
           <span className="text-p03-dim">
-            {hashOf(game)} · {number(game.score)}
+            {hashOf(run)} · {number(run.score)}
           </span>
         </p>
         {frames.map((frame) => (
@@ -43,7 +43,7 @@ export function Trace({ game }: { game: Game }) {
         ))}
         <p className="mt-1">
           <span className="text-p03">P03&gt;</span>{' '}
-          {game.forfeited ? 'Walking away? Typical.' : 'Weak cards. Total lack of synergy.'}
+          {run.forfeited ? 'Walking away? Typical.' : 'Weak cards. Total lack of synergy.'}
         </p>
       </div>
     </div>

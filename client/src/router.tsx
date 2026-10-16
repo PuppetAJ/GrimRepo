@@ -9,7 +9,6 @@ import * as z from 'zod/mini'
 import { Layout } from './components/Layout.tsx'
 import { ReloadPage } from './components/LoadFailed.tsx'
 import { RequireAuth } from './components/RequireAuth.tsx'
-import type { Finished } from './lib/api.ts'
 import { Home } from './pages/Home.tsx'
 import { Leaderboard } from './pages/Leaderboard.tsx'
 import { NotFound } from './pages/NotFound.tsx'
@@ -33,7 +32,8 @@ const optional = <T extends z.core.SomeType>(schema: T) => z.catch(z.optional(sc
 
 const page = z.object({ page: optional(z.coerce.number().check(z.int(), z.minimum(2))) })
 
-const leaderboardSearch = z.object({ ...page.shape, board: optional(z.enum(['runs'])) })
+// Once there were quick battle and run boards; an old ?board= link now just finds the one.
+const leaderboardSearch = page
 
 const cardsSearch = z.object({
   q: optional(z.coerce.string()),
@@ -183,9 +183,5 @@ export function makeRouter(history?: RouterHistory, origin?: string) {
 declare module '@tanstack/react-router' {
   interface Register {
     router: ReturnType<typeof makeRouter>
-  }
-  // Set by the game page when a game ends, for the leaderboard to show.
-  interface HistoryState {
-    result?: Finished
   }
 }

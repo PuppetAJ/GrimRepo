@@ -166,7 +166,7 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
       )
     case 'top': {
       const rows = (await api.leaderboard()).players.slice(0, 5)
-      if (!rows.length) return <p>Nobody has finished a game against me. Obviously.</p>
+      if (!rows.length) return <p>Nobody has finished a run against me. Obviously.</p>
       return (
         <div className="grid grid-cols-[auto_1fr_auto] gap-x-6">
           {rows.map((row) => (
@@ -184,8 +184,8 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
       const stats = await api.stats(context.user)
       return (
         <p>
-          <span className="text-[#ffb454]">{context.user}</span>. {stats.games} {stats.games === 1 ? 'game' : 'games'},{' '}
-          {stats.wins} won, best {number(stats.bestScore)}.
+          <span className="text-[#ffb454]">{context.user}</span>. {stats.runs} {stats.runs === 1 ? 'run' : 'runs'},{' '}
+          {stats.wins} cleared, best {number(stats.bestScore)}.
           {stats.losses ? " I remember every time you've lost." : ' Not a single loss. Yet.'}
         </p>
       )

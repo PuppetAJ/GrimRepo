@@ -1,26 +1,26 @@
 import { CalendarDays, Clock, Flame, GitCommitHorizontal, GitMerge, GitPullRequestClosed } from 'lucide-react'
 import type { PlayerStats } from '../../lib/api.ts'
 import { ago, number } from '../../lib/format.ts'
-import { messageOf } from './games.ts'
+import { ending } from '../../components/charts/chart.ts'
 import type { Cell } from './grid.ts'
 
-/** The current run may end yesterday, if today has no games yet. */
+/** The current streak of days may end yesterday, if today has no runs yet. */
 function streaks(cells: Cell[]): { longest: number; current: number } {
   let longest = 0
-  let run = 0
+  let spell = 0
   for (const cell of cells) {
-    run = cell.games ? run + 1 : 0
-    longest = Math.max(longest, run)
+    spell = cell.runs ? spell + 1 : 0
+    longest = Math.max(longest, spell)
   }
   let current = 0
-  for (let index = cells.length - (cells.at(-1)?.games ? 1 : 2); index >= 0 && cells[index]?.games; index--) current++
+  for (let index = cells.length - (cells.at(-1)?.runs ? 1 : 2); index >= 0 && cells[index]?.runs; index--) current++
   return { longest, current }
 }
 
 export function Contributions({ stats, cells }: { stats: PlayerStats; cells: Cell[] }) {
-  const played = cells.reduce((sum, cell) => sum + cell.games, 0)
+  const played = cells.reduce((sum, cell) => sum + cell.runs, 0)
   const lost = stats.days.reduce((sum, day) => sum + day.losses, 0)
-  const busiest = cells.reduce<Cell | null>((most, cell) => (cell.games > (most?.games ?? 0) ? cell : most), null)
+  const busiest = cells.reduce<Cell | null>((most, cell) => (cell.runs > (most?.runs ?? 0) ? cell : most), null)
   const { longest, current } = streaks(cells)
   const day = (key: string) =>
     new Date(`${key}T00:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
@@ -29,38 +29,38 @@ export function Contributions({ stats, cells }: { stats: PlayerStats; cells: Cel
     {
       icon: GitCommitHorizontal,
       tone: 'text-muted-foreground',
-      title: `${plural(played, 'game')} committed`,
+      title: `${plural(played, 'run')} committed`,
       note: 'in the last 26 weeks',
     },
     {
       icon: GitMerge,
       tone: 'text-primary',
       title: `${plural(played - lost, 'win')} merged`,
-      note: 'games won',
+      note: 'runs cleared',
     },
     {
       icon: GitPullRequestClosed,
       tone: 'text-death',
       title: `${plural(lost, 'loss', 'losses')} reverted`,
-      note: 'games lost',
+      note: 'runs lost',
     },
     {
       icon: Flame,
       tone: 'text-[#ffb454]',
       title: `${plural(longest, 'day')} in a row, at most`,
-      note: current ? `${plural(current, 'day')} running now` : 'no run going now',
+      note: current ? `${plural(current, 'day')} going now` : 'no streak going now',
     },
     {
       icon: CalendarDays,
       tone: 'text-muted-foreground',
       title: busiest ? `Busiest on ${day(busiest.key)}` : 'No busiest day yet',
-      note: busiest ? plural(busiest.games, 'game') : 'nothing played',
+      note: busiest ? plural(busiest.runs, 'run') : 'nothing played',
     },
     {
       icon: Clock,
       tone: 'text-muted-foreground',
       title: stats.recent[0] ? `Last played ${ago(stats.recent[0].playedAt)}` : 'Never played',
-      note: stats.recent[0] ? messageOf(stats.recent[0]) : 'the table is waiting',
+      note: stats.recent[0] ? ending(stats.recent[0]) : 'the table is waiting',
     },
   ]
   return (

@@ -12,9 +12,8 @@ import {
   type GameState,
 } from 'shared'
 import { pool } from '../config/db.ts'
-import { BOARD_PAGE, countCardsPlayed, HISTORY_PAGE, RECENT_GAMES } from '../db/games.ts'
 import { newPlayer, startApp } from '../test/http.ts'
-import { insertGame, insertOldGame, insertPlayer, resetDatabase } from '../test/support.ts'
+import { insertOldGame, resetDatabase } from '../test/support.ts'
 
 const app = await startApp()
 after(async () => {
@@ -113,8 +112,6 @@ describe('a game', () => {
     assert.equal(last?.body.turns, expected.turns)
     assert.equal(last?.body.score, scoreBattle(expected.outcome, expected.turns))
 
-    const stats = await app.call('GET', `/api/players/${player.username}/stats`)
-    assert.equal(stats.body.games, 1)
     const { rows } = await pool.query<{ cards: Record<string, number> }>('SELECT cards FROM games WHERE id = $1', [
       game.id,
     ])
@@ -217,9 +214,8 @@ describe('a game', () => {
     assert.equal(forfeited.body.outcome, 'loss')
     assert.equal(forfeited.body.turns, played + 1)
 
-    const stats = await app.call('GET', `/api/players/${player.username}/stats`)
-    assert.equal(stats.body.recent[0].forfeited, true)
-    assert.equal(stats.body.losses, 1)
+    const { rows } = await pool.query('SELECT outcome, forfeited FROM games WHERE id = $1', [game.id])
+    assert.deepEqual(rows[0], { outcome: 'loss', forfeited: true })
     const fresh = await start(player.cookie)
     assert.notEqual(fresh.id, game.id)
   })
@@ -247,11 +243,12 @@ describe('a game', () => {
     assert.equal(reply.body.rulesChanged, true)
   })
 
-  it('stays off the leaderboard until it is finished', async () => {
+  it('stays off the leaderboard and the profile, which count runs only', async () => {
     const player = await signedIn()
     const game = await start(player.cookie)
-    await submit(player.cookie, game.id, botGame(game.seed).turns.slice(0, 1))
+    await submit(player.cookie, game.id, botGame(game.seed).turns)
     assert.deepEqual((await app.call('GET', '/api/leaderboard')).body.players, [])
+    assert.equal((await app.call('GET', `/api/players/${player.username}/stats`)).body.runs, 0)
   })
 
   it('answers malformed JSON with a 400, not a stack trace', async () => {
@@ -270,226 +267,5 @@ describe('a game', () => {
       raw: JSON.stringify({ pad: 'x'.repeat(40_000) }),
     })
     assert.equal(reply.status, 413)
-  })
-})
-
-describe('the leaderboard', () => {
-  it('ranks players by their best game', async () => {
-    const slow = await signedIn('slow')
-    const fast = await signedIn('fast')
-    await insertGame(slow.username, 'win', 25)
-    await insertGame(fast.username, 'win', 6)
-    const { body } = await app.call('GET', '/api/leaderboard')
-    assert.deepEqual(
-      body.players.map((row: { username: string }) => row.username),
-      [fast.username, slow.username],
-    )
-    assert.equal(body.players[0].rank, 1)
-  })
-
-  it('keeps a best score when a worse game follows it', async () => {
-    const player = await signedIn()
-    await insertGame(player.username, 'win', 6)
-    await insertGame(player.username, 'loss', 3)
-    const { body } = await app.call('GET', '/api/leaderboard')
-    assert.equal(body.players[0].bestScore, scoreBattle('win', 6))
-    assert.equal(body.players[0].games, 2)
-  })
-
-  it('gives tied players the same rank', async () => {
-    const one = await signedIn('tied')
-    const two = await signedIn('tied')
-    await insertGame(one.username, 'win', 10)
-    await insertGame(two.username, 'win', 10)
-    const { body } = await app.call('GET', '/api/leaderboard')
-    assert.deepEqual(
-      body.players.map((row: { rank: number }) => row.rank),
-      [1, 1],
-    )
-  })
-
-  it('pages twenty at a time, ranking across every page', async () => {
-    for (let n = 0; n < 23; n++) {
-      await insertPlayer(`many_${n}`)
-      await insertGame(`many_${n}`, 'win', 3 + n)
-    }
-    const first = (await app.call('GET', '/api/leaderboard')).body
-    assert.deepEqual([first.page, first.pages, first.total, first.players.length], [1, 2, 23, BOARD_PAGE])
-    assert.equal(first.top, scoreBattle('win', 3))
-    const second = (await app.call('GET', '/api/leaderboard?page=2')).body
-    assert.deepEqual(
-      second.players.map((row: { rank: number }) => row.rank),
-      [21, 22, 23],
-    )
-    assert.equal((await app.call('GET', '/api/leaderboard?page=9')).body.page, 2, 'a page past the end is the last one')
-  })
-
-  it('leaves out players who have never finished a game', async () => {
-    await signedIn()
-    assert.deepEqual((await app.call('GET', '/api/leaderboard')).body.players, [])
-  })
-
-  it('never shows an email address', async () => {
-    const player = await signedIn()
-    await insertGame(player.username, 'win', 10)
-    const { body } = await app.call('GET', '/api/leaderboard')
-    assert.ok(!JSON.stringify(body).includes('@'), JSON.stringify(body))
-  })
-})
-
-describe('a player’s stats', () => {
-  it('add up after a mix of wins and losses', async () => {
-    const player = await signedIn('Mixed')
-    const games = [
-      ['win', 12, 4],
-      ['loss', 4, 3],
-      ['win', 9, 2],
-      ['loss', 20, 1],
-    ] as const
-    for (const [outcome, turns, daysAgo] of games) await insertGame(player.username, outcome, turns, daysAgo)
-
-    const { status, body } = await app.call('GET', `/api/players/${player.username}/stats`)
-    assert.equal(status, 200)
-    assert.equal(body.username, player.username)
-    assert.deepEqual([body.games, body.wins, body.losses, body.winRate], [4, 2, 2, 0.5])
-    assert.equal(body.bestScore, scoreBattle('win', 9))
-    assert.equal(body.bestWinTurns, 9)
-    assert.equal(body.averageTurns, 11.3)
-    assert.deepEqual(
-      body.recent.map((game: { turns: number }) => game.turns),
-      [20, 9, 4, 12],
-      'newest first',
-    )
-  })
-
-  it('keep the newest games, enough for the charts and no more', async () => {
-    const player = await signedIn()
-    for (let day = 0; day < RECENT_GAMES + 5; day++) await insertGame(player.username, 'loss', 5 + day, day)
-    const { body } = await app.call('GET', `/api/players/${player.username}/stats`)
-    assert.equal(body.recent.length, RECENT_GAMES)
-    assert.equal(body.recent[0].turns, 5, 'the newest first')
-  })
-
-  it('page through a player’s history, newest first, ten at a time', async () => {
-    const player = await signedIn()
-    for (let day = 0; day < 25; day++) await insertGame(player.username, 'loss', 5 + day, day)
-    const first = await app.call('GET', `/api/players/${player.username}/games`)
-    assert.equal(first.status, 200)
-    assert.deepEqual([first.body.page, first.body.pages, first.body.total], [1, 3, 25])
-    assert.equal(first.body.games.length, HISTORY_PAGE)
-    assert.equal(first.body.games[0].turns, 5, 'the newest first')
-    const last = await app.call('GET', `/api/players/${player.username}/games?page=3`)
-    assert.deepEqual([last.body.page, last.body.games.length, last.body.games[4].turns], [3, 5, 29])
-    const past = await app.call('GET', `/api/players/${player.username}/games?page=99`)
-    assert.equal(past.body.page, 3, 'a page past the end is the last one')
-    const nonsense = await app.call('GET', `/api/players/${player.username}/games?page=abc`)
-    assert.equal(nonsense.body.page, 1)
-    const nobody = await app.call('GET', '/api/players/nobody_at_all/games')
-    assert.equal(nobody.status, 404)
-  })
-
-  it('count games per day for the activity grid', async () => {
-    const player = await signedIn()
-    await insertGame(player.username, 'win', 10, 3)
-    await insertGame(player.username, 'loss', 5, 3)
-    await insertGame(player.username, 'loss', 5, 1)
-    await insertGame(player.username, 'win', 10, 400)
-    const { body } = await app.call('GET', `/api/players/${player.username}/stats`)
-    assert.deepEqual(
-      body.days.map((day: { games: number; losses: number }) => [day.games, day.losses]),
-      [
-        [2, 1],
-        [1, 1],
-      ],
-      'a game from more than half a year ago is not in the grid',
-    )
-  })
-
-  it('are public and found whatever the case of the name', async () => {
-    const player = await signedIn('CaseSensitive')
-    await insertGame(player.username, 'win', 10)
-    const reply = await app.call('GET', `/api/players/${player.username.toLowerCase()}/stats`)
-    assert.equal(reply.status, 200)
-    assert.equal(reply.body.username, player.username)
-  })
-
-  it('exist, empty, for a player who has not played', async () => {
-    const player = await signedIn()
-    const { body } = await app.call('GET', `/api/players/${player.username}/stats`)
-    assert.equal(body.games, 0)
-    assert.equal(body.winRate, null)
-    assert.deepEqual(body.recent, [])
-  })
-
-  it('are a 404 for nobody, or for a name that could not exist', async () => {
-    assert.equal((await app.call('GET', '/api/players/nobody_here/stats')).status, 404)
-    assert.equal((await app.call('GET', '/api/players/no%20spaces/stats')).status, 404)
-  })
-
-  it('never include an email address', async () => {
-    const player = await signedIn()
-    await insertGame(player.username, 'win', 10)
-    const { body } = await app.call('GET', `/api/players/${player.username}/stats`)
-    assert.ok(!JSON.stringify(body).includes('@'))
-  })
-
-  it('give the best game, the first time that score was reached, even past the recent games', async () => {
-    const player = await signedIn()
-    await insertGame(player.username, 'win', 3, 60)
-    await insertGame(player.username, 'win', 3, 50)
-    for (let day = 0; day < RECENT_GAMES; day++) await insertGame(player.username, 'loss', 5, day)
-    const { body } = await app.call('GET', `/api/players/${player.username}/stats`)
-    assert.equal(body.best.score, scoreBattle('win', 3))
-    assert.equal(body.best.turns, 3)
-    assert.ok(Date.now() - Date.parse(body.best.playedAt) > 55 * 86_400_000, 'the earlier of the two')
-    assert.ok(!body.recent.some((game: { turns: number }) => game.turns === 3), 'older than the recent games')
-  })
-
-  it('rank a player as the leaderboard does, and leave a guest or a newcomer unranked', async () => {
-    const first = await signedIn()
-    const second = await signedIn()
-    const tied = await signedIn()
-    await insertGame(first.username, 'win', 3)
-    await insertGame(second.username, 'win', 10)
-    await insertGame(tied.username, 'win', 10)
-    const rank = async (username: string) =>
-      (await app.call('GET', `/api/players/${username}/stats`)).body.rank as number | null
-    assert.deepEqual([await rank(first.username), await rank(second.username), await rank(tied.username)], [1, 2, 2])
-    const newcomer = await signedIn()
-    assert.equal(await rank(newcomer.username), null)
-    await pool.query(`UPDATE users SET is_anonymous = true WHERE username = lower($1)`, [first.username])
-    assert.equal(await rank(first.username), null, 'a guest is off the board')
-    assert.equal(await rank(second.username), 1)
-  })
-
-  it('name the card played most across every game, Boilerplate aside', async () => {
-    const player = await signedIn()
-    await insertGame(player.username, 'win', 10, 2, { RubberDuck: 2, Boilerplate: 9, Bug: 1 })
-    await insertGame(player.username, 'loss', 5, 1, { Bug: 2 })
-    await insertGame(player.username, 'loss', 5, 0)
-    const { body } = await app.call('GET', `/api/players/${player.username}/stats`)
-    assert.equal(body.favoriteCard, 'Bug')
-    const newcomer = await signedIn()
-    assert.equal((await app.call('GET', `/api/players/${newcomer.username}/stats`)).body.favoriteCard, null)
-  })
-
-  it('count the cards of games finished before cards were counted, once', async () => {
-    const player = await signedIn()
-    const seed = 4242
-    const { actions } = botGame(seed)
-    const replayed = replay(seed, actions)
-    assert.ok(replayed.ok)
-    await pool.query(
-      `INSERT INTO games (user_id, seed, actions, outcome, turns, score, status)
-       SELECT id, $2, $3, 'win', 5, 1, 'finished' FROM users WHERE username = lower($1)`,
-      [player.username, seed, JSON.stringify(actions)],
-    )
-    await insertGame(player.username, 'win', 10)
-    assert.equal(await countCardsPlayed(), 1, 'only the game with moves to replay')
-    const { rows } = await pool.query<{ cards: Record<string, number> }>('SELECT cards FROM games WHERE seed = $1', [
-      seed,
-    ])
-    assert.deepEqual(rows[0]?.cards, cardsPlayed(replayed.events))
-    assert.equal(await countCardsPlayed(), 0, 'and not again')
   })
 })

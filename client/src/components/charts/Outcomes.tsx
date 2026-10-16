@@ -1,21 +1,21 @@
 import type { ReactNode } from 'react'
 import { number } from '../../lib/format.ts'
-import type { Game } from './chart.ts'
+import type { Run } from './chart.ts'
 import { Frame } from './parts.tsx'
 
-function streaks(recent: Game[]): { current: number; winning: boolean; wins: number; losses: number } {
+function streaks(recent: Run[]): { current: number; winning: boolean; wins: number; losses: number } {
   const winning = recent[0]?.outcome === 'win'
   let current = 0
-  for (const game of recent) {
-    if ((game.outcome === 'win') !== winning) break
+  for (const run of recent) {
+    if ((run.outcome === 'win') !== winning) break
     current++
   }
-  const longest = (outcome: Game['outcome']) => {
+  const longest = (outcome: Run['outcome']) => {
     let best = 0
-    let run = 0
-    for (const game of recent) {
-      run = game.outcome === outcome ? run + 1 : 0
-      best = Math.max(best, run)
+    let spell = 0
+    for (const run of recent) {
+      spell = run.outcome === outcome ? spell + 1 : 0
+      best = Math.max(best, spell)
     }
     return best
   }
@@ -54,7 +54,7 @@ function Split({ wins, losses }: { wins: number; losses: number }) {
   )
 }
 
-function Streaks({ recent }: { recent: Game[] }) {
+function Streaks({ recent }: { recent: Run[] }) {
   const streak = streaks(recent)
   return (
     <dl className="flex flex-wrap gap-x-3.5 gap-y-1 text-sm">
@@ -73,14 +73,14 @@ export function Outcomes({
 }: {
   wins: number
   losses: number
-  recent: Game[]
+  recent: Run[]
   /** The streak chart, loaded apart from the page like the other charts. */
   chart?: ReactNode
 }) {
   const total = wins + losses
   const rate = total ? Math.round((wins / total) * 100) : 0
   return (
-    <Frame title="Wins and losses" note={`${number(total)} ${total === 1 ? 'game' : 'games'}`}>
+    <Frame title="Wins and losses" note={`${number(total)} ${total === 1 ? 'run' : 'runs'}`}>
       <p className="flex items-baseline gap-2">
         <span className="font-mono text-4xl leading-none">{total ? `${rate}%` : '-'}</span>
         <span className="text-sm text-muted-foreground">win rate</span>

@@ -30,7 +30,7 @@ function Legend() {
 
 export function Activity({ stats }: { stats: PlayerStats }) {
   const cells = grid(stats.days)
-  const played = cells.reduce((sum, cell) => sum + cell.games, 0)
+  const played = cells.reduce((sum, cell) => sum + cell.runs, 0)
   const bad = cells.filter((cell) => cell.bad).length
   return (
     // The count sits by the heading so the two cards below come out about the same height.
@@ -40,7 +40,7 @@ export function Activity({ stats }: { stats: PlayerStats }) {
           Contributions
         </h2>
         <p className="text-sm text-muted-foreground">
-          {played} {played === 1 ? 'game' : 'games'}
+          {played} {played === 1 ? 'run' : 'runs'}
           <span className="@max-[20rem]:hidden"> over </span>
           <span className="@min-[20rem]:hidden"> | </span>
           26 weeks
@@ -60,7 +60,7 @@ export function Activity({ stats }: { stats: PlayerStats }) {
           >
             <div
               role="img"
-              aria-label={`${played} games over the last 26 weeks, ${bad} days with more losses than wins`}
+              aria-label={`${played} runs over the last 26 weeks, ${bad} days with more losses than wins`}
               // 12px is the smallest legible square; narrower, the grid scrolls sideways.
               className="grid shrink-0 grow grid-flow-col grid-rows-7 gap-[3px] sm:gap-1"
               style={{ gridAutoColumns: 'minmax(12px, 1fr)' }}
@@ -68,8 +68,8 @@ export function Activity({ stats }: { stats: PlayerStats }) {
               {cells.map((cell) => (
                 <span
                   key={cell.key}
-                  title={`${cell.key}: ${cell.games} ${cell.games === 1 ? 'game' : 'games'}`}
-                  className={`aspect-square w-full rounded-[20%] ${cell.bad ? 'border-2 border-[#ffd2cf] bg-death' : levels[level(cell.games)]}`}
+                  title={`${cell.key}: ${cell.runs} ${cell.runs === 1 ? 'run' : 'runs'}`}
+                  className={`aspect-square w-full rounded-[20%] ${cell.bad ? 'border-2 border-[#ffd2cf] bg-death' : levels[level(cell.runs)]}`}
                 />
               ))}
             </div>
