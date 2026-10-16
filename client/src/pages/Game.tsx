@@ -7,6 +7,7 @@ import { useSeat } from '../game/controls.tsx'
 import { FIXTURES_ON } from '../game/fixtures.ts'
 import { useLeaveFullScreen } from '../game/fullScreen.ts'
 import { useKeepTableFocus } from '../game/shortcuts.ts'
+import { TableBox } from '../game/TableBox.tsx'
 import { Boot } from '../game/table/Boot.tsx'
 import { TableFailed, TurnSideways } from '../game/tableNotices.tsx'
 import { TerminalTable } from '../game/TerminalTable.tsx'
@@ -70,7 +71,7 @@ function GameTable() {
     )
 
   return (
-    <div className="relative -mx-(--gutter) -my-8 h-[calc(100dvh-7rem)] min-h-[24rem] bg-[#050403] short:fixed short:inset-0 short:z-40 short:m-0 short:h-dvh short:min-h-0">
+    <TableBox>
       <h1 className="sr-only">Play against P03</h1>
       {/* The 3D table is drawn, not read, so the first stop offers the text table; it shows once focused, like a skip link. */}
       <Button
@@ -91,6 +92,6 @@ function GameTable() {
           <TurnSideways onText={() => choose('text')} />
         </div>
       ) : null}
-    </div>
+    </TableBox>
   )
 }

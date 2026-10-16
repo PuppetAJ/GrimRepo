@@ -1,6 +1,7 @@
 import {
   Backpack,
   Flag,
+  FoldHorizontal,
   LayoutGrid,
   ListEnd,
   LogOut,
@@ -9,6 +10,7 @@ import {
   Minimize,
   MoveDown,
   Type,
+  UnfoldHorizontal,
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
@@ -36,7 +38,12 @@ import type { useFullScreen } from '../../fullScreen.ts'
 import type { Ready } from '../../useGame.ts'
 import type { View } from '../../view.ts'
 import type { CameraView } from '../layout.ts'
+import { useWideTable } from '../../wideTable.ts'
 import { ScreenReadout } from './ScreenReadout.tsx'
+
+// Past the site's width, as on a widened table, the corners keep to it so the controls never drift apart.
+const LEFT = 'left-[max(0px,calc((100%-100rem)/2))]'
+const RIGHT = 'right-[max(0px,calc((100%-100rem)/2))]'
 
 // Hidden on a sideways phone or a narrow screen, where the icon and its tooltip stand in; screen readers always get it.
 const Label = ({ children }: { children: ReactNode }) => (
@@ -100,10 +107,13 @@ export function Hud({
   const reshuffle = view.deck ? null : reshuffleNote(state)
   const last = game.log.slice(-3)
   const ended = finished && !busy
+  const widen = useWideTable()
   return (
     <>
       {/* Stops above the prompt so the reader never runs over it. */}
-      <div className="pointer-events-none absolute top-0 bottom-24 left-0 z-10 flex flex-col items-start p-3 font-terminal sm:p-4">
+      <div
+        className={`pointer-events-none absolute top-0 bottom-24 z-10 flex flex-col items-start p-3 font-terminal sm:p-4 ${LEFT}`}
+      >
         {/* On a dark backing, so the room's lights never wash the numbers out. */}
         <div className="flex flex-col rounded-md bg-p03-ground/75 px-2 py-1 [text-shadow:0_0_4px_#000]">
           <ScaleBar scale={view.scale} className="text-xl sm:text-2xl" />
@@ -161,7 +171,7 @@ export function Hud({
         ) : null}
       </div>
 
-      <div className="absolute top-0 right-0 z-10 flex flex-col items-end gap-1 p-3 sm:p-4">
+      <div className={`absolute top-0 z-10 flex flex-col items-end gap-1 p-3 sm:p-4 ${RIGHT}`}>
         {/* Icons only on a sideways phone or a narrow screen, so the row stays off P03's face and the scale. */}
         <div className="flex flex-wrap justify-end">
           {camera === 'table' ? null : (
@@ -204,6 +214,19 @@ export function Hud({
             <Type aria-hidden />
             <Label>Text table</Label>
           </Button>
+          {widen.offered && !fullScreen.on ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={widen.toggle}
+              aria-pressed={widen.wide}
+              title={widen.wide ? 'Back to the site width' : 'Widen the table'}
+              className="short:hidden"
+            >
+              {widen.wide ? <FoldHorizontal aria-hidden /> : <UnfoldHorizontal aria-hidden />}
+              <Label>{widen.wide ? 'Narrow the table' : 'Widen the table'}</Label>
+            </Button>
+          ) : null}
           {fullScreen.supported ? (
             <Button
               size="sm"
@@ -254,7 +277,9 @@ export function Hud({
         </div>
       ) : (
         <>
-          <div className="pointer-events-none absolute bottom-0 left-0 flex w-[26%] flex-col gap-1 p-3 font-terminal sm:p-4">
+          <div
+            className={`pointer-events-none absolute bottom-0 flex w-[min(26%,26rem)] flex-col gap-1 p-3 font-terminal sm:p-4 ${LEFT}`}
+          >
             {/* A screen reader copy of the log the monitor beside P03 shows. */}
             <ol aria-live="polite" className="sr-only">
               {last.map((line, index) => (
@@ -280,7 +305,7 @@ export function Hud({
             </p>
           </div>
 
-          <div className="absolute right-0 bottom-0 flex w-[26%] flex-col items-end gap-2 p-3 sm:p-4">
+          <div className={`absolute bottom-0 flex w-[min(26%,26rem)] flex-col items-end gap-2 p-3 sm:p-4 ${RIGHT}`}>
             {aimed ? (
               <Button variant="outline" onClick={onPutBack} aria-keyshortcuts="Escape">
                 Put the {ITEMS[aimed].name} back

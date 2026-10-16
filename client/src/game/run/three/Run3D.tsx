@@ -6,6 +6,7 @@ import type { Seat } from '../../controls.tsx'
 import { forTable } from '../../shortcuts.ts'
 import { loadCardAssets } from '../../table/faces.ts'
 import { Battle3D } from '../../table/Table3D.tsx'
+import { TableBox } from '../../TableBox.tsx'
 import { TableStage, useStage } from '../../table/TableStage.tsx'
 import type { Layout } from '../../text/useTextTable.ts'
 import { BACK_TO, mapTitle, ScreenBody, useRunScreen, type RunView } from '../screens.tsx'
@@ -235,12 +236,11 @@ export default function Run3D({
     [],
   )
   return (
-    <div
+    <TableBox
       data-run-seed={run.state.seed}
       data-run-moves={run.moves}
       data-run-unsaved={run.unsaved}
       data-run-view={view}
-      className="relative -mx-(--gutter) -my-8 h-[calc(100dvh-7rem)] min-h-[24rem] bg-[#050403] short:fixed short:inset-0 short:z-40 short:m-0 short:h-dvh short:min-h-0"
     >
       <TableStage>
         {shown.scene === 'battle' ? (
@@ -276,6 +276,6 @@ export default function Run3D({
       </TableStage>
       {replay ? <Replay looking={looking} inBattle={view === 'battle'} onLook={setLook} /> : null}
       <InventoryDialog run={run} open={inventory} onOpenChange={setInventory} />
-    </div>
+    </TableBox>
   )
 }

@@ -83,8 +83,8 @@ export function useStuckToBottom(content: unknown) {
   return [attach, onScroll] as const
 }
 
-// Width cap and height-to-width cap, so a big window doesn't stretch the table.
-const MOST_WIDE = 1792
+// Width cap, the site's own width, and height-to-width cap, so a big window doesn't stretch the table.
+const MOST_WIDE = 1600
 const MOST_TALL = 0.62
 
 export function useFit(full: boolean) {
