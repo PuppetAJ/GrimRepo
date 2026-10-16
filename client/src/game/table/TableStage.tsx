@@ -36,7 +36,7 @@ type Attributes = Record<string, string | number>
 /** What the room shows: the factory's battery and monitors, and P03's mood. */
 type RoomState = { view: View; log: string[]; outcome?: 'win' | 'loss' }
 type RoomHandlers = {
-  onHold?: (screen: Screen, x: number, y: number) => void
+  onHold?: (screen: Screen, x: number, y: number, sticky?: boolean) => void
   onPin?: (screen: Screen) => void
 }
 
@@ -61,6 +61,8 @@ type Stage = {
   label: (attributes: Attributes) => void
   /** What a click on nothing does, such as putting a lifted card down. */
   onMissed: (handler: () => void) => void
+  /** Offered every right-click first; returning true takes it, so nothing in the room sees it. */
+  onContext: (handler: () => boolean) => void
   /** Sets what the room shows; the room itself stays, so its dust, P03 and monitors carry on between scenes. */
   room: (room: RoomState & RoomHandlers) => void
   /** Sets the button's and the rack's state; they stay too, so neither blinks out as scenes swap. */
@@ -118,10 +120,14 @@ export function TableStage({ children }: { children: ReactNode }) {
   const dpr = Math.min(sharpest, SHARPNESS[quality] ?? Infinity)
   const [attributes, setAttributes] = useState<Attributes>({})
   const missed = useRef(() => {})
+  const context = useRef<() => boolean>(() => false)
   const [room, setRoom] = useState<RoomState | null>(null)
   const handlers = useRef<RoomHandlers>({})
   // Stable, so the monitors never re-render for a new handler.
-  const onHold = useCallback((screen: Screen, x: number, y: number) => handlers.current.onHold?.(screen, x, y), [])
+  const onHold = useCallback(
+    (screen: Screen, x: number, y: number, sticky?: boolean) => handlers.current.onHold?.(screen, x, y, sticky),
+    [],
+  )
   const onPin = useCallback((screen: Screen) => handlers.current.onPin?.(screen), [])
   const [bench, setBench] = useState<BenchState | null>(null)
   const benchHandlers = useRef<BenchHandlers>({})
@@ -159,6 +165,9 @@ export function TableStage({ children }: { children: ReactNode }) {
     onMissed: (handler) => {
       missed.current = handler
     },
+    onContext: (handler) => {
+      context.current = handler
+    },
     room: ({ onHold, onPin, ...next }) => {
       handlers.current = { onHold, onPin }
       setRoom((now) => (now && sameRoom(now, next) ? now : next))
@@ -180,6 +189,12 @@ export function TableStage({ children }: { children: ReactNode }) {
         tabIndex={-1}
         // A long press is the table's magnifier, so iOS mustn't select text, show its loupe or offer a menu.
         onContextMenu={(event) => event.preventDefault()}
+        // Before the room's own handlers, which a scene can stop, as a right-click cancelling a card does.
+        onContextMenuCapture={(event) => {
+          if (!context.current()) return
+          event.preventDefault()
+          event.stopPropagation()
+        }}
         className={`select-none [-webkit-touch-callout:none] ${fullScreen.on ? 'fixed inset-0 z-40 bg-[#050403]' : 'relative h-full w-full'}`}
       >
         <Canvas

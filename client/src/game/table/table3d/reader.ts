@@ -12,7 +12,8 @@ export const COARSE = typeof window !== 'undefined' && window.matchMedia('(point
 export type Reader = {
   /** uid of the hand card lifted by a first tap on touch. */
   peek: number | null
-  hold: (target: Target, x: number, y: number) => void
+  /** `sticky` for a right-click, whose magnifier stays up until the next click. */
+  hold: (target: Target, x: number, y: number, sticky?: boolean) => void
   lift: (unit: Unit | null) => void
   /** Toggles a screen's pinned readout. */
   pin: (screen: Screen) => void

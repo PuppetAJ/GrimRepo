@@ -1,5 +1,5 @@
 import { animate } from 'motion/react'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { ITEMS, legalActions, type Action, type Slot, type Unit } from 'shared'
 import { has, hasEnded, overText, owed, prompt, skippedDraw, type Seat } from '../controls.tsx'
 import { usePlayback } from '../table/usePlayback.ts'
@@ -71,6 +71,7 @@ export function useTextTable({
     magnified,
     holdProps,
     frameProps: holdFrameProps,
+    magnify,
   } = useHoldToMagnify((x, y) => {
     const key = document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-look]')?.dataset['look']
     const place = key ? placeOf(key) : null
@@ -142,7 +143,8 @@ export function useTextTable({
   }, [refusal])
   const canPress = has(legal, { type: 'ringBell' })
   useBellKey(canPress, () => act({ type: 'ringBell' }))
-  useEscapeCancel(aiming === null && has(legal, { type: 'cancel' }), () => act({ type: 'cancel' }))
+  const cancellable = aiming === null && has(legal, { type: 'cancel' })
+  useEscapeCancel(cancellable, () => act({ type: 'cancel' }))
 
   const promptText = busy
     ? "P03's turn…"
@@ -164,6 +166,24 @@ export function useTextTable({
     // Focusable, so a click anywhere on the table puts focus here and its shortcuts work.
     tabIndex: -1,
     ...holdFrameProps,
+    // A right-click calls off a card being played, or magnifies the card under it.
+    onContextMenu: (event: MouseEvent) => {
+      if (cancellable) {
+        event.preventDefault()
+        act({ type: 'cancel' })
+        return
+      }
+      const key = (event.target as Element).closest<HTMLElement>('[data-look]')?.dataset['look']
+      const place = key ? placeOf(key) : null
+      const unit = unitAt(place)
+      if (!place || !unit) {
+        holdFrameProps.onContextMenu(event)
+        return
+      }
+      event.preventDefault()
+      setLooking(place)
+      magnify(unit, event.clientX, event.clientY)
+    },
   }
 
   return {

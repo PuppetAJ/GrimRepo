@@ -67,7 +67,7 @@ export function Card({
   /** `touch` is true for a finger, since a first tap only lifts a hand card. */
   onClick?: (event: ThreeEvent<MouseEvent>, touch: boolean) => void
   onHover?: (on: boolean) => void
-  onHold?: (x: number, y: number) => void
+  onHold?: (x: number, y: number, sticky?: boolean) => void
   /** Shown as hovered, for a hand card tapped once on touch. */
   raised?: boolean
   cursor?: CursorKind
@@ -258,6 +258,11 @@ export function Card({
     },
     onPointerUp: endHold,
     onPointerCancel: endHold,
+    // A right-click magnifies the card as a hold does.
+    onContextMenu: (event: ThreeEvent<MouseEvent>) => {
+      event.stopPropagation()
+      onHold?.(event.nativeEvent.clientX, event.nativeEvent.clientY, true)
+    },
     onPointerOver: (event: ThreeEvent<PointerEvent>) => {
       event.stopPropagation()
       setPointed(true)

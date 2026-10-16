@@ -37,10 +37,19 @@ export function ItemButton({
   const button = useRef<HTMLButtonElement>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const read = useRef(false)
+  // A right-click's reading outlasts the button's release, until the pointer leaves it.
+  const clicked = useRef(false)
   useEffect(() => () => clearTimeout(timer.current), [])
   const stop = () => {
     clearTimeout(timer.current)
+    clicked.current = false
     setReading(null)
+  }
+  const show = () => {
+    const rect = button.current?.getBoundingClientRect()
+    if (!rect) return
+    const left = Math.min(Math.max(8, rect.left + rect.width / 2 - 112), window.innerWidth - 232)
+    setReading({ left, bottom: window.innerHeight - rect.top + 8 })
   }
   return (
     <span className="relative inline-block">
@@ -59,16 +68,18 @@ export function ItemButton({
           clearTimeout(timer.current)
           timer.current = setTimeout(() => {
             read.current = true
-            const rect = button.current?.getBoundingClientRect()
-            if (!rect) return
-            const left = Math.min(Math.max(8, rect.left + rect.width / 2 - 112), window.innerWidth - 232)
-            setReading({ left, bottom: window.innerHeight - rect.top + 8 })
+            show()
           }, HOLD_MS)
         }}
-        onPointerUp={stop}
+        onPointerUp={() => !clicked.current && stop()}
         onPointerLeave={stop}
         onPointerCancel={stop}
-        onContextMenu={(event) => event.preventDefault()}
+        onContextMenu={(event) => {
+          event.preventDefault()
+          clearTimeout(timer.current)
+          clicked.current = true
+          show()
+        }}
         onClick={() => {
           if (read.current) return void (read.current = false)
           if (usable) onUse()

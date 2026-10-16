@@ -6,9 +6,10 @@ const HOLD_MS = 280
 // Longer than a touch's click can trail its touchend, so that click is still swallowed.
 const HELD_MS = 400
 
-type Magnified = { unit: Unit; x: number; y: number }
+/** `sticky` for a right-click, which stays up until the next press rather than following the pointer. */
+type Magnified = { unit: Unit; x: number; y: number; sticky?: boolean }
 
-/** Holding a card magnifies it; sliding then reads whichever card `pointAt` finds under the pointer. */
+/** Holding a card magnifies it; sliding then reads whichever card `pointAt` finds under the pointer. A right-click does too. */
 export function useHoldToMagnify(pointAt: (x: number, y: number) => Unit | null) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const held = useRef(false)
@@ -19,9 +20,28 @@ export function useHoldToMagnify(pointAt: (x: number, y: number) => Unit | null)
   })
 
   const magnifying = magnified !== null
+  const sticky = magnified?.sticky ?? false
+  // A right-click's magnifier goes at the next press, which mustn't also play the card under it.
+  useEffect(() => {
+    if (!sticky) return
+    const end = () => {
+      held.current = true
+      setMagnified(null)
+      setTimeout(() => (held.current = false), HELD_MS)
+    }
+    const key = (event: KeyboardEvent) => event.key === 'Escape' && end()
+    window.addEventListener('pointerdown', end, true)
+    window.addEventListener('keydown', key)
+    window.addEventListener('wheel', end, { passive: true })
+    return () => {
+      window.removeEventListener('pointerdown', end, true)
+      window.removeEventListener('keydown', key)
+      window.removeEventListener('wheel', end)
+    }
+  }, [sticky])
   // While magnifying, sliding reads the card underneath and the page must not scroll.
   useEffect(() => {
-    if (!magnifying) return
+    if (!magnifying || sticky) return
     const move = ({ clientX, clientY }: { clientX: number; clientY: number }) => {
       const unit = latest.current(clientX, clientY)
       setMagnified((last) => (last ? { unit: unit ?? last.unit, x: clientX, y: clientY } : last))
@@ -49,7 +69,7 @@ export function useHoldToMagnify(pointAt: (x: number, y: number) => Unit | null)
       document.removeEventListener('pointermove', pointerMove)
       document.removeEventListener('pointerup', end)
     }
-  }, [magnifying])
+  }, [magnifying, sticky])
 
   const cancel = () => {
     if (timer.current) clearTimeout(timer.current)
@@ -91,5 +111,8 @@ export function useHoldToMagnify(pointAt: (x: number, y: number) => Unit | null)
     },
   }
 
-  return { magnified, holdProps, frameProps }
+  /** Magnifies a card where it was right-clicked. */
+  const magnify = (unit: Unit, x: number, y: number) => setMagnified({ unit, x, y, sticky: true })
+
+  return { magnified, holdProps, frameProps, magnify }
 }

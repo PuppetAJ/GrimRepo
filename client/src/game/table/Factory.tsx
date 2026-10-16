@@ -31,7 +31,7 @@ export function Factory({
   view: View
   log: string[]
   onPin?: (screen: Screen) => void
-  onHold?: (screen: Screen, x: number, y: number) => void
+  onHold?: (screen: Screen, x: number, y: number, sticky?: boolean) => void
 }) {
   // Wrapped to the screen's width, so a long line never runs off its edge.
   const lines = useMemo(() => logLines(log, MONITOR_ROWS - 1, MONITOR_COLUMNS), [log])

@@ -203,7 +203,7 @@ export function Scene({
               assets={assets}
               shake={hinted === unit.uid ? hint : 0}
               raised={reader.peek === unit.uid}
-              onHold={(x, y) => reader.hold({ card: unit.uid }, x, y)}
+              onHold={(x, y, sticky) => reader.hold({ card: unit.uid }, x, y, sticky)}
               onClick={
                 // On touch every card is tappable, to read it; with a mouse, only one that can act.
                 selected || selectable || owesDraw || COARSE
@@ -251,7 +251,7 @@ export function Scene({
                 leavingAt={leftAt}
                 // A board card covers its lane, so it passes the hover on to it.
                 onHover={row === 'board' ? (on) => setAimed(on ? lane : null) : undefined}
-                onHold={(x, y) => reader.hold({ card: unit.uid }, x, y)}
+                onHold={(x, y, sticky) => reader.hold({ card: unit.uid }, x, y, sticky)}
               />
             )
           }),
