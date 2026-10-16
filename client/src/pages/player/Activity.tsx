@@ -19,7 +19,7 @@ function Legend() {
         <span className="@min-[14rem]:hidden">+</span>
       </span>
       <span className="flex items-center gap-1.5">
-        <span className="size-3 rounded-[3px] border-2 border-[#ffd2cf] bg-death" />
+        <span className="size-3 rounded-[3px] bg-death" />
         <span>
           Losing<span className="@max-[17rem]:hidden"> trend</span>
         </span>
@@ -69,7 +69,7 @@ export function Activity({ stats }: { stats: PlayerStats }) {
                 <span
                   key={cell.key}
                   title={`${cell.key}: ${cell.runs} ${cell.runs === 1 ? 'run' : 'runs'}`}
-                  className={`aspect-square w-full rounded-[20%] ${cell.bad ? 'border-2 border-[#ffd2cf] bg-death' : levels[level(cell.runs)]}`}
+                  className={`aspect-square w-full rounded-[20%] ${cell.bad ? 'bg-death' : levels[level(cell.runs)]}`}
                 />
               ))}
             </div>
