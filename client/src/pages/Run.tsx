@@ -8,6 +8,7 @@ import { useLeaveFullScreen } from '../game/fullScreen.ts'
 import { useLayoutChoice } from '../game/layoutChoice.ts'
 import type { Mockup } from '../game/run/mockups.ts'
 import { RunText } from '../game/run/RunText.tsx'
+import { RunDebug } from '../game/run/RunDebug.tsx'
 import { useRun } from '../game/run/useRun.ts'
 import { useKeepTableFocus } from '../game/shortcuts.ts'
 import { Boot } from '../game/table/Boot.tsx'
@@ -64,6 +65,7 @@ export function RunTable({
   return (
     <>
       <h1 className="sr-only">A run against P03</h1>
+      <RunDebug run={run} />
       {/* Remount on a new run or reload, so no screen keeps the last run's choices. */}
       {mode === 'text' ? (
         <RunText key={run.generation} run={run} layout={layout} seat={seat} on3d={() => choose('3d')} />

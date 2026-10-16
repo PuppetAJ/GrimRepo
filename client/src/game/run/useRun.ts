@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import { api, ApiError, type OpenRun, type RunOver } from '../../lib/api.ts'
 import { narrate, opening } from '../../lib/narrate.ts'
 import type { Mockup } from './mockups.ts'
+import { debugWanted, type RunOrigin } from './debug.ts'
 import { narrateRun } from './narrate.ts'
 
 type Listener = (events: RunEvent[]) => void
@@ -30,6 +31,9 @@ export type Run =
       generation: number
       /** Every action taken, saved or not. */
       moves: number
+      /** What the run was dealt from, and every move since, for a debug log; a mockup has no origin. */
+      origin: RunOrigin | null
+      history: RunAction[]
       state: RunState
       /** P03's console for the battle in progress, or the last one. */
       log: string[]
@@ -57,6 +61,9 @@ type Table = {
   id: number
   generation: number
   moves: number
+  /** What the run was dealt from, and every move since; a mockup has no origin. */
+  origin: RunOrigin | null
+  history: RunAction[]
   state: RunState
   log: string[]
   news: string[]
@@ -65,6 +72,8 @@ type Table = {
 }
 
 const LOG_LINES = 2_000
+// Read once a page load; ?debug logs every move and what it did to the console.
+const debugging = typeof window !== 'undefined' && debugWanted()
 const p03 = (lines: string[]) => lines.map((line) => `P03> ${line}`)
 
 let generations = 0
@@ -114,7 +123,15 @@ function open(run: OpenRun): Table {
     story = told(story, result.state, result.events)
   }
   generations += 1
-  return { id: run.id, generation: generations, moves: run.actions.length, aftermath: null, ...story }
+  return {
+    id: run.id,
+    generation: generations,
+    moves: run.actions.length,
+    origin: { seed: run.seed, death: run.death, rival: run.rival },
+    history: run.actions,
+    aftermath: null,
+    ...story,
+  }
 }
 
 /** Plays the open run locally and saves it at every step off the board, and at every draw and bell on it; a mockup is never saved. */
@@ -144,6 +161,8 @@ export function useRun(mockup: Mockup | null = null): Run {
           id: -1,
           generation: generations,
           moves: 0,
+          origin: null,
+          history: [],
           state: mockup.state,
           log: ['P03> A mockup: played here and never saved.'],
           news: mockup.news ?? [],
@@ -246,7 +265,8 @@ export function useRun(mockup: Mockup | null = null): Run {
           : ended && (NODE_RESULTS as readonly string[]).includes(visit.kind)
             ? { kind: 'node', view: visit.kind as NodeResultView, events: outcome.events, lines: story.news }
             : null
-      setTable({ ...table, moves: table.moves + 1, ...story, aftermath })
+      if (debugging) console.debug('[run]', table.moves + 1, action, outcome.events)
+      setTable({ ...table, moves: table.moves + 1, history: [...table.history, action], ...story, aftermath })
       // On the board, saves wait for a draw or the bell, as a quick battle's do, or a reload could peek at a draw.
       const quiet = action.type === 'play' && action.action.type !== 'draw' && action.action.type !== 'ringBell'
       if (!quiet || outcome.state.status !== 'playing') void save()
