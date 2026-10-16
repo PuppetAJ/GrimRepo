@@ -13,6 +13,8 @@ type Magnified = { unit: Unit; x: number; y: number; sticky?: boolean }
 export function useHoldToMagnify(pointAt: (x: number, y: number) => Unit | null) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const held = useRef(false)
+  // Set as a right-click's magnifier goes, for the click that ends it, which a card's own press can't clear.
+  const dismissed = useRef(false)
   const [magnified, setMagnified] = useState<Magnified | null>(null)
   const latest = useRef(pointAt)
   useEffect(() => {
@@ -25,9 +27,9 @@ export function useHoldToMagnify(pointAt: (x: number, y: number) => Unit | null)
   useEffect(() => {
     if (!sticky) return
     const end = () => {
-      held.current = true
+      dismissed.current = true
       setMagnified(null)
-      setTimeout(() => (held.current = false), HELD_MS)
+      setTimeout(() => (dismissed.current = false), HELD_MS)
     }
     const key = (event: KeyboardEvent) => event.key === 'Escape' && end()
     window.addEventListener('pointerdown', end, true)
@@ -75,9 +77,10 @@ export function useHoldToMagnify(pointAt: (x: number, y: number) => Unit | null)
     if (timer.current) clearTimeout(timer.current)
     timer.current = null
   }
+  // A right-click's magnifier outlasts the button's release, which Firefox sends after the click.
   const endHold = () => {
     cancel()
-    setMagnified(null)
+    setMagnified((last) => (last?.sticky ? last : null))
   }
 
   /** A card's pointer handlers; `onHold` runs as the hold begins. */
@@ -104,8 +107,9 @@ export function useHoldToMagnify(pointAt: (x: number, y: number) => Unit | null)
   const frameProps = {
     onContextMenu: (event: MouseEvent) => (timer.current || held.current) && event.preventDefault(),
     onClickCapture: (event: MouseEvent) => {
-      if (!held.current) return
+      if (!held.current && !dismissed.current) return
       held.current = false
+      dismissed.current = false
       event.stopPropagation()
       event.preventDefault()
     },
