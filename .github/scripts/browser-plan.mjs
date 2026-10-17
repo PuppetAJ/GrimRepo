@@ -24,7 +24,8 @@ const REACH = [
 ]
 
 function reached() {
-  if (!changed) return null
+  // Unsure what changed, every suite runs: a picker that can't tell must err toward more, never toward none.
+  if (!changed?.length) return null
   const keys = new Set()
   for (const file of changed) {
     const spec = /^e2e\/([\w-]+)\.spec\.mjs$/.exec(file)
