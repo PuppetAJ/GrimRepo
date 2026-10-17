@@ -1,21 +1,8 @@
-import {
-  BASE,
-  deletePlayer,
-  freshPage,
-  launch,
-  newPlayer,
-  reporter,
-  resetRateLimits,
-  signUp,
-  visibleText,
-} from './lib.mjs'
+import { BASE, check, deletePlayer, freshPage, newPlayer, resetRateLimits, signUp, test, visibleText } from './lib.mjs'
 
-await resetRateLimits()
-const { browser, pageErrors, close } = await launch()
-const { check, section, report } = reporter()
+test.beforeAll(resetRateLimits)
 
-section('Signing up')
-{
+test('Signing up', async ({ browser }) => {
   const { context, page } = await freshPage(browser)
   await page.goto(`${BASE}/signup`)
   await page.getByRole('button', { name: 'Create account' }).click()
@@ -68,7 +55,7 @@ section('Signing up')
   await page.getByRole('heading', { name: 'Create an account' }).waitFor()
   check('and the header reaches the sign-up form in one click', page.url() === `${BASE}/signup`, page.url())
 
-  section('Signing in')
+  // Signing in
   await page.goto(`${BASE}/login`)
   await page.getByLabel('Username or email').fill(player.username.toUpperCase())
   await page.getByLabel('Password', { exact: true }).fill('not-the-password')
@@ -100,10 +87,9 @@ section('Signing up')
   check('and by email', true)
   check('the test player is removed afterwards', await deletePlayer(page, player))
   await context.close()
-}
+})
 
-section('Playing as a guest')
-{
+test('Playing as a guest', async ({ browser }) => {
   const { context, page } = await freshPage(browser, { table: 'text' })
   await page.goto(BASE)
   await page.getByRole('link', { name: 'Quick battle' }).click()
@@ -131,10 +117,9 @@ section('Playing as a guest')
   )
   check('and the test player is removed afterwards', await deletePlayer(page, player))
   await context.close()
-}
+})
 
-section('The demo account and redirects')
-{
+test('The demo account and redirects', async ({ browser }) => {
   const { context, page } = await freshPage(browser)
   await page.goto(`${BASE}/login`)
   await page.getByRole('button', { name: 'Play as the demo account' }).click()
@@ -171,10 +156,9 @@ section('The demo account and redirects')
   })
   check('the server refuses to rename it, whatever the page shows', renamed.status() === 403, String(renamed.status()))
   await context.close()
-}
+})
 
-section('Changing an account')
-{
+test('Changing an account', async ({ browser }) => {
   const { context, page } = await freshPage(browser)
   const player = await signUp(page, newPlayer('Rename'))
   const renamed = `${player.username}_x`.slice(0, 20)
@@ -207,7 +191,4 @@ section('Changing an account')
   await page.getByRole('heading', { name: 'No such player' }).waitFor()
   check('and then the player is gone', true)
   await context.close()
-}
-
-await close()
-process.exit(report(pageErrors))
+})

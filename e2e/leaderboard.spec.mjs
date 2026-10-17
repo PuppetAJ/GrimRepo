@@ -1,12 +1,7 @@
 // Needs a seeded database.
-import { BASE, freshPage, launch, reporter, visibleText } from './lib.mjs'
+import { BASE, check, test, visibleText } from './lib.mjs'
 
-const { browser, pageErrors, close } = await launch()
-const { check, section, report } = reporter()
-const { page } = await freshPage(browser)
-
-section('The README')
-{
+test('The README', async ({ page }) => {
   // React reports a hydration mismatch as a console error, not a thrown one.
   const hydration = []
   page.on('console', (message) => {
@@ -38,10 +33,9 @@ section('The README')
     top.every((row) => shown.includes(row.username)),
     shown,
   )
-}
+})
 
-section('The leaderboard')
-{
+test('The leaderboard', async ({ page }) => {
   await page.goto(`${BASE}/leaderboard`)
   await page.getByRole('heading', { name: 'Contributors' }).waitFor()
   const rows = page.locator('tbody > tr')
@@ -83,10 +77,9 @@ section('The leaderboard')
   await page.getByRole('link', { name: 'PuppetAJ' }).click()
   await page.getByRole('heading', { name: 'PuppetAJ' }).waitFor()
   check('a name opens that player’s record', page.url().endsWith('/players/PuppetAJ'))
-}
+})
 
-section('A player’s record')
-{
+test('A player’s record', async ({ page }) => {
   await page.goto(`${BASE}/players/johanh`)
   await page.getByRole('heading', { name: 'JohanH' }).waitFor()
   const text = await visibleText(page)
@@ -102,14 +95,10 @@ section('A player’s record')
   await page.goto(`${BASE}/players/nobody_at_all`)
   await page.getByRole('heading', { name: 'No such player' }).waitFor()
   check('an unknown player says so', true)
-}
+})
 
-section('Anything else')
-{
+test('Anything else', async ({ page }) => {
   await page.goto(`${BASE}/no/such/page`)
   await page.getByRole('heading', { name: '404' }).waitFor()
   check('an unknown page is P03’s 404', /nothing here/.test(await visibleText(page)))
-}
-
-await close()
-process.exit(report(pageErrors))
+})

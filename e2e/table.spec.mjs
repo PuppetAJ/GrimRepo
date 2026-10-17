@@ -1,19 +1,7 @@
 import { apply, card, nextBotAction, summary, TIP } from '../shared/src/index.ts'
-import {
-  BASE,
-  deletePlayer,
-  freshPage,
-  launch,
-  newPlayer,
-  reporter,
-  resetRateLimits,
-  signUp,
-  tableReady,
-} from './lib.mjs'
+import { BASE, check, deletePlayer, freshPage, newPlayer, resetRateLimits, signUp, tableReady, test } from './lib.mjs'
 
-await resetRateLimits()
-const { browser, pageErrors, close } = await launch()
-const { check, section, report } = reporter()
+test.beforeAll(resetRateLimits)
 
 // Software WebGL is slow and shaders warm up behind the boot screen, hence the long timeout.
 const openTable = async (page) => {
@@ -24,8 +12,7 @@ const openTable = async (page) => {
 
 const until = (page, test, arg, timeout = 15_000) => page.waitForFunction(test, arg, { timeout, polling: 100 })
 
-section('The 3D table')
-{
+test('The 3D table', async ({ browser }) => {
   const { context, page } = await freshPage(browser)
   const player = await signUp(page, newPlayer('Table'))
   await openTable(page)
@@ -39,12 +26,12 @@ section('The 3D table')
 
   const dev = await page.evaluate(() => Boolean(window.__game))
   if (!dev) {
-    section('Clicking the models (skipped: they need a development build)')
+    // Clicking the models (skipped: they need a development build)
     await page.getByRole('button', { name: 'Draw from the deck' }).click()
     await page.getByRole('button', { name: 'Press the button' }).waitFor()
     check('the buttons still play without the test handle', true)
   } else {
-    section('A first turn, clicking the models')
+    // A first turn, clicking the models
     const click = async (what) => {
       const at = await page.evaluate((target) => window.__game.screen(target), what)
       await page.mouse.click(at.x, at.y)
@@ -143,7 +130,7 @@ section('The 3D table')
       }),
     )
 
-    section('Keys, and a sacrifice')
+    // Keys, and a sacrifice
     // A Boilerplate played into an empty lane is always there to sacrifice.
     const act = (action) => page.evaluate((next) => window.__game.act(next), action)
     await act({ type: 'draw', from: 'boilerplate' })
@@ -228,7 +215,7 @@ section('The 3D table')
     await page.evaluate(() => window.__game.skip())
     await until(page, () => !window.__game.busy(), undefined, 30_000)
 
-    section('To the end')
+    // To the end
     // An engine copy picks each move and gives the state the page must reach before the next.
     let state = await page.evaluate(() => window.__game.state())
     while (state.status === 'playing') {
@@ -258,7 +245,7 @@ section('The 3D table')
     )
   }
 
-  section('Full screen')
+  // Full screen
   // The page reacts to fullscreenchange a moment after the request, so wait for what it shows.
   await page.getByRole('button', { name: 'Full screen' }).click()
   await page.getByRole('link', { name: 'Exit' }).waitFor({ state: 'visible' })
@@ -272,7 +259,7 @@ section('The 3D table')
   await page.getByRole('link', { name: 'Exit' }).waitFor({ state: 'hidden' })
   check('and give it back', !(await page.evaluate(() => Boolean(document.fullscreenElement))))
 
-  section('The text table')
+  // The text table
   await page.getByRole('button', { name: 'Text table', exact: true }).click()
   await page.locator('[data-table="text"]').waitFor()
   check('the table can switch to text', true)
@@ -283,7 +270,7 @@ section('The 3D table')
   await page.locator('[data-table="3d"]').waitFor()
   check('and switches back', true)
 
-  section('Leaving the table')
+  // Leaving the table
   await page.getByRole('link', { name: 'Leaderboard' }).click()
   await page.getByRole('heading', { name: 'Contributors' }).waitFor()
   check(
@@ -293,10 +280,9 @@ section('The 3D table')
   )
   check('and the test player is removed afterwards', await deletePlayer(page, player))
   await context.close()
-}
+})
 
-section('Phones')
-{
+test('Phones', async ({ browser }) => {
   const { context, page } = await freshPage(browser, { width: 390, height: 844 })
   const player = await signUp(page, newPlayer('Upright'))
   await page.goto(`${BASE}/game`)
@@ -333,7 +319,4 @@ section('Phones')
   check('with a way out, since the header is hidden', (await page.getByRole('link', { name: 'Exit' }).count()) === 1)
   check('and the test player is removed afterwards', await deletePlayer(page, player))
   await context.close()
-}
-
-await close()
-process.exit(report(pageErrors))
+})

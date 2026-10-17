@@ -1,21 +1,19 @@
 import { applyRun, createRun, legalActions, nextRunAction, scoreRun } from '../shared/src/index.ts'
 import {
   BASE,
+  check,
   clickMove,
   deletePlayer,
   freshPage,
-  launch,
   newPlayer,
-  reporter,
   resetRateLimits,
   selectorFor,
   signUp,
+  test,
   visibleText,
 } from './lib.mjs'
 
-await resetRateLimits()
-const { browser, pageErrors, close } = await launch()
-const { check, section, report } = reporter()
+test.beforeAll(resetRateLimits)
 
 const ROOT = '[data-run-moves]'
 // A mockup works out its state as the page loads; the screen's own wait covers it, not the load event.
@@ -134,146 +132,147 @@ function losing(state) {
 const inBattle = (state) => state.visit?.kind === 'battle'
 const battleWon = (state) => inBattle(state) && state.visit.game.status === 'won'
 
-section('Starting a run')
-const { context, page } = await freshPage(browser, { width: 1440, height: 900, table: 'text' })
-const player = await signUp(page, newPlayer('Run'))
-await page.goto(`${BASE}/run`)
-const root = page.locator(ROOT)
-await root.waitFor()
-let mirror = { state: createRun({ seed: Number(await root.getAttribute('data-run-seed')) }), moves: 0 }
-check(
-  'a new run opens on a choice of starter decks',
-  (await view(page)) === 'start' && (await page.locator('[data-action="start"]').count()) === 3,
-)
-mirror = await playRun(page, mirror, { done: (state) => state.visit?.kind !== 'start' })
-check('then opens the starter packs, a card to take from each', (await view(page)) === 'pack')
-mirror = await playRun(page, mirror, { done: (state) => state.visit?.kind !== 'pack' })
-check('and then the map', (await view(page)) === 'map')
-check('in the first stage', (await visibleText(page)).includes('Stage 1 of 3: Localhost'))
-check(
-  'and only the first row can be chosen',
-  (await page.locator('[data-action="go"]').count()) === mirror.state.map.rows[0].length,
-)
-
-section('A card choice')
-mirror = await playRun(page, mirror, { done: (state) => state.visit?.kind === 'card' })
-check('a card node offers a sealed pack', (await page.locator('[data-action="open-pack"]').count()) === 1)
-await page.locator('[data-action="open-pack"]').click()
-await page.locator('[data-action="take"]').first().waitFor()
-check(
-  'which tears open on three cards to take, in its place',
-  (await page.locator('[data-action="take"]').count()) === 3,
-)
-const before = mirror.state.deck.length
-mirror = await playRun(page, mirror, { done: (state) => state.deck.length === before + 1 })
-check(
-  'taking one adds it to the deck',
-  (await page.getByRole('button', { name: new RegExp(`^Your inventory, ${before + 1} cards`) }).count()) === 1,
-)
-check('and P03 says so', (await page.getByRole('status').filter({ hasText: 'joins your deck' }).count()) === 1)
-
-section('Resuming')
-// Only what the server has saved comes back.
-await page.locator('[data-run-unsaved="0"]').waitFor()
-await page.reload()
-await root.waitFor()
-check(
-  'a reload puts the run back where it was',
-  Number(await root.getAttribute('data-run-moves')) === mirror.moves && (await view(page)) !== 'battle',
-)
-
-section('A battle')
-mirror = await playRun(page, mirror, {
-  done: (state) => battleWon(state) || (inBattle(state) && state.status !== 'playing'),
-})
-if (mirror.state.status !== 'playing') {
-  // The bot loses the first battle now and then; the rest of the suite still needs a lost run.
-  check('the first battle is played to the end at the text table (lost it, which ends the run)', true)
-} else {
-  const panel = page.getByRole('status').filter({ hasText: 'You win in' })
+test('A run, from the first choice to the summary', async ({ browser }) => {
+  // Starting a run
+  const { context, page } = await freshPage(browser, { width: 1440, height: 900, table: 'text' })
+  const player = await signUp(page, newPlayer('Run'))
+  await page.goto(`${BASE}/run`)
+  const root = page.locator(ROOT)
+  await root.waitFor()
+  let mirror = { state: createRun({ seed: Number(await root.getAttribute('data-run-seed')) }), moves: 0 }
   check(
-    'winning says so over the board',
-    await panel.waitFor().then(
-      () => true,
-      () => false,
-    ),
+    'a new run opens on a choice of starter decks',
+    (await view(page)) === 'start' && (await page.locator('[data-action="start"]').count()) === 3,
   )
-  mirror = await playRun(page, mirror, { done: (state) => !inBattle(state) })
-  check('and leads back to the map', await shows(page, 'map'))
-  // Where the run stands is in the menu.
-  await page.getByRole('button', { name: /^Run menu/ }).click()
-  check('with the battle counted', (await page.getByRole('menu').innerText()).includes('1 battle won'))
-  await page.keyboard.press('Escape')
+  mirror = await playRun(page, mirror, { done: (state) => state.visit?.kind !== 'start' })
+  check('then opens the starter packs, a card to take from each', (await view(page)) === 'pack')
+  mirror = await playRun(page, mirror, { done: (state) => state.visit?.kind !== 'pack' })
+  check('and then the map', (await view(page)) === 'map')
+  check('in the first stage', (await visibleText(page)).includes('Stage 1 of 3: Localhost'))
+  check(
+    'and only the first row can be chosen',
+    (await page.locator('[data-action="go"]').count()) === mirror.state.map.rows[0].length,
+  )
 
-  section('Losing on purpose')
-  mirror = await playRun(page, mirror, { pick: losing, done: () => false })
-}
-check(
-  'a lost battle ends the run on the board',
-  mirror.state.status === 'lost' &&
-    (await page
-      .getByRole('status')
-      .filter({ hasText: 'The run ends here' })
+  // A card choice
+  mirror = await playRun(page, mirror, { done: (state) => state.visit?.kind === 'card' })
+  check('a card node offers a sealed pack', (await page.locator('[data-action="open-pack"]').count()) === 1)
+  await page.locator('[data-action="open-pack"]').click()
+  await page.locator('[data-action="take"]').first().waitFor()
+  check(
+    'which tears open on three cards to take, in its place',
+    (await page.locator('[data-action="take"]').count()) === 3,
+  )
+  const before = mirror.state.deck.length
+  mirror = await playRun(page, mirror, { done: (state) => state.deck.length === before + 1 })
+  check(
+    'taking one adds it to the deck',
+    (await page.getByRole('button', { name: new RegExp(`^Your inventory, ${before + 1} cards`) }).count()) === 1,
+  )
+  check('and P03 says so', (await page.getByRole('status').filter({ hasText: 'joins your deck' }).count()) === 1)
+
+  // Resuming
+  // Only what the server has saved comes back.
+  await page.locator('[data-run-unsaved="0"]').waitFor()
+  await page.reload()
+  await root.waitFor()
+  check(
+    'a reload puts the run back where it was',
+    Number(await root.getAttribute('data-run-moves')) === mirror.moves && (await view(page)) !== 'battle',
+  )
+
+  // A battle
+  mirror = await playRun(page, mirror, {
+    done: (state) => battleWon(state) || (inBattle(state) && state.status !== 'playing'),
+  })
+  if (mirror.state.status !== 'playing') {
+    // The bot loses the first battle now and then; the rest of the suite still needs a lost run.
+    check('the first battle is played to the end at the text table (lost it, which ends the run)', true)
+  } else {
+    const panel = page.getByRole('status').filter({ hasText: 'You win in' })
+    check(
+      'winning says so over the board',
+      await panel.waitFor().then(
+        () => true,
+        () => false,
+      ),
+    )
+    mirror = await playRun(page, mirror, { done: (state) => !inBattle(state) })
+    check('and leads back to the map', await shows(page, 'map'))
+    // Where the run stands is in the menu.
+    await page.getByRole('button', { name: /^Run menu/ }).click()
+    check('with the battle counted', (await page.getByRole('menu').innerText()).includes('1 battle won'))
+    await page.keyboard.press('Escape')
+
+    // Losing on purpose
+    mirror = await playRun(page, mirror, { pick: losing, done: () => false })
+  }
+  check(
+    'a lost battle ends the run on the board',
+    mirror.state.status === 'lost' &&
+      (await page
+        .getByRole('status')
+        .filter({ hasText: 'The run ends here' })
+        .waitFor()
+        .then(
+          () => true,
+          () => false,
+        )),
+  )
+
+  // The summary
+  await page.locator('[data-action="summary"]').click()
+  check('it follows the lost battle', await shows(page, 'summary'))
+  await page.getByText('Saving the result…').waitFor({ state: 'detached' })
+  const score = scoreRun(mirror.state.record, false)
+  check(
+    'and scores the run as the server does',
+    (await visibleText(page)).includes(`Score\t${score.toLocaleString('en-US')}`) ||
+      (await page
+        .locator('dd')
+        .filter({ hasText: score.toLocaleString('en-US') })
+        .count()) > 0,
+  )
+
+  // A death card
+  await page.locator('[data-action="death-cost"]').first().click()
+  await page.locator('[data-action="death-stats"]').first().click()
+  await page.locator('[data-action="death-sigils"]').first().click()
+  await page.locator('#death-name').fill('<b>')
+  await page.locator('[data-action="build-death-card"]').click()
+  check('a name it cannot print is refused before sending', await page.getByText('Letters, numbers').isVisible())
+  await page.locator('#death-name').fill('E2E Ghost')
+  await page.locator('[data-action="build-death-card"]').click()
+  check(
+    'the lost run builds a death card, kept for the player',
+    await page
+      .getByText('Saved, and pinned to your profile')
       .waitFor()
       .then(
         () => true,
         () => false,
-      )),
-)
+      ),
+  )
+  await page.locator('[data-action="again"]').click()
+  await page.waitForFunction(() => document.querySelector('[data-run-moves]')?.getAttribute('data-run-moves') === '0')
+  check('starting another run opens on the starter deck choice', (await view(page)) === 'start')
+  check(
+    'which offers to leave the death card out for more score',
+    (await page.locator('[data-action="include-death"]').filter({ visible: true }).count()) === 1 &&
+      (await visibleText(page)).includes('E2E Ghost'),
+  )
 
-section('The summary')
-await page.locator('[data-action="summary"]').click()
-check('it follows the lost battle', await shows(page, 'summary'))
-await page.getByText('Saving the result…').waitFor({ state: 'detached' })
-const score = scoreRun(mirror.state.record, false)
-check(
-  'and scores the run as the server does',
-  (await visibleText(page)).includes(`Score\t${score.toLocaleString('en-US')}`) ||
-    (await page
-      .locator('dd')
-      .filter({ hasText: score.toLocaleString('en-US') })
-      .count()) > 0,
-)
+  // Abandoning
+  await page.getByRole('button', { name: 'Run menu' }).click()
+  await page.getByRole('menuitem', { name: 'Abandon run' }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Abandon' }).click()
+  check('abandoning asks first, then ends the run', await shows(page, 'summary'))
+  check('and the summary says so', (await visibleText(page)).includes('You abandoned the run'))
+  check('and the test player is removed afterwards', await deletePlayer(page, player))
+  await context.close()
+})
 
-section('A death card')
-await page.locator('[data-action="death-cost"]').first().click()
-await page.locator('[data-action="death-stats"]').first().click()
-await page.locator('[data-action="death-sigils"]').first().click()
-await page.locator('#death-name').fill('<b>')
-await page.locator('[data-action="build-death-card"]').click()
-check('a name it cannot print is refused before sending', await page.getByText('Letters, numbers').isVisible())
-await page.locator('#death-name').fill('E2E Ghost')
-await page.locator('[data-action="build-death-card"]').click()
-check(
-  'the lost run builds a death card, kept for the player',
-  await page
-    .getByText('Saved, and pinned to your profile')
-    .waitFor()
-    .then(
-      () => true,
-      () => false,
-    ),
-)
-await page.locator('[data-action="again"]').click()
-await page.waitForFunction(() => document.querySelector('[data-run-moves]')?.getAttribute('data-run-moves') === '0')
-check('starting another run opens on the starter deck choice', (await view(page)) === 'start')
-check(
-  'which offers to leave the death card out for more score',
-  (await page.locator('[data-action="include-death"]').filter({ visible: true }).count()) === 1 &&
-    (await visibleText(page)).includes('E2E Ghost'),
-)
-
-section('Abandoning')
-await page.getByRole('button', { name: 'Run menu' }).click()
-await page.getByRole('menuitem', { name: 'Abandon run' }).click()
-await page.getByRole('alertdialog').getByRole('button', { name: 'Abandon' }).click()
-check('abandoning asks first, then ends the run', await shows(page, 'summary'))
-check('and the summary says so', (await visibleText(page)).includes('You abandoned the run'))
-check('and the test player is removed afterwards', await deletePlayer(page, player))
-await context.close()
-
-section('The campfire, from a mockup')
-{
+test('The campfire, from a mockup', async ({ browser }) => {
   const { context, page } = await freshPage(browser, { width: 1440, height: 900, table: 'text' })
   await page.goto(`${BASE}/mockups/campfire`, MOCKUP)
   await shows(page, 'campfire', 30_000)
@@ -308,10 +307,9 @@ section('The campfire, from a mockup')
   await page.mouse.click(corner.x + corner.width - 4, corner.y + 4)
   check('after a card burns, the corner of Leave still leaves', await shows(page, 'map'))
   await context.close()
-}
+})
 
-section("A run's battle menu, from a mockup")
-{
+test("A run's battle menu, from a mockup", async ({ browser }) => {
   const { context, page } = await freshPage(browser, { width: 1440, height: 900, table: 'text' })
   await page.goto(`${BASE}/mockups/battle?table=text`, MOCKUP)
   await page.locator('[data-run-view="battle"] [data-seed]').waitFor({ timeout: 30_000 })
@@ -340,10 +338,9 @@ section("A run's battle menu, from a mockup")
   await page.getByRole('button', { name: 'Back to the battle' }).click()
   check('and goes back to the battle', await shows(page, 'battle'))
   await context.close()
-}
+})
 
-section('The map from a node, from a mockup')
-{
+test('The map from a node, from a mockup', async ({ browser }) => {
   const { context, page } = await freshPage(browser, { width: 1440, height: 900, table: 'text' })
   await page.goto(`${BASE}/mockups/shop?table=text`, MOCKUP)
   await shows(page, 'shop', 30_000)
@@ -363,10 +360,9 @@ section('The map from a node, from a mockup')
   )
   check('and picking the next node there heads on, leaving the registry', (await view(page)) !== 'shop')
   await context.close()
-}
+})
 
-section('The sigil stones, from a mockup')
-{
+test('The sigil stones, from a mockup', async ({ browser }) => {
   const { context, page } = await freshPage(browser, { width: 1440, height: 900, table: 'text' })
   await page.goto(`${BASE}/mockups/stones`, MOCKUP)
   check('the stones open', await shows(page, 'stones', 30_000))
@@ -403,10 +399,9 @@ section('The sigil stones, from a mockup')
     (await page.getByRole('status').filter({ hasText: 'gains' }).count()) === 1,
   )
   await context.close()
-}
+})
 
-section('Items, from a mockup')
-{
+test('Items, from a mockup', async ({ browser }) => {
   const { context, page } = await freshPage(browser, { width: 1440, height: 900, table: 'text' })
   await page.goto(`${BASE}/mockups/battle-items`, MOCKUP)
   const used = page.locator('[data-action="use"]')
@@ -429,10 +424,9 @@ section('Items, from a mockup')
   await page.locator(`${ROOT}[data-run-moves="${start + 2}"]`).waitFor()
   check('aimed at a card, it is used there', (await used.count()) === 1)
   await context.close()
-}
+})
 
-section('An event, from a mockup')
-{
+test('An event, from a mockup', async ({ browser }) => {
   const { context, page } = await freshPage(browser, { width: 1440, height: 900, table: 'text' })
   await page.goto(`${BASE}/mockups/event`, MOCKUP)
   check(
@@ -453,10 +447,9 @@ section('An event, from a mockup')
   await page.keyboard.press('Enter')
   check('and Enter goes back to the map', await shows(page, 'map'))
   await context.close()
-}
+})
 
-section('Planning a route, from a mockup')
-{
+test('Planning a route, from a mockup', async ({ browser }) => {
   const { context, page } = await freshPage(browser, { width: 1440, height: 900, table: 'text' })
   await page.goto(`${BASE}/mockups/map`, MOCKUP)
   await shows(page, 'map', 30_000)
@@ -508,10 +501,9 @@ section('Planning a route, from a mockup')
   await page.getByRole('button', { name: 'Clear the plan' }).click()
   check('clearing it removes the marks', (await page.locator('[data-planned]').count()) === 0)
   await context.close()
-}
+})
 
-section('A big deck, from a mockup')
-{
+test('A big deck, from a mockup', async ({ browser }) => {
   const { context, page } = await freshPage(browser, { width: 1440, height: 900, table: 'text' })
   await page.goto(`${BASE}/mockups/worst-lint`, MOCKUP)
   await shows(page, 'lint', 30_000)
@@ -555,7 +547,4 @@ section('A big deck, from a mockup')
     Boolean(inside) && inside.y >= frame.y - 1 && inside.y + inside.height <= frame.y + frame.height + 1,
   )
   await context.close()
-}
-
-await close()
-process.exit(report(pageErrors))
+})

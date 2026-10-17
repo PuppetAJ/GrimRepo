@@ -1,9 +1,6 @@
 // A run at the 3D table, from mockups: the projector's window, clicks through it, the glides to and from a battle,
 // and the floating screens of a stage too small for the window.
-import { BASE, freshPage, launch, reporter } from './lib.mjs'
-
-const { browser, pageErrors, close } = await launch({ width: 1440, height: 900 })
-const { check, section, report } = reporter()
+import { BASE, check, freshPage, test } from './lib.mjs'
 
 // Software WebGL is slow, so every wait on the stage is long.
 const SLOW = 90_000
@@ -11,7 +8,7 @@ const SLOW = 90_000
 const MOCKUP = { waitUntil: 'domcontentloaded' }
 const ROOT = '[data-run-moves]'
 
-async function open(name, { width = 1440, height = 900 } = {}) {
+async function open(browser, name, { width = 1440, height = 900 } = {}) {
   const { context, page } = await freshPage(browser, { width, height })
   page.setDefaultTimeout(30_000)
   await page.goto(`${BASE}/mockups/${name}?table=3d`, MOCKUP)
@@ -29,9 +26,8 @@ const shown = (locator, timeout = SLOW) =>
     .then(() => true)
     .catch(() => false)
 
-section('The map on the projector')
-{
-  const { context, page } = await open('map')
+test('The map on the projector', async ({ browser }) => {
+  const { context, page } = await open(browser, 'map')
   check('the window opens over the table', await shown(lit(page)))
   const title = await lit(page).locator('h2').textContent()
   check('with the stage as its title, inside it', (title ?? '').startsWith('Stage 1 of 3'), title)
@@ -58,11 +54,10 @@ section('The map on the projector')
   )
   check('without the window closing between them', (await page.locator('.hologram-window').count()) === 1)
   await context.close()
-}
+})
 
-section('A battle and the map')
-{
-  const { context, page } = await open('battle')
+test('A battle and the map', async ({ browser }) => {
+  const { context, page } = await open(browser, 'battle')
   const look = page.getByRole('button', { name: 'Look at the map' })
   check('the battle offers a look at the map', await shown(look))
   await look.click()
@@ -73,11 +68,10 @@ section('A battle and the map')
   check('and going back sets the table again', await shown(look))
   check('on the one canvas the run loaded', (await page.locator('canvas').count()) === 1)
   await context.close()
-}
+})
 
-section('Into a battle from the map')
-{
-  const { context, page } = await open('map')
+test('Into a battle from the map', async ({ browser }) => {
+  const { context, page } = await open(browser, 'map')
   await shown(lit(page))
   // Walks the mockup's map to a battle, through whatever lies between.
   for (let step = 0; step < 12 && (await view(page)) !== 'battle'; step++) {
@@ -114,11 +108,10 @@ section('Into a battle from the map')
   )
   check('on the same canvas', (await page.locator('canvas').count()) === 1)
   await context.close()
-}
+})
 
-section('A stage too small for the window')
-{
-  const { context, page } = await open('map', { width: 844, height: 390 })
+test('A stage too small for the window', async ({ browser }) => {
+  const { context, page } = await open(browser, 'map', { width: 844, height: 390 })
   check('the map floats over the room instead', await shown(page.locator('[data-table="run"] h2')))
   check('with no projector window', (await page.locator('.hologram-window').count()) === 0)
   check(
@@ -131,11 +124,10 @@ section('A stage too small for the window')
       .catch(() => false),
   )
   await context.close()
-}
+})
 
-section('A window wider than the site')
-{
-  const { context, page } = await open('map', { width: 2560, height: 1080 })
+test('A window wider than the site', async ({ browser }) => {
+  const { context, page } = await open(browser, 'map', { width: 2560, height: 1080 })
   await shown(lit(page))
   const width = async () => (await page.locator(`${ROOT} canvas`).first().boundingBox())?.width ?? 0
   const site = await width()
@@ -169,7 +161,4 @@ section('A window wider than the site')
     JSON.stringify(box),
   )
   await context.close()
-}
-
-await close()
-process.exit(report(pageErrors))
+})

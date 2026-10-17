@@ -28,8 +28,8 @@
     "format": "prettier --write .",
     "typecheck": "pnpm --recursive typecheck",
     "test": "pnpm --recursive test",
-    "test:e2e": "node --env-file-if-exists=.env e2e/run.mjs",
-    "test:prod": "node e2e/production.mjs",
+    "test:e2e": "playwright test",
+    "test:prod": "playwright test -c playwright.production.config.mjs",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:migrate": "pnpm --filter server db:migrate",
@@ -54,6 +54,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.63.0",
     "oxlint": "^1.86.0",
     "pg": "^8.23.1",
     "playwright": "^1.63.0",
