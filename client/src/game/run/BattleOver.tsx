@@ -1,6 +1,5 @@
-import { P03Dialogue } from '../P03Dialogue.tsx'
+import { Choices, P03Dialogue } from '../P03Dialogue.tsx'
 import { findNode, STAGES, TIP } from 'shared'
-import { Button } from '@/components/ui/button.tsx'
 import type { RunReady } from './useRun.ts'
 
 /** The panel over the board when a run's battle ends; both tables show it. */
@@ -12,22 +11,24 @@ export function BattleOver({ run, onSummary }: { run: RunReady; onSummary: () =>
   const overkill = Math.max(0, visit.game.scale - TIP)
   const won = visit.game.status === 'won'
   return (
-    // P03 says it, with his white flag for a win and his grin for a loss, and the way on in the corner.
+    // P03 says it, with his white flag for a win and his grin for a loss, and offers the way on.
     <P03Dialogue
       role="status"
       face={won ? 'whiteflag' : 'happy'}
       // As wide as the board it sits over, and no wider, so it stays centered on it.
       className="w-full max-w-[36rem] bg-p03-ground/95"
-      actions={
-        state.status === 'playing' ? (
-          <Button data-action="leave" className="text-base" onClick={() => run.act({ type: 'leave' })}>
-            {boss ? 'Claim the reward' : 'Back to the map'}
-          </Button>
-        ) : (
-          <Button data-action="summary" className="text-base" onClick={onSummary}>
-            See how the run went
-          </Button>
-        )
+      below={
+        <Choices
+          choices={[
+            state.status === 'playing'
+              ? {
+                  label: boss ? 'Claim the reward' : 'Back to the map',
+                  action: 'leave',
+                  onChoose: () => run.act({ type: 'leave' }),
+                }
+              : { label: 'See how the run went', action: 'summary', onChoose: onSummary },
+          ]}
+        />
       }
     >
       {/* The sentences run on together, so the second shares the first's line where it fits; a turn never parts from its number. */}

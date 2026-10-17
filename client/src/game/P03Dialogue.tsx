@@ -1,5 +1,5 @@
 import { cn } from 'cn'
-import type { ComponentProps, ReactNode } from 'react'
+import { useRef, useState, type ComponentProps, type ReactNode } from 'react'
 import type { Face } from 'shared'
 import { p03Art } from './art.ts'
 
@@ -29,6 +29,7 @@ export function P03Dialogue({
   face,
   children,
   actions,
+  below,
   compact = false,
   className = '',
   ...section
@@ -37,6 +38,8 @@ export function P03Dialogue({
   children: ReactNode
   /** Buttons, or the arrow that moves on, in the bottom right corner. */
   actions?: ReactNode
+  /** A row across the whole box under his head and words, as his choices take. */
+  below?: ReactNode
   /** A smaller head and text, for a phone. */
   compact?: boolean
 } & Omit<ComponentProps<'section'>, 'children'>) {
@@ -44,13 +47,14 @@ export function P03Dialogue({
     <section
       {...section}
       className={cn(
-        '@container relative flex rounded-md border-2 border-p03-edge bg-p03-ground/85 font-terminal text-p03',
+        '@container relative flex flex-wrap rounded-md border-2 border-p03-edge bg-p03-ground/85 font-terminal text-p03',
         // On a phone the head and words sit in the middle of the box, so a short line leaves no gap under them.
-        compact ? 'items-center gap-2 px-2 pt-3 pb-2' : 'items-start gap-3 px-3 pt-4 pb-3',
+        // The name tab may sit over the top of his head there, which keeps the box short.
+        compact ? 'items-center gap-2 px-2 pt-1.5 pb-1.5' : 'items-start gap-3 px-3 pt-4 pb-3',
         className,
       )}
     >
-      <span className="absolute -top-3.5 left-3 rounded-sm border-2 border-p03-edge bg-p03-ground px-3 text-base leading-tight">
+      <span className="absolute -top-3.5 left-3 z-10 rounded-sm border-2 border-p03-edge bg-p03-ground px-3 text-base leading-tight">
         P03
       </span>
       {/* Where the box is narrow, as an ending over a phone's board is, the head and words shrink with it. */}
@@ -72,6 +76,66 @@ export function P03Dialogue({
           </div>
         ) : null}
       </div>
+      {below ? (
+        <div
+          className={cn(
+            'basis-full leading-snug [text-shadow:0_0_4px_#000]',
+            compact ? 'text-sm' : 'text-xl @max-[28rem]:text-base',
+          )}
+        >
+          {below}
+        </div>
+      ) : null}
     </section>
+  )
+}
+
+export type Choice = { label: string; onChoose: () => void; /** For the tests, as the buttons had. */ action?: string }
+
+/**
+ * What P03 offers next, as a game's dialogue offers it: choices side by side under his words, a pointer on the one
+ * picked. Pointing at one picks it; the arrow keys move the pick, and Enter or a click takes it.
+ */
+export function Choices({ choices }: { choices: Choice[] }) {
+  const [picked, setPicked] = useState(0)
+  const buttons = useRef<(HTMLButtonElement | null)[]>([])
+  const move = (by: number) => {
+    const next = (picked + by + choices.length) % choices.length
+    setPicked(next)
+    buttons.current[next]?.focus()
+  }
+  return (
+    <div
+      role="group"
+      aria-label="What next"
+      className="flex flex-wrap justify-end gap-x-6 gap-y-1"
+      onKeyDown={(event) => {
+        if (event.key === 'ArrowRight' || event.key === 'ArrowDown') move(1)
+        else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') move(-1)
+        else return
+        event.preventDefault()
+      }}
+    >
+      {choices.map((choice, index) => (
+        <button
+          key={choice.label}
+          ref={(button) => {
+            buttons.current[index] = button
+          }}
+          type="button"
+          data-action={choice.action}
+          onClick={choice.onChoose}
+          onPointerEnter={() => setPicked(index)}
+          onFocus={() => setPicked(index)}
+          className="flex items-center gap-1.5 font-bold text-[#c9ffd5] outline-none focus-visible:underline focus-visible:underline-offset-4"
+        >
+          {/* Every choice keeps the pointer's room, so picking another never shifts the line. */}
+          <span aria-hidden className={index === picked ? '' : 'invisible'}>
+            ▸
+          </span>
+          {choice.label}
+        </button>
+      ))}
+    </div>
   )
 }

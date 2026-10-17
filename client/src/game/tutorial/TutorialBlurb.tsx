@@ -1,10 +1,9 @@
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { cn } from 'cn'
 import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from 'react'
 import { card, gloss, ITEMS, said, type Move, type TutorialStep } from 'shared'
-import { Button } from '@/components/ui/button.tsx'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover.tsx'
-import { P03Dialogue } from '../P03Dialogue.tsx'
+import { Choices, P03Dialogue } from '../P03Dialogue.tsx'
 
 /** What the step waits for, in the words the table's own controls use; lanes count from 1. */
 export function moveText(move: Move): string {
@@ -51,7 +50,7 @@ export function targetSelector(move: Move): string {
 }
 
 /** A control to outline, with how far out the outline sits: clear of what it marks, but inside whatever clips it. */
-type Outline = { selector: string; offset: number }
+type Outline = { selector: string; offset: number; radius?: number }
 
 /**
  * What gets the dotted outline: only what the table doesn't already mark. A lane to play or sacrifice into, and the
@@ -68,7 +67,13 @@ export function outlinesFor(move: Move): Outline[] {
       ]
     case 'select':
       // Around the card inside its button, in the button's own padding, since the hand scrolls and clips past it.
-      return [{ selector: `${text} [data-action="select"][aria-label^="${card(move.card).name},"] > span`, offset: 2 }]
+      return [
+        {
+          selector: `${text} [data-action="select"][aria-label^="${card(move.card).name},"] > span`,
+          offset: 2,
+          radius: 6,
+        },
+      ]
     case 'ringBell':
       // EXECUTE fills its column; the column leaves room for this.
       return [
@@ -94,7 +99,10 @@ function outlineCss(outlines: Outline[]): string {
   // override an important one.
   return [
     `${all} { outline-width: 2px !important; outline-style: dotted !important; outline-color: #fff; animation: tutorial-pulse 0.9s ease-in-out infinite alternate; }`,
-    ...outlines.map((one) => `${one.selector} { outline-offset: ${one.offset}px !important; }`),
+    ...outlines.map(
+      (one) =>
+        `${one.selector} { outline-offset: ${one.offset}px !important;${one.radius ? ` border-radius: ${one.radius}px;` : ''} }`,
+    ),
     '@keyframes tutorial-pulse { from { outline-color: #fff; } to { outline-color: rgb(255 255 255 / 0.3); } }',
     `@media (prefers-reduced-motion: reduce) { ${all} { animation: none; } }`,
   ].join('\n')
@@ -251,7 +259,7 @@ export function TutorialBlurb({
           place.center === null ? 'left-1/2' : '',
           place.bottom ? 'bottom-2' : 'top-5',
           // One size for every line, so the box never jumps between steps.
-          compact ? 'h-24 w-[min(30rem,calc(100vw-1rem))]' : 'h-30 w-[min(36rem,calc(100%-1rem))]',
+          compact ? 'h-21 w-[min(30rem,calc(100vw-1rem))]' : 'h-30 w-[min(36rem,calc(100%-1rem))]',
           onPressOn ? 'cursor-pointer' : '',
           className,
         )}
@@ -287,25 +295,23 @@ export function SkipTutorial({ className = '' }: { className?: string }) {
   )
 }
 
-/** The hand-off once the tutorial is won: straight to a real run. */
+/** The hand-off once the tutorial is won: straight to a real run, or the tutorial once more. */
 export function TutorialEnding() {
+  const navigate = useNavigate()
   return (
+    // As wide as the board it sits over, and no wider, so it stays centered on it.
     <P03Dialogue
       face="whiteflag"
       aria-label="Tutorial complete"
-      // As wide as the board it sits over, and no wider, so it stays centered on it.
       className="w-full max-w-[36rem] bg-p03-ground/95"
-      actions={
-        <>
-          <Button asChild className="text-base">
-            <Link to="/run">Start a run</Link>
-          </Button>
-          <Button asChild variant="outline" className="text-base hover:bg-p03/10 hover:text-p03">
-            <Link to="/tutorial" reloadDocument>
-              Play tutorial again
-            </Link>
-          </Button>
-        </>
+      below={
+        <Choices
+          choices={[
+            { label: 'Start a run', onChoose: () => void navigate({ to: '/run' }) },
+            // A fresh page, so the battle deals again from the start.
+            { label: 'Play tutorial again', onChoose: () => window.location.reload() },
+          ]}
+        />
       }
     >
       <p aria-live="polite">Fine. You know the rules. Now a real game, where it actually counts.</p>
