@@ -187,19 +187,45 @@ export function PixelCard({ unit, blank }: { unit: Shown; blank?: Blank }) {
   )
 }
 
+/** A type or sigil and what it means: the name on its own line, so a long one never splits the sentence after it. */
+function Note({
+  icon,
+  name,
+  text,
+  className,
+  size,
+}: {
+  icon: IconId
+  name: string
+  text: string
+  className: string
+  size: number
+}) {
+  return (
+    <p className={className}>
+      <span className="shrink-0 pt-0.5">
+        <Sigil id={icon} size={size} />
+      </span>
+      <span className="flex min-w-0 flex-col">
+        <strong>{name}</strong>
+        <span>{text}</span>
+      </span>
+    </p>
+  )
+}
+
 /** The card's type and what it means, for the sigils that count cards of a type. */
 function TypeLine({ id, className, icon }: { id: string; className: string; icon: number }) {
   const type = card(id).type
   if (!type) return null
   return (
-    <p className={className}>
-      <span className="shrink-0 pt-0.5">
-        <Sigil id={`type-${type}`} size={icon} />
-      </span>
-      <span>
-        <strong>{CARD_TYPES[type].name}.</strong> {CARD_TYPES[type].about}
-      </span>
-    </p>
+    <Note
+      icon={`type-${type}`}
+      name={`${CARD_TYPES[type].name} type`}
+      text={CARD_TYPES[type].about}
+      className={className}
+      size={icon}
+    />
   )
 }
 
@@ -226,14 +252,14 @@ export function ReaderBody({ unit }: { unit: Shown }) {
       >
         <TypeLine id={unit.card} className="flex gap-2 text-xl leading-tight" icon={20} />
         {unit.sigils.map((sigil) => (
-          <p key={sigil} className="flex gap-2 text-xl leading-tight">
-            <span className="shrink-0 pt-0.5">
-              <Sigil id={sigil} size={20} />
-            </span>
-            <span>
-              <strong>{SIGILS[sigil].name}.</strong> {SIGILS[sigil].text}
-            </span>
-          </p>
+          <Note
+            key={sigil}
+            icon={sigil}
+            name={SIGILS[sigil].name}
+            text={SIGILS[sigil].text}
+            className="flex gap-2 text-xl leading-tight"
+            size={20}
+          />
         ))}
       </div>
       <Stats unit={unit} icon={20} className="mt-auto pt-1 text-3xl" />
@@ -262,14 +288,14 @@ export function FlatReaderBody({ unit }: { unit: Shown }) {
         >
           <TypeLine id={unit.card} className="flex gap-1" icon={14} />
           {unit.sigils.map((sigil) => (
-            <p key={sigil} className="flex gap-1">
-              <span className="shrink-0 pt-0.5">
-                <Sigil id={sigil} size={14} />
-              </span>
-              <span>
-                <strong>{SIGILS[sigil].name}.</strong> {SIGILS[sigil].text}
-              </span>
-            </p>
+            <Note
+              key={sigil}
+              icon={sigil}
+              name={SIGILS[sigil].name}
+              text={SIGILS[sigil].text}
+              className="flex gap-1"
+              size={14}
+            />
           ))}
         </div>
         <Stats unit={unit} icon={16} className="pt-0.5 text-2xl leading-none" />

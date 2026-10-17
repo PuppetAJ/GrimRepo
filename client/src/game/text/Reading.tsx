@@ -95,8 +95,10 @@ export function Magnifier() {
               <span className="mt-0.5 shrink-0">
                 <Sigil id={note.id} size={16} color="var(--p03)" />
               </span>
-              <span className="leading-tight">
-                <span className="text-p03">{note.name}.</span> <span className="font-sans text-xs">{note.text}</span>
+              {/* The name on its own line, so a long one never splits the sentence after it. */}
+              <span className="flex min-w-0 flex-col leading-tight">
+                <span className="text-p03">{note.name}</span>
+                <span className="font-sans text-xs">{note.text}</span>
               </span>
             </li>
           ))}

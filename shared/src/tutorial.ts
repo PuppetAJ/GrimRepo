@@ -179,7 +179,7 @@ export const TUTORIAL: TutorialStep[] = [
   {
     id: 'sacrifice',
     face: 'happy',
-    says: "[Documentation](card:Documentation) costs 2. Pick it, then mark both Boilerplates as [sacrifices](term:sacrifice). Leshy invented this. It's the one good idea he ever had.",
+    says: '[Documentation](card:Documentation) costs 2. Pick it, then mark both Boilerplates as [sacrifices](term:sacrifice). Leshy invented this. His one good idea.',
     moves: [
       { type: 'select', card: 'Documentation' },
       { type: 'mark', lane: 0 },
@@ -196,7 +196,7 @@ export const TUTORIAL: TutorialStep[] = [
   {
     id: 'overkilled',
     face: 'neutral',
-    says: "[Overkill](term:overkill). I designed it that way. You're welcome. And an open lane lets my cards hit you.",
+    says: 'That was [overkill](term:overkill). The extra damage spilled into my queue. And an open lane lets my cards hit you.',
   },
   {
     id: 'redraw',

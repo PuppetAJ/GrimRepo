@@ -1,3 +1,4 @@
+import { SkipTutorial } from '../tutorial/TutorialBlurb.tsx'
 import { MouseRight } from 'lucide-react'
 import { Forfeit } from '../controls.tsx'
 import { useTable } from './context.ts'
@@ -76,7 +77,9 @@ export function Controls() {
             {fullScreen.on ? 'Exit full screen' : 'Full screen'}
           </button>
         ) : null}
-        {game.tutorial ? null : (
+        {game.tutorial ? (
+          <SkipTutorial className={`${SIDE_BUTTON} h-auto flex-1 justify-center`} />
+        ) : (
           <Forfeit
             forfeit={game.forfeit}
             run={Boolean(game.run)}

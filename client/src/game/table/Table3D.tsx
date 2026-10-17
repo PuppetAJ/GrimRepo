@@ -1,6 +1,7 @@
 import { use, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { Action } from 'shared'
 import { type Seat, has, hasEnded, legalFor, outcomeOf } from '../controls.tsx'
+import { useSettled } from '../tutorial/TutorialBlurb.tsx'
 import { useFullScreen } from '../fullScreen.ts'
 import type { Ready } from '../useGame.ts'
 import { cardTones, FlatReaderBody } from '../CardReader.tsx'
@@ -156,12 +157,14 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
     })
     return () => stage.onContext(() => false)
   })
+  // His face follows the table, not the moves, so it never changes ahead of the turn playing out.
+  const face = useSettled(game.tutorial?.face, busy)
   useLayoutEffect(() =>
     stage.room({
       view: playback.view,
       log: game.log,
       outcome: busy ? undefined : outcomeOf(game),
-      face: game.tutorial?.face,
+      face,
       onHold: (screen, x, y) => reader.hold({ screen }, x, y),
       onPin: (screen) => reader.pin(screen),
     }),

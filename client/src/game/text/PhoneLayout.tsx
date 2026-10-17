@@ -13,7 +13,7 @@ import {
 import { Link } from '@tanstack/react-router'
 import FaultyScreenShader from '../../components/p03/FaultyScreenShader.tsx'
 import { encounterName, Forfeit, hasEnded, IntegrityBar, ScaleBar, SeatNote } from '../controls.tsx'
-import { blurbAtBottom, TutorialBlurb } from '../tutorial/TutorialBlurb.tsx'
+import { SkipTutorial, TutorialBlurb, useSettled } from '../tutorial/TutorialBlurb.tsx'
 import { Balance } from './Balance.tsx'
 import { Board } from './Board.tsx'
 import { CancelButton, ExecuteButton, SaveStatus } from './Buttons.tsx'
@@ -107,7 +107,9 @@ function Menu() {
             {fullScreen.on ? 'Exit full screen' : 'Full screen'}
           </button>
         ) : null}
-        {game.tutorial ? null : (
+        {game.tutorial ? (
+          <SkipTutorial className={`${MENU_BUTTON} h-auto`} />
+        ) : (
           <Forfeit
             forfeit={game.forfeit}
             run={Boolean(game.run)}
@@ -134,12 +136,12 @@ function Menu() {
 }
 
 export function PhoneLayout() {
-  const { frameProps, phoneFrame, covering, sideways, scrolling, seat, setArea, setHandSection, view, game } =
+  const { frameProps, phoneFrame, covering, sideways, scrolling, seat, setArea, setHandSection, view, game, busy } =
     useTable()
   // Once the battle ends, its panel over the board may run past the board, so the board rises above the rest.
   const over = hasEnded(game)
   // In the tutorial, P03 talks over the table, out of the way of whatever the step points at.
-  const blurb = game.tutorial?.blurb
+  const blurb = useSettled(game.tutorial?.blurb ?? null, busy)
   // Too short in the page, the page scrolls; covering the screen, the frame scrolls instead.
   const flowing = scrolling && !covering
   const pieces = `z-10 gap-2 pt-[max(0.5rem,env(safe-area-inset-top))] pr-[max(0.5rem,env(safe-area-inset-right))] pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(0.5rem,env(safe-area-inset-left))] ${flowing ? 'relative min-h-svh' : 'absolute inset-0'}`
@@ -223,7 +225,7 @@ export function PhoneLayout() {
         </div>
       ) : null}
       {/* Pinned to the screen, since the table can be taller than it and scroll. */}
-      {blurb ? <TutorialBlurb blurb={blurb} compact bottom={blurbAtBottom(blurb.move)} className="fixed" /> : null}
+      {blurb ? <TutorialBlurb blurb={blurb} busy={busy} compact fixed /> : null}
       <Menu />
       <LogDialog />
       <Inspector />

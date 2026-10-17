@@ -19,7 +19,7 @@ import { ITEMS, type Action, type ItemId, type Unit } from 'shared'
 import { Button } from '@/components/ui/button.tsx'
 import { cardTones, FlatReaderBody } from '../../CardReader.tsx'
 import { ItemButton } from '../../ItemButton.tsx'
-import { TutorialBlurb, tutorialPrompt } from '../../tutorial/TutorialBlurb.tsx'
+import { TutorialBlurb, tutorialPrompt, useSettled } from '../../tutorial/TutorialBlurb.tsx'
 import {
   Ending,
   Forfeit,
@@ -103,6 +103,9 @@ export function Hud({
   const { state, act } = game
   const finished = hasEnded(game)
   const legal = busy || finished ? [] : legalFor(game)
+  const blurb = useSettled(game.tutorial?.blurb ?? null, busy)
+  // Below the corner buttons and narrower, so it sits between the scale and the buttons over P03's head.
+  const place3d = 'top-14 h-30 w-[min(36rem,calc(100%-1rem))]'
   // The turn's own draw; a catch-up draw after it gets its own button, never owed.
   const mustDraw = !state.drawn && has(legal, { type: 'draw' })
   const summoning = view.summon ? view.hand.find((unit) => unit.uid === view.summon?.uid) : undefined
@@ -254,7 +257,14 @@ export function Hud({
               <Label>Exit</Label>
             </Link>
           </Button>
-          {finished || game.tutorial ? null : (
+          {game.tutorial ? (
+            <Button size="sm" variant="ghost" asChild className="h-8 px-3">
+              <Link to="/">
+                <LogOut aria-hidden />
+                <Label>Skip tutorial</Label>
+              </Link>
+            </Button>
+          ) : finished ? null : (
             <Forfeit
               forfeit={game.forfeit}
               run={Boolean(game.run)}
@@ -275,9 +285,7 @@ export function Hud({
       </div>
 
       {/* In the tutorial, P03 talks from the top of the screen, above his own head. */}
-      {game.tutorial?.blurb && !ended ? (
-        <TutorialBlurb blurb={game.tutorial.blurb} className="w-[min(36rem,calc(100%-1rem))]" />
-      ) : null}
+      {blurb && !ended ? <TutorialBlurb blurb={blurb} busy={busy} className={place3d} /> : null}
       {ended ? (
         <div className="absolute inset-0 grid place-items-center bg-black/40 p-4">
           <Ending game={game} />

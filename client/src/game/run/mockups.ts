@@ -559,7 +559,7 @@ export const MOCKUPS: Record<string, Entry> = {
   battle: {
     title: 'A battle in a run',
     group: 'reached',
-    revision: 8,
+    revision: 9,
     make: () => reached((s) => s.visit?.kind === 'battle' && s.visit.game.turn > 2),
   },
   'battle-empty-deck': {
@@ -703,7 +703,7 @@ export const MOCKUPS: Record<string, Entry> = {
   'card-types': {
     title: 'Card types: Botnet scaling with its Bots, Monolith beside its Legacy',
     group: 'reached',
-    revision: 3,
+    revision: 4,
     make: () =>
       itemBattle([], {
         board: ['Botnet', 'SpamBot', 'Crawler', 'Heisenbug'],

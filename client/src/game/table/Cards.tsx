@@ -1,3 +1,4 @@
+import { CardMark } from './table3d/TutorialMark.tsx'
 import { useFrame, type ThreeEvent } from '@react-three/fiber'
 import { Select } from '@react-three/postprocessing'
 import { easing } from 'maath'
@@ -50,6 +51,7 @@ export function Card({
   onHold,
   raised = false,
   cursor = 'point',
+  tutorialMark = false,
 }: {
   unit: Unit
   summoning?: boolean
@@ -71,6 +73,8 @@ export function Card({
   /** Shown as hovered, for a hand card tapped once on touch. */
   raised?: boolean
   cursor?: CursorKind
+  /** The card the tutorial's step waits on, framed in white dots. */
+  tutorialMark?: boolean
 }) {
   const mesh = useRef<THREE.Object3D>(null)
   const disk = useRef<DiskHandle>(null)
@@ -286,6 +290,7 @@ export function Card({
       ) : (
         <Disk ref={disk} open={fromDeck ? 0 : 1} kind={kind} front={front} content={content} back={rear} />
       )}
+      {tutorialMark ? <CardMark /> : null}
     </group>
   )
 }
