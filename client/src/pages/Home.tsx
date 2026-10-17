@@ -9,11 +9,12 @@ import { api, type LeaderboardRow } from '../lib/api.ts'
 import { authClient } from '../lib/auth.ts'
 import { number } from '../lib/format.ts'
 import { useAsync, type Async } from '../lib/useAsync.ts'
+import { CARD_COUNT } from './cardCount.ts'
 
 const badges = [
   { label: 'build', value: 'haunted', color: 'bg-primary' },
-  // As many as the compendium lists; the license badge went so P03's fits beside these on a phone.
-  { label: 'cards', value: '35', color: 'bg-[#c4b5fd]' },
+  // The license badge went so P03's fits beside these on a phone.
+  { label: 'cards', value: String(CARD_COUNT), color: 'bg-[#c4b5fd]' },
 ]
 
 const turn = [
