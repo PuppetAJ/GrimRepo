@@ -95,15 +95,15 @@ export function Home() {
           </ul>
           <p className="max-w-2xl text-lg leading-relaxed text-foreground/85">
             A card game of sacrifices, played on floppy disks against P03 in his factory. Every card costs something: to
-            play the strong ones you give up the weak. Beat P03 in as few turns as you can, or take a deck across his
-            map, from Localhost to Production.
+            play the strong ones you give up the weak. Take a deck across his map, from Localhost to Production, or beat
+            him in a quick battle.
           </p>
           <div className="flex flex-wrap gap-3">
             <Button asChild size="lg">
-              <Link to="/game">Quick battle</Link>
+              <Link to="/run">Start a run</Link>
             </Button>
             <Button asChild size="lg" variant="outline">
-              <Link to="/run">Start a run</Link>
+              <Link to="/game">Quick battle</Link>
             </Button>
             <Button asChild size="lg" variant="outline">
               <Link to="/leaderboard">Leaderboard</Link>
@@ -153,7 +153,7 @@ export function Home() {
         <section className="flex flex-col gap-2">
           <h2 className="font-semibold">About</h2>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            An Inscryption-style card game: quick battles, and a roguelike run across three stages of P03's map.
+            An Inscryption-style card game: a roguelike run across three stages of P03's map, and quick battles.
           </p>
         </section>
         <section className="flex flex-col gap-3 border-t pt-5">
