@@ -48,11 +48,11 @@ describe('the sigils', () => {
     assert.equal(hit?.type === 'damaged' && hit.amount, 4)
   })
 
-  it('Retry attacks twice, the second time for half, rounded down', () => {
+  it('Retry attacks twice, the second time for half, rounded down, never below 1', () => {
     const state = table({ board: ['ZeroDay'] })
     ;(state.player.board[0] as { sigils: string[] }).sigils.push('retry')
     assert.equal(hits(bell(state).events, 'opponent'), 4 + 2)
-    assert.equal(hits(bell(table({ board: ['InfiniteLoop'] })).events, 'opponent'), 1, 'half of 1 is nothing')
+    assert.equal(hits(bell(table({ board: ['InfiniteLoop'] })).events, 'opponent'), 1 + 1, 'half of 1 is still 1')
   })
 
   it('Deprecated dies after it attacks, and leaves a Boilerplate in its lane', () => {

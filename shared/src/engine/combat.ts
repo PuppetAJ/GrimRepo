@@ -122,8 +122,8 @@ function damage(unit: Unit, amount: number, fatal: boolean, events: GameEvent[])
   return left <= 0 && stayUp(unit, events) ? unit.health : left
 }
 
-/** What an extra hit does: Broadcast's side lanes and Retry's second strike. */
-export const extraHit = (power: number): number => Math.floor(power / 2)
+/** What an extra hit does: Broadcast's side lanes and Retry's second strike. Half, never less than 1. */
+export const extraHit = (power: number): number => Math.max(1, Math.floor(power / 2))
 
 /** What Fork deals each of its two lanes: three quarters of its attack, never less than 1. */
 export const forkHit = (power: number): number => Math.max(1, Math.floor((power * 3) / 4))
