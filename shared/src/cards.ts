@@ -59,19 +59,19 @@ export const SIGILS: Record<SigilId, { name: string; text: string }> = {
   backtrace: { name: 'Backtrace', text: 'Deals 2 damage back to anything that attacks it.' },
   fork: {
     name: 'Fork',
-    text: 'Attacks the lanes on either side instead of the one opposite. Incompatible with Broadcast.',
+    text: 'Attacks the lanes on either side instead of the one opposite, each for three quarters of its attack. Incompatible with Broadcast.',
   },
   hotfix: { name: 'Hotfix', text: 'Heals 1 at the end of each turn.' },
   fatal_error: { name: 'Fatal Error', text: 'Destroys any card it damages.' },
   rollback: { name: 'Rollback', text: 'Shrugs off the first damage it takes.' },
   tech_lead: { name: 'Tech Lead', text: 'Cards beside it get +1 attack.' },
   packet_loss: { name: 'Packet Loss', text: 'The card opposite it has 2 less attack.' },
-  retry: { name: 'Retry', text: 'Attacks twice.' },
+  retry: { name: 'Retry', text: 'Attacks twice; the second attack does half damage.' },
   deprecated: { name: 'Deprecated', text: 'Dies after it attacks, leaving a Boilerplate in its lane.' },
   scope_creep: { name: 'Scope Creep', text: 'Gains 1 attack each time it destroys a card.' },
   broadcast: {
     name: 'Broadcast',
-    text: 'Attacks the lane opposite and both lanes beside it. Incompatible with Fork.',
+    text: 'Attacks the lane opposite, and both lanes beside it for half damage. Incompatible with Fork.',
   },
   popup: { name: 'Pop-up', text: 'The card opposite it has 1 more attack.' },
   refactor: {

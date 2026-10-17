@@ -122,8 +122,11 @@ function damage(unit: Unit, amount: number, fatal: boolean, events: GameEvent[])
   return left <= 0 && stayUp(unit, events) ? unit.health : left
 }
 
-/** What an extra hit does: Broadcast's side lanes, Fork's second lane and Retry's second strike. */
-export const extraHit = (power: number): number => Math.floor(power / 2)
+/** What an extra hit does: Broadcast's side lanes and Retry's second strike. Half, never less than 1. */
+export const extraHit = (power: number): number => Math.max(1, Math.floor(power / 2))
+
+/** What Fork deals each of its two lanes: three quarters of its attack, never less than 1. */
+export const forkHit = (power: number): number => Math.max(1, Math.floor((power * 3) / 4))
 
 export function attack(state: GameState, side: Side, events: GameEvent[]): void {
   const attackers = side === 'player' ? state.player.board : state.opponent.front
@@ -157,8 +160,9 @@ export function attack(state: GameState, side: Side, events: GameEvent[]): void 
         ? within([lane - 1, lane + 1])
         : [lane]
     const strikes = attacker.sigils.includes('retry') ? 2 : 1
-    // Only the first strike at the main lane, opposite or Fork's first, hits in full; extra hits do half, rounded down.
-    const main = lanes.includes(lane) ? lane : lanes[0]
+    // A first strike hits the lane opposite in full, and Fork's two lanes for three quarters each, or its one lane at an
+    // edge in full; Broadcast's side lanes and Retry's second strike do half.
+    const split = attacker.sigils.includes('fork') && lanes.length > 1
     let struck = false
 
     for (let strike = 0; strike < strikes; strike++) {
@@ -167,7 +171,14 @@ export function attack(state: GameState, side: Side, events: GameEvent[]): void 
         if (attackers[lane]?.uid !== attacker.uid) break
         const full = attackOf(state, side, lane)
         if (full <= 0) break
-        const power = strike === 0 && aimed === main ? full : extraHit(full)
+        const power =
+          strike > 0
+            ? extraHit(full)
+            : split
+              ? forkHit(full)
+              : aimed === lane || lanes.length === 1
+                ? full
+                : extraHit(full)
         if (power <= 0) continue
         struck = true
         const occupant = attacker.sigils.includes('bypass') ? null : defenders[aimed]
