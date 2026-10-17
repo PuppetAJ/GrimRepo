@@ -38,17 +38,27 @@ env:
     {"suite":"a11y","part":"run","engine":"firefox"},{"suite":"a11y","part":"tables","engine":"firefox"}]
 
 jobs:
-  # Which suites to run: the matrix can't read env, so a step hands it on.
+  # Which suites to run: the matrix can't read env, so a step hands it on. A pull request runs only the suites its
+  # changes can reach (see .github/scripts/browser-plan.mjs); the slowest suites are split over two runners.
   plan:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.pick.outputs.matrix }}
     steps:
+      - uses: actions/checkout@v7
+        with:
+          # The base branch too, to see what the pull request changed.
+          fetch-depth: 0
+
       # Passed through the environment, since the JSON's quotes would end a quoted shell string.
       - id: pick
         env:
           MATRIX: ${{ github.event_name == 'pull_request' && env.PULL_REQUEST || env.FULL }}
-        run: echo "matrix=$(jq -c . <<< "$MATRIX")" >> "$GITHUB_OUTPUT"
+          BASE: ${{ github.base_ref }}
+        run: |
+          # If the changes can't be listed, CHANGED stays unset and every suite runs.
+          if [ -n "$BASE" ] && changed="$(git diff --name-only "origin/$BASE...HEAD")"; then export CHANGED="$changed"; fi
+          echo "matrix=$(node .github/scripts/browser-plan.mjs)" >> "$GITHUB_OUTPUT"
 
   browser:
     needs: plan
@@ -57,7 +67,7 @@ jobs:
     timeout-minutes: 30
 
     # One runner per suite and engine, so the wall clock is the slowest suite rather than all of them in a row.
-    # The accessibility suite, much the longest, runs in three parts at once.
+    # The accessibility suite, much the longest, runs in three parts at once, and its run screens and run-3d in two.
     strategy:
       fail-fast: false
       matrix:
@@ -83,8 +93,10 @@ jobs:
       # Throwaway: nothing here signs a cookie that has to be read back later.
       BETTER_AUTH_SECRET: ci-secret-not-used-for-anything-real-0123456789
       E2E_BASE_URL: http://localhost:3000
-      # The accessibility suite's part, as Playwright's --grep picks it by tag; empty for every other suite.
+      # The accessibility suite's part, as Playwright's --grep picks it by tag, and this runner's share of a split suite;
+      # each empty when it doesn't apply.
       PART: ${{ matrix.part && format('--grep @{0}', matrix.part) || '' }}
+      SHARD: ${{ matrix.shard && format('--shard={0}', matrix.shard) || '' }}
 
     steps:
       - uses: actions/checkout@v7
@@ -127,18 +139,18 @@ jobs:
 
       # Headless Firefox on a runner with no GPU won't create a WebGL context; in a virtual display it draws in software.
       - if: matrix.engine == 'firefox'
-        run: xvfb-run -a pnpm exec playwright test e2e/${{ matrix.suite }}.spec.mjs --project=firefox $PART
+        run: xvfb-run -a pnpm exec playwright test e2e/${{ matrix.suite }}.spec.mjs --project=firefox $PART $SHARD
         env:
           E2E_HEADED: '1'
 
       - if: matrix.engine == 'chromium'
-        run: pnpm exec playwright test e2e/${{ matrix.suite }}.spec.mjs --project=chromium $PART
+        run: pnpm exec playwright test e2e/${{ matrix.suite }}.spec.mjs --project=chromium $PART $SHARD
 
       # The report and each failed test's trace, screenshot and context, to step through without rerunning.
       - if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: failure-${{ matrix.suite }}${{ matrix.part && format('-{0}', matrix.part) || '' }}-${{ matrix.engine }}
+          name: failure-${{ matrix.suite }}${{ matrix.part && format('-{0}', matrix.part) || '' }}${{ matrix.share && format('-{0}', matrix.share) || '' }}-${{ matrix.engine }}
           path: |
             app.log
             playwright-report/
