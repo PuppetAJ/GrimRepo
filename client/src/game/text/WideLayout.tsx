@@ -6,10 +6,9 @@ import { CancelButton, Controls, ExecuteButton, SaveStatus } from './Buttons.tsx
 import { useTable } from './context.ts'
 import { TurnLabel } from './TurnLabel.tsx'
 import { Hand, Piles } from './Hand.tsx'
-import { Items } from './Items.tsx'
 import { ConsolePanel } from './Log.tsx'
 import { Panel } from './Panel.tsx'
-import { P03Monitor } from './P03Monitor.tsx'
+import { MonitorAndTools } from './P03Monitor.tsx'
 import { Magnifier, PromptLine, ReaderPanel } from './Reading.tsx'
 import { TutorialBlurb, useSettled } from '../tutorial/TutorialBlurb.tsx'
 
@@ -44,8 +43,7 @@ export function WideLayout() {
             ) : null}
           </Panel>
           <ExecuteButton />
-          <Items className="justify-center" />
-          <P03Monitor />
+          <MonitorAndTools />
         </aside>
         <section aria-label="The table" className="relative z-10 flex min-h-0 flex-col items-center gap-2">
           {seat ? <SeatNote seat={seat} /> : null}

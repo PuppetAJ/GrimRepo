@@ -21,8 +21,9 @@ export function P03Face({ face, className = '' }: { face: Face; className?: stri
   )
 }
 
-// A tight, bright edge with a short halo, so the box draws the eye off the busy table without looking airbrushed.
-const GLOW = 'shadow-[0_0_0_1px_rgb(125_255_154/0.45),0_0_10px_rgb(125_255_154/0.45)]'
+// A bright glow close in and a wider, fainter one, drawn around the whole shape, the name tab and any ledge
+// included, so it draws the eye off the busy table.
+const GLOW = '[filter:drop-shadow(0_0_5px_rgb(125_255_154/0.6))_drop-shadow(0_0_16px_rgb(125_255_154/0.3))]'
 
 /**
  * P03 speaking, as a game's dialogue box: his name on a tab, his head on the left with the words beside it, and the
@@ -53,7 +54,8 @@ export function P03Dialogue({
       className={cn(
         // A strong blur behind it, so the table never muddies the words.
         '@container relative flex items-center rounded-md border-2 border-p03-edge bg-p03-ground/85 font-terminal text-p03 backdrop-blur-md',
-        GLOW,
+        // With a ledge, the glow goes around the two together instead.
+        ledge ? '' : GLOW,
         // His head and words sit in the middle of the box, so a short line leaves no gap under them; the name tab may
         // sit over the top of his head, which keeps the box short.
         compact ? 'gap-2 px-2 py-1.5' : 'gap-3 px-3 py-2',
@@ -71,7 +73,7 @@ export function P03Dialogue({
   )
   if (!ledge) return box
   return (
-    <div className={cn('@container flex flex-col items-end font-terminal text-p03', className)}>
+    <div className={cn('@container flex flex-col items-end font-terminal text-p03', GLOW, className)}>
       {box}
       <Ledge className={words}>{ledge}</Ledge>
     </div>
@@ -80,13 +82,11 @@ export function P03Dialogue({
 
 /**
  * The ledge, shaped \___: its left edge slants in under the box, its bottom runs flat, and its right edge carries on
- * the box's own. It overlaps the box's bottom border, so the two read as one piece.
+ * the box's own. It starts under the box's bottom border, which is all that parts the two.
  */
 function Ledge({ children, className }: { children: ReactNode; className: string }) {
   return (
-    <div
-      className={cn('relative -mt-0.5 py-2 pr-4 pl-9 [filter:drop-shadow(0_0_5px_rgb(125_255_154/0.45))]', className)}
-    >
+    <div className={cn('relative py-2 pr-4 pl-9', className)}>
       {/* The edge's color behind, and the fill two pixels in, both cut to the slant. */}
       <span
         aria-hidden

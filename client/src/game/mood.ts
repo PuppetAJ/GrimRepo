@@ -50,13 +50,3 @@ export function useP03Face(view: View, outcome: 'win' | 'loss' | undefined): Fac
   if (danger) return screaming ? 'dying' : 'impatient'
   return 'neutral'
 }
-
-/** His face in a word, for the text table's monitor and a screen reader. */
-export const FACE_WORDS: Record<Face, string> = {
-  neutral: 'smug',
-  happy: 'gloating',
-  impatient: 'glaring',
-  choking: 'choking',
-  dying: 'screaming',
-  whiteflag: 'surrendering',
-}
