@@ -6,6 +6,7 @@ import { MOCKUPS } from '../game/run/mockups.ts'
 import { NotFound } from './NotFound.tsx'
 import { RunTable } from './Run.tsx'
 import { MotionRoot } from '../components/MotionRoot.tsx'
+import { EndingOptions } from './EndingOptions.tsx'
 
 const LAYOUTS = ['wide', 'mid', 'phone'] as const
 
@@ -174,6 +175,10 @@ export function MockupIndex() {
           </Link>
         </section>
       ) : null}
+      <section className="flex flex-col gap-3">
+        <h2 className="text-xl font-semibold">End of battle box: where its buttons go</h2>
+        <EndingOptions />
+      </section>
       <section className="flex flex-col gap-3">
         <h2 className="text-xl font-semibold">The tutorial</h2>
         <p className="text-sm text-muted-foreground">

@@ -28,7 +28,11 @@ export function WideLayout() {
       >
         <FaultyScreenShader />
         <span aria-hidden className="crt-glass pointer-events-none absolute inset-0 z-30" />
-        <aside aria-label="Turn and scale" className="relative z-10 flex min-h-0 flex-col gap-3 overflow-hidden">
+        {/* Its padding, given back by the margin, leaves room inside the clip for the tutorial's outline on EXECUTE. */}
+        <aside
+          aria-label="Turn and scale"
+          className="relative z-10 -m-1.5 flex min-h-0 flex-col gap-3 overflow-hidden p-1.5"
+        >
           <Panel className="flex items-center justify-between gap-2 text-2xl">
             <TurnLabel stack />
             <SaveStatus className="text-base text-p03-dim" />

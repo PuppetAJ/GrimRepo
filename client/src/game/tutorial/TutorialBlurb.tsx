@@ -67,12 +67,12 @@ export function outlinesFor(move: Move): Outline[] {
         { selector: `${hud} [data-action="draw-${move.from}"]`, offset: 3 },
       ]
     case 'select':
-      // The hand scrolls, so it clips past its own padding; this sits in that padding, a gap off the card.
-      return [{ selector: `${text} [data-action="select"][aria-label^="${card(move.card).name},"]`, offset: 1 }]
+      // Around the card inside its button, in the button's own padding, since the hand scrolls and clips past it.
+      return [{ selector: `${text} [data-action="select"][aria-label^="${card(move.card).name},"] > span`, offset: 2 }]
     case 'ringBell':
-      // EXECUTE fills its column, which clips, so the outline runs just inside its border instead.
+      // EXECUTE fills its column; the column leaves room for this.
       return [
-        { selector: `${text} [data-action="ringBell"]`, offset: -6 },
+        { selector: `${text} [data-action="ringBell"]`, offset: 2 },
         { selector: `${hud} [data-action="ringBell"]`, offset: 3 },
       ]
     case 'use':
@@ -86,16 +86,16 @@ export function outlinesFor(move: Move): Outline[] {
   }
 }
 
-/** The outlines as a style sheet: dotted white, flashing on and off, still for anyone who asks for less motion. */
+/** The outlines as a style sheet: dotted white, pulsing bright and dim, still for anyone who asks for less motion. */
 function outlineCss(outlines: Outline[]): string {
   if (!outlines.length) return ''
   const all = outlines.map((one) => one.selector).join(', ')
-  // Only the width, style and offset win over the control's own; the color is left to the flash, which can't
+  // Only the width, style and offset win over the control's own; the color is left to the pulse, which can't
   // override an important one.
   return [
-    `${all} { outline-width: 2px !important; outline-style: dotted !important; outline-color: #fff; animation: tutorial-flash 1.1s steps(1) infinite; }`,
+    `${all} { outline-width: 2px !important; outline-style: dotted !important; outline-color: #fff; animation: tutorial-pulse 0.9s ease-in-out infinite alternate; }`,
     ...outlines.map((one) => `${one.selector} { outline-offset: ${one.offset}px !important; }`),
-    '@keyframes tutorial-flash { 0% { outline-color: #fff; } 50% { outline-color: transparent; } }',
+    '@keyframes tutorial-pulse { from { outline-color: #fff; } to { outline-color: rgb(255 255 255 / 0.3); } }',
     `@media (prefers-reduced-motion: reduce) { ${all} { animation: none; } }`,
   ].join('\n')
 }

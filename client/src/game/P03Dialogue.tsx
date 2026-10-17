@@ -44,8 +44,9 @@ export function P03Dialogue({
     <section
       {...section}
       className={cn(
-        '@container relative flex items-start rounded-md border-2 border-p03-edge bg-p03-ground/85 font-terminal text-p03',
-        compact ? 'gap-2 px-2 pt-3 pb-2' : 'gap-3 px-3 pt-4 pb-3',
+        '@container relative flex rounded-md border-2 border-p03-edge bg-p03-ground/85 font-terminal text-p03',
+        // On a phone the head and words sit in the middle of the box, so a short line leaves no gap under them.
+        compact ? 'items-center gap-2 px-2 pt-3 pb-2' : 'items-start gap-3 px-3 pt-4 pb-3',
         className,
       )}
     >
@@ -54,8 +55,8 @@ export function P03Dialogue({
       </span>
       {/* Where the box is narrow, as an ending over a phone's board is, the head and words shrink with it. */}
       <P03Face face={face} className={compact ? 'w-16' : 'w-24 @max-[28rem]:w-16'} />
-      {/* The first line's top meets the top of his head, under the fins. */}
-      <div className={cn('flex min-w-0 flex-1 flex-col self-stretch', compact ? 'pt-0.5' : 'pt-1')}>
+      {/* Otherwise the first line's top meets the top of his head, under the fins. */}
+      <div className={cn('flex min-w-0 flex-1 flex-col', compact ? '' : 'self-stretch pt-1')}>
         {/* Shadowed against the table behind; the buttons keep their own look. */}
         <div
           className={cn(
@@ -65,7 +66,11 @@ export function P03Dialogue({
         >
           {children}
         </div>
-        {actions ? <div className="mt-auto flex flex-wrap justify-end gap-2 pt-2">{actions}</div> : null}
+        {actions ? (
+          <div className={compact ? 'absolute right-2 bottom-1' : 'mt-auto flex flex-wrap justify-end gap-2 pt-2'}>
+            {actions}
+          </div>
+        ) : null}
       </div>
     </section>
   )

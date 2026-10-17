@@ -178,14 +178,19 @@ export const TUTORIAL: TutorialStep[] = [
   },
   {
     id: 'sacrifice',
-    face: 'happy',
-    says: '[Documentation](card:Documentation) costs 2. Pick it, then mark both Boilerplates as [sacrifices](term:sacrifice). Leshy invented this. His one good idea.',
+    face: 'neutral',
+    says: '[Documentation](card:Documentation) costs 2. Pick it, then mark both Boilerplates as [sacrifices](term:sacrifice).',
     moves: [
       { type: 'select', card: 'Documentation' },
       { type: 'mark', lane: 0 },
       { type: 'mark', lane: 2 },
       { type: 'place', lane: 2 },
     ],
+  },
+  {
+    id: 'leshy',
+    face: 'happy',
+    says: 'Leshy invented this. It was the only good idea he ever had.',
   },
   {
     id: 'overkill',
