@@ -4,33 +4,36 @@ A card game of sacrifices, played on floppy disks against P03 in his factory. In
 
 It started in 2022 as a bootcamp group project (Express, Handlebars, MySQL and a single three.js script) and is rebuilt here as a portfolio project.
 
-**Live: [grimrepo.up.railway.app](https://grimrepo.up.railway.app)**. Press **Quick battle** to play straight away as a guest, with no sign-up, or use the demo account button on the sign-in page.
+**Live: [grimrepo.up.railway.app](https://grimrepo.up.railway.app)**. Press **Start a run** to play straight away as a guest, with no sign-up, or use the demo account button on the sign-in page.
 
-![The 3D table in P03's factory: a card is summoned and placed, P03 takes his turn, and damage rises off the cards it hits](.github/screenshots/table.webp)
+![The 3D table in P03's factory mid-battle: P03 at his monitors, the cards in play on the board, and two cards in hand](.github/screenshots/table.webp)
 
-- **A 3D table** in P03's factory, built with React Three Fiber. Every card is a floppy disk drawn from the game's data, and every move is played back: cards lunge, damage rises off what they hit, and the dead fold away.
-- **Scores the server can trust.** Only moves are ever sent. The server replays them with the same rules engine the browser plays with, refuses an illegal one, and scores the finished game itself.
+- **Runs across P03's map.** Three stages, from Localhost to Production, each ending in a boss. Between battles come card choices, packs, campfires, sigil stones, shops and events. Every card P03 destroys costs the run integrity, and a lost run leaves a death card behind for a later one.
+- **A 3D table** in P03's factory, built with React Three Fiber. Every card is a floppy disk drawn from the game's data, and every move is played back: cards lunge, damage rises off what they hit, and the dead fold away. Between battles, the run's map shines from a projector on the table.
+- **Scores the server can trust.** Only moves are ever sent. The server replays a whole run with the same rules engine the browser plays with, refuses an illegal move, and scores the finished run itself.
 - **A text table as well,** laid out for phones held either way, which works with a screen reader.
 - **P03 has broken in.** The README's screenshot tears into his terminal, which takes commands (`help`, `tutorial`, `cards`), and he has taken over first place on the leaderboard.
-- **Profiles like GitHub's:** a contributions heatmap, charts of recent games, badges with rank and favorite card, and a pinned best game; and a compendium of every card, turning on its disk in 3D.
+- **Profiles like GitHub's:** a contributions heatmap, charts of recent runs and their streaks, badges with rank and favorite card, and a pinned best run and death card; and a compendium of every card, turning on its disk in 3D.
 
 <table>
   <tr>
     <td width="36%"><img src=".github/screenshots/readme.webp" alt="The home page: a README titled Grim Repo, with P03's green terminal where the screenshot was, corruption spilling from its corners"></td>
-    <td width="36%"><img src=".github/screenshots/profile.webp" alt="A player's profile: an avatar, a table of stats, a contributions heatmap and a chart of score per game"></td>
-    <td width="28%" rowspan="2"><img src=".github/screenshots/phone.webp" alt="The text table on a phone: the turn and scale, P03's last lines, the board, the hand, and the EXECUTE button"></td>
+    <td width="36%"><img src=".github/screenshots/profile.webp" alt="A player's profile: an avatar, a table of stats, a contributions heatmap and a chart of score per run"></td>
+    <td width="28%" rowspan="2"><img src=".github/screenshots/phone.webp" alt="A run's map on a phone: the first stage's nodes and the paths between them, up to the boss"></td>
   </tr>
   <tr>
-    <td colspan="2"><img src=".github/screenshots/compendium.webp" alt="The compendium: the list of cards beside Mainframe turning on its floppy disk over a grid floor"></td>
+    <td><img src=".github/screenshots/compendium.webp" alt="The compendium: the list of cards beside Mainframe turning on its floppy disk over a grid floor"></td>
+    <td><img src=".github/screenshots/map.webp" alt="A run's map on the 3D table, projected as a green hologram from the projector in front of P03"></td>
   </tr>
 </table>
 
 ## How it works
 
-- **One rules engine, used by both sides.** The rules are plain TypeScript in `shared`, with no browser or database in them, so they're tested in Node and run the same everywhere. A game is its seed and its moves: replaying them always gives the same state.
-- **The server keeps the score.** A game's seed is chosen by the server. The browser saves the moves at each turn's end, and the server replays the whole game on every save, so an illegal move is refused and nothing is kept from it. A score can't be sent at all: it's computed once the replay reaches the end.
+- **One rules engine, used by both sides.** The rules are plain TypeScript in `shared`, with no browser or database in them, so they're tested in Node and run the same everywhere. A run is its seed and its moves, and each battle in it is too: replaying them always gives the same state.
+- **The server keeps the score.** A run's seed is chosen by the server. The browser saves its moves as it goes, and the server replays the whole run on every save, so an illegal move is refused and nothing is kept from it. A score can't be sent at all: it's computed once the replay reaches the end.
+- **Rules versions.** A change that would replay an old run differently bumps a rules version, and an open run from older rules is dropped rather than scored.
 - **The table plays back events.** Each move reports what it did as a list of events (placed, attacked, damaged, killed), and both tables play them back one at a time. A unit test folds the events of whole games and checks they always land on the rules' own state.
-- **Guests become players.** Quick battle signs a visitor in as a guest. If they sign up later, their games follow them into the account; guests stay off the leaderboard and are cleared out after a week.
+- **Guests become players.** Playing signs a visitor in as a guest. If they sign up later, their runs and death card follow them into the account; guests stay off the leaderboard and are cleared out after a week.
 - **Fast first load.** The home page is prerendered at build time with React's own `prerender`, so its first view arrives in the HTML, and three.js loads only when a 3D view is opened. A budget in the build fails it if a bundle outgrows its limit. Largest Contentful Paint on a simulated slow phone is 2.45 s.
 
 ## What it is built on
@@ -57,18 +60,18 @@ pnpm db:seed
 pnpm dev
 ```
 
-The seed creates a demo account anyone can use, `demo` with the password `demo-password`, and the three original players with some games behind them.
+The seed creates a demo account anyone can use, `demo` with the password `demo-password`, and the three original players with some runs behind them.
 
 The client is at http://localhost:3000 and proxies `/api` and `/health` to the API on port 3001. The database listens on 5433 so it can run beside another project's Postgres on 5432.
 
-In development, `window.__game` exposes the 3D table's state and where things are on screen, and `/game?fixture=worst` loads a worst-case board to lay the tables out against. Neither exists in a production build.
+In development, `window.__game` exposes the 3D table's state and where things are on screen, `/game?fixture=worst` loads a worst-case board to lay the tables out against, and `/mockups` holds every run screen, stopped at the point a run reaches it. None of them exist in a production build.
 
 ## Tests
 
-- **Unit tests** (`pnpm test`): the rules engine, including a bot that plays whole seeded games and a check that replay always agrees; the server's routes, auth, guests, rate limits and name filter against a real Postgres database whose name must end in `_test`; and the client's playback, table layout and P03's lines.
-- **Browser suites** (`pnpm test:e2e`): plain Playwright scripts in `e2e/`, run in Chromium and Firefox. Smoke, auth, leaderboard, a whole game on the text table, the 3D table (clicking its models through `window.__game`), and an axe accessibility check of every page but the game on a laptop and a phone.
+- **Unit tests** (`pnpm test`): the rules engine, including a bot that plays whole seeded games and runs and a check that replay always agrees; the server's routes, auth, guests, rate limits and name filter against a real Postgres database whose name must end in `_test`; and the client's playback, table layout and P03's lines.
+- **Browser suites** (`pnpm test:e2e`): plain Playwright scripts in `e2e/`, run in Chromium and Firefox. Smoke, auth, leaderboard, a whole game and a whole run on the text table, the 3D table (clicking its models through `window.__game`), a run at the 3D table, and an axe accessibility check of every page but the game on a laptop and a phone.
 - **CI:** `ci.yml` runs lint, formatting, types, the unit tests and the build on every pull request and on `main`, and Railway deploys only once it passes. `browser.yml` runs every browser suite on pull requests, in both engines, against a production build.
-- **The live site** (`pnpm test:prod`): a short check of the critical path after a deploy. It plays as a guest and signs nobody up.
+- **The live site** (`pnpm test:prod`): a short check of the critical path after a deploy, ending with a whole run played by a bot. It plays as a guest and signs nobody up.
 
 ## Scripts
 
@@ -97,9 +100,10 @@ The browser suites need `pnpm exec playwright install chromium firefox` once.
 client/   the web app
   src/game/table/   the 3D table: the factory, the disks, playback
   src/game/text/    the text table and its layouts
+  src/game/run/     runs: the map, the screens between battles, and the projector
   src/pages/        the README, leaderboard, profiles, compendium and account pages
 server/   the API, auth, migrations and the nightly clean-up
-shared/   game rules and data, imported by both
+shared/   game and run rules and data, imported by both
 e2e/      browser suites, plain Playwright scripts
 art/      sources made in art tools, such as the floppy disk's Blender file
 ```
@@ -111,15 +115,17 @@ Imports run one way, and oxlint enforces it: the client and the server may use `
 | Route                              | Does                                                                                                   |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | `/api/auth/*`                      | Sign up, sign in by email or username or as a guest, rename, delete the account, sign out; Better Auth |
-| `GET /api/me`                      | The signed-in player, their best score and games played                                                |
-| `POST /api/games`                  | Starts a game with a seed the server picks, or resumes the unfinished one                              |
-| `POST /api/games/:id/moves`        | Saves the moves since the last save; the server replays the whole game, and scores it once it is over  |
-| `POST /api/games/:id/forfeit`      | Walks away: a loss on the turn reached                                                                 |
-| `GET /api/leaderboard?page=`       | Players ranked by their best game, twenty to a page; guests are left off                               |
-| `GET /api/players/:username/stats` | A player's record: wins, losses, rank, favorite card, best game, recent games                          |
-| `GET /api/players/:username/games` | A player's whole history, ten games to a page                                                          |
+| `GET /api/me`                      | The signed-in player, their best run and runs played                                                   |
+| `POST /api/runs`                   | Starts a run with a seed the server picks, or resumes the unfinished one                               |
+| `POST /api/runs/:id/moves`         | Saves the moves since the last save; the server replays the whole run, and scores it once it is over   |
+| `POST /api/runs/:id/forfeit`       | Abandons the run, scored on how far it got                                                             |
+| `POST /api/runs/:id/death-card`    | Builds a death card from the deck a lost run ended with                                                |
+| `GET /api/leaderboard?page=`       | Players ranked by their best run, twenty to a page; guests are left off                                |
+| `GET /api/players/:username/stats` | A player's record: runs, runs cleared, rank, favorite card, best run, death card, recent runs          |
+| `GET /api/players/:username/runs`  | A player's whole history, ten runs to a page                                                           |
+| `POST /api/games` and `/:id/moves` | Quick battles, which still play until a tutorial replaces them, and no longer rank                     |
 
-Every figure is computed from the stored games, and a player can only ever be shown under their own username. Sign-in attempts are rate limited by the client's real address, and games per player.
+Every figure is computed from the stored runs, and a player can only ever be shown under their own username. Sign-in attempts are rate limited by the client's real address, and games and runs per player.
 
 ## Looking after the live site
 
@@ -138,10 +144,12 @@ Against the live site, the same commands run inside the app's container:
 pnpm exec railway ssh --service GrimRepo -- pnpm moderate rename <username>
 ```
 
-A clean-up runs every night at 04:00 UTC as its own Railway service. It clears the shared demo account's open game, drops games abandoned for a month, and sweeps expired sessions and old rate-limit rows. `pnpm db:cleanup` runs it by hand. Scores are kept: every one is a replayed game, so there is nothing to reset.
+A clean-up runs every night at 04:00 UTC as its own Railway service. It clears the shared demo account's open game and run, drops games and runs abandoned for a month, removes guests after a week, and sweeps expired sessions and old rate-limit rows. `pnpm db:cleanup` runs it by hand. Scores are kept: every one is a replayed run, so there is nothing to reset.
 
 ## Future plans
 
+- **A tutorial in place of quick battles.** A scripted first battle on both tables, with P03 talking the player through each move, replaces quick battle as the way in. Old quick battle scores stay in the database.
+- **Offense leads, currently by design.** The scale is a race, so damage is the only way to win, and defense buys time rather than winning on its own. Inscryption's factory plays the same way. Changing that would mean another way to win, such as wearing P03's deck down, and the cards to build around it: a new game more than a tune-up.
 - **Five lanes.** P03's board in Inscryption's third act is five lanes wide. Grim Repo keeps four for now: every encounter and boss is tuned to four, and five cards across is tight on a phone. The rules engine counts lanes in one place, so a fifth is mostly a matter of the 3D board, the camera views and a rebalance.
 - **Conduits.** Act 3's conduit cards power the cards between them. A fifth lane would leave room for three cards between two conduits, where four lanes leaves two, so conduits would come with it.
 - **A challenge ladder.** Optional rules that make a run harder for a higher score, unlocked one level at a time, as in Kaycee's Mod. Designed, but set aside until enough players come back for more runs.
