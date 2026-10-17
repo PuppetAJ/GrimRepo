@@ -17,7 +17,8 @@ export default defineConfig({
   testIgnore: 'production.spec.mjs',
   // The suites share one database and its rate limits, so they run one at a time; CI spreads them over runners instead.
   workers: 1,
-  fullyParallel: false,
+  // Each test sets itself up, so a split suite can share out its tests, not only whole files.
+  fullyParallel: true,
   // Whole games and runs are played through the page, so a test has minutes, not seconds; CI draws WebGL in software,
   // which takes the 3D table twice as long.
   timeout: (CI ? 10 : 5) * 60_000,
