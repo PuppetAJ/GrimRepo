@@ -1,5 +1,5 @@
 import { cn } from 'cn'
-import { useRef, useState, type ComponentProps, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react'
 import type { Face } from 'shared'
 import { p03Art } from './art.ts'
 
@@ -80,7 +80,9 @@ export function P03Dialogue({
         <div
           className={cn(
             'basis-full leading-snug [text-shadow:0_0_4px_#000]',
-            compact ? 'text-sm' : 'text-xl @max-[28rem]:text-base',
+            // Starting where his words start, under the head's width and the gap beside it; where the box is too
+            // narrow for that, from the box's own edge, under his head.
+            compact ? 'text-sm' : 'pl-[6.75rem] text-xl @max-[28rem]:pl-0 @max-[28rem]:text-base',
           )}
         >
           {below}
@@ -99,23 +101,42 @@ export type Choice = { label: string; onChoose: () => void; /** For the tests, a
 export function Choices({ choices }: { choices: Choice[] }) {
   const [picked, setPicked] = useState(0)
   const buttons = useRef<(HTMLButtonElement | null)[]>([])
-  const move = (by: number) => {
-    const next = (picked + by + choices.length) % choices.length
-    setPicked(next)
-    buttons.current[next]?.focus()
-  }
-  return (
-    <div
-      role="group"
-      aria-label="What next"
-      className="flex flex-wrap justify-end gap-x-6 gap-y-1"
-      onKeyDown={(event) => {
-        if (event.key === 'ArrowRight' || event.key === 'ArrowDown') move(1)
-        else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') move(-1)
-        else return
+  // Read by the key listener below, which is added once.
+  const latest = useRef({ picked, choices })
+  useEffect(() => {
+    latest.current = { picked, choices }
+  })
+  // The keys work from anywhere on the page, since nothing has focus when the box first shows; a choice that has focus
+  // takes Enter itself, and any other control keeps its keys.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const { picked: now, choices: offered } = latest.current
+      const elsewhere =
+        event.target instanceof Element &&
+        event.target.closest('input, textarea, select, a, button, [role="button"]') !== null &&
+        !buttons.current.includes(event.target as HTMLButtonElement)
+      if (elsewhere || event.metaKey || event.ctrlKey || event.altKey) return
+      const by =
+        event.key === 'ArrowRight' || event.key === 'ArrowDown'
+          ? 1
+          : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+            ? -1
+            : 0
+      if (by) {
         event.preventDefault()
-      }}
-    >
+        const next = (now + by + offered.length) % offered.length
+        setPicked(next)
+        buttons.current[next]?.focus()
+      } else if (event.key === 'Enter' && !buttons.current.includes(event.target as HTMLButtonElement)) {
+        event.preventDefault()
+        offered[now]?.onChoose()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+  return (
+    <div role="group" aria-label="What next" className="flex flex-wrap gap-x-6 gap-y-1">
       {choices.map((choice, index) => (
         <button
           key={choice.label}
