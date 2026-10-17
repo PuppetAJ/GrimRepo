@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { useEffect, useSyncExternalStore } from 'react'
 import { Button } from '@/components/ui/button.tsx'
+import { Skeleton } from '@/components/ui/skeleton.tsx'
 import { Avatar } from '../components/Avatar.tsx'
 import { Glass } from '../components/p03/Glass.tsx'
 import { Infected, REPLAY_EVENT } from '../components/p03/Infected.tsx'
@@ -159,13 +160,25 @@ export function Home() {
           {top.status === 'ready' && top.data.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nobody yet. Be the first.</p>
           ) : null}
+          {/* Held open while the list loads, so it fades in without moving the release below it. */}
+          {top.status === 'loading' ? (
+            <div role="status" aria-label="Loading the top maintainers" className="flex flex-col gap-3">
+              {[0, 1, 2].map((row) => (
+                <div key={row} aria-hidden className="flex items-center gap-3">
+                  <Skeleton className="size-7 shrink-0 rounded-full" />
+                  <Skeleton className="h-4 flex-1" />
+                  <Skeleton className="h-4 w-12" />
+                </div>
+              ))}
+            </div>
+          ) : null}
           {top.status === 'ready'
             ? top.data.map((row) => (
                 <Link
                   key={row.username}
                   to="/players/$username"
                   params={{ username: row.username }}
-                  className="flex items-center gap-3 text-sm hover:text-primary"
+                  className="appear flex items-center gap-3 text-sm hover:text-primary"
                 >
                   <Avatar name={row.username} />
                   <span className="flex-1 font-medium">{row.username}</span>
@@ -179,8 +192,10 @@ export function Home() {
         </section>
         <section className="flex flex-col gap-1 border-t pt-5">
           <h2 className="font-semibold">Latest release</h2>
-          <div className="font-mono text-sm text-primary">v2.0.0</div>
-          <p className="text-sm text-muted-foreground">Rebuilt from a 2022 bootcamp project.</p>
+          <div className="font-mono text-sm text-primary">v3.0.0</div>
+          <p className="text-sm text-muted-foreground">
+            Runs: a deck taken across P03's map, three stages and their bosses.
+          </p>
         </section>
       </aside>
     </div>

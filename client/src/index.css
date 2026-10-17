@@ -219,6 +219,24 @@
   }
 }
 
+/* What the server couldn't prerender, and each page after the first, fades in; opacity only, as a transform would
+   move anything fixed inside it while it ran. */
+@keyframes appear {
+  from {
+    opacity: 0;
+  }
+}
+
+.appear {
+  animation: appear 0.2s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .appear {
+    animation: none;
+  }
+}
+
 [data-table] {
   cursor:
     url(/cursors/arrow.svg) 2 2,

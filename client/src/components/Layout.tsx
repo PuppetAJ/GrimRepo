@@ -1,5 +1,5 @@
 import { ChevronDown, LogIn, LogOut, Menu, Settings, UserPlus, UserRound } from 'lucide-react'
-import { Suspense, useEffect } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from '@tanstack/react-router'
 import { LoadFailed, ReloadPage } from './LoadFailed.tsx'
 import { toast } from 'sonner'
@@ -33,6 +33,12 @@ export function Layout() {
   const { pathname } = useLocation()
   // The game's tables set their own widths, the site's or wider; a run's mockup is a run's table.
   const playing = ['/game', '/run', '/mockups/'].some((path) => pathname.startsWith(path))
+  // The first page arrives prerendered; only the pages moved to after it fade in.
+  const [firstPath] = useState(pathname)
+  const moved = pathname !== firstPath
+  // While the session loads, a placeholder holds the header's height; what replaces it fades in.
+  const holding = session.isPending && homeVariant()?.signedIn !== false
+  const [heldAtFirst] = useState(holding)
   const navigate = useNavigate()
   const user = session.data?.user as { displayUsername?: string; username?: string; isAnonymous?: boolean } | undefined
   const name = user?.displayUsername ?? user?.username
@@ -59,12 +65,12 @@ export function Layout() {
             </span>
           </div>
           {/* Holds the header's height while the session loads, unless the server already knew there was none. */}
-          {session.isPending && homeVariant()?.signedIn !== false ? (
+          {holding ? (
             <Button variant="outline" aria-hidden tabIndex={-1} className="invisible">
               Sign in
             </Button>
           ) : (
-            <>
+            <div className={`flex items-center gap-2 ${heldAtFirst ? 'appear' : ''}`}>
               <div className="hidden gap-2 sm:flex">
                 {name ? (
                   <>
@@ -128,7 +134,7 @@ export function Layout() {
                   )}
                 </DropdownMenuContent>
               </DropdownMenu>
-            </>
+            </div>
           )}
         </div>
       </header>
@@ -152,7 +158,8 @@ export function Layout() {
 
       <main className="flex-1 px-(--gutter) py-8">
         {/* Capped so a browser zoomed far out stays readable; the game's tables cap themselves. */}
-        <div className={playing ? '' : PAGE}>
+        {/* Keyed by the path, so each page fades in as it arrives. */}
+        <div key={pathname} className={`${playing ? '' : PAGE} ${moved ? 'appear' : ''}`}>
           {/* Keyed by the path, so leaving a page that failed clears the failure. */}
           <LoadFailed key={pathname} fallback={<ReloadPage />}>
             <Suspense fallback={<Loading label="Loading" />}>
