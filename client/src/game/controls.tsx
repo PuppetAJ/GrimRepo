@@ -11,6 +11,7 @@ import {
   indebted,
   type GameState,
   HAND_LIMIT,
+  legalActions,
   reshuffleCostsMemory,
   reshuffleSize,
   type Outcome,
@@ -157,22 +158,29 @@ export function phaseText(state: GameState, phase: number): string | null {
   return phases.length > 1 ? `${name} · Phase ${phase + 1} of ${phases.length}` : name
 }
 
-/** The panel over the board once a game ends: the run's own, or the quick battle's result. */
+/** A run's or the tutorial's own ending panel, which is decided locally rather than by the server. */
+const localEnding = (game: Ready): ReactNode | null | undefined => game.run?.ending ?? game.tutorial?.ending
+
+/** The panel over the board once a game ends: the run's or the tutorial's own, or the quick battle's result. */
 export function Ending({ game }: { game: Ready }) {
-  if (game.run) return game.run.ending
+  if (game.run || game.tutorial) return localEnding(game)
   return game.result ? (
     <GameOver result={game.result} className="w-full max-w-md bg-p03-ground/95 font-terminal text-xl" />
   ) : null
 }
 
-export const hasEnded = (game: Ready) => Boolean(game.run ? game.run.ending : game.result)
+export const hasEnded = (game: Ready) => Boolean(game.run || game.tutorial ? localEnding(game) : game.result)
 
-/** How the game ended, for P03's face; a run's battle knows at once. */
+/** How the game ended, for P03's face; a run's battle and the tutorial know at once. */
 export const outcomeOf = (game: Ready): Outcome | undefined =>
-  game.result?.outcome ?? (game.run?.ending ? (game.state.status === 'won' ? 'win' : 'loss') : undefined)
+  game.result?.outcome ?? (localEnding(game) ? (game.state.status === 'won' ? 'win' : 'loss') : undefined)
 
 /** For the prompt: a run's battle is decided locally, while a quick battle waits for the server. */
-export const overText = (game: Ready) => game.state.status !== 'playing' && (game.run ? 'The battle is over.' : true)
+export const overText = (game: Ready) =>
+  game.state.status !== 'playing' && (game.run || game.tutorial ? 'The battle is over.' : true)
+
+/** The moves that can be made now: the rules', narrowed in the tutorial to the one it waits for. */
+export const legalFor = (game: Ready): Action[] => game.tutorial?.legal(game.state) ?? legalActions(game.state)
 
 export function Forfeit({
   forfeit,

@@ -1,7 +1,8 @@
 import { animate } from 'motion/react'
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
-import { ITEMS, legalActions, type Action, type Slot, type Unit } from 'shared'
-import { has, hasEnded, overText, owed, prompt, skippedDraw, type Seat } from '../controls.tsx'
+import { ITEMS, type Action, type Slot, type Unit } from 'shared'
+import { tutorialPrompt } from '../tutorial/TutorialDrawer.tsx'
+import { has, hasEnded, legalFor, overText, owed, prompt, skippedDraw, type Seat } from '../controls.tsx'
 import { usePlayback } from '../table/usePlayback.ts'
 import type { Ready } from '../useGame.ts'
 import { authClient } from '../../lib/auth.ts'
@@ -45,7 +46,7 @@ export function useTextTable({
   // `view` lags `state` during playback; moves come from `state` and wait for playback to finish.
   const { playback, busy } = usePlayback(game)
   const view = playback.view
-  const legal = busy || ended ? [] : legalActions(state)
+  const legal = busy || ended ? [] : legalFor(game)
   const summoning = state.summon ? state.player.hand.find((unit) => unit.uid === state.summon?.uid) : undefined
   // The turn's own draw; a catch-up draw after it is offered at the deck, never owed.
   const mustDraw = !state.drawn && has(legal, { type: 'draw' })
@@ -150,13 +151,14 @@ export function useTextTable({
     ? "P03's turn…"
     : aimedItem
       ? `Use the ${ITEMS[aimedItem].name} on which card? Esc to put it back.`
-      : prompt(
+      : (tutorialPrompt(game.tutorial?.drawer ?? null) ??
+        prompt(
           mustDraw,
           summoning,
           summoning ? owed(summoning, state.player.board, state.summon?.marked ?? []) : 0,
           overText(game),
           handFull,
-        )
+        ))
 
   const frameProps = {
     'data-game-id': game.id,

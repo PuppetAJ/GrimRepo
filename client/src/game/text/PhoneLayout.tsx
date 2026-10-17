@@ -13,6 +13,7 @@ import {
 import { Link } from '@tanstack/react-router'
 import FaultyScreenShader from '../../components/p03/FaultyScreenShader.tsx'
 import { encounterName, Forfeit, hasEnded, IntegrityBar, ScaleBar, SeatNote } from '../controls.tsx'
+import { TutorialDrawer } from '../tutorial/TutorialDrawer.tsx'
 import { Balance } from './Balance.tsx'
 import { Board } from './Board.tsx'
 import { CancelButton, ExecuteButton, SaveStatus } from './Buttons.tsx'
@@ -108,15 +109,17 @@ function Menu() {
             {fullScreen.on ? 'Exit full screen' : 'Full screen'}
           </button>
         ) : null}
-        <Forfeit
-          forfeit={game.forfeit}
-          run={Boolean(game.run)}
-          disabled={game.state.status !== 'playing'}
-          className={`${MENU_BUTTON} h-auto`}
-        >
-          <Flag aria-hidden />
-          {game.run ? 'Abandon run' : 'Forfeit'}
-        </Forfeit>
+        {game.tutorial ? null : (
+          <Forfeit
+            forfeit={game.forfeit}
+            run={Boolean(game.run)}
+            disabled={game.state.status !== 'playing'}
+            className={`${MENU_BUTTON} h-auto`}
+          >
+            <Flag aria-hidden />
+            {game.run ? 'Abandon run' : 'Forfeit'}
+          </Forfeit>
+        )}
         {on3d ? (
           <button type="button" onClick={on3d} className={MENU_BUTTON}>
             <Box aria-hidden />
@@ -137,6 +140,8 @@ export function PhoneLayout() {
     useTable()
   // Once the battle ends, its panel over the board may run past the board, so the board rises above the rest.
   const over = hasEnded(game)
+  // In the tutorial, P03 talks where his log would be.
+  const drawer = game.tutorial?.drawer
   // Too short in the page, the page scrolls; covering the screen, the frame scrolls instead.
   const flowing = scrolling && !covering
   const pieces = `z-10 gap-2 pt-[max(0.5rem,env(safe-area-inset-top))] pr-[max(0.5rem,env(safe-area-inset-right))] pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(0.5rem,env(safe-area-inset-left))] ${flowing ? 'relative min-h-svh' : 'absolute inset-0'}`
@@ -186,7 +191,11 @@ export function PhoneLayout() {
               </div>
             </div>
             <Items />
-            <LogBox className="min-h-0 flex-1" />
+            {drawer ? (
+              <TutorialDrawer {...drawer} compact className="min-h-0 flex-1 overflow-y-auto" />
+            ) : (
+              <LogBox className="min-h-0 flex-1" />
+            )}
             <CancelButton />
           </aside>
         </div>
@@ -197,7 +206,11 @@ export function PhoneLayout() {
             <ScaleBar scale={view.scale} fluid className="gap-1 pr-1 text-base" />
           </div>
           <div className="relative z-10 shrink-0">
-            <LogBox className="h-[3.25rem] tall:h-[4.75rem]" log="sr-only tall:not-sr-only" />
+            {drawer ? (
+              <TutorialDrawer {...drawer} compact />
+            ) : (
+              <LogBox className="h-[3.25rem] tall:h-[4.75rem]" log="sr-only tall:not-sr-only" />
+            )}
           </div>
           {board}
           <section ref={setHandSection} aria-label="Your hand" className="relative z-10 flex shrink-0">

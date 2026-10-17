@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useState } from 'react'
-import { ITEMS, legalActions, PLAYER_DECK, reshuffleSize, type Action } from 'shared'
-import { has, hasEnded, laneAction, skippedDraw } from '../../controls.tsx'
+import { ITEMS, PLAYER_DECK, reshuffleSize, type Action } from 'shared'
+import { has, hasEnded, laneAction, legalFor, skippedDraw } from '../../controls.tsx'
 import type { Ready } from '../../useGame.ts'
 import type { View } from '../../view.ts'
 import { CardBatch } from '../Batch.tsx'
@@ -90,7 +90,7 @@ export function Scene({
 }) {
   const { state, act } = game
   // Legal moves come from the real state, not the view being played back.
-  const legal = busy || hasEnded(game) ? [] : legalActions(state)
+  const legal = busy || hasEnded(game) ? [] : legalFor(game)
   const can = (match: Partial<Action>) => has(legal, match)
   // The turn's own draw is owed; a catch-up draw after it is only offered.
   const owesDraw = !state.drawn && can({ type: 'draw' })

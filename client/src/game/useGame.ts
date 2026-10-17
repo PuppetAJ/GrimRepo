@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import { apply, type Action, type GameEvent, type GameState } from 'shared'
+import { apply, type Action, type Face, type GameEvent, type GameState, type Move, type TutorialStep } from 'shared'
 import { toast } from 'sonner'
 import { api, ApiError, type Finished, type OpenGame } from '../lib/api.ts'
 import { history, narrate } from '../lib/narrate.ts'
@@ -25,7 +25,19 @@ export type Game =
       subscribe: (listener: Listener) => () => void
       /** Set for a battle in a run, whose panel replaces the result and whose forfeit abandons the run. */
       run?: { ending: ReactNode | null }
+      /** Set for the tutorial, which narrows the moves to the one it waits for and sets P03's face. */
+      tutorial?: Tutorial
     }
+
+/** What the tables need from the tutorial; its own panel replaces the result, and leaving it forfeits nothing. */
+export type Tutorial = {
+  face: Face
+  /** The moves the rules allow, narrowed to the one the current step waits for. */
+  legal: (state: GameState) => Action[]
+  /** P03's words and the step's controls, which each table lays out for itself; null once the battle is won. */
+  drawer: { step: TutorialStep | null; move: Move | null; onPressOn: (() => void) | null } | null
+  ending: ReactNode | null
+}
 
 export type Ready = Extract<Game, { status: 'ready' }>
 

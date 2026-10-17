@@ -1,6 +1,6 @@
 import { TUTORIAL_ENCOUNTER } from './encounters.ts'
-import { createGame, legalActions } from './engine/game.ts'
-import { TIP, type Action, type GameState } from './engine/types.ts'
+import { apply, createGame, legalActions } from './engine/game.ts'
+import { TIP, type Action, type GameEvent, type GameState } from './engine/types.ts'
 import { deckCard } from './engine/units.ts'
 import type { ItemId } from './items.ts'
 
@@ -196,4 +196,24 @@ export function afterMove(progress: Progress): Progress {
 /** On to the next step, from one with nothing to do but read. */
 export function afterStep(progress: Progress): Progress {
   return { step: Math.min(progress.step + 1, TUTORIAL.length - 1), move: 0 }
+}
+
+/** The battle as it stands at a step, reached by making every move before it; for mockups and tests. */
+export function tutorialAt(step: number): { state: GameState; progress: Progress; events: GameEvent[] } {
+  let state = createTutorial()
+  let progress: Progress = { step: 0, move: 0 }
+  const events: GameEvent[] = []
+  while (progress.step < Math.min(step, TUTORIAL.length - 1)) {
+    if (!expectedMove(progress)) {
+      progress = afterStep(progress)
+      continue
+    }
+    const [action] = tutorialActions(state, progress)
+    const result = action ? apply(state, action) : null
+    if (!result?.ok) throw new Error(`The tutorial's step ${TUTORIAL[progress.step]?.id} could not be made`)
+    state = result.state
+    events.push(...result.events)
+    progress = afterMove(progress)
+  }
+  return { state, progress, events }
 }

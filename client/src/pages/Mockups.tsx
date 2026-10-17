@@ -1,6 +1,7 @@
 import { Link, useParams, useSearch } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
 import { FIXTURES_ON } from '../game/fixtures.ts'
+import { TUTORIAL } from 'shared'
 import { MOCKUPS } from '../game/run/mockups.ts'
 import { NotFound } from './NotFound.tsx'
 import { RunTable } from './Run.tsx'
@@ -173,6 +174,41 @@ export function MockupIndex() {
           </Link>
         </section>
       ) : null}
+      <section className="flex flex-col gap-3">
+        <h2 className="text-xl font-semibold">The tutorial</h2>
+        <p className="text-sm text-muted-foreground">
+          Opened at each step of the script, with every move before it made.
+        </p>
+        <ol className="flex flex-col gap-1 text-sm">
+          {TUTORIAL.map((step, index) => (
+            <li key={step.id} className="flex flex-wrap items-baseline gap-x-3">
+              <span className="w-6 text-right text-muted-foreground tabular-nums">{index + 1}</span>
+              <span className="w-24">{step.id}</span>
+              <Link
+                to="/tutorial"
+                search={{ step: String(index + 1), text: '' }}
+                className="underline-offset-2 hover:underline"
+              >
+                text
+              </Link>
+              <Link
+                to="/tutorial"
+                search={{ step: String(index + 1), text: '', layout: 'phone' }}
+                className="underline-offset-2 hover:underline"
+              >
+                phone
+              </Link>
+              <Link
+                to="/tutorial"
+                search={{ step: String(index + 1) }}
+                className="font-medium text-primary underline-offset-2 hover:underline"
+              >
+                3D table
+              </Link>
+            </li>
+          ))}
+        </ol>
+      </section>
       <section className="flex flex-col gap-3">
         <h2 className="text-xl font-semibold">The quick battle</h2>
         <Link to="/game" search={{ fixture: 'worst', text: '' }} className="text-primary underline underline-offset-2">

@@ -15,16 +15,18 @@ import {
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
-import { ITEMS, legalActions, type Action, type ItemId, type Unit } from 'shared'
+import { ITEMS, type Action, type ItemId, type Unit } from 'shared'
 import { Button } from '@/components/ui/button.tsx'
 import { cardTones, FlatReaderBody } from '../../CardReader.tsx'
 import { ItemButton } from '../../ItemButton.tsx'
+import { TutorialDrawer } from '../../tutorial/TutorialDrawer.tsx'
 import {
   Ending,
   Forfeit,
   has,
   hasEnded,
   IntegrityBar,
+  legalFor,
   overText,
   owed,
   phaseText,
@@ -100,7 +102,7 @@ export function Hud({
 }) {
   const { state, act } = game
   const finished = hasEnded(game)
-  const legal = busy || finished ? [] : legalActions(state)
+  const legal = busy || finished ? [] : legalFor(game)
   // The turn's own draw; a catch-up draw after it gets its own button, never owed.
   const mustDraw = !state.drawn && has(legal, { type: 'draw' })
   const summoning = view.summon ? view.hand.find((unit) => unit.uid === view.summon?.uid) : undefined
@@ -252,7 +254,7 @@ export function Hud({
               <Label>Exit</Label>
             </Link>
           </Button>
-          {finished ? null : (
+          {finished || game.tutorial ? null : (
             <Forfeit
               forfeit={game.forfeit}
               run={Boolean(game.run)}
@@ -279,7 +281,7 @@ export function Hud({
       ) : (
         <>
           <div
-            className={`pointer-events-none absolute bottom-0 flex w-[min(26%,26rem)] flex-col gap-1 p-3 font-terminal sm:p-4 ${LEFT}`}
+            className={`pointer-events-none absolute bottom-0 flex flex-col gap-1 p-3 font-terminal sm:p-4 ${game.tutorial ? 'w-[min(42%,36rem)]' : 'w-[min(26%,26rem)]'} ${LEFT}`}
           >
             {/* A screen reader copy of the log the monitor beside P03 shows. */}
             <ol aria-live="polite" className="sr-only">
@@ -287,10 +289,12 @@ export function Hud({
                 <li key={game.log.length - last.length + index}>{line}</li>
               ))}
             </ol>
+            {/* In the tutorial, P03 talks where the prompt would be. */}
+            {game.tutorial?.drawer ? <TutorialDrawer {...game.tutorial.drawer} /> : null}
             {/* Keyed on hint so the shake replays. */}
             <p
               key={hint}
-              className={`text-lg leading-tight text-p03 sm:text-xl ${hint ? 'animate-[nudge_0.6s_ease-out]' : ''}`}
+              className={`text-lg leading-tight text-p03 sm:text-xl ${hint ? 'animate-[nudge_0.6s_ease-out]' : ''} ${game.tutorial?.drawer ? 'sr-only' : ''}`}
             >
               {busy
                 ? "P03's turn…"

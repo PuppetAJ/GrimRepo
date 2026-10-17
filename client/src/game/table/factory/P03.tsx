@@ -1,7 +1,7 @@
 import { useGLTF } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import { use, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { TIP } from 'shared'
+import { TIP, type Face as ScriptedFace } from 'shared'
 import * as THREE from 'three'
 import type { View } from '../../view.ts'
 import { MOOD } from '../mood.ts'
@@ -167,8 +167,10 @@ function P03({ mood }: { mood: Mood }) {
   return <primitive object={scene} position={[CENTER_X, 9.06, -16]} rotation={[0, -Math.PI / 2, 0]} />
 }
 
-export function FactoryP03({ view, outcome }: { view: View; outcome?: 'win' | 'loss' }) {
-  const mood = useMood(view, outcome)
+export function FactoryP03({ view, outcome, face }: { view: View; outcome?: 'win' | 'loss'; face?: ScriptedFace }) {
+  const felt = useMood(view, outcome)
+  // The tutorial's script sets his face; neutral is his resting smug one.
+  const mood = face ? (face === 'neutral' ? 'smug' : face) : felt
   return (
     <>
       <P03 mood={mood} />

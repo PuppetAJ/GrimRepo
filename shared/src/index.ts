@@ -88,6 +88,7 @@ export {
   TUTORIAL,
   tutorialActions,
   tutorialAllows,
+  tutorialAt,
   tutorialStep,
   type Face,
   type Move,

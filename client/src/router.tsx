@@ -20,6 +20,7 @@ const Game = lazyRouteComponent(() => import('./pages/Game.tsx'), 'Game')
 const MyStats = lazyRouteComponent(() => import('./pages/MyStats.tsx'), 'MyStats')
 const Player = lazyRouteComponent(() => import('./pages/Player.tsx'), 'Player')
 const Run = lazyRouteComponent(() => import('./pages/Run.tsx'), 'Run')
+const Tutorial = lazyRouteComponent(() => import('./pages/Tutorial.tsx'), 'Tutorial')
 const MockupIndex = lazyRouteComponent(() => import('./pages/Mockups.tsx'), 'MockupIndex')
 const MockupRun = lazyRouteComponent(() => import('./pages/Mockups.tsx'), 'MockupRun')
 const ArtEditor = lazyRouteComponent(() => import('./pages/ArtEditor.tsx'), 'ArtEditor')
@@ -51,6 +52,11 @@ const gameSearch = z.object({
 })
 
 const runSearch = z.object({ layout: optional(z.enum(['wide', 'mid', 'phone'])) })
+const tutorialSearch = z.object({
+  text: optional(z.string()),
+  layout: optional(z.enum(['wide', 'mid', 'phone'])),
+  step: optional(z.string()),
+})
 const mockupSearch = z.object({
   layout: optional(z.enum(['wide', 'mid', 'phone'])),
   table: optional(z.enum(['3d', 'text'])),
@@ -120,6 +126,14 @@ const run = createRoute({
   ),
 })
 
+// No sign-in: the tutorial is played locally and never saved.
+const tutorial = createRoute({
+  getParentRoute: parent,
+  path: '/tutorial',
+  validateSearch: tutorialSearch,
+  component: Tutorial,
+})
+
 // Development and test builds only; production shows the not-found page.
 const mockups = createRoute({ getParentRoute: parent, path: '/mockups', component: MockupIndex })
 const mockup = createRoute({
@@ -145,6 +159,7 @@ const tree = root.addChildren([
   account,
   game,
   run,
+  tutorial,
   mockups,
   art,
   anatomy,

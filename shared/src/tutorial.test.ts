@@ -13,6 +13,7 @@ import {
   TUTORIAL,
   tutorialActions,
   tutorialAllows,
+  tutorialAt,
   type Progress,
 } from './tutorial.ts'
 
@@ -55,22 +56,15 @@ describe('the tutorial', () => {
   })
 
   it('shows overkill reaching the queue', () => {
-    let state = createTutorial()
-    let progress: Progress = { step: 0, move: 0 }
-    const events: string[] = []
-    while (!TUTORIAL[progress.step]?.free) {
-      const [action] = expectedMove(progress) ? tutorialActions(state, progress) : []
-      if (!action) {
-        progress = afterStep(progress)
-        continue
-      }
-      const result = apply(state, action)
-      assert.ok(result.ok)
-      events.push(...result.events.map((event) => event.type))
-      state = result.state
-      progress = afterMove(progress)
-    }
-    assert.ok(events.includes('overkill'))
+    const { events } = tutorialAt(TUTORIAL.length - 1)
+    assert.ok(events.some((event) => event.type === 'overkill'))
+  })
+
+  it('fast-forwards to any step', () => {
+    const sacrifice = TUTORIAL.findIndex((step) => step.id === 'sacrifice')
+    const { state, progress } = tutorialAt(sacrifice)
+    assert.deepEqual(progress, { step: sacrifice, move: 0 })
+    assert.equal(state.player.board.filter((unit) => unit?.card === 'Boilerplate').length, 2)
   })
 
   it('refuses any other move while a step waits', () => {

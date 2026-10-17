@@ -13,7 +13,7 @@ import {
   type ReactNode,
 } from 'react'
 import * as THREE from 'three'
-import type { ItemId } from 'shared'
+import type { Face, ItemId } from 'shared'
 import { useFullScreen } from '../fullScreen.ts'
 import { Boot } from './Boot.tsx'
 import { disposeFaces } from './faces.ts'
@@ -34,7 +34,8 @@ const LOWEST = 6
 type Attributes = Record<string, string | number>
 
 /** What the room shows: the factory's battery and monitors, and P03's mood. */
-type RoomState = { view: View; log: string[]; outcome?: 'win' | 'loss' }
+/** `face` is set by the tutorial, whose script says how P03 looks. */
+type RoomState = { view: View; log: string[]; outcome?: 'win' | 'loss'; face?: Face }
 type RoomHandlers = {
   onHold?: (screen: Screen, x: number, y: number, sticky?: boolean) => void
   onPin?: (screen: Screen) => void
@@ -82,6 +83,7 @@ const same = (a: Attributes, b: Attributes) =>
 const sameRoom = (a: RoomState, b: RoomState) =>
   a.view === b.view &&
   a.outcome === b.outcome &&
+  a.face === b.face &&
   a.log.length === b.log.length &&
   a.log.every((line, index) => b.log[index] === line)
 const sameList = <T,>(a: T[], b: T[]) => a.length === b.length && a.every((entry, index) => b[index] === entry)
@@ -229,7 +231,7 @@ export function TableStage({ children }: { children: ReactNode }) {
               {room ? (
                 <>
                   <Factory view={room.view} log={room.log} onHold={onHold} onPin={onPin} />
-                  <FactoryP03 view={room.view} outcome={room.outcome} />
+                  <FactoryP03 view={room.view} outcome={room.outcome} face={room.face} />
                 </>
               ) : null}
               {bench ? (
