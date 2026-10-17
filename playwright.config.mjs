@@ -18,8 +18,9 @@ export default defineConfig({
   // The suites share one database and its rate limits, so they run one at a time; CI spreads them over runners instead.
   workers: 1,
   fullyParallel: false,
-  // Whole games and runs are played through the page, so a test has minutes, not seconds.
-  timeout: 5 * 60_000,
+  // Whole games and runs are played through the page, so a test has minutes, not seconds; CI draws WebGL in software,
+  // which takes the 3D table twice as long.
+  timeout: (CI ? 10 : 5) * 60_000,
   // Once on CI, where Firefox now and then stalls a page load outright; a test that passes on its retry is marked flaky.
   retries: CI ? 1 : 0,
   forbidOnly: CI,
@@ -28,8 +29,9 @@ export default defineConfig({
     baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:3000',
     viewport: { width: 1280, height: 800 },
     navigationTimeout: 30_000,
-    // A failure keeps a trace to step through: each action, the page before and after it, and the network.
-    trace: 'retain-on-failure',
+    // A failure keeps a trace to step through: each action, the page before and after it, and the network. Recording
+    // slows every test, so CI records only a retry, which a failure always gets there.
+    trace: CI ? 'on-first-retry' : 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
   projects: [

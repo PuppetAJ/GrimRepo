@@ -53,7 +53,8 @@ jobs:
   browser:
     needs: plan
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Room for a slow 3D test and its retry.
+    timeout-minutes: 30
 
     # One runner per suite and engine, so the wall clock is the slowest suite rather than all of them in a row.
     # The accessibility suite, much the longest, runs in three parts at once.
