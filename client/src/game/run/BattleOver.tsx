@@ -16,8 +16,8 @@ export function BattleOver({ run, onSummary }: { run: RunReady; onSummary: () =>
       role="status"
       face={won ? 'whiteflag' : 'happy'}
       // As wide as the board it sits over, and no wider, so it stays centered on it.
-      className="w-full max-w-[36rem] bg-p03-ground/95"
-      below={
+      className="w-full max-w-[36rem]"
+      ledge={
         <Choices
           choices={[
             state.status === 'playing'

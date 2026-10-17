@@ -9,7 +9,7 @@ import { Hand, Piles } from './Hand.tsx'
 import { Items } from './Items.tsx'
 import { ConsolePanel } from './Log.tsx'
 import { Panel } from './Panel.tsx'
-import { Processes } from './Processes.tsx'
+import { P03Monitor } from './P03Monitor.tsx'
 import { Magnifier, PromptLine, ReaderPanel } from './Reading.tsx'
 import { TutorialBlurb, useSettled } from '../tutorial/TutorialBlurb.tsx'
 
@@ -31,7 +31,7 @@ export function WideLayout() {
         {/* Its padding, given back by the margin, leaves room inside the clip for the tutorial's outline on EXECUTE. */}
         <aside
           aria-label="Turn and scale"
-          className="relative z-10 -m-1.5 flex min-h-0 flex-col gap-3 overflow-hidden p-1.5"
+          className="relative z-10 -m-2 flex min-h-0 flex-col gap-3 overflow-hidden p-2"
         >
           <Panel className="flex items-center justify-between gap-2 text-2xl">
             <TurnLabel stack />
@@ -45,7 +45,7 @@ export function WideLayout() {
           </Panel>
           <ExecuteButton />
           <Items className="justify-center" />
-          <Processes />
+          <P03Monitor />
         </aside>
         <section aria-label="The table" className="relative z-10 flex min-h-0 flex-col items-center gap-2">
           {seat ? <SeatNote seat={seat} /> : null}

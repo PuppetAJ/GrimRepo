@@ -105,7 +105,7 @@ export function Hud({
   const legal = busy || finished ? [] : legalFor(game)
   const blurb = useSettled(game.tutorial?.blurb ?? null, busy)
   // Below the corner buttons and narrower, so it sits between the scale and the buttons over P03's head.
-  const place3d = 'top-14 h-30 w-[min(36rem,calc(100%-1rem))]'
+  const place3d = 'top-14 h-26 w-[min(36rem,calc(100%-1rem))]'
   // The turn's own draw; a catch-up draw after it gets its own button, never owed.
   const mustDraw = !state.drawn && has(legal, { type: 'draw' })
   const summoning = view.summon ? view.hand.find((unit) => unit.uid === view.summon?.uid) : undefined

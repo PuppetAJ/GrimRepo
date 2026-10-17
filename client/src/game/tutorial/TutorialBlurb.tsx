@@ -49,8 +49,11 @@ export function targetSelector(move: Move): string {
   }
 }
 
-/** A control to outline, with how far out the outline sits: clear of what it marks, but inside whatever clips it. */
-type Outline = { selector: string; offset: number; radius?: number }
+// How far out every outline sits from what it marks, the same all round.
+const GAP_OUT = 4
+
+/** A control to outline, and the corner radius its outline follows where the control has none of its own. */
+type Outline = { selector: string; radius?: number }
 
 /**
  * What gets the dotted outline: only what the table doesn't already mark. A lane to play or sacrifice into, and the
@@ -62,28 +65,24 @@ export function outlinesFor(move: Move): Outline[] {
   switch (move.type) {
     case 'draw':
       return [
-        { selector: `${text} [data-action="draw-${move.from}"] > span:first-child`, offset: 4 },
-        { selector: `${hud} [data-action="draw-${move.from}"]`, offset: 3 },
+        { selector: `${text} [data-action="draw-${move.from}"] > span:first-child` },
+        { selector: `${hud} [data-action="draw-${move.from}"]` },
       ]
     case 'select':
       // Around the card inside its button, in the button's own padding, since the hand scrolls and clips past it.
       return [
         {
           selector: `${text} [data-action="select"][aria-label^="${card(move.card).name},"] > span`,
-          offset: 2,
           radius: 6,
         },
       ]
     case 'ringBell':
       // EXECUTE fills its column; the column leaves room for this.
-      return [
-        { selector: `${text} [data-action="ringBell"]`, offset: 2 },
-        { selector: `${hud} [data-action="ringBell"]`, offset: 3 },
-      ]
+      return [{ selector: `${text} [data-action="ringBell"]` }, { selector: `${hud} [data-action="ringBell"]` }]
     case 'use':
       return [
-        { selector: `[data-table] [data-action="use"][aria-label^="${ITEMS[move.item].name}:"]`, offset: 3 },
-        { selector: `${text} button[aria-label="Menu"]`, offset: 1 },
+        { selector: `[data-table] [data-action="use"][aria-label^="${ITEMS[move.item].name}:"]` },
+        { selector: `${text} button[aria-label="Menu"]` },
       ]
     case 'mark':
     case 'place':
@@ -101,7 +100,7 @@ function outlineCss(outlines: Outline[]): string {
     `${all} { outline-width: 2px !important; outline-style: dotted !important; outline-color: #fff; animation: tutorial-pulse 0.9s ease-in-out infinite alternate; }`,
     ...outlines.map(
       (one) =>
-        `${one.selector} { outline-offset: ${one.offset}px !important;${one.radius ? ` border-radius: ${one.radius}px;` : ''} }`,
+        `${one.selector} { outline-offset: ${GAP_OUT}px !important;${one.radius ? ` border-radius: ${one.radius}px;` : ''} }`,
     ),
     '@keyframes tutorial-pulse { from { outline-color: #fff; } to { outline-color: rgb(255 255 255 / 0.3); } }',
     `@media (prefers-reduced-motion: reduce) { ${all} { animation: none; } }`,
@@ -254,12 +253,12 @@ export function TutorialBlurb({
         onClick={onClick}
         style={place.center === null ? undefined : { left: place.center }}
         className={cn(
-          'pointer-events-auto z-40 -translate-x-1/2 bg-p03-ground/80 backdrop-blur-[2px]',
+          'pointer-events-auto z-40 -translate-x-1/2 bg-p03-ground/80',
           fixed ? 'fixed' : 'absolute',
           place.center === null ? 'left-1/2' : '',
           place.bottom ? 'bottom-2' : 'top-5',
           // One size for every line, so the box never jumps between steps.
-          compact ? 'h-21 w-[min(30rem,calc(100vw-1rem))]' : 'h-30 w-[min(36rem,calc(100%-1rem))]',
+          compact ? 'h-21 w-[min(30rem,calc(100vw-1rem))]' : 'h-26 w-[min(36rem,calc(100%-1rem))]',
           onPressOn ? 'cursor-pointer' : '',
           className,
         )}
@@ -303,8 +302,8 @@ export function TutorialEnding() {
     <P03Dialogue
       face="whiteflag"
       aria-label="Tutorial complete"
-      className="w-full max-w-[36rem] bg-p03-ground/95"
-      below={
+      className="w-full max-w-[36rem]"
+      ledge={
         <Choices
           choices={[
             { label: 'Start a run', onChoose: () => void navigate({ to: '/run' }) },

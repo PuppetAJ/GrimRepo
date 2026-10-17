@@ -21,37 +21,43 @@ export function P03Face({ face, className = '' }: { face: Face; className?: stri
   )
 }
 
+// A tight, bright edge with a short halo, so the box draws the eye off the busy table without looking airbrushed.
+const GLOW = 'shadow-[0_0_0_1px_rgb(125_255_154/0.45),0_0_10px_rgb(125_255_154/0.45)]'
+
 /**
- * P03 speaking, as a game's dialogue box: his name on a tab, his head on the left with the words beside it, and any
- * buttons tucked into the bottom right corner rather than a row of their own.
+ * P03 speaking, as a game's dialogue box: his name on a tab, his head on the left with the words beside it, and the
+ * arrow that moves on tucked into the bottom right corner. What he offers next hangs in a ledge under its right end.
  */
 export function P03Dialogue({
   face,
   children,
   actions,
-  below,
+  ledge,
   compact = false,
   className = '',
   ...section
 }: {
   face: Face
   children: ReactNode
-  /** Buttons, or the arrow that moves on, in the bottom right corner. */
+  /** The arrow that moves on, in the bottom right corner. */
   actions?: ReactNode
-  /** A row across the whole box under his head and words, as his choices take. */
-  below?: ReactNode
+  /** What he offers next, such as his choices, in a ledge hung under the box's right end. */
+  ledge?: ReactNode
   /** A smaller head and text, for a phone. */
   compact?: boolean
 } & Omit<ComponentProps<'section'>, 'children'>) {
-  return (
+  const words = cn('leading-snug [text-shadow:0_0_4px_#000]', compact ? 'text-sm' : 'text-xl @max-[28rem]:text-base')
+  const box = (
     <section
       {...section}
       className={cn(
-        '@container relative flex flex-wrap rounded-md border-2 border-p03-edge bg-p03-ground/85 font-terminal text-p03',
-        // On a phone the head and words sit in the middle of the box, so a short line leaves no gap under them.
-        // The name tab may sit over the top of his head there, which keeps the box short.
-        compact ? 'items-center gap-2 px-2 pt-1.5 pb-1.5' : 'items-start gap-3 px-3 pt-4 pb-3',
-        className,
+        // A strong blur behind it, so the table never muddies the words.
+        '@container relative flex items-center rounded-md border-2 border-p03-edge bg-p03-ground/85 font-terminal text-p03 backdrop-blur-md',
+        GLOW,
+        // His head and words sit in the middle of the box, so a short line leaves no gap under them; the name tab may
+        // sit over the top of his head, which keeps the box short.
+        compact ? 'gap-2 px-2 py-1.5' : 'gap-3 px-3 py-2',
+        ledge ? 'w-full rounded-br-none bg-p03-ground/95' : className,
       )}
     >
       <span className="absolute -top-3.5 left-3 z-10 rounded-sm border-2 border-p03-edge bg-p03-ground px-3 text-base leading-tight">
@@ -59,36 +65,39 @@ export function P03Dialogue({
       </span>
       {/* Where the box is narrow, as an ending over a phone's board is, the head and words shrink with it. */}
       <P03Face face={face} className={compact ? 'w-16' : 'w-24 @max-[28rem]:w-16'} />
-      {/* Otherwise the first line's top meets the top of his head, under the fins. */}
-      <div className={cn('flex min-w-0 flex-1 flex-col', compact ? '' : 'self-stretch pt-1')}>
-        {/* Shadowed against the table behind; the buttons keep their own look. */}
-        <div
-          className={cn(
-            'leading-snug [text-shadow:0_0_4px_#000]',
-            compact ? 'text-sm' : 'text-xl @max-[28rem]:text-base',
-          )}
-        >
-          {children}
-        </div>
-        {actions ? (
-          <div className={compact ? 'absolute right-2 bottom-1' : 'mt-auto flex flex-wrap justify-end gap-2 pt-2'}>
-            {actions}
-          </div>
-        ) : null}
-      </div>
-      {below ? (
-        <div
-          className={cn(
-            'basis-full leading-snug [text-shadow:0_0_4px_#000]',
-            // Starting where his words start, under the head's width and the gap beside it; where the box is too
-            // narrow for that, from the box's own edge, under his head.
-            compact ? 'text-sm' : 'pl-[6.75rem] text-xl @max-[28rem]:pl-0 @max-[28rem]:text-base',
-          )}
-        >
-          {below}
-        </div>
-      ) : null}
+      <div className={cn('min-w-0 flex-1', words)}>{children}</div>
+      {actions ? <div className="absolute right-2 bottom-1">{actions}</div> : null}
     </section>
+  )
+  if (!ledge) return box
+  return (
+    <div className={cn('@container flex flex-col items-end font-terminal text-p03', className)}>
+      {box}
+      <Ledge className={words}>{ledge}</Ledge>
+    </div>
+  )
+}
+
+/**
+ * The ledge, shaped \___: its left edge slants in under the box, its bottom runs flat, and its right edge carries on
+ * the box's own. It overlaps the box's bottom border, so the two read as one piece.
+ */
+function Ledge({ children, className }: { children: ReactNode; className: string }) {
+  return (
+    <div
+      className={cn('relative -mt-0.5 py-2 pr-4 pl-9 [filter:drop-shadow(0_0_5px_rgb(125_255_154/0.45))]', className)}
+    >
+      {/* The edge's color behind, and the fill two pixels in, both cut to the slant. */}
+      <span
+        aria-hidden
+        className="absolute inset-0 bg-p03-edge [clip-path:polygon(0_0,100%_0,100%_100%,1.5rem_100%)]"
+      />
+      <span
+        aria-hidden
+        className="absolute top-0 right-0.5 bottom-0.5 left-0 bg-p03-ground [clip-path:polygon(3px_0,100%_0,100%_100%,calc(1.5rem+1px)_100%)]"
+      />
+      <div className="relative">{children}</div>
+    </div>
   )
 }
 
@@ -148,13 +157,14 @@ export function Choices({ choices }: { choices: Choice[] }) {
           onClick={choice.onChoose}
           onPointerEnter={() => setPicked(index)}
           onFocus={() => setPicked(index)}
-          className="flex items-center gap-1.5 font-bold text-[#c9ffd5] outline-none focus-visible:underline focus-visible:underline-offset-4"
+          className="group flex items-center gap-1.5 font-bold text-[#c9ffd5] outline-none"
         >
           {/* Every choice keeps the pointer's room, so picking another never shifts the line. */}
           <span aria-hidden className={index === picked ? '' : 'invisible'}>
             ▸
           </span>
-          {choice.label}
+          {/* Underlined on keyboard focus, the label alone, not the pointer. */}
+          <span className="underline-offset-4 group-focus-visible:underline">{choice.label}</span>
         </button>
       ))}
     </div>

@@ -19,7 +19,7 @@ export function Hand() {
           : 'aspect-[5/7] h-full'
   return (
     <div
-      className={`flex min-w-0 flex-1 gap-2 rounded-md border-2 border-[#1f3a26] bg-[#050d07]/70 px-1 pb-1 ${sideways ? 'min-h-0 flex-wrap content-start justify-center overflow-y-auto pt-4' : `justify-[safe_center] items-center overflow-x-auto ${phone ? 'pt-4' : 'pt-5'}`} ${compact ? '' : 'h-full'}`}
+      className={`flex min-w-0 flex-1 gap-2 rounded-md border-2 border-[#1f3a26] bg-[#050d07]/70 px-1 ${phone || sideways ? 'pb-1' : 'pb-3.5'} ${sideways ? 'min-h-0 flex-wrap content-start justify-center overflow-y-auto pt-4' : `justify-[safe_center] items-center overflow-x-auto ${phone ? 'pt-4' : 'pt-3.5'}`} ${compact ? '' : 'h-full'}`}
     >
       {view.hand.map((unit) => {
         const selected = unit.uid === state.summon?.uid
