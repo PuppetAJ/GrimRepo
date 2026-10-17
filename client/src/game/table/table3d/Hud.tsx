@@ -343,9 +343,9 @@ export function Hud({
                     aria-keyshortcuts="Escape"
                     title="Cancel, or right-click anywhere"
                   >
-                    {/* A right-click cancels too; touch has no right-click to point at. */}
-                    <MouseRight aria-hidden className="pointer-coarse:hidden" />
                     Cancel
+                    {/* A right-click cancels too, after the label as the bell's key is; touch has no right-click to point at. */}
+                    <MouseRight aria-hidden className="opacity-70 pointer-coarse:hidden" />
                   </Button>
                 ) : null}
                 {/* While P03 leads, a second draw from the deck, framed in the deck's gold. */}
