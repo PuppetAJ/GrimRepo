@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import { apply, type Action, type Face, type GameEvent, type GameState, type Move, type TutorialStep } from 'shared'
+import { apply, type Action, type Face, type GameEvent, type GameState } from 'shared'
+import type { Blurb } from './tutorial/TutorialBlurb.tsx'
 import { toast } from 'sonner'
 import { api, ApiError, type Finished, type OpenGame } from '../lib/api.ts'
 import { history, narrate } from '../lib/narrate.ts'
@@ -34,8 +35,8 @@ export type Tutorial = {
   face: Face
   /** The moves the rules allow, narrowed to the one the current step waits for. */
   legal: (state: GameState) => Action[]
-  /** P03's words and the step's controls, which each table lays out for itself; null once the battle is won. */
-  drawer: { step: TutorialStep | null; move: Move | null; onPressOn: (() => void) | null } | null
+  /** P03's words and the step's controls, laid over each table; null once the battle is won. */
+  blurb: Blurb | null
   ending: ReactNode | null
 }
 

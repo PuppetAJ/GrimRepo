@@ -19,7 +19,7 @@ import { ITEMS, type Action, type ItemId, type Unit } from 'shared'
 import { Button } from '@/components/ui/button.tsx'
 import { cardTones, FlatReaderBody } from '../../CardReader.tsx'
 import { ItemButton } from '../../ItemButton.tsx'
-import { TutorialDrawer } from '../../tutorial/TutorialDrawer.tsx'
+import { TutorialBlurb, tutorialPrompt } from '../../tutorial/TutorialBlurb.tsx'
 import {
   Ending,
   Forfeit,
@@ -274,6 +274,10 @@ export function Hud({
         ) : null}
       </div>
 
+      {/* In the tutorial, P03 talks from the top of the screen, above his own head. */}
+      {game.tutorial?.blurb && !ended ? (
+        <TutorialBlurb blurb={game.tutorial.blurb} className="w-[min(36rem,calc(100%-1rem))]" />
+      ) : null}
       {ended ? (
         <div className="absolute inset-0 grid place-items-center bg-black/40 p-4">
           <Ending game={game} />
@@ -281,7 +285,7 @@ export function Hud({
       ) : (
         <>
           <div
-            className={`pointer-events-none absolute bottom-0 flex flex-col gap-1 p-3 font-terminal sm:p-4 ${game.tutorial ? 'w-[min(42%,36rem)]' : 'w-[min(26%,26rem)]'} ${LEFT}`}
+            className={`pointer-events-none absolute bottom-0 flex w-[min(26%,26rem)] flex-col gap-1 p-3 font-terminal sm:p-4 ${LEFT}`}
           >
             {/* A screen reader copy of the log the monitor beside P03 shows. */}
             <ol aria-live="polite" className="sr-only">
@@ -289,24 +293,23 @@ export function Hud({
                 <li key={game.log.length - last.length + index}>{line}</li>
               ))}
             </ol>
-            {/* In the tutorial, P03 talks where the prompt would be. */}
-            {game.tutorial?.drawer ? <TutorialDrawer {...game.tutorial.drawer} /> : null}
             {/* Keyed on hint so the shake replays. */}
             <p
               key={hint}
-              className={`text-lg leading-tight text-p03 sm:text-xl ${hint ? 'animate-[nudge_0.6s_ease-out]' : ''} ${game.tutorial?.drawer ? 'sr-only' : ''}`}
+              className={`text-lg leading-tight text-p03 sm:text-xl ${hint ? 'animate-[nudge_0.6s_ease-out]' : ''}`}
             >
               {busy
                 ? "P03's turn…"
                 : aimed
                   ? `Use the ${ITEMS[aimed].name} on which card? Esc to put it back.`
-                  : prompt(
+                  : (tutorialPrompt(game.tutorial?.blurb ?? null) ??
+                    prompt(
                       mustDraw,
                       summoning,
                       summoning ? owed(summoning, view.board, view.summon?.marked ?? []) : 0,
                       overText(game),
                       !busy && !finished && skippedDraw(state),
-                    )}
+                    ))}
             </p>
           </div>
 

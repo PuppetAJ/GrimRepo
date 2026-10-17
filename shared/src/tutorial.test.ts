@@ -10,6 +10,8 @@ import {
   afterStep,
   createTutorial,
   expectedMove,
+  gloss,
+  said,
   TUTORIAL,
   tutorialActions,
   tutorialAllows,
@@ -115,6 +117,21 @@ describe('the tutorial', () => {
   it('lets anything legal through once play is free', () => {
     const { state, progress } = follow()
     assert.deepEqual(tutorialActions(state, progress), legalActions(state))
+  })
+
+  it('links only to things that exist', () => {
+    for (const step of TUTORIAL)
+      for (const part of said(step.says))
+        if (typeof part !== 'string') assert.doesNotThrow(() => gloss(part), `${step.id}: ${part.kind}:${part.id}`)
+  })
+
+  it('splits a line into plain text and linked words', () => {
+    assert.deepEqual(said('Phishing has [Bypass](sigil:bypass). Go.'), [
+      'Phishing has ',
+      { text: 'Bypass', kind: 'sigil', id: 'bypass' },
+      '. Go.',
+    ])
+    assert.equal(gloss({ text: 'Bypass', kind: 'sigil', id: 'bypass' }).title, 'Bypass')
   })
 
   it('names only real cards, and no run ever meets it', () => {

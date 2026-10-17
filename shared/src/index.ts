@@ -85,6 +85,9 @@ export {
   afterStep,
   createTutorial,
   expectedMove,
+  gloss,
+  said,
+  TERMS,
   TUTORIAL,
   tutorialActions,
   tutorialAllows,
@@ -93,6 +96,8 @@ export {
   type Face,
   type Move,
   type Progress,
+  type Said,
+  type Term,
   type TutorialStep,
 } from './tutorial.ts'
 export { nextRunAction, playRun } from './run/bot.ts'

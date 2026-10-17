@@ -1,7 +1,7 @@
 import { animate } from 'motion/react'
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { ITEMS, type Action, type Slot, type Unit } from 'shared'
-import { tutorialPrompt } from '../tutorial/TutorialDrawer.tsx'
+import { tutorialPrompt } from '../tutorial/TutorialBlurb.tsx'
 import { has, hasEnded, legalFor, overText, owed, prompt, skippedDraw, type Seat } from '../controls.tsx'
 import { usePlayback } from '../table/usePlayback.ts'
 import type { Ready } from '../useGame.ts'
@@ -151,7 +151,7 @@ export function useTextTable({
     ? "P03's turn…"
     : aimedItem
       ? `Use the ${ITEMS[aimedItem].name} on which card? Esc to put it back.`
-      : (tutorialPrompt(game.tutorial?.drawer ?? null) ??
+      : (tutorialPrompt(game.tutorial?.blurb ?? null) ??
         prompt(
           mustDraw,
           summoning,

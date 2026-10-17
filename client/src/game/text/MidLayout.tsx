@@ -8,7 +8,7 @@ import { Hand, Piles } from './Hand.tsx'
 import { Items } from './Items.tsx'
 import { ConsolePanel } from './Log.tsx'
 import { Magnifier, PromptLine, ReaderPanel } from './Reading.tsx'
-import { TutorialDrawer } from '../tutorial/TutorialDrawer.tsx'
+import { blurbAtBottom, TutorialBlurb } from '../tutorial/TutorialBlurb.tsx'
 
 export function MidLayout() {
   const { frameProps, fullScreen, seat, setArea, setHandSection, view, game } = useTable()
@@ -41,7 +41,6 @@ export function MidLayout() {
           <div className="absolute inset-0 flex flex-col gap-3 overflow-hidden">
             {/* Above the board, the note would shrink it. */}
             {seat ? <SeatNote seat={seat} /> : null}
-            {game.tutorial?.drawer ? <TutorialDrawer {...game.tutorial.drawer} compact className="shrink-0" /> : null}
             <ReaderPanel />
             <ConsolePanel />
           </div>
@@ -64,6 +63,9 @@ export function MidLayout() {
       <div className="relative z-10">
         <Controls />
       </div>
+      {game.tutorial?.blurb ? (
+        <TutorialBlurb blurb={game.tutorial.blurb} bottom={blurbAtBottom(game.tutorial.blurb.move)} />
+      ) : null}
       <Magnifier />
     </div>
   )

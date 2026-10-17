@@ -1,8 +1,9 @@
+import { card, CARD_TYPES, SIGILS, type CardType, type SigilId } from './cards.ts'
 import { TUTORIAL_ENCOUNTER } from './encounters.ts'
 import { apply, createGame, legalActions } from './engine/game.ts'
 import { TIP, type Action, type GameEvent, type GameState } from './engine/types.ts'
 import { deckCard } from './engine/units.ts'
-import type { ItemId } from './items.ts'
+import { ITEMS as ITEM_DEFS, type ItemId } from './items.ts'
 
 /** The faces P03's monitor shows, as named in client/public/p03/screen. */
 export type Face = 'neutral' | 'happy' | 'impatient' | 'choking' | 'dying' | 'whiteflag'
@@ -23,14 +24,109 @@ export type TutorialStep = { id: string; face: Face; says: string; moves?: Move[
 export type Progress = { step: number; move: number }
 
 // Dealt in this order: the first three and a Boilerplate make the opening hand.
-const DECK = ['CopyPaste', 'Phishing', 'HelloWorld', 'Documentation', 'SQLInjection', 'Crawler', 'Sandbox']
-const ITEMS: ItemId[] = ['scissors']
+const DECK = ['CopyPaste', 'Phishing', 'HelloWorld', 'Documentation', 'CopyPaste', 'Crawler', 'Sandbox']
+const TOOLS: ItemId[] = ['scissors']
+
+/**
+ * What P03 says may link a word to its explanation: `[Bypass](sigil:bypass)`, or a card, a type, an item or one of
+ * the terms below. The table underlines it, and the explanation opens from it, so the lines themselves stay short.
+ */
+export const TERMS = {
+  scale: {
+    title: 'The scale',
+    text: `Your damage tips it your way, P03's tips it his. First to tip it to ${TIP} wins.`,
+  },
+  cost: {
+    title: 'Cost',
+    text: 'How many sacrifices a card needs to be played. A card with no cost goes straight onto the table.',
+  },
+  attack: {
+    title: 'Attacking',
+    text: "When you press EXECUTE, your cards attack left to right. Each hits the card across from it, or P03 if that lane is open. Then P03's cards attack you the same way.",
+  },
+  queue: {
+    title: "P03's queue",
+    text: "P03's cards wait in his back row, and each steps up when the lane in front of it clears.",
+  },
+  sacrifice: {
+    title: 'Sacrifices',
+    text: 'Pick a card with a cost, then mark cards on the table until they cover it. Each is worth its own cost, and a card with no cost is still worth 1. They die when the new card lands.',
+  },
+  overkill: {
+    title: 'Overkill',
+    text: "Damage past a card's health carries into the card queued behind it. It never reaches the scale.",
+  },
+  sigils: {
+    title: 'Sigils',
+    text: 'Abilities printed on a card. Hold a card, or right click it, to read what its sigils do.',
+  },
+} as const
+
+export type Term = keyof typeof TERMS
+
+/** A stretch of what P03 says: plain text, or a word linked to its explanation. */
+export type Said = string | { text: string; kind: 'term' | 'card' | 'type' | 'sigil' | 'item'; id: string }
+
+const LINK = /\[([^\]]+)\]\((term|card|type|sigil|item):([\w]+)\)/g
+
+/** Splits a line into its plain text and its linked words. */
+export function said(line: string): Said[] {
+  const parts: Said[] = []
+  let at = 0
+  for (const match of line.matchAll(LINK)) {
+    if (match.index > at) parts.push(line.slice(at, match.index))
+    parts.push({ text: match[1] as string, kind: match[2] as Exclude<Said, string>['kind'], id: match[3] as string })
+    at = match.index + match[0].length
+  }
+  if (at < line.length) parts.push(line.slice(at))
+  return parts
+}
+
+/** The explanation a linked word opens; throws for a link to nothing, which the tests catch. */
+export function gloss(link: Exclude<Said, string>): { title: string; text: string } {
+  switch (link.kind) {
+    case 'term': {
+      const found = TERMS[link.id as Term]
+      if (!found) throw new Error(`No such term: ${link.id}`)
+      return found
+    }
+    case 'card': {
+      const def = card(link.id)
+      const cost = def.cost ? `costs ${def.cost}` : 'no cost'
+      const sigils = def.sigils.map((id) => `${SIGILS[id].name}: ${SIGILS[id].text}`).join(' ')
+      const type = def.type
+      return {
+        title: def.name,
+        text: `${def.attack} attack, ${def.health} health, ${cost}${type ? `. ${CARD_TYPES[type].name}` : ''}.${sigils ? ` ${sigils}` : ''}`,
+      }
+    }
+    case 'type': {
+      const found = CARD_TYPES[link.id as CardType]
+      if (!found) throw new Error(`No such type: ${link.id}`)
+      const all = Object.values(CARD_TYPES).map((type) => type.name)
+      return {
+        title: found.name,
+        text: `${found.about} Every card has a type: ${all.slice(0, -1).join(', ')} or ${all.at(-1)}. A few sigils count the cards of their own type.`,
+      }
+    }
+    case 'sigil': {
+      const found = SIGILS[link.id as SigilId]
+      if (!found) throw new Error(`No such sigil: ${link.id}`)
+      return { title: found.name, text: found.text }
+    }
+    case 'item': {
+      const found = ITEM_DEFS[link.id as ItemId]
+      if (!found) throw new Error(`No such item: ${link.id}`)
+      return { title: found.name, text: `${found.text} An item works once, on your turn.` }
+    }
+  }
+}
 
 export const TUTORIAL: TutorialStep[] = [
   {
     id: 'goal',
     face: 'neutral',
-    says: `Listen up, I'm only explaining this once. There's a scale between us. Your damage tips it your way, mine tips it mine. First to tip it to ${TIP} wins.`,
+    says: `Listen up, I'm only explaining this once. Damage tips the [scale](term:scale) between us. First to tip it to ${TIP} wins.`,
   },
   {
     id: 'draw',
@@ -41,12 +137,12 @@ export const TUTORIAL: TutorialStep[] = [
   {
     id: 'types',
     face: 'neutral',
-    says: "Documentation. A Legacy card. Every card has a type: Bot, Exploit, Bug, Legacy or Dev. A few sigils count the cards of their own type. Most of the time you won't care.",
+    says: "[Documentation](card:Documentation). A [Legacy](type:legacy) card. Most of the time you won't care.",
   },
   {
     id: 'free',
     face: 'neutral',
-    says: "A card with no cost goes straight onto the table. Put Copy Paste in the second lane, across from my queue. I'll be playing across from you.",
+    says: 'A card with no [cost](term:cost) goes straight onto the table. Put [Copy Paste](card:CopyPaste) in the second lane, across from my [queue](term:queue).',
     moves: [
       { type: 'select', card: 'CopyPaste' },
       { type: 'place', lane: 1 },
@@ -55,18 +151,18 @@ export const TUTORIAL: TutorialStep[] = [
   {
     id: 'execute',
     face: 'neutral',
-    says: "Press EXECUTE, or E, to end your turn. Your cards attack left to right. Each hits the card across from it, or me if the lane's open.",
+    says: 'Press EXECUTE, or E, to end your turn. Your cards [attack](term:attack) left to right.',
     moves: [{ type: 'ringBell' }],
   },
   {
     id: 'queue',
     face: 'impatient',
-    says: "Don't get used to that. My cards queue in my back row and step up when the lane in front clears. That Boilerplate just did.",
+    says: "Don't get used to that. My [queue](term:queue) steps up as soon as a lane clears.",
   },
   {
     id: 'pile',
     face: 'neutral',
-    says: "Your deck runs out. The Boilerplate pile never does. Filler, but you'll need it. Take one.",
+    says: 'Your deck runs out. The [Boilerplate](card:Boilerplate) pile never does. Take one.',
     moves: [{ type: 'draw', from: 'boilerplate' }],
   },
   {
@@ -83,7 +179,7 @@ export const TUTORIAL: TutorialStep[] = [
   {
     id: 'sacrifice',
     face: 'happy',
-    says: "Documentation costs 2, so it needs sacrifices. Pick it, then mark both Boilerplates. A card with no cost is still worth 1. Leshy invented this. It's the one good idea he ever had.",
+    says: "[Documentation](card:Documentation) costs 2. Pick it, then mark both Boilerplates as [sacrifices](term:sacrifice). Leshy invented this. It's the one good idea he ever had.",
     moves: [
       { type: 'select', card: 'Documentation' },
       { type: 'mark', lane: 0 },
@@ -100,7 +196,7 @@ export const TUTORIAL: TutorialStep[] = [
   {
     id: 'overkilled',
     face: 'neutral',
-    says: "Overkill carries into the card behind. It never reaches the scale. I designed it that way. You're welcome. And an open lane lets my cards hit you.",
+    says: "[Overkill](term:overkill). I designed it that way. You're welcome. And an open lane lets my cards hit you.",
   },
   {
     id: 'redraw',
@@ -111,7 +207,7 @@ export const TUTORIAL: TutorialStep[] = [
   {
     id: 'sigils',
     face: 'impatient',
-    says: 'Some cards carry sigils. Phishing has Bypass: it attacks me over whatever is in the way. Put it across from my Copy Paste.',
+    says: 'Some cards carry [sigils](term:sigils). [Phishing](card:Phishing) has [Bypass](sigil:bypass). Put it across from my Copy Paste.',
     moves: [
       { type: 'select', card: 'Phishing' },
       { type: 'place', lane: 3 },
@@ -120,18 +216,18 @@ export const TUTORIAL: TutorialStep[] = [
   {
     id: 'items',
     face: 'impatient',
-    says: "That's my Mainframe in the queue. It would flatten your Documentation. You've got Scissors, so cut it. An item works once, on your turn.",
+    says: "That's my [Mainframe](card:Mainframe) in the queue. Cut it with your [Scissors](item:scissors).",
     moves: [{ type: 'use', item: 'scissors', row: 'back', lane: 2 }],
   },
   {
     id: 'read',
     face: 'neutral',
-    says: 'Hold left click on a card, or right click it, to read it up close. Every sigil is spelled out there.',
+    says: 'Hold left click on a card, or right click it, to read it up close.',
   },
   {
     id: 'finish',
     face: 'impatient',
-    says: 'Finish it. EXECUTE when you are ready.',
+    says: 'Finish it.',
     free: true,
   },
 ]
@@ -141,7 +237,7 @@ export function createTutorial(): GameState {
     seed: 0,
     deck: DECK.map(deckCard),
     encounter: TUTORIAL_ENCOUNTER.id,
-    items: ITEMS,
+    items: TOOLS,
     scripted: true,
   })
 }

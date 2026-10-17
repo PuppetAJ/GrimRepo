@@ -16,7 +16,7 @@ import {
 } from 'shared'
 import { narrate } from '../../lib/narrate.ts'
 import type { Ready } from '../useGame.ts'
-import { TutorialEnding } from './TutorialDrawer.tsx'
+import { TutorialEnding } from './TutorialBlurb.tsx'
 
 type Listener = (events: GameEvent[]) => void
 
@@ -66,7 +66,7 @@ export function useTutorial(start = 0): Ready {
     () => ({
       face: over ? ('whiteflag' as const) : (step?.face ?? 'neutral'),
       legal: (state: GameState) => tutorialActions(state, played.progress),
-      drawer: over ? null : { step, move: expectedMove(played.progress), onPressOn: reading ? pressOn : null },
+      blurb: over ? null : { step, move: expectedMove(played.progress), onPressOn: reading ? pressOn : null },
       ending: over ? <TutorialEnding /> : null,
     }),
     [over, step, played.progress, reading, pressOn],

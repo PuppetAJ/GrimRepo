@@ -13,7 +13,7 @@ import {
 import { Link } from '@tanstack/react-router'
 import FaultyScreenShader from '../../components/p03/FaultyScreenShader.tsx'
 import { encounterName, Forfeit, hasEnded, IntegrityBar, ScaleBar, SeatNote } from '../controls.tsx'
-import { TutorialDrawer } from '../tutorial/TutorialDrawer.tsx'
+import { blurbAtBottom, TutorialBlurb } from '../tutorial/TutorialBlurb.tsx'
 import { Balance } from './Balance.tsx'
 import { Board } from './Board.tsx'
 import { CancelButton, ExecuteButton, SaveStatus } from './Buttons.tsx'
@@ -70,13 +70,11 @@ function Menu() {
         <span className="truncate text-p03">{name ?? 'Quick battle'}</span>
         <SaveStatus className="shrink-0 text-p03-dim" />
       </p>
-      {/* Upright, the board has no room for the tools, so they're here. */}
-      {sideways ? null : (
-        <div className="flex flex-col items-center gap-1">
-          {state.items?.length ? <span className="font-terminal text-base text-p03-dim">Tools</span> : null}
-          <Items className="justify-center" onPick={() => setMenu(false)} />
-        </div>
-      )}
+      {/* A phone has no room beside the board for the tools, upright or sideways, so they're here. */}
+      <div className="flex flex-col items-center gap-1">
+        {state.items?.length ? <span className="font-terminal text-base text-p03-dim">Tools</span> : null}
+        <Items className="justify-center" onPick={() => setMenu(false)} />
+      </div>
       <div className="grid grid-cols-2 gap-2 [&_svg]:size-4 [&_svg]:shrink-0">
         {/* A run's own first: its deck and tools, and its map. */}
         {run ? (
@@ -140,8 +138,8 @@ export function PhoneLayout() {
     useTable()
   // Once the battle ends, its panel over the board may run past the board, so the board rises above the rest.
   const over = hasEnded(game)
-  // In the tutorial, P03 talks where his log would be.
-  const drawer = game.tutorial?.drawer
+  // In the tutorial, P03 talks over the table, out of the way of whatever the step points at.
+  const blurb = game.tutorial?.blurb
   // Too short in the page, the page scrolls; covering the screen, the frame scrolls instead.
   const flowing = scrolling && !covering
   const pieces = `z-10 gap-2 pt-[max(0.5rem,env(safe-area-inset-top))] pr-[max(0.5rem,env(safe-area-inset-right))] pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(0.5rem,env(safe-area-inset-left))] ${flowing ? 'relative min-h-svh' : 'absolute inset-0'}`
@@ -190,12 +188,7 @@ export function PhoneLayout() {
                 <ExecuteButton />
               </div>
             </div>
-            <Items />
-            {drawer ? (
-              <TutorialDrawer {...drawer} compact className="min-h-0 flex-1 overflow-y-auto" />
-            ) : (
-              <LogBox className="min-h-0 flex-1" />
-            )}
+            <LogBox className="min-h-0 flex-1" />
             <CancelButton />
           </aside>
         </div>
@@ -206,11 +199,7 @@ export function PhoneLayout() {
             <ScaleBar scale={view.scale} fluid className="gap-1 pr-1 text-base" />
           </div>
           <div className="relative z-10 shrink-0">
-            {drawer ? (
-              <TutorialDrawer {...drawer} compact />
-            ) : (
-              <LogBox className="h-[3.25rem] tall:h-[4.75rem]" log="sr-only tall:not-sr-only" />
-            )}
+            <LogBox className="h-[3.25rem] tall:h-[4.75rem]" log="sr-only tall:not-sr-only" />
           </div>
           {board}
           <section ref={setHandSection} aria-label="Your hand" className="relative z-10 flex shrink-0">
@@ -233,6 +222,8 @@ export function PhoneLayout() {
           <SeatNote seat={seat} />
         </div>
       ) : null}
+      {/* Pinned to the screen, since the table can be taller than it and scroll. */}
+      {blurb ? <TutorialBlurb blurb={blurb} compact bottom={blurbAtBottom(blurb.move)} className="fixed" /> : null}
       <Menu />
       <LogDialog />
       <Inspector />

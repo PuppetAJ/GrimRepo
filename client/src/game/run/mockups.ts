@@ -7,6 +7,7 @@ import {
   findNode,
   reachable,
   generateStage,
+  HAND_LIMIT,
   Rng,
   nextRunAction,
   SCENES,
@@ -576,9 +577,17 @@ export const MOCKUPS: Record<string, Entry> = {
   'catch-up': {
     title: 'P03 ahead, with the turn drawn and an extra draw waiting',
     group: 'reached',
-    revision: 1,
+    revision: 2,
     make: () => {
-      const found = reached((s) => s.visit?.kind === 'battle' && s.visit.game.turn > 2 && s.visit.game.drawn)
+      // The extra draw comes from the deck, so it needs cards left there and room in the hand.
+      const found = reached(
+        (s) =>
+          s.visit?.kind === 'battle' &&
+          s.visit.game.turn > 2 &&
+          s.visit.game.drawn &&
+          s.visit.game.player.deck.length > 0 &&
+          s.visit.game.player.hand.length < HAND_LIMIT,
+      )
       if (!found || found.state.visit?.kind !== 'battle') return null
       const game = { ...found.state.visit.game, scale: -6, drawn: true, catchUp: true }
       return { ...found, state: { ...found.state, visit: { ...found.state.visit, game } } }
@@ -587,7 +596,7 @@ export const MOCKUPS: Record<string, Entry> = {
   'battle-items': {
     title: 'A battle in a run, with three items to use',
     group: 'reached',
-    revision: 5,
+    revision: 6,
     make: () => {
       const found = reached((s) => s.visit?.kind === 'battle' && s.visit.game.turn > 2 && s.visit.game.drawn)
       if (!found || found.state.visit?.kind !== 'battle') return null
@@ -610,7 +619,7 @@ export const MOCKUPS: Record<string, Entry> = {
   'items-own': {
     title: 'Items: the Hammer on your Bug, the Pliers on a sigil, the Hourglass',
     group: 'reached',
-    revision: 5,
+    revision: 6,
     make: () =>
       itemBattle(['hammer', 'pliers', 'hourglass'], {
         board: ['Bug', 'CopyPaste'],
@@ -621,7 +630,7 @@ export const MOCKUPS: Record<string, Entry> = {
   'items-steal': {
     title: 'Items: the Hook on a Mainframe, the Bottled Boilerplate, the Scissors on the queue',
     group: 'reached',
-    revision: 5,
+    revision: 6,
     make: () =>
       itemBattle(['hook', 'bottle', 'scissors'], {
         board: [null, null, 'Watchdog'],

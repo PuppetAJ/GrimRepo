@@ -11,11 +11,11 @@ import { ConsolePanel } from './Log.tsx'
 import { Panel } from './Panel.tsx'
 import { Processes } from './Processes.tsx'
 import { Magnifier, PromptLine, ReaderPanel } from './Reading.tsx'
-import { TutorialDrawer } from '../tutorial/TutorialDrawer.tsx'
+import { blurbAtBottom, TutorialBlurb } from '../tutorial/TutorialBlurb.tsx'
 
 export function WideLayout() {
   const { frameProps, frame, size, fullScreen, seat, setArea, view, game } = useTable()
-  const drawer = game.tutorial?.drawer
+  const blurb = game.tutorial?.blurb
   return (
     <>
       {fullScreen.on ? <div aria-hidden className="fixed inset-0 z-40 bg-[#030604]" /> : null}
@@ -45,7 +45,6 @@ export function WideLayout() {
         </aside>
         <section aria-label="The table" className="relative z-10 flex min-h-0 flex-col items-center gap-2">
           {seat ? <SeatNote seat={seat} /> : null}
-          {drawer ? <TutorialDrawer {...drawer} className="w-full max-w-4xl" /> : null}
           <div ref={setArea} className="flex min-h-0 w-full flex-1 items-center justify-center">
             <Board />
           </div>
@@ -66,6 +65,7 @@ export function WideLayout() {
           <Hand />
           <Piles />
         </section>
+        {blurb ? <TutorialBlurb blurb={blurb} bottom={blurbAtBottom(blurb.move)} /> : null}
         <Magnifier />
       </div>
     </>
