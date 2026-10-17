@@ -1,17 +1,11 @@
+import { expect, test as base } from '@playwright/test'
 import pg from 'pg'
-import { chromium, firefox } from 'playwright'
 import { isOffensive } from '../server/src/auth/names.ts'
 import { apply, createGame, nextBotAction } from '../shared/src/index.ts'
 
 export const BASE = process.env.E2E_BASE_URL ?? 'http://localhost:3000'
 
-/** Firefox stands in for Zen, which runs on Gecko; choose it with E2E_BROWSER=firefox. */
-export const ENGINE = process.env.E2E_BROWSER === 'firefox' ? 'firefox' : 'chromium'
-
-// The default is the dev server, and a run against the wrong one fails oddly.
-console.log(`against ${BASE} in ${ENGINE}`)
-
-// Collected from every page a suite opens, so an error on any of them fails the run.
+// Collected from every page a test opens, so an error on any of them fails the test.
 const pageErrors = []
 const listen = (page) => {
   page.on('pageerror', (error) => pageErrors.push(error.message))
@@ -38,54 +32,39 @@ function steady(page) {
   }
 }
 
-export async function launch({ width = 1280, height = 800 } = {}) {
-  // Without a GPU, headless browsers draw WebGL in software only when asked, and the 3D table needs it.
-  const browser =
-    ENGINE === 'firefox'
-      ? // On CI, E2E_HEADED runs Firefox in a virtual display, where Mesa's software OpenGL can draw WebGL.
-        await firefox.launch({ headless: !process.env.E2E_HEADED, firefoxUserPrefs: { 'webgl.force-enabled': true } })
-      : await chromium.launch({ args: ['--enable-unsafe-swiftshader'] })
-  const context = await browser.newContext({ viewport: { width, height } })
-  const page = await context.newPage()
-  steady(page)
+/**
+ * Playwright Test's `test`, with every page a test opens watched for uncaught errors, which fail it, and given the same
+ * timeouts and stalled-load retry as the pages `freshPage` and `newTab` open.
+ */
+export const test = base.extend({
+  page: async ({ page }, use) => {
+    steady(page)
+    listen(page)
+    await use(page)
+  },
+  pageErrors: [
+    // Playwright reads a fixture's needs from this pattern, so it has to be one, even empty.
+    // oxlint-disable-next-line no-empty-pattern
+    async ({}, use) => {
+      pageErrors.length = 0
+      await use(pageErrors)
+      expect(pageErrors, 'no uncaught errors on any page the test opened').toEqual([])
+    },
+    { auto: true },
+  ],
+})
 
-  listen(page)
+export { expect }
 
-  return { browser, context, page, pageErrors, close: () => browser.close() }
+/** One check among many: a failure is recorded and the test carries on, so a run shows every failure, not the first. */
+export function check(name, ok, detail = '') {
+  expect.soft(ok, detail ? `${name}   (${String(detail).slice(0, 300)})` : name).toBeTruthy()
 }
 
 /** Waits for the table's controls and for P03's boot screen to go. */
 export async function tableReady(page, timeout = 60_000) {
   await page.getByRole('button', { name: /Look at the board|Sit back/ }).waitFor({ timeout })
   await page.getByRole('status', { name: /^Setting the table/ }).waitFor({ state: 'detached', timeout })
-}
-
-export function reporter() {
-  const results = []
-
-  function check(name, ok, detail = '') {
-    results.push({ name, ok })
-    console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name}${ok || !detail ? '' : `   — ${detail}`}`)
-  }
-
-  function section(title) {
-    console.log(`\n${title}`)
-  }
-
-  /** Returns the exit code rather than exiting, so the caller can close the browser first. */
-  function report(pageErrors = []) {
-    const failed = results.filter((r) => !r.ok)
-    console.log(`\n${results.length - failed.length} passed, ${failed.length} failed`)
-
-    if (pageErrors.length) {
-      console.log(`\nUncaught page errors (${pageErrors.length}):`)
-      for (const message of [...new Set(pageErrors)].slice(0, 10)) console.log('  - ' + message.slice(0, 200))
-    }
-
-    return failed.length === 0 && pageErrors.length === 0 ? 0 : 1
-  }
-
-  return { check, section, report, results }
 }
 
 /** Local or CI databases only; live runs must fit the real limits. */
@@ -215,7 +194,6 @@ export async function playWithBot(page, { stopAfterTurn = Infinity, beforeMove }
       console.log(`  The bot wanted ${JSON.stringify(action)} on turn ${state.turn}, as move ${actions.length + 1};`)
       console.log(`  the page had made ${await moves()}, and the table said:`)
       console.log(`  ${(await page.locator('[data-table]').innerText()).replace(/\s+/g, ' ').slice(0, 600)}`)
-      await page.screenshot({ path: 'e2e-failure.png' }).catch(() => {})
       throw error
     }
     state = result.state

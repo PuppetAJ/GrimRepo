@@ -1,13 +1,9 @@
 import { apply, createGame, nextBotAction, summary } from '../shared/src/index.ts'
-import { BASE, deletePlayer, freshPage, launch, newPlayer, reporter, resetRateLimits } from './lib.mjs'
+import { BASE, check, deletePlayer, freshPage, newPlayer, resetRateLimits, test } from './lib.mjs'
 
-await resetRateLimits()
+test.beforeAll(resetRateLimits)
 
-const { browser, page, pageErrors, close } = await launch()
-const { check, section, report } = reporter()
-
-section('The API')
-{
+test('The API', async ({ page }) => {
   const health = await page.request.get(`${BASE}/health`)
   check('the health check answers', health.ok(), String(health.status()))
   check('and says it is fine', (await health.json().catch(() => ({}))).ok === true)
@@ -15,10 +11,9 @@ section('The API')
   const missing = await page.request.get(`${BASE}/api/nothing-here`)
   check('an unknown API route is a 404', missing.status() === 404, String(missing.status()))
   check('in JSON, not the page', /json/.test(missing.headers()['content-type'] ?? ''))
-}
+})
 
-section('The home page')
-{
+test('The home page', async ({ page }) => {
   await page.goto(BASE, { waitUntil: 'domcontentloaded' })
   check('it has the name', (await page.getByRole('heading', { name: 'Grim Repo' }).count()) === 1)
   check('and a title', (await page.title()) === 'Grim Repo')
@@ -32,98 +27,97 @@ section('The home page')
     .then(() => true)
     .catch(() => false)
   check('the client reaches the API', reached)
-}
 
-section("P03's terminal")
-{
-  const readme = page.getByRole('img', { name: /The 3D table/ })
-  check('the README shows a gameplay screenshot first', await readme.isVisible())
-  const terminal = page.getByRole('region', { name: "P03's terminal" })
-  await terminal.getByText('You done gawking').first().waitFor()
-  check('then P03 takes it over with his terminal', !(await readme.isVisible()))
-  check(
-    'and greets the visitor once',
-    (await terminal.locator('.sr-only', { hasText: 'You done gawking' }).count()) === 1,
-  )
-  const prompt = terminal.getByLabel('Command for P03')
-  const run = async (command) => {
-    await prompt.fill(command)
-    await prompt.press('Enter')
-  }
-  await run('help')
-  check(
-    'help lists the commands',
-    await terminal
-      .getByText('The rules, since you clearly need them')
-      .waitFor()
-      .then(
-        () => true,
-        () => false,
-      ),
-  )
-  await run('card mainframe')
-  check(
-    'a card can be read up close',
-    await terminal
-      .getByText('attack 13')
-      .waitFor()
-      .then(
-        () => true,
-        () => false,
-      ),
-  )
-  await run('nonsense')
-  check(
-    'an unknown command says so',
-    await terminal
-      .getByText('command not found: nonsense')
-      .waitFor()
-      .then(
-        () => true,
-        () => false,
-      ),
-  )
-  await page.reload()
-  check(
-    'on the same visit, the README is already infected',
-    await terminal.waitFor({ timeout: 1500 }).then(
-      () => true,
-      () => false,
-    ),
-  )
-  // Only a build prerenders the README; the server picks the version by the visitor's cookies.
-  const served = await (await page.request.get(BASE)).text()
-  if (served.includes('data-home=')) {
+  await test.step("P03's terminal", async () => {
+    const readme = page.getByRole('img', { name: /The 3D table/ })
+    check('the README shows a gameplay screenshot first', await readme.isVisible())
+    const terminal = page.getByRole('region', { name: "P03's terminal" })
+    await terminal.getByText('You done gawking').first().waitFor()
+    check('then P03 takes it over with his terminal', !(await readme.isVisible()))
     check(
-      'and a build sends it that way, with the sign-in buttons, so nothing swaps on load',
-      served.includes('data-home="signed-out seen"') &&
-        !served.includes('table-720.webp') &&
-        served.includes('>Sign in</a>'),
+      'and greets the visitor once',
+      (await terminal.locator('.sr-only', { hasText: 'You done gawking' }).count()) === 1,
     )
-    // The first terminal on the page is the prerendered one; hydration should adopt it, not rebuild it.
-    await page.addInitScript(() => {
-      const find = () =>
-        (window.__terminal = document.querySelector('[aria-label="P03\'s terminal"]')) ?? requestAnimationFrame(find)
-      requestAnimationFrame(find)
-    })
+    const prompt = terminal.getByLabel('Command for P03')
+    const run = async (command) => {
+      await prompt.fill(command)
+      await prompt.press('Enter')
+    }
+    await run('help')
+    check(
+      'help lists the commands',
+      await terminal
+        .getByText('The rules, since you clearly need them')
+        .waitFor()
+        .then(
+          () => true,
+          () => false,
+        ),
+    )
+    await run('card mainframe')
+    check(
+      'a card can be read up close',
+      await terminal
+        .getByText('attack 13')
+        .waitFor()
+        .then(
+          () => true,
+          () => false,
+        ),
+    )
+    await run('nonsense')
+    check(
+      'an unknown command says so',
+      await terminal
+        .getByText('command not found: nonsense')
+        .waitFor()
+        .then(
+          () => true,
+          () => false,
+        ),
+    )
     await page.reload()
-    await page.waitForTimeout(2000)
     check(
-      'and reloading keeps the prerendered terminal instead of rebuilding it',
-      await page.evaluate(
-        () =>
-          Boolean(window.__terminal) && document.querySelector('[aria-label="P03\'s terminal"]') === window.__terminal,
+      'on the same visit, the README is already infected',
+      await terminal.waitFor({ timeout: 1500 }).then(
+        () => true,
+        () => false,
       ),
     )
-  }
-  await run('cd leaderboard')
-  await page.waitForURL(/\/leaderboard$/)
-  check('cd moves to another page', true)
-  await page.goto(BASE)
-}
+    // Only a build prerenders the README; the server picks the version by the visitor's cookies.
+    const served = await (await page.request.get(BASE)).text()
+    if (served.includes('data-home=')) {
+      check(
+        'and a build sends it that way, with the sign-in buttons, so nothing swaps on load',
+        served.includes('data-home="signed-out seen"') &&
+          !served.includes('table-720.webp') &&
+          served.includes('>Sign in</a>'),
+      )
+      // The first terminal on the page is the prerendered one; hydration should adopt it, not rebuild it.
+      await page.addInitScript(() => {
+        const find = () =>
+          (window.__terminal = document.querySelector('[aria-label="P03\'s terminal"]')) ?? requestAnimationFrame(find)
+        requestAnimationFrame(find)
+      })
+      await page.reload()
+      await page.waitForTimeout(2000)
+      check(
+        'and reloading keeps the prerendered terminal instead of rebuilding it',
+        await page.evaluate(
+          () =>
+            Boolean(window.__terminal) &&
+            document.querySelector('[aria-label="P03\'s terminal"]') === window.__terminal,
+        ),
+      )
+    }
+    await run('cd leaderboard')
+    await page.waitForURL(/\/leaderboard$/)
+    check('cd moves to another page', true)
+    await page.goto(BASE)
+  })
+})
 
-section('The compendium')
-{
+test('The compendium', async ({ page }) => {
   await page.goto(`${BASE}/cards`)
   await page.getByRole('heading', { name: 'Compendium' }).waitFor()
   const names = page.locator('main li h2')
@@ -178,10 +172,9 @@ section('The compendium')
     /q=duck.*view=3d.*card=RubberDuck|q=duck/.test(page.url()),
     page.url(),
   )
-}
+})
 
-section('Accounts and scores')
-{
+test('Accounts and scores', async ({ page }) => {
   // The page's request context shares its cookies, so this signs in the way the client will.
   const made = newPlayer()
   const player = { name: made.username, ...made }
@@ -256,10 +249,9 @@ section('Accounts and scores')
     headers: { origin: BASE },
   })
   check('and the test player is removed afterwards', await deletePlayer(page, player))
-}
+})
 
-section('A page whose code is gone')
-{
+test('A page whose code is gone', async ({ browser }) => {
   // Mimics an open tab asking for a chunk a new deploy removed, in development or a build.
   const { context, page: stale } = await freshPage(browser)
   await stale.route(/\/(pages\/Cards\.tsx|assets\/Cards-[^/]*\.js)/, (route) => route.abort())
@@ -291,7 +283,4 @@ section('A page whose code is gone')
       .catch(() => false),
   )
   await context.close()
-}
-
-await close()
-process.exit(report(pageErrors))
+})

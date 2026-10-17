@@ -54,6 +54,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.63.0",
     "oxlint": "^1.86.0",
     "pg": "^8.23.1",
     "playwright": "^1.63.0",

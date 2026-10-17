@@ -45,6 +45,9 @@ CLAUDE.md
 client/viewer/
 client/public/mockups/
 e2e-failure.png
+# Playwright Test's output: traces, screenshots and the HTML report.
+test-results/
+playwright-report/
 
 # Blender keeps its last save as a .blend1 backup beside the file.
 *.blend1
