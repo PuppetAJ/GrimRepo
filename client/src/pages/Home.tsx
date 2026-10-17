@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { useEffect, useSyncExternalStore } from 'react'
 import { Button } from '@/components/ui/button.tsx'
+import { Skeleton } from '@/components/ui/skeleton.tsx'
 import { Avatar } from '../components/Avatar.tsx'
 import { Glass } from '../components/p03/Glass.tsx'
 import { Infected, REPLAY_EVENT } from '../components/p03/Infected.tsx'
@@ -8,11 +9,13 @@ import { api, type LeaderboardRow } from '../lib/api.ts'
 import { authClient } from '../lib/auth.ts'
 import { number } from '../lib/format.ts'
 import { useAsync, type Async } from '../lib/useAsync.ts'
+import { useRise } from '../lib/rise.ts'
+import { CARD_COUNT } from './cardCount.ts'
 
 const badges = [
   { label: 'build', value: 'haunted', color: 'bg-primary' },
-  // As many as the compendium lists; the license badge went so P03's fits beside these on a phone.
-  { label: 'cards', value: '35', color: 'bg-[#c4b5fd]' },
+  // The license badge went so P03's fits beside these on a phone.
+  { label: 'cards', value: String(CARD_COUNT), color: 'bg-[#c4b5fd]' },
 ]
 
 const turn = [
@@ -45,6 +48,7 @@ const unchanging = () => () => {}
 const noList = () => null
 
 export function Home() {
+  const rise = useRise()
   const fresh = useAsync(() => api.leaderboard().then((board) => board.players.slice(0, 3)), 'top')
   // The last visit's list shows at once while the current one loads.
   const stale = useSyncExternalStore(unchanging, rememberedTop, noList)
@@ -73,7 +77,10 @@ export function Home() {
   return (
     <div className="flex flex-col gap-10 lg:flex-row lg:items-start">
       {/* Edge to edge on phones, so the text gets the room. */}
-      <article className="relative -mx-(--gutter) -mt-8 min-w-0 flex-1 border-b bg-card sm:mx-0 sm:mt-0 sm:rounded-lg sm:border">
+      <article
+        {...rise(0)}
+        className="relative -mx-(--gutter) -mt-8 min-w-0 flex-1 border-b bg-card sm:mx-0 sm:mt-0 sm:rounded-lg sm:border"
+      >
         <div className="border-b px-4 py-3 font-mono text-sm text-muted-foreground sm:px-5">README.md</div>
         <div className="flex flex-col gap-6 px-4 py-8 sm:px-11">
           <h1 className="font-display text-[clamp(3.5rem,20vw,4.5rem)] leading-none whitespace-nowrap sm:text-8xl">
@@ -93,15 +100,15 @@ export function Home() {
           </ul>
           <p className="max-w-2xl text-lg leading-relaxed text-foreground/85">
             A card game of sacrifices, played on floppy disks against P03 in his factory. Every card costs something: to
-            play the strong ones you give up the weak. Beat P03 in as few turns as you can, or take a deck across his
-            map, from Localhost to Production.
+            play the strong ones you give up the weak. Take a deck across his map, from Localhost to Production, or beat
+            him in a quick battle.
           </p>
           <div className="flex flex-wrap gap-3">
             <Button asChild size="lg">
-              <Link to="/game">Quick battle</Link>
+              <Link to="/run">Start a run</Link>
             </Button>
             <Button asChild size="lg" variant="outline">
-              <Link to="/run">Start a run</Link>
+              <Link to="/game">Quick battle</Link>
             </Button>
             <Button asChild size="lg" variant="outline">
               <Link to="/leaderboard">Leaderboard</Link>
@@ -148,16 +155,28 @@ export function Home() {
       </article>
 
       <aside className="flex w-full flex-col gap-7 lg:w-80">
-        <section className="flex flex-col gap-2">
+        <section {...rise(1)} className="flex flex-col gap-2">
           <h2 className="font-semibold">About</h2>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            An Inscryption-style card game: quick battles, and a roguelike run across three stages of P03's map.
+            An Inscryption-style card game: a roguelike run across three stages of P03's map, and quick battles.
           </p>
         </section>
-        <section className="flex flex-col gap-3 border-t pt-5">
+        <section {...rise(2)} className="flex flex-col gap-3 border-t pt-5">
           <h2 className="font-semibold">Top maintainers</h2>
           {top.status === 'ready' && top.data.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nobody yet. Be the first.</p>
+          ) : null}
+          {/* Held open while the list loads, so it fades in without moving the release below it. */}
+          {top.status === 'loading' ? (
+            <div role="status" aria-label="Loading the top maintainers" className="flex flex-col gap-3">
+              {[0, 1, 2].map((row) => (
+                <div key={row} aria-hidden className="flex items-center gap-3">
+                  <Skeleton className="size-7 shrink-0 rounded-full" />
+                  <Skeleton className="h-4 flex-1" />
+                  <Skeleton className="h-4 w-12" />
+                </div>
+              ))}
+            </div>
           ) : null}
           {top.status === 'ready'
             ? top.data.map((row) => (
@@ -165,7 +184,7 @@ export function Home() {
                   key={row.username}
                   to="/players/$username"
                   params={{ username: row.username }}
-                  className="flex items-center gap-3 text-sm hover:text-primary"
+                  className="appear flex items-center gap-3 text-sm hover:text-primary"
                 >
                   <Avatar name={row.username} />
                   <span className="flex-1 font-medium">{row.username}</span>
@@ -177,10 +196,12 @@ export function Home() {
             The full shortlog
           </Link>
         </section>
-        <section className="flex flex-col gap-1 border-t pt-5">
+        <section {...rise(3)} className="flex flex-col gap-1 border-t pt-5">
           <h2 className="font-semibold">Latest release</h2>
-          <div className="font-mono text-sm text-primary">v2.0.0</div>
-          <p className="text-sm text-muted-foreground">Rebuilt from a 2022 bootcamp project.</p>
+          <div className="font-mono text-sm text-primary">v3.0.0</div>
+          <p className="text-sm text-muted-foreground">
+            Runs: a deck taken across P03's map, three stages and their bosses.
+          </p>
         </section>
       </aside>
     </div>

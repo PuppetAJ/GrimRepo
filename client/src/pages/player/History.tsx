@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton.tsx'
 import { api } from '../../lib/api.ts'
 import { ago, number } from '../../lib/format.ts'
 import { useAsync } from '../../lib/useAsync.ts'
+import { useRise } from '../../lib/rise.ts'
 import { ending, type Run } from '../../components/charts/chart.ts'
 import { hashOf } from './runs.ts'
 import { Trace } from './Trace.tsx'
@@ -20,6 +21,7 @@ export function History({ username, lastLoss }: { username: string; lastLoss: Ru
   const page = useSearch({ from: '/players/$username', select: (search) => search.page ?? 1 })
   const navigate = useNavigate({ from: '/players/$username' })
   const history = useAsync(() => api.runs(username, page), `${username}:${page}`)
+  const rise = useRise()
   const turn = (to: number) =>
     void navigate({ search: (now) => ({ ...now, page: to > 1 ? to : undefined }), resetScroll: false })
   const runs = history.status === 'ready' ? history.data.runs : []
@@ -64,8 +66,9 @@ export function History({ username, lastLoss }: { username: string; lastLoss: Ru
       ) : null}
       {runs.length ? (
         <ol className={pinned ? '' : FIRST_ROW_OPEN}>
-          {runs.map((run) => (
-            <li key={run.playedAt} className="flex items-center gap-4 border-t px-6 py-3.5">
+          {runs.map((run, index) => (
+            // One after another as each page of the history loads.
+            <li key={run.playedAt} {...rise(index)} className="flex items-center gap-4 border-t px-6 py-3.5">
               <span
                 aria-hidden
                 className={`size-2.5 shrink-0 rounded-full ${run.outcome === 'win' ? 'bg-primary' : 'bg-death'}`}

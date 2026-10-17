@@ -10,6 +10,7 @@ import { Failure, Loading } from '../components/States.tsx'
 import { api, ApiError } from '../lib/api.ts'
 import { number } from '../lib/format.ts'
 import { useAsync } from '../lib/useAsync.ts'
+import { useRise } from '../lib/rise.ts'
 import { Activity } from './player/Activity.tsx'
 import { History } from './player/History.tsx'
 
@@ -28,6 +29,7 @@ const chartFailed = (
 )
 
 export function Player() {
+  const rise = useRise()
   const { username } = useParams({ from: '/players/$username' })
   const stats = useAsync(() => api.stats(username), username)
 
@@ -64,7 +66,7 @@ export function Player() {
 
   return (
     <div className="flex flex-col gap-10 profile:flex-row profile:items-start">
-      <aside className="@container w-full profile:w-72">
+      <aside {...rise(0)} className="@container w-full profile:w-72">
         <div className="grid items-center gap-5 @[43rem]:grid-cols-[minmax(15rem,1fr)_auto] @[43rem]:gap-x-12">
           <div className="flex items-center gap-5 profile:flex-col profile:items-start">
             <Avatar name={player.username} size="lg" className="profile:self-center" />
@@ -129,10 +131,12 @@ export function Player() {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col gap-7">
-        <Pinned player={player} className="profile:hidden" />
-        <Activity stats={player} />
+        <div {...rise(1)} className="flex flex-col gap-7">
+          <Pinned player={player} className="profile:hidden" />
+          <Activity stats={player} />
+        </div>
         {player.recent.length ? (
-          <section aria-labelledby="recent" className="flex flex-col gap-3">
+          <section {...rise(2)} aria-labelledby="recent" className="flex flex-col gap-3">
             <h2 id="recent" className="font-semibold">
               Recent runs
             </h2>
@@ -164,7 +168,9 @@ export function Player() {
             </div>
           </section>
         ) : null}
-        <History username={player.username} lastLoss={player.recent.find((run) => run.outcome === 'loss')} />
+        <div {...rise(3)}>
+          <History username={player.username} lastLoss={player.recent.find((run) => run.outcome === 'loss')} />
+        </div>
       </div>
     </div>
   )

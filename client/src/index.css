@@ -219,6 +219,39 @@
   }
 }
 
+/* What arrives after the page, such as the top maintainers, fades in; opacity only, as a transform would move anything
+   fixed inside it while it ran. */
+@keyframes appear {
+  from {
+    opacity: 0;
+  }
+}
+
+.appear {
+  animation: appear 0.2s ease-out;
+}
+
+/* Each page after the first rises into place a part at a time, 60ms apart and no more than nine steps in, eased with a
+   slight overshoot after Wicken's springs. Held hidden through its delay. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    translate: 0 16px;
+  }
+}
+
+[data-rise] {
+  animation: rise 0.55s cubic-bezier(0.22, 1.2, 0.36, 1) backwards;
+  animation-delay: calc(min(var(--rise, 0), 9) * 60ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .appear,
+  [data-rise] {
+    animation: none;
+  }
+}
+
 [data-table] {
   cursor:
     url(/cursors/arrow.svg) 2 2,

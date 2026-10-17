@@ -1,5 +1,5 @@
 import { ChevronDown, LogIn, LogOut, Menu, Settings, UserPlus, UserRound } from 'lucide-react'
-import { Suspense, useEffect } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from '@tanstack/react-router'
 import { LoadFailed, ReloadPage } from './LoadFailed.tsx'
 import { toast } from 'sonner'
@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu.tsx'
 import { authClient, settled } from '../lib/auth.ts'
+import { markLanded } from '../lib/rise.ts'
 import { homeVariant } from '../lib/homeVariant.ts'
 import { Avatar } from './Avatar.tsx'
 import { Logo } from './Logo.tsx'
@@ -33,6 +34,11 @@ export function Layout() {
   const { pathname } = useLocation()
   // The game's tables set their own widths, the site's or wider; a run's mockup is a run's table.
   const playing = ['/game', '/run', '/mockups/'].some((path) => pathname.startsWith(path))
+  // The first page arrives prerendered; the pages moved to after it rise in.
+  useEffect(() => markLanded(), [])
+  // While the session loads, a placeholder holds the header's height; what replaces it fades in.
+  const holding = session.isPending && homeVariant()?.signedIn !== false
+  const [heldAtFirst] = useState(holding)
   const navigate = useNavigate()
   const user = session.data?.user as { displayUsername?: string; username?: string; isAnonymous?: boolean } | undefined
   const name = user?.displayUsername ?? user?.username
@@ -59,12 +65,12 @@ export function Layout() {
             </span>
           </div>
           {/* Holds the header's height while the session loads, unless the server already knew there was none. */}
-          {session.isPending && homeVariant()?.signedIn !== false ? (
+          {holding ? (
             <Button variant="outline" aria-hidden tabIndex={-1} className="invisible">
               Sign in
             </Button>
           ) : (
-            <>
+            <div className={`flex items-center gap-2 ${heldAtFirst ? 'appear' : ''}`}>
               <div className="hidden gap-2 sm:flex">
                 {name ? (
                   <>
@@ -128,7 +134,7 @@ export function Layout() {
                   )}
                 </DropdownMenuContent>
               </DropdownMenu>
-            </>
+            </div>
           )}
         </div>
       </header>

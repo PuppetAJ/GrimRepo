@@ -12,9 +12,11 @@ import { api, type LeaderboardRow } from '../lib/api.ts'
 import { authClient } from '../lib/auth.ts'
 import { initials, number } from '../lib/format.ts'
 import { useAsync } from '../lib/useAsync.ts'
+import { useRise } from '../lib/rise.ts'
 import { FaultyScreen } from '../components/p03/FaultyScreen.ts'
 
 export function Leaderboard() {
+  const rise = useRise()
   // First place's row, which its screen and corruption are laid over.
   const firstRow = useRef<HTMLTableRowElement>(null)
   const page = useSearch({ from: '/leaderboard', select: (search) => search.page ?? 1 })
@@ -27,12 +29,12 @@ export function Leaderboard() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-2">
+      <div {...rise(0)} className="flex flex-col gap-2">
         <h1 className="font-display text-6xl leading-none">Contributors</h1>
         <p className="font-mono text-sm text-muted-foreground">git shortlog --runs --since="last reset"</p>
       </div>
-      {/* Reserves height so the page doesn't jump when the rows arrive. */}
-      <div className="min-h-[65dvh]">
+      {/* Reserves height so the page doesn't jump when the rows arrive. As one piece, so first place's layers stay on its row. */}
+      <div {...rise(1)} className="min-h-[65dvh]">
         {board.status === 'loading' ? (
           <div role="status" aria-label="Loading the leaderboard">
             <ol aria-hidden className="overflow-hidden rounded-lg border bg-card">

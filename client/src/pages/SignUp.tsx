@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label.tsx'
 import { PasswordInput } from '../components/PasswordInput.tsx'
 import { authClient, authError, settled } from '../lib/auth.ts'
 import { P03Line } from '../components/p03/P03Line.tsx'
+import { useRise } from '../lib/rise.ts'
 
 // The server checks all of this too; this only saves a round trip and explains the rule.
 const schema = z.object({
@@ -19,6 +20,7 @@ const schema = z.object({
 type Field = keyof z.infer<typeof schema>
 
 export function SignUp() {
+  const rise = useRise()
   const navigate = useNavigate()
   const [errors, setErrors] = useState<Partial<Record<Field | 'form', string>>>({})
   const [busy, setBusy] = useState(false)
@@ -73,14 +75,16 @@ export function SignUp() {
 
   return (
     <div className="mx-auto flex w-full max-w-sm flex-col gap-6">
-      <h1 className="font-display text-5xl">Create an account</h1>
-      <P03Line>A new challenger. Pick a name I can put on my leaderboard.</P03Line>
+      <h1 {...rise(0)} className="font-display text-5xl">
+        Create an account
+      </h1>
+      <P03Line {...rise(1)}>A new challenger. Pick a name I can put on my leaderboard.</P03Line>
       {guest ? (
         <p className="-mt-3 text-sm text-muted-foreground">
-          Your guest games come with you, and your best goes on the board.
+          Your guest runs come with you, and your best goes on the board.
         </p>
       ) : null}
-      <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
+      <form {...rise(2)} onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
         {field(
           'username',
           'Username',

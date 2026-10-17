@@ -5,12 +5,17 @@ import { Button } from '@/components/ui/button.tsx'
 import { Input } from '@/components/ui/input.tsx'
 import { Cost } from './cards/CardFacts.tsx'
 import { DECK } from '../game/deck.ts'
+import { useRise } from '../lib/rise.ts'
 import { COSTS, matches, SORTS, sorted, type Sort } from './cards/deck.ts'
 import { Grid } from './cards/Grid.tsx'
 import { Viewer } from './cards/Viewer.tsx'
 import type { CardsSearch } from '../router.tsx'
 
+// One look for every control here: a bordered group of plain buttons, the chosen one filled.
+const GROUP = 'flex divide-x overflow-hidden rounded-md border'
+
 export function Cards() {
+  const rise = useRise()
   const search = useSearch({ from: '/cards' })
   const navigate = useNavigate({ from: '/cards' })
   const query = search.q ?? ''
@@ -40,14 +45,14 @@ export function Cards() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-2">
+      <div {...rise(0)} className="flex flex-col gap-2">
         <h1 className="font-display text-6xl leading-none">Compendium</h1>
         <p role="status" className="font-mono text-sm text-muted-foreground">
           ls ./cards · {cards.length} of {DECK.length} cards
         </p>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div {...rise(1)} className="flex flex-wrap items-center gap-3">
         <label htmlFor={field} className="sr-only">
           Search the cards
         </label>
@@ -59,17 +64,20 @@ export function Cards() {
             value={query}
             onChange={(event) => change({ q: event.target.value || null })}
             placeholder="Name, Sigil, or Cost"
-            className="pl-9"
+            className="border-border bg-transparent pl-9 dark:bg-transparent"
           />
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
-            <label className="flex items-center gap-2 text-sm text-muted-foreground">
+            <label htmlFor={`${field}-sort`} className="text-sm text-muted-foreground">
               Sort:
+            </label>
+            <div className={GROUP}>
               <select
+                id={`${field}-sort`}
                 value={sort}
                 onChange={(event) => change({ sort: event.target.value === 'deck' ? null : event.target.value })}
-                className="h-8 rounded-md border border-input bg-transparent px-2 text-sm text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                className="h-8 bg-transparent px-2 text-sm text-foreground hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-inset dark:hover:bg-accent/50"
               >
                 {Object.entries(SORTS).map(([key, label]) => (
                   <option key={key} value={key} className="bg-popover">
@@ -77,41 +85,44 @@ export function Cards() {
                   </option>
                 ))}
               </select>
-            </label>
-            <Button
-              variant="outline"
-              size="sm"
-              aria-label={descending ? 'Highest first' : 'Lowest first'}
-              title={descending ? 'Highest first' : 'Lowest first'}
-              onClick={() => change({ order: descending ? null : 'desc' })}
-            >
-              {descending ? <ArrowDownWideNarrow aria-hidden /> : <ArrowUpNarrowWide aria-hidden />}
-            </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label={descending ? 'Highest first' : 'Lowest first'}
+                title={descending ? 'Highest first' : 'Lowest first'}
+                className="rounded-none"
+                onClick={() => change({ order: descending ? null : 'desc' })}
+              >
+                {descending ? <ArrowDownWideNarrow aria-hidden /> : <ArrowUpNarrowWide aria-hidden />}
+              </Button>
+            </div>
           </div>
           {/* Tighter buttons on phones keep this on one line down to 320px. */}
-          <div role="group" aria-label="Filter by cost" className="flex items-center gap-1">
-            <span className="mr-1 text-sm text-muted-foreground">Cost:</span>
-            {COSTS.map((cost) => {
-              const on = costs.includes(cost)
-              return (
-                <Button
-                  key={cost}
-                  variant="outline"
-                  size="sm"
-                  aria-pressed={on}
-                  className={`max-sm:px-2 max-sm:[&_span]:tracking-normal ${on ? 'border-primary bg-primary/15' : ''}`}
-                  onClick={() =>
-                    change({
-                      cost: (on ? costs.filter((c) => c !== cost) : [...costs, cost]).sort().join(',') || null,
-                    })
-                  }
-                >
-                  <Cost cost={cost} />
-                </Button>
-              )
-            })}
+          <div role="group" aria-label="Filter by cost" className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Cost:</span>
+            <div className={GROUP}>
+              {COSTS.map((cost) => {
+                const on = costs.includes(cost)
+                return (
+                  <Button
+                    key={cost}
+                    variant="ghost"
+                    size="sm"
+                    aria-pressed={on}
+                    className={`rounded-none max-sm:px-2 max-sm:[&_span]:tracking-normal ${on ? 'bg-muted' : ''}`}
+                    onClick={() =>
+                      change({
+                        cost: (on ? costs.filter((c) => c !== cost) : [...costs, cost]).sort().join(',') || null,
+                      })
+                    }
+                  >
+                    <Cost cost={cost} />
+                  </Button>
+                )
+              })}
+            </div>
           </div>
-          <div role="group" aria-label="View" className="flex overflow-hidden rounded-md border">
+          <div role="group" aria-label="View" className={GROUP}>
             <Button
               variant="ghost"
               size="sm"
@@ -139,7 +150,9 @@ export function Cards() {
       ) : view === 'grid' ? (
         <Grid cards={cards} onOpen={(id) => change({ view: '3d', card: id })} />
       ) : (
-        <Viewer cards={cards} chosen={chosen} onChoose={(id) => change({ card: id })} />
+        <div {...rise(2)}>
+          <Viewer cards={cards} chosen={chosen} onChoose={(id) => change({ card: id })} />
+        </div>
       )}
     </div>
   )

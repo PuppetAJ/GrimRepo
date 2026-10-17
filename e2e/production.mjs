@@ -80,6 +80,38 @@ section('Playing')
   check('the demo account signs in', true)
 }
 
+section('A whole run')
+{
+  // The guest dealt in above starts a run, and a bot plays it to the end in saves the size the browser sends.
+  const { applyRun, createRun, deathSkipBonus, playRun, RUN_SAVE_LIMIT, scoreRun } =
+    await import('../shared/src/index.ts')
+  await page.goto(`${BASE}/run`, { waitUntil: 'networkidle' })
+  await page.locator('[data-run-moves]').waitFor()
+  check('/run opens a run for the guest', true)
+  const opened = await (await page.request.post(`${BASE}/api/runs`, { headers: { origin: BASE } })).json()
+  const step = (state, action) => {
+    const result = applyRun(state, action)
+    if (!result.ok) throw new Error(result.reason)
+    return result.state
+  }
+  const { state, actions } = playRun(createRun({ seed: opened.seed, death: opened.death, rival: opened.rival }), step)
+  let last = null
+  for (let from = 0; from < actions.length; from += RUN_SAVE_LIMIT) {
+    const response = await page.request.post(`${BASE}/api/runs/${opened.id}/moves`, {
+      data: { from, actions: actions.slice(from, from + RUN_SAVE_LIMIT) },
+      headers: { origin: BASE },
+    })
+    last = await response.json().catch(() => ({}))
+    if (!response.ok()) break
+  }
+  const bonus = state.death?.skipped ? deathSkipBonus(state.death.card) : 1
+  check(
+    'a whole run is replayed and scored by the server, as the rules play it',
+    last?.status === state.status && last?.score === scoreRun(state.record, state.status === 'won', bonus),
+    JSON.stringify(last),
+  )
+}
+
 section('Guessing')
 {
   // Last, since it locks this address out of sign-in for a minute; a made-up name touches no real account.
