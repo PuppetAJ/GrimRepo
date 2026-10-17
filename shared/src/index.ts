@@ -70,7 +70,30 @@ export {
   tidyDeathName,
   type DeathChoice,
 } from './run/death.ts'
-export { cardsIn, ENCOUNTERS, encounter, STAGES, type Encounter, type Plan, type Queued } from './encounters.ts'
+export {
+  cardsIn,
+  ENCOUNTERS,
+  encounter,
+  STAGES,
+  TUTORIAL_ENCOUNTER,
+  type Encounter,
+  type Plan,
+  type Queued,
+} from './encounters.ts'
+export {
+  afterMove,
+  afterStep,
+  createTutorial,
+  expectedMove,
+  TUTORIAL,
+  tutorialActions,
+  tutorialAllows,
+  tutorialStep,
+  type Face,
+  type Move,
+  type Progress,
+  type TutorialStep,
+} from './tutorial.ts'
 export { nextRunAction, playRun } from './run/bot.ts'
 export { findNode, generateStage, MAP_COLUMNS } from './run/map.ts'
 export {

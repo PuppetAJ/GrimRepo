@@ -195,8 +195,27 @@ export const DESPERATE_CARDS: string[][] = [
 
 export const ENCOUNTERS: Record<string, Encounter> = Object.fromEntries(list.map((found) => [found.id, found]))
 
+/** The tutorial's battle; kept out of ENCOUNTERS, so no run ever picks it. */
+export const TUTORIAL_ENCOUNTER: Encounter = {
+  id: 'tutorial',
+  name: 'Tutorial',
+  intro: "Sit down. I'll show you how this works, once.",
+  stage: 0,
+  boss: false,
+  phases: [
+    [
+      [{ lane: 1, card: 'Boilerplate' }],
+      [
+        { lane: 1, card: 'CopyPaste' },
+        { lane: 3, card: 'CopyPaste' },
+      ],
+      [{ lane: 2, card: 'Mainframe' }],
+    ],
+  ],
+}
+
 export function encounter(id: string): Encounter {
-  const found = ENCOUNTERS[id]
+  const found = id === TUTORIAL_ENCOUNTER.id ? TUTORIAL_ENCOUNTER : ENCOUNTERS[id]
   if (!found) throw new Error(`No such encounter: ${id}`)
   return found
 }

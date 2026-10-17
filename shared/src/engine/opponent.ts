@@ -96,9 +96,9 @@ function nearestFree(state: GameState, lane: number): number | undefined {
 export function queuePlan(state: GameState, rng: Rng, events: GameEvent[]): void {
   const found = encounter(state.opponent.encounter as string)
   // Well ahead in a battle that isn't a boss's, P03 eases off: its plan waits.
-  if (!found.boss && state.scale <= -EASE_AT) return
+  if (!found.boss && !state.scripted && state.scale <= -EASE_AT) return
   // Far behind, P03 makes one desperate play a battle: a strong card for the stage, in a free lane.
-  if (!state.opponent.desperate && state.scale >= DESPERATE_AT) {
+  if (!state.opponent.desperate && !state.scripted && state.scale >= DESPERATE_AT) {
     const lane = [...Array(LANES).keys()].find((candidate) => !state.opponent.back[candidate])
     if (lane !== undefined) {
       state.opponent.desperate = true
@@ -111,6 +111,7 @@ export function queuePlan(state: GameState, rng: Rng, events: GameEvent[]): void
   const turn = plan[state.opponent.step]
   state.opponent.step += 1
   if (!turn) {
+    if (state.scripted) return
     queue(state, rng, queueCountFor(state.turn, rng), state.turn, events)
     return queueHaunt(state, events)
   }

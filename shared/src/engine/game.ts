@@ -37,6 +37,8 @@ export type GameOptions = {
   haunt?: { card: string; by: string | null } | null
   /** A run's integrity, which the cards P03 destroys wear down. */
   integrity?: { left: number; max: number }
+  /** Deals the deck in order and has P03 play its encounter's plan exactly, for the tutorial. */
+  scripted?: boolean
 }
 
 export function createGame({
@@ -49,6 +51,7 @@ export function createGame({
   items,
   haunt = null,
   integrity,
+  scripted = false,
 }: GameOptions): GameState {
   const rng = new Rng(seed >>> 0)
   const library = deck ? structuredClone(deck) : PLAYER_DECK.map(deckCard)
@@ -61,10 +64,16 @@ export function createGame({
     nextUid: 1,
     debug,
     scale: 0,
-    player: { library, deck: rng.shuffle([...library.keys()]), hand: [], board: Array(LANES).fill(null) },
+    player: {
+      library,
+      deck: scripted ? [...library.keys()] : rng.shuffle([...library.keys()]),
+      hand: [],
+      board: Array(LANES).fill(null),
+    },
     opponent: { front: Array(LANES).fill(null), back: Array(LANES).fill(null), encounter, phase: 0, step: 0 },
     summon: null,
   }
+  if (scripted) state.scripted = true
   if (outOfMemory) state.rebuilds = 0
   if (items) state.items = [...items]
   if (integrity) state.integrity = { ...integrity }
@@ -390,7 +399,8 @@ function playTurn(state: GameState, rng: Rng, events: GameEvent[]): void {
   state.turn += 1
   events.push({ type: 'turnStarted', turn: state.turn })
   // While P03 leads a run's battle, the player may draw a second card from the deck this turn, after the first.
-  state.catchUp = Boolean(state.opponent.encounter) && state.scale < 0 && state.player.deck.length > 0
+  state.catchUp =
+    Boolean(state.opponent.encounter) && !state.scripted && state.scale < 0 && state.player.deck.length > 0
   state.drawn = state.player.hand.length >= HAND_LIMIT
 }
 
