@@ -99,7 +99,7 @@ export const TUTORIAL: TutorialStep[] = [
   },
   {
     id: 'overkilled',
-    face: 'choking',
+    face: 'neutral',
     says: "Overkill carries into the card behind. It never reaches the scale. I designed it that way. You're welcome. And an open lane lets my cards hit you.",
   },
   {
@@ -119,7 +119,7 @@ export const TUTORIAL: TutorialStep[] = [
   },
   {
     id: 'items',
-    face: 'dying',
+    face: 'impatient',
     says: "That's my Mainframe in the queue. It would flatten your Documentation. You've got Scissors, so cut it. An item works once, on your turn.",
     moves: [{ type: 'use', item: 'scissors', row: 'back', lane: 2 }],
   },
