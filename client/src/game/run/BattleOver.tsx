@@ -16,14 +16,15 @@ export function BattleOver({ run, onSummary }: { run: RunReady; onSummary: () =>
     <P03Dialogue
       role="status"
       face={won ? 'whiteflag' : 'happy'}
-      className="w-[min(36rem,calc(100vw-1rem))] bg-p03-ground/95"
+      // As wide as the board it sits over, and no wider, so it stays centered on it.
+      className="w-full max-w-[36rem] bg-p03-ground/95"
       actions={
         state.status === 'playing' ? (
-          <Button data-action="leave" size="sm" onClick={() => run.act({ type: 'leave' })}>
+          <Button data-action="leave" className="text-base" onClick={() => run.act({ type: 'leave' })}>
             {boss ? 'Claim the reward' : 'Back to the map'}
           </Button>
         ) : (
-          <Button data-action="summary" size="sm" onClick={onSummary}>
+          <Button data-action="summary" className="text-base" onClick={onSummary}>
             See how the run went
           </Button>
         )

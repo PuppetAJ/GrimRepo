@@ -50,24 +50,54 @@ export function targetSelector(move: Move): string {
   }
 }
 
+/** A control to outline, with how far out the outline sits: clear of what it marks, but inside whatever clips it. */
+type Outline = { selector: string; offset: number }
+
 /**
  * What gets the dotted outline: only what the table doesn't already mark. A lane to play or sacrifice into, and the
  * card an item is aimed at, label themselves on the text table, so they go without; so does a pile's count.
  */
-export function outlineSelector(move: Move): string | null {
+export function outlinesFor(move: Move): Outline[] {
+  const text = '[data-table="text"]'
+  const hud = '[data-table="3d"]'
   switch (move.type) {
     case 'draw':
-      return `[data-table="text"] [data-action="draw-${move.from}"] > span:first-child, [data-table="3d"] [data-action="draw-${move.from}"]`
+      return [
+        { selector: `${text} [data-action="draw-${move.from}"] > span:first-child`, offset: 4 },
+        { selector: `${hud} [data-action="draw-${move.from}"]`, offset: 3 },
+      ]
     case 'select':
-      return `[data-table="text"] [data-action="select"][aria-label^="${card(move.card).name},"]`
+      // The hand scrolls, so it clips past its own padding; this sits in that padding, a gap off the card.
+      return [{ selector: `${text} [data-action="select"][aria-label^="${card(move.card).name},"]`, offset: 1 }]
     case 'ringBell':
-      return '[data-table] [data-action="ringBell"]'
+      // EXECUTE fills its column, which clips, so the outline runs just inside its border instead.
+      return [
+        { selector: `${text} [data-action="ringBell"]`, offset: -6 },
+        { selector: `${hud} [data-action="ringBell"]`, offset: 3 },
+      ]
     case 'use':
-      return `[data-table] [data-action="use"][aria-label^="${ITEMS[move.item].name}:"], [data-table="text"] button[aria-label="Menu"]`
+      return [
+        { selector: `[data-table] [data-action="use"][aria-label^="${ITEMS[move.item].name}:"]`, offset: 3 },
+        { selector: `${text} button[aria-label="Menu"]`, offset: 1 },
+      ]
     case 'mark':
     case 'place':
-      return null
+      return []
   }
+}
+
+/** The outlines as a style sheet: dotted white, flashing on and off, still for anyone who asks for less motion. */
+function outlineCss(outlines: Outline[]): string {
+  if (!outlines.length) return ''
+  const all = outlines.map((one) => one.selector).join(', ')
+  // Only the width, style and offset win over the control's own; the color is left to the flash, which can't
+  // override an important one.
+  return [
+    `${all} { outline-width: 2px !important; outline-style: dotted !important; outline-color: #fff; animation: tutorial-flash 1.1s steps(1) infinite; }`,
+    ...outlines.map((one) => `${one.selector} { outline-offset: ${one.offset}px !important; }`),
+    '@keyframes tutorial-flash { 0% { outline-color: #fff; } 50% { outline-color: transparent; } }',
+    `@media (prefers-reduced-motion: reduce) { ${all} { animation: none; } }`,
+  ].join('\n')
 }
 
 /** The last value seen while the table was still, so nothing changes ahead of P03's turn playing out. */
@@ -203,15 +233,11 @@ export function TutorialBlurb({
     if (!onPressOn || takesKeys(event.target)) return
     onPressOn()
   }
-  const outline = move && !busy ? outlineSelector(move) : null
+  const outlines = move && !busy ? outlineCss(outlinesFor(move)) : ''
   return (
     <>
-      {/* What to press, outlined in flashing white dots, inside its own edge so no container clips it. */}
-      {outline ? (
-        <style>{`${outline} { outline: 2px dotted #fff !important; outline-offset: -2px !important; animation: tutorial-flash 1.1s steps(1) infinite; }
-@keyframes tutorial-flash { 50% { outline-color: transparent; } }
-@media (prefers-reduced-motion: reduce) { ${outline} { animation: none; } }`}</style>
-      ) : null}
+      {/* What to press, outlined in flashing white dots. */}
+      {outlines ? <style>{outlines}</style> : null}
       <P03Dialogue
         ref={box}
         face={step.face}
@@ -267,13 +293,14 @@ export function TutorialEnding() {
     <P03Dialogue
       face="whiteflag"
       aria-label="Tutorial complete"
-      className="w-[min(36rem,calc(100vw-1rem))] bg-p03-ground/95"
+      // As wide as the board it sits over, and no wider, so it stays centered on it.
+      className="w-full max-w-[36rem] bg-p03-ground/95"
       actions={
         <>
-          <Button asChild size="sm">
+          <Button asChild className="text-base">
             <Link to="/run">Start a run</Link>
           </Button>
-          <Button asChild size="sm" variant="outline" className="hover:bg-p03/10 hover:text-p03">
+          <Button asChild variant="outline" className="text-base hover:bg-p03/10 hover:text-p03">
             <Link to="/tutorial" reloadDocument>
               Play tutorial again
             </Link>
@@ -281,7 +308,7 @@ export function TutorialEnding() {
         </>
       }
     >
-      <p aria-live="polite">Fine. You know the rules. Now a real one, where it actually counts.</p>
+      <p aria-live="polite">Fine. You know the rules. Now a real game, where it actually counts.</p>
     </P03Dialogue>
   )
 }
