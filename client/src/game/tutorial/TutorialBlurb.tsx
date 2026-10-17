@@ -1,9 +1,10 @@
 import { Link } from '@tanstack/react-router'
 import { cn } from 'cn'
 import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from 'react'
-import { card, gloss, ITEMS, said, type Face, type Move, type TutorialStep } from 'shared'
+import { card, gloss, ITEMS, said, type Move, type TutorialStep } from 'shared'
 import { Button } from '@/components/ui/button.tsx'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover.tsx'
+import { P03Dialogue } from '../P03Dialogue.tsx'
 
 /** What the step waits for, in the words the table's own controls use; lanes count from 1. */
 export function moveText(move: Move): string {
@@ -31,7 +32,7 @@ export function tutorialPrompt(blurb: Blurb | null): string | null {
   return blurb.move ? moveText(blurb.move) : 'Read what P03 says, then click it to go on.'
 }
 
-/** The table's controls for the move, so the step can outline them and keep the blurb off them. */
+/** The table's controls for the move, which the blurb keeps clear of. */
 export function targetSelector(move: Move): string {
   switch (move.type) {
     case 'draw':
@@ -49,29 +50,31 @@ export function targetSelector(move: Move): string {
   }
 }
 
+/**
+ * What gets the dotted outline: only what the table doesn't already mark. A lane to play or sacrifice into, and the
+ * card an item is aimed at, label themselves on the text table, so they go without; so does a pile's count.
+ */
+export function outlineSelector(move: Move): string | null {
+  switch (move.type) {
+    case 'draw':
+      return `[data-table="text"] [data-action="draw-${move.from}"] > span:first-child, [data-table="3d"] [data-action="draw-${move.from}"]`
+    case 'select':
+      return `[data-table="text"] [data-action="select"][aria-label^="${card(move.card).name},"]`
+    case 'ringBell':
+      return '[data-table] [data-action="ringBell"]'
+    case 'use':
+      return `[data-table] [data-action="use"][aria-label^="${ITEMS[move.item].name}:"], [data-table="text"] button[aria-label="Menu"]`
+    case 'mark':
+    case 'place':
+      return null
+  }
+}
+
 /** The last value seen while the table was still, so nothing changes ahead of P03's turn playing out. */
 export function useSettled<T>(value: T, busy: boolean): T {
   const [settled, setSettled] = useState(value)
   if (!busy && settled !== value) setSettled(value)
   return busy ? settled : value
-}
-
-// Where the screen sits in frame.png, traced from P03's model, as fractions of the image.
-const SCREEN = { left: '11%', top: '24.8%', width: '72.8%', height: '60%' }
-
-/** P03's head as line art, with a face on its screen: both white on nothing, lit in the terminal's green. */
-export function P03Face({ face, className = '' }: { face: Face; className?: string }) {
-  const lit = { maskSize: '100% 100%', maskRepeat: 'no-repeat' } as const
-  return (
-    <span aria-hidden className={`relative block aspect-136/105 shrink-0 ${className}`}>
-      <span className="absolute inset-0 bg-p03" style={{ ...lit, maskImage: 'url(/p03/frame.png)' }} />
-      {/* The pack stores its faces upside down; the 3D screen flips them the same way. */}
-      <span
-        className="absolute -scale-y-100 bg-p03"
-        style={{ ...SCREEN, ...lit, maskImage: `url(/p03/screen/${face}.png)`, maskMode: 'luminance' }}
-      />
-    </span>
-  )
 }
 
 /** What P03 says, with each linked word underlined and opening its explanation. */
@@ -200,56 +203,51 @@ export function TutorialBlurb({
     if (!onPressOn || takesKeys(event.target)) return
     onPressOn()
   }
+  const outline = move && !busy ? outlineSelector(move) : null
   return (
     <>
-      {/* The awaited control, outlined the way Inscryption marks what to press. */}
-      {selector ? (
-        <style>{`${selector
-          .split(', ')
-          .map((one) => `[data-table] ${one}`)
-          .join(', ')} { outline: 2px dotted #fff !important; outline-offset: 3px !important; }`}</style>
+      {/* What to press, outlined in flashing white dots, inside its own edge so no container clips it. */}
+      {outline ? (
+        <style>{`${outline} { outline: 2px dotted #fff !important; outline-offset: -2px !important; animation: tutorial-flash 1.1s steps(1) infinite; }
+@keyframes tutorial-flash { 50% { outline-color: transparent; } }
+@media (prefers-reduced-motion: reduce) { ${outline} { animation: none; } }`}</style>
       ) : null}
-      <section
+      <P03Dialogue
         ref={box}
+        face={step.face}
+        compact={compact}
         aria-label="P03's tutorial"
         onClick={onClick}
         style={place.center === null ? undefined : { left: place.center }}
         className={cn(
-          'pointer-events-auto z-40 flex -translate-x-1/2 items-center rounded-md border-2 border-p03-edge bg-p03-ground/80 font-terminal text-p03 backdrop-blur-[2px] [text-shadow:0_0_4px_#000]',
+          'pointer-events-auto z-40 -translate-x-1/2 bg-p03-ground/80 backdrop-blur-[2px]',
           fixed ? 'fixed' : 'absolute',
           place.center === null ? 'left-1/2' : '',
           place.bottom ? 'bottom-2' : 'top-5',
-          compact
-            ? 'h-28 w-[min(30rem,calc(100vw-1rem))] gap-2 px-2 pt-3 pb-2'
-            : 'h-36 w-176 max-w-[calc(100%-1rem)] gap-3 px-3 pt-4 pb-3',
+          // One size for every line, so the box never jumps between steps.
+          compact ? 'h-24 w-[min(30rem,calc(100vw-1rem))]' : 'h-30 w-[min(36rem,calc(100%-1rem))]',
           onPressOn ? 'cursor-pointer' : '',
           className,
         )}
+        actions={
+          onPressOn ? (
+            <button
+              type="button"
+              onClick={onPressOn}
+              aria-label="Continue"
+              aria-keyshortcuts="Enter Space"
+              className="-mr-1 -mb-1 text-lg leading-none motion-safe:animate-pulse"
+            >
+              ▼
+            </button>
+          ) : null
+        }
       >
-        <span className="absolute -top-3.5 left-3 rounded-sm border-2 border-p03-edge bg-p03-ground px-3 text-base leading-tight">
-          P03
-        </span>
-        <P03Face face={step.face} className={compact ? 'w-16' : 'w-28'} />
         {/* Keyed so a screen reader hears each new line once. */}
-        <p
-          key={step.id}
-          aria-live="polite"
-          className={cn('min-w-0 flex-1 self-start', compact ? 'text-sm leading-snug' : 'text-xl leading-snug')}
-        >
+        <p key={step.id} aria-live="polite">
           <Line text={step.says} />
         </p>
-        {onPressOn ? (
-          <button
-            type="button"
-            onClick={onPressOn}
-            aria-label="Continue"
-            aria-keyshortcuts="Enter Space"
-            className="absolute right-2 bottom-1 text-lg leading-none motion-safe:animate-pulse"
-          >
-            ▼
-          </button>
-        ) : null}
-      </section>
+      </P03Dialogue>
     </>
   )
 }
@@ -266,24 +264,24 @@ export function SkipTutorial({ className = '' }: { className?: string }) {
 /** The hand-off once the tutorial is won: straight to a real run. */
 export function TutorialEnding() {
   return (
-    <section
+    <P03Dialogue
+      face="whiteflag"
       aria-label="Tutorial complete"
-      className="flex w-full max-w-md flex-col gap-4 rounded-md border-2 border-p03-edge bg-p03-ground/95 p-4 font-terminal text-xl text-p03"
+      className="w-[min(36rem,calc(100vw-1rem))] bg-p03-ground/95"
+      actions={
+        <>
+          <Button asChild size="sm">
+            <Link to="/run">Start a run</Link>
+          </Button>
+          <Button asChild size="sm" variant="outline" className="hover:bg-p03/10 hover:text-p03">
+            <Link to="/tutorial" reloadDocument>
+              Play tutorial again
+            </Link>
+          </Button>
+        </>
+      }
     >
-      <div className="flex items-center gap-3">
-        <P03Face face="whiteflag" className="w-28" />
-        <p aria-live="polite">Fine. You know the rules. Now a real one, where it actually counts.</p>
-      </div>
-      <div className="flex flex-wrap justify-end gap-2">
-        <Button asChild>
-          <Link to="/run">Start a run</Link>
-        </Button>
-        <Button asChild variant="outline" className="hover:bg-p03/10 hover:text-p03">
-          <Link to="/tutorial" reloadDocument>
-            Play tutorial again
-          </Link>
-        </Button>
-      </div>
-    </section>
+      <p aria-live="polite">Fine. You know the rules. Now a real one, where it actually counts.</p>
+    </P03Dialogue>
   )
 }

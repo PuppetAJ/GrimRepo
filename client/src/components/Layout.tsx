@@ -33,7 +33,7 @@ export function Layout() {
   const session = authClient.useSession()
   const { pathname } = useLocation()
   // The game's tables set their own widths, the site's or wider; a run's mockup is a run's table.
-  const playing = ['/game', '/run', '/mockups/'].some((path) => pathname.startsWith(path))
+  const playing = ['/game', '/run', '/tutorial', '/mockups/'].some((path) => pathname.startsWith(path))
   // The first page arrives prerendered; the pages moved to after it rise in.
   useEffect(() => markLanded(), [])
   // While the session loads, a placeholder holds the header's height; what replaces it fades in.

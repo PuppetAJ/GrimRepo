@@ -4,7 +4,7 @@ import { useRef } from 'react'
 import { CARD, type Vec3 } from '../layout.ts'
 import { STILL } from '../factory/constants.ts'
 
-/** The tutorial's mark, white and dotted like the text table's, its dots marching so it reads at a glance. */
+/** The tutorial's mark, white and dotted like the text table's, its dots marching so it reads at a glance; anything in front of it hides it, as it would a real outline. */
 function Frame({ width, height, plane }: { width: number; height: number; plane: 'flat' | 'upright' }) {
   const line = useRef<{ material: { dashOffset: number } }>(null)
   useFrame((_, delta) => {
@@ -28,17 +28,7 @@ function Frame({ width, height, plane }: { width: number; height: number; plane:
           [-w, -h, 0],
         ]
   return (
-    <Line
-      ref={line as never}
-      points={corners}
-      color="#ffffff"
-      lineWidth={3}
-      dashed
-      dashSize={0.06}
-      gapSize={0.05}
-      depthTest={false}
-      renderOrder={10}
-    />
+    <Line ref={line as never} points={corners} color="#ffffff" lineWidth={3} dashed dashSize={0.06} gapSize={0.05} />
   )
 }
 

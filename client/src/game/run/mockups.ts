@@ -619,7 +619,7 @@ export const MOCKUPS: Record<string, Entry> = {
   'items-own': {
     title: 'Items: the Hammer on your Bug, the Pliers on a sigil, the Hourglass',
     group: 'reached',
-    revision: 6,
+    revision: 7,
     make: () =>
       itemBattle(['hammer', 'pliers', 'hourglass'], {
         board: ['Bug', 'CopyPaste'],
@@ -630,7 +630,7 @@ export const MOCKUPS: Record<string, Entry> = {
   'items-steal': {
     title: 'Items: the Hook on a Mainframe, the Bottled Boilerplate, the Scissors on the queue',
     group: 'reached',
-    revision: 6,
+    revision: 7,
     make: () =>
       itemBattle(['hook', 'bottle', 'scissors'], {
         board: [null, null, 'Watchdog'],
@@ -738,7 +738,7 @@ export const MOCKUPS: Record<string, Entry> = {
   'boss-beaten': {
     title: 'A boss just beaten',
     group: 'reached',
-    revision: 6,
+    revision: 7,
     make: () => reached((s) => isBoss(s) && s.visit?.kind === 'battle' && s.visit.game.status === 'won'),
   },
   'low-integrity': {
@@ -750,7 +750,7 @@ export const MOCKUPS: Record<string, Entry> = {
   'integrity-lost': {
     title: 'A run lost when its integrity ran out',
     group: 'reached',
-    revision: 3,
+    revision: 4,
     make: () => {
       const found = lastIntegrity()
       const rung = found && applyRun(found.state, { type: 'play', action: { type: 'ringBell' } })
@@ -806,7 +806,7 @@ export const MOCKUPS: Record<string, Entry> = {
   lost: {
     title: 'A run lost in battle',
     group: 'reached',
-    revision: 10,
+    revision: 11,
     make: () => reached((s) => s.status === 'lost'),
   },
   won: { title: 'A cleared run', group: 'reached', revision: 6, make: () => reached((s) => s.status === 'won') },

@@ -103,7 +103,8 @@ export function Scene({
       ? state.player.hand.find((unit) => unit.card === asked.card)?.uid
       : asked?.type === 'mark'
         ? state.player.board[asked.lane]?.uid
-        : asked?.type === 'use'
+        : // Once the item is picked up, the card it can reach is already lit as a target.
+          asked?.type === 'use' && aiming === null
           ? (asked.row === 'board'
               ? state.player.board
               : asked.row === 'front'
