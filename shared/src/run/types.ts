@@ -3,7 +3,7 @@ import type { ItemId } from '../items.ts'
 import type { Action, DeckCard, GameEvent, GameState } from '../engine/types.ts'
 
 /** Bumped whenever a change would make an old run replay differently. */
-export const RUN_RULES_VERSION = 23
+export const RUN_RULES_VERSION = 24
 
 /** The integrity a run starts with, and the most it can hold. */
 export const INTEGRITY = 20

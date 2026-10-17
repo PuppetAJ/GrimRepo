@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
+import { forkHit } from './combat.ts'
 import { cardAt, play, table } from './test-support.ts'
 import type { GameEvent, GameState } from './types.ts'
 
@@ -59,14 +60,19 @@ describe('combat', () => {
     assert.equal(after.opponent.front[0]?.health, 6)
   })
 
-  it('lets Fork strike the lanes either side instead of the one opposite, the second for half', () => {
+  it('lets Fork strike the lanes either side instead of the one opposite, each for three quarters, never below 1', () => {
     const state = table({ board: [null, 'CopyPaste'], front: ['Bug', 'Bug', 'Bug'] })
     ;(state.player.board[1] as { sigils: string[] }).sigils.push('fork')
     const after = bell(state).state
     assert.deepEqual(
       after.opponent.front.slice(0, 3).map((unit) => unit?.health),
-      [6 - 3, 6, 6 - 1],
+      [6 - 2, 6, 6 - 2],
     )
+    assert.deepEqual([1, 2, 3, 4, 7].map(forkHit), [1, 1, 2, 3, 5])
+    // At the edge there's one lane to fork into, which takes the whole attack.
+    const edge = table({ board: ['CopyPaste'], front: [null, 'Bug'] })
+    ;(edge.player.board[0] as { sigils: string[] }).sigils.push('fork')
+    assert.equal(bell(edge).state.opponent.front[1]?.health, 6 - 3)
   })
 
   it('makes an attacker pay for hitting a Backtrace, even to death', () => {
