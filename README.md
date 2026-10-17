@@ -69,28 +69,28 @@ In development, `window.__game` exposes the 3D table's state and where things ar
 ## Tests
 
 - **Unit tests** (`pnpm test`): the rules engine, including a bot that plays whole seeded games and runs and a check that replay always agrees; the server's routes, auth, guests, rate limits and name filter against a real Postgres database whose name must end in `_test`; and the client's playback, table layout and P03's lines.
-- **Browser suites** (`pnpm test:e2e`): plain Playwright scripts in `e2e/`, run in Chromium and Firefox. Smoke, auth, leaderboard, a whole game and a whole run on the text table, the 3D table (clicking its models through `window.__game`), a run at the 3D table, and an axe accessibility check of every page but the game on a laptop and a phone.
+- **Browser suites** (`pnpm test:e2e`): Playwright Test specs in `e2e/`, run in Chromium and Firefox. A failing test keeps a trace to step through with `pnpm exec playwright show-trace`. Smoke, auth, leaderboard, a whole game and a whole run on the text table, the 3D table (clicking its models through `window.__game`), a run at the 3D table, and an axe accessibility check of every page but the game on a laptop and a phone.
 - **CI:** `ci.yml` runs lint, formatting, types, the unit tests and the build on every pull request and on `main`, and Railway deploys only once it passes. `browser.yml` runs every browser suite on pull requests, in both engines, against a production build.
 - **The live site** (`pnpm test:prod`): a short check of the critical path after a deploy, ending with a whole run played by a bot. It plays as a guest and signs nobody up.
 
 ## Scripts
 
-| Script                        | Does                                                                                                                                                                    |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm dev`                    | Client and API together, reloading on change                                                                                                                            |
-| `pnpm build`                  | Builds the client into `client/dist`, with the home page prerendered                                                                                                    |
-| `pnpm start`                  | The API, serving the built client when `NODE_ENV=production`                                                                                                            |
-| `pnpm lint` / `pnpm format`   | oxlint / Prettier                                                                                                                                                       |
-| `pnpm typecheck`              | TypeScript across every package                                                                                                                                         |
-| `pnpm test`                   | Unit tests in every package                                                                                                                                             |
-| `pnpm test:e2e`               | The browser suites in Chromium and then Firefox, against `E2E_BASE_URL` (default http://localhost:3000); `pnpm test:e2e game --browser=firefox` runs one in one browser |
-| `pnpm test:prod`              | The live site's critical path, or another production build's with `E2E_BASE_URL`                                                                                        |
-| `pnpm db:up` / `pnpm db:down` | Start and stop the local Postgres                                                                                                                                       |
-| `pnpm db:migrate`             | Apply the migrations in `server/migrations`                                                                                                                             |
-| `pnpm db:seed`                | Wipe the database and reseed the demo state                                                                                                                             |
-| `pnpm db:seed:empty`          | Seed only if there are no players yet; Railway runs this on every boot                                                                                                  |
-| `pnpm db:cleanup`             | The nightly clean-up, by hand                                                                                                                                           |
-| `pnpm moderate`               | Rename, remove, list or scan accounts; see Looking after the live site                                                                                                  |
+| Script                        | Does                                                                                                                                                                                 |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pnpm dev`                    | Client and API together, reloading on change                                                                                                                                         |
+| `pnpm build`                  | Builds the client into `client/dist`, with the home page prerendered                                                                                                                 |
+| `pnpm start`                  | The API, serving the built client when `NODE_ENV=production`                                                                                                                         |
+| `pnpm lint` / `pnpm format`   | oxlint / Prettier                                                                                                                                                                    |
+| `pnpm typecheck`              | TypeScript across every package                                                                                                                                                      |
+| `pnpm test`                   | Unit tests in every package                                                                                                                                                          |
+| `pnpm test:e2e`               | The browser suites in Chromium and then Firefox, against `E2E_BASE_URL` (default http://localhost:3000); `pnpm test:e2e e2e/game.spec.mjs --project=firefox` runs one in one browser |
+| `pnpm test:prod`              | The live site's critical path, or another production build's with `E2E_BASE_URL`                                                                                                     |
+| `pnpm db:up` / `pnpm db:down` | Start and stop the local Postgres                                                                                                                                                    |
+| `pnpm db:migrate`             | Apply the migrations in `server/migrations`                                                                                                                                          |
+| `pnpm db:seed`                | Wipe the database and reseed the demo state                                                                                                                                          |
+| `pnpm db:seed:empty`          | Seed only if there are no players yet; Railway runs this on every boot                                                                                                               |
+| `pnpm db:cleanup`             | The nightly clean-up, by hand                                                                                                                                                        |
+| `pnpm moderate`               | Rename, remove, list or scan accounts; see Looking after the live site                                                                                                               |
 
 The browser suites need `pnpm exec playwright install chromium firefox` once.
 
@@ -104,7 +104,7 @@ client/   the web app
   src/pages/        the README, leaderboard, profiles, compendium and account pages
 server/   the API, auth, migrations and the nightly clean-up
 shared/   game and run rules and data, imported by both
-e2e/      browser suites, plain Playwright scripts
+e2e/      browser suites, Playwright Test specs
 art/      sources made in art tools, such as the floppy disk's Blender file
 ```
 

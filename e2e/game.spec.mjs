@@ -1,24 +1,21 @@
 import { summary } from '../shared/src/index.ts'
 import {
   BASE,
+  check,
   deletePlayer,
   freshPage,
-  launch,
   newPlayer,
   newTab,
   playWithBot,
-  reporter,
   resetRateLimits,
   signUp,
+  test,
   visibleText,
 } from './lib.mjs'
 
-await resetRateLimits()
-const { browser, pageErrors, close } = await launch()
-const { check, section, report } = reporter()
+test.beforeAll(resetRateLimits)
 
-section('A whole game')
-{
+test('A whole game', async ({ browser }) => {
   const { context, page } = await freshPage(browser, { table: 'text' })
   const player = await signUp(page, newPlayer('Game'))
   await page.goto(`${BASE}/game`)
@@ -75,10 +72,9 @@ section('A whole game')
   check('and their record keeps to runs, leaving the quick battle out', true)
   check('and the test player is removed afterwards', await deletePlayer(page, player))
   await context.close()
-}
+})
 
-section('Resuming')
-{
+test('Resuming', async ({ browser }) => {
   const { context, page } = await freshPage(browser, { table: 'text' })
   const resumer = await signUp(page, newPlayer('Resume'))
   await page.goto(`${BASE}/game`)
@@ -163,7 +159,7 @@ section('Resuming')
   await magnifier.waitFor({ state: 'detached', timeout: 5_000 })
   check('until the next click, which plays nothing', (await page.locator('[data-action="cancel"]').count()) === 0)
 
-  section('Walking away')
+  // Walking away
   await page.getByRole('button', { name: 'Forfeit' }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Forfeit' }).click()
   await page
@@ -179,10 +175,9 @@ section('Resuming')
   )
   check('and the test player is removed afterwards', await deletePlayer(page, resumer))
   await context.close()
-}
+})
 
-section('A result that does not save at first')
-{
+test('A result that does not save at first', async ({ browser }) => {
   // The final bell's save hits a dropped connection that comes back a moment later.
   const { context, page } = await freshPage(browser, { table: 'text' })
   const player = await signUp(page, newPlayer('Offline'))
@@ -215,10 +210,9 @@ section('A result that does not save at first')
   )
   check('and the test player is removed afterwards', await deletePlayer(page, player))
   await context.close()
-}
+})
 
-section('Two tabs')
-{
+test('Two tabs', async ({ browser }) => {
   // The first tab moves the game on; the second, out of step, must catch up from the server.
   const { context, page: first } = await freshPage(browser, { table: 'text' })
   const player = await signUp(first, newPlayer('Tabs'))
@@ -256,7 +250,4 @@ section('Two tabs')
   check('and asks for no second draw', (await second.locator('[data-action^="draw-"]:not(:disabled)').count()) === 0)
   check('and the test player is removed afterwards', await deletePlayer(first, player))
   await context.close()
-}
-
-await close()
-process.exit(report(pageErrors))
+})

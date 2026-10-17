@@ -1,5 +1,12 @@
 import { defineConfig, devices } from '@playwright/test'
 
+// DATABASE_URL lets the suites clear the local rate limits between sign-ups; a variable already set wins.
+try {
+  process.loadEnvFile('.env')
+} catch {
+  // No .env, as on CI, which sets what it needs itself.
+}
+
 const CI = Boolean(process.env.CI)
 
 // The browser suites, against a running app at E2E_BASE_URL (the dev server by default). The live site's check has its
