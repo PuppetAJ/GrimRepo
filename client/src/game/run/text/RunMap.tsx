@@ -124,13 +124,15 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
   const [peek, setPeek] = useState<string | null>(null)
   // Holding a node shows it larger with its name, for touch and for anyone not hovering; the release then isn't a click.
   const [held, setHeld] = useState<string | null>(null)
-  const hold = useRef<{ timer?: ReturnType<typeof setTimeout>; fired: boolean }>({ fired: false })
+  // `clicked` for a right-click, whose node stays shown past the button's release, until the pointer leaves it.
+  const hold = useRef<{ timer?: ReturnType<typeof setTimeout>; fired: boolean; clicked?: boolean }>({ fired: false })
   useEffect(() => () => clearTimeout(hold.current.timer), [])
   const holdProps = (id: string) => ({
     onPointerDown: (event: ReactPointerEvent) => {
       if (event.button !== 0) return
       clearTimeout(hold.current.timer)
       hold.current.fired = false
+      hold.current.clicked = false
       hold.current.timer = setTimeout(() => {
         hold.current.fired = true
         setHeld(id)
@@ -138,17 +140,23 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
     },
     onPointerUp: () => {
       clearTimeout(hold.current.timer)
-      setHeld(null)
+      if (!hold.current.clicked) setHeld(null)
     },
     onPointerLeave: () => {
       clearTimeout(hold.current.timer)
+      hold.current.clicked = false
       setHeld(null)
     },
     onPointerCancel: () => {
       clearTimeout(hold.current.timer)
       setHeld(null)
     },
-    onContextMenu: (event: ReactMouseEvent) => event.preventDefault(),
+    onContextMenu: (event: ReactMouseEvent) => {
+      event.preventDefault()
+      clearTimeout(hold.current.timer)
+      hold.current.clicked = true
+      setHeld(id)
+    },
   })
   const [pen, setPen] = useState(false)
   const [hovered, setHovered] = useState<NodeKind | null>(null)

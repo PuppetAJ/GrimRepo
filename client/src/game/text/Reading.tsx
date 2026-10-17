@@ -77,6 +77,7 @@ export function Magnifier() {
   return (
     <div
       aria-hidden
+      data-magnifier
       className="pointer-events-none fixed z-[60] flex flex-col items-center gap-2 drop-shadow-[0_0_12px_rgb(0_0_0/0.8)]"
       style={
         above ? { left, width, bottom: window.innerHeight - magnified.y + 26 } : { left, width, top: magnified.y + 26 }

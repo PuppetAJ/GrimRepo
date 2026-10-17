@@ -3,12 +3,15 @@ import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import type { Target } from '../reading.ts'
 
+/** Follows a held finger or mouse from card to card; a `sticky` one, from a right-click, stays put until the next press. */
 export function HeldReader({
   on,
+  sticky,
   onMove,
   onEnd,
 }: {
   on: boolean
+  sticky: boolean
   onMove: (target: Target | null, x: number, y: number) => void
   onEnd: () => void
 }) {
@@ -18,7 +21,20 @@ export function HeldReader({
     latest.current = { onMove, onEnd }
   })
   useEffect(() => {
-    if (!on) return
+    if (!on || !sticky) return
+    const end = () => latest.current.onEnd()
+    const key = (event: KeyboardEvent) => event.key === 'Escape' && end()
+    window.addEventListener('pointerdown', end, true)
+    window.addEventListener('keydown', key)
+    window.addEventListener('wheel', end, { passive: true })
+    return () => {
+      window.removeEventListener('pointerdown', end, true)
+      window.removeEventListener('keydown', key)
+      window.removeEventListener('wheel', end)
+    }
+  }, [on, sticky])
+  useEffect(() => {
+    if (!on || sticky) return
     const pointer = new THREE.Vector2()
     const at = (x: number, y: number) => {
       const box = gl.domElement.getBoundingClientRect()
@@ -58,6 +74,6 @@ export function HeldReader({
       window.removeEventListener('pointermove', mouseMove)
       window.removeEventListener('pointerup', mouseUp)
     }
-  }, [on, camera, scene, raycaster, gl])
+  }, [on, sticky, camera, scene, raycaster, gl])
   return null
 }

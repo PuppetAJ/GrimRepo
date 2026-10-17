@@ -1,5 +1,16 @@
 import { useNavigate } from '@tanstack/react-router'
-import { Backpack, Flag, LogOut, Maximize, Menu, Minimize, Repeat, X } from 'lucide-react'
+import {
+  Backpack,
+  Flag,
+  FoldHorizontal,
+  LogOut,
+  Maximize,
+  Menu,
+  Minimize,
+  Repeat,
+  UnfoldHorizontal,
+  X,
+} from 'lucide-react'
 import { Dialog as DialogPrimitive } from 'radix-ui'
 import { use, useEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
@@ -18,6 +29,8 @@ import FaultyScreenShader from '../../../components/p03/FaultyScreenShader.tsx'
 import { prefersReducedMotion } from '../../../lib/motion.ts'
 import { ForfeitConfirm } from '../../controls.tsx'
 import { useFullScreen } from '../../fullScreen.ts'
+import { useMedia } from '../../../lib/useMedia.ts'
+import { ROOM_TO_WIDEN, useWideTable } from '../../wideTable.ts'
 import { Panel } from '../../text/Panel.tsx'
 import { useFit } from '../../text/sizing.ts'
 import type { Layout } from '../../text/useTextTable.ts'
@@ -25,6 +38,7 @@ import { DebugItem } from '../RunDebug.tsx'
 import type { RunReady } from '../useRun.ts'
 import { SearchContext } from './CardBits.tsx'
 import { DeckTable } from './DeckTable.tsx'
+import { InventoryDialog } from './InventoryDialog.tsx'
 import { Bytes, HeldTools, RunIntegrity } from './HeldTools.tsx'
 import { SlotContext, type Mode } from './slots.ts'
 
@@ -201,9 +215,12 @@ function RunMenu({
   onDeck,
   onSwitch,
   button,
+  widen,
 }: {
   run: RunReady
   fullScreen: ReturnType<typeof useFullScreen>
+  /** Over the 3D table, its width: the site's, or the window's. */
+  widen?: ReturnType<typeof useWideTable>
   /** Set where the deck isn't beside the screen, so the menu opens it. */
   onDeck?: () => void
   onSwitch?: Switch
@@ -261,6 +278,12 @@ function RunMenu({
             <DropdownMenuItem onSelect={fullScreen.toggle} className="text-lg">
               {fullScreen.on ? <Minimize aria-hidden /> : <Maximize aria-hidden />}
               {fullScreen.on ? 'Leave full screen' : 'Full screen'}
+            </DropdownMenuItem>
+          ) : null}
+          {widen?.offered && !fullScreen.on ? (
+            <DropdownMenuItem onSelect={widen.toggle} className="text-lg">
+              {widen.wide ? <FoldHorizontal aria-hidden /> : <UnfoldHorizontal aria-hidden />}
+              {widen.wide ? 'Narrow the table' : 'Widen the table'}
             </DropdownMenuItem>
           ) : null}
           {onSwitch ? (
@@ -343,6 +366,8 @@ export function Screen({
   const showDock = deck && roomy && docked
   const still = useReducedMotion()
   const [drawer, setDrawer] = useState(false)
+  const widen = useWideTable()
+  const centered = useMedia(ROOM_TO_WIDEN)
   const menuButton = useRef<HTMLButtonElement>(null)
   // One search per screen, cleared when the screen changes.
   const [search, setSearch] = useState({ title, query: '' })
@@ -373,6 +398,7 @@ export function Screen({
       onDeck={deck && !roomy ? () => setDrawer(true) : undefined}
       onSwitch={onSwitch}
       button={menuButton}
+      widen={terminal ? undefined : widen}
     />
   )
   // Stacked, the menu keeps to the top right corner, so it has room, and the screen's own buttons sit centered below.
@@ -392,9 +418,14 @@ export function Screen({
     </div>
   )
   const drawerHost = <div ref={setHost} className="pointer-events-none absolute inset-0 z-40 *:pointer-events-auto" />
+  // Past the site's width a drawer at the window's edge is a long way off, so the inventory opens in the middle.
   const deckDrawer =
     deck && !roomy ? (
-      <DeckDrawer run={run} host={host} open={drawer} onOpenChange={setDrawer} returnTo={menuButton} />
+      centered ? (
+        <InventoryDialog run={run} open={drawer} onOpenChange={setDrawer} />
+      ) : (
+        <DeckDrawer run={run} host={host} open={drawer} onOpenChange={setDrawer} returnTo={menuButton} />
+      )
     ) : null
 
   // Over the 3D table, everything goes in the projector's window, which the scene warps onto it every frame.

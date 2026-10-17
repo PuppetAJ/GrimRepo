@@ -85,7 +85,7 @@ export const Monitor = memo(function Monitor({
   position: Vec3
   turn: number
   lines: string[]
-  onHold?: (screen: Screen, x: number, y: number) => void
+  onHold?: (screen: Screen, x: number, y: number, sticky?: boolean) => void
   onPin?: (screen: Screen) => void
 }) {
   const typed = useTyped(lines)
@@ -122,6 +122,10 @@ export const Monitor = memo(function Monitor({
       }}
       onPointerUp={endHold}
       onPointerCancel={endHold}
+      onContextMenu={(event) => {
+        event.stopPropagation()
+        onHold?.(screen, event.nativeEvent.clientX, event.nativeEvent.clientY, true)
+      }}
       onClick={(event) => {
         event.stopPropagation()
         // A hold was for reading; a click or tap pins the readout.

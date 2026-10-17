@@ -31,7 +31,8 @@ const PAGE = 'mx-auto w-full max-w-[100rem]'
 export function Layout() {
   const session = authClient.useSession()
   const { pathname } = useLocation()
-  const playing = pathname.startsWith('/game')
+  // The game's tables set their own widths, the site's or wider; a run's mockup is a run's table.
+  const playing = ['/game', '/run', '/mockups/'].some((path) => pathname.startsWith(path))
   const navigate = useNavigate()
   const user = session.data?.user as { displayUsername?: string; username?: string; isAnonymous?: boolean } | undefined
   const name = user?.displayUsername ?? user?.username
@@ -150,7 +151,7 @@ export function Layout() {
       </nav>
 
       <main className="flex-1 px-(--gutter) py-8">
-        {/* Capped so a browser zoomed far out stays readable; the game table is uncapped. */}
+        {/* Capped so a browser zoomed far out stays readable; the game's tables cap themselves. */}
         <div className={playing ? '' : PAGE}>
           {/* Keyed by the path, so leaving a page that failed clears the failure. */}
           <LoadFailed key={pathname} fallback={<ReloadPage />}>

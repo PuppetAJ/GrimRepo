@@ -354,6 +354,14 @@ section('The map from a node, from a mockup')
   await page.locator('[data-table]').first().focus()
   await page.keyboard.press('m')
   check('M looks at it too', await shows(page, 'map'))
+  // The registry can be left by heading straight for the next node.
+  const moves = Number(await page.locator('[data-run-moves]').getAttribute('data-run-moves'))
+  await page.locator('[data-action="go"]').first().click()
+  await page.waitForFunction(
+    (before) => Number(document.querySelector('[data-run-moves]')?.getAttribute('data-run-moves')) > before,
+    moves,
+  )
+  check('and picking the next node there heads on, leaving the registry', (await view(page)) !== 'shop')
   await context.close()
 }
 
@@ -369,6 +377,18 @@ section('The sigil stones, from a mockup')
   await page.locator('[data-slot-for="give"]').click()
   await page.locator('[data-action="give"]:not([disabled])').first().click()
   await page.locator('[data-action="stone-sigil"]').first().click()
+  // The chosen sigil's name, underlined in the next step, says what it does; so does a right-click on the sigil.
+  await page
+    .getByRole('heading')
+    .getByRole('button', { name: /: what it does$/ })
+    .click()
+  const note = page.locator('[data-slot="popover-content"]')
+  check('the sigil being moved says what it does from its name', (await note.innerText().catch(() => '')).length > 20)
+  await page.keyboard.press('Escape')
+  await note.waitFor({ state: 'detached' })
+  await page.locator('[data-action="stone-sigil"]').first().click({ button: 'right' })
+  check('or from a right-click', await note.isVisible())
+  await page.keyboard.press('Escape')
   await page.locator('[data-slot-for="take-sigil"]').click()
   await page.locator('[data-action="take-sigil"]:not([disabled])').first().click()
   await page.locator('[data-action="transfer"]').click()

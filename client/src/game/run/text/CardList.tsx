@@ -156,7 +156,7 @@ export function CardList({
 /** How long a press must last to read the card instead of choosing it, in milliseconds, as an item's button has it. */
 const HOLD_MS = 350
 
-/** Holding a card opens it to read; letting go after a hold isn't a click. */
+/** Holding or right-clicking a card opens it to read; letting go after a hold isn't a click. */
 export function useHoldToRead(open: (unit: Unit) => void) {
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const held = useRef(false)
@@ -176,7 +176,11 @@ export function useHoldToRead(open: (unit: Unit) => void) {
       onPointerUp: stop,
       onPointerLeave: stop,
       onPointerCancel: stop,
-      onContextMenu: (event: MouseEvent) => event.preventDefault(),
+      onContextMenu: (event: MouseEvent) => {
+        event.preventDefault()
+        stop()
+        open(unit)
+      },
     }),
     /** Whether the press just ended was a hold, which then isn't counted again. */
     read: () => {

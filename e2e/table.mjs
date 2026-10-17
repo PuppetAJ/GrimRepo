@@ -161,6 +161,41 @@ section('The 3D table')
         .then(() => true)
         .catch(() => false)
       check('Escape calls off the card being placed', calledOff)
+      // So does a right-click anywhere, or a click on nothing; the top of the room, over P03, takes no clicks.
+      const canvas = await page.locator('[data-table="3d"] canvas').boundingBox()
+      const nothing = { x: canvas.x + canvas.width / 2, y: canvas.y + canvas.height * 0.06 }
+      const offBy = async (how) => {
+        await act({ type: 'select', uid: fuel.uid })
+        await until(page, (uid) => window.__game.state().summon?.uid === uid, fuel.uid)
+        await page.waitForTimeout(400)
+        await how()
+        return until(page, () => window.__game.state().summon === null)
+          .then(() => true)
+          .catch(() => false)
+      }
+      check(
+        'a right-click calls it off',
+        await offBy(() => page.mouse.click(nothing.x, nothing.y, { button: 'right' })),
+      )
+      check('and so does a click on nothing', await offBy(() => page.mouse.click(nothing.x, nothing.y)))
+      // With nothing being played, a right-click on a card magnifies it until the next click, which plays nothing.
+      await page.waitForTimeout(600)
+      const at = await page.evaluate((uid) => window.__game.screen({ uid }), fuel.uid)
+      await page.mouse.click(at.x, at.y, { button: 'right' })
+      const magnifier = page.locator('[data-magnifier]')
+      const magnified = await magnifier
+        .waitFor({ timeout: 5_000 })
+        .then(() => true)
+        .catch(() => false)
+      await page.waitForTimeout(300)
+      check('a right-click on a card magnifies it, and it stays up', magnified && (await magnifier.isVisible()))
+      await page.mouse.click(at.x, at.y)
+      await magnifier.waitFor({ state: 'detached', timeout: 5_000 })
+      await page.waitForTimeout(300)
+      check(
+        'until the next click, which plays nothing',
+        (await page.evaluate(() => window.__game.state().summon)) === null,
+      )
     }
     if (costly && fuel && victim >= 0) {
       // Each move waits for the last to land, as a player's clicks would.

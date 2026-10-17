@@ -86,6 +86,26 @@ describe('a new run', () => {
     assert.equal(moved.at, first)
     assert.equal(refused(moved, { type: 'go', node: first }), 'Finish this node first')
   })
+
+  it('heads on from a node that can be left, just as leaving first would, but never from one to resolve', () => {
+    const shop = at('shop', { kind: 'shop', node: '0-0', offer: [], sold: [], tools: [], toolsSold: [] })
+    const here = findNode(shop.map, shop.at as string)
+    const next = here?.next[0] as string
+    assert.deepEqual(reachable(shop), here?.next)
+    assert.deepEqual(
+      step(shop, { type: 'go', node: next }),
+      step(step(shop, { type: 'leave' }), { type: 'go', node: next }),
+    )
+    assert.ok(
+      !legalRunActions(shop).some((action) => action.type === 'go'),
+      'the bots still leave first, so the runs they play are unchanged',
+    )
+    const choice = at('card', { kind: 'card', node: '0-0', offer: ['Bug', 'Bug', 'Bug'] })
+    assert.deepEqual(reachable(choice), [])
+    assert.equal(refused(choice, { type: 'go', node: next }), 'Finish this node first')
+    const event = at('event', { kind: 'event', node: '0-0', event: 'linter' })
+    assert.equal(refused(event, { type: 'go', node: next }), 'Finish this node first')
+  })
 })
 
 describe('the starter packs', () => {

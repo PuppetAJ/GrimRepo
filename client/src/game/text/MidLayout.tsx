@@ -14,7 +14,7 @@ export function MidLayout() {
   return (
     <div
       {...frameProps}
-      className={`p03-screen crt mx-auto flex w-full max-w-[1792px] flex-col gap-2 overflow-hidden border border-p03-edge p-2 font-terminal text-xl sm:gap-3 sm:p-3 ${fullScreen.on ? 'fixed inset-0 z-50 overflow-y-auto' : 'relative rounded-lg'}`}
+      className={`p03-screen crt mx-auto flex w-full max-w-[100rem] flex-col gap-2 overflow-hidden border border-p03-edge p-2 font-terminal text-xl sm:gap-3 sm:p-3 ${fullScreen.on ? 'fixed inset-0 z-50 overflow-y-auto' : 'relative rounded-lg'}`}
     >
       <FaultyScreenShader />
       <span aria-hidden className="crt-glass pointer-events-none absolute inset-0 z-30" />

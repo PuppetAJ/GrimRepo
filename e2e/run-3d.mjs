@@ -133,5 +133,43 @@ section('A stage too small for the window')
   await context.close()
 }
 
+section('A window wider than the site')
+{
+  const { context, page } = await open('map', { width: 2560, height: 1080 })
+  await shown(lit(page))
+  const width = async () => (await page.locator(`${ROOT} canvas`).first().boundingBox())?.width ?? 0
+  const site = await width()
+  check('the table keeps to the site width at first', Math.abs(site - 1600) < 2, String(site))
+  await lit(page)
+    .getByRole('button', { name: /^Run menu/ })
+    .click()
+  await page.getByRole('menuitem', { name: 'Widen the table' }).click()
+  // Under the 7rem header, 21:9 of what's left is as wide as it goes.
+  const most = ((1080 - 112) * 21) / 9
+  const widened = await page
+    .waitForFunction(
+      (least) => (document.querySelector('[data-run-moves] canvas')?.getBoundingClientRect().width ?? 0) > least,
+      most - 2,
+      { timeout: 10_000 },
+    )
+    .then(() => true)
+    .catch(() => false)
+  const wide = await width()
+  check('and widens from the menu to 21:9 at most', widened && wide <= most + 2, String(wide))
+  await lit(page)
+    .getByRole('button', { name: /^Run menu/ })
+    .click()
+  await page.getByRole('menuitem', { name: 'Inventory' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Inventory' })
+  await dialog.waitFor()
+  const box = await dialog.boundingBox()
+  check(
+    'where the inventory opens in the middle rather than at the far edge',
+    Math.abs(box.x + box.width / 2 - 1280) < 4,
+    JSON.stringify(box),
+  )
+  await context.close()
+}
+
 await close()
 process.exit(report(pageErrors))

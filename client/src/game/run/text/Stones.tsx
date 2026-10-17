@@ -5,7 +5,7 @@ import { asUnit } from '../nodes.ts'
 import type { RunReady } from '../useRun.ts'
 import { NothingHere } from './CardBits.tsx'
 import { CardSlot } from './CardSlot.tsx'
-import { Arrow, FLOW, SigilChoice, Step, Waiting } from './Flow.tsx'
+import { Arrow, FLOW, SigilChoice, SigilName, Step, Waiting } from './Flow.tsx'
 import { LeaveButton, ScreenBar } from './Screen.tsx'
 
 type Transfer = Extract<RunAction, { type: 'transfer' }>
@@ -80,7 +80,15 @@ export function Stones({ run }: { run: RunReady }) {
           </Step>
           <Arrow on={Boolean(chosen)} />
           <Step
-            title={chosen ? `The card that gains ${SIGILS[chosen].name}` : 'The card that gains it'}
+            title={
+              chosen ? (
+                <>
+                  The card that gains <SigilName id={chosen} />
+                </>
+              ) : (
+                'The card that gains it'
+              )
+            }
             on={Boolean(chosen)}
           >
             {giver && chosen ? (

@@ -90,15 +90,14 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
     game.act(action)
   }
   const playing = { ...game, act }
-  useEscapeCancel(
-    aiming === null && !busy && !hasEnded(game) && has(legalActions(game.state), { type: 'cancel' }),
-    () => act({ type: 'cancel' }),
-  )
+  const cancellable = aiming === null && !busy && !hasEnded(game) && has(legalActions(game.state), { type: 'cancel' })
+  const cancel = () => act({ type: 'cancel' })
+  useEscapeCancel(cancellable, cancel)
 
   // Kept by id so a reader shows the card's current stats.
   const [peek, setPeek] = useState<number | null>(null)
   const [pinned, setPinned] = useState<Screen | null>(null)
-  const [magnified, setMagnified] = useState<{ target: Target; x: number; y: number } | null>(null)
+  const [magnified, setMagnified] = useState<{ target: Target; x: number; y: number; sticky?: boolean } | null>(null)
   // Sized to the card so every sigil fits, then put on whichever side of the finger has more room.
   const magnifier = useRef<HTMLDivElement>(null)
   useLayoutEffect(() => {
@@ -110,7 +109,7 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
   })
   const reader: Reader = {
     peek,
-    hold: (target, x, y) => setMagnified({ target, x, y }),
+    hold: (target, x, y, sticky) => setMagnified({ target, x, y, sticky }),
     lift: (unit) => {
       setPeek(unit?.uid ?? null)
       setPinned(null)
@@ -140,13 +139,23 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
       'data-table': '3d',
     }),
   )
-  // A tap on nothing puts down whatever is being read; with nothing to put down, it sits back from the board.
+  // A tap on nothing calls off a card being played, or puts down whatever is being read, or sits back from the board.
   useEffect(() =>
     stage.onMissed(() => {
-      if (peek !== null || pinned !== null) reader.lift(null)
+      if (cancellable) cancel()
+      else if (peek !== null || pinned !== null) reader.lift(null)
       else if (chosen !== 'table' && aiming === null) setCamera('table')
     }),
   )
+  // A right-click anywhere calls off a card being played; otherwise it's the room's, which magnifies with it.
+  useEffect(() => {
+    stage.onContext(() => {
+      if (!cancellable) return false
+      cancel()
+      return true
+    })
+    return () => stage.onContext(() => false)
+  })
   useLayoutEffect(() =>
     stage.room({
       view: playback.view,
@@ -162,6 +171,7 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
       <stage.Scene>
         <HeldReader
           on={magnified !== null}
+          sticky={magnified?.sticky ?? false}
           onMove={(target, x, y) => setMagnified((last) => (last ? { target: target ?? last.target, x, y } : last))}
           onEnd={() => {
             setMagnified(null)
@@ -177,7 +187,10 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
           skip={skip}
           rung={rung}
           camera={camera}
-          onFocusBoard={camera === 'table' && !playback.view.summon ? () => setCamera('board') : undefined}
+          // Clicking the table while a card is being played calls it off, back to the hand.
+          onFocusBoard={
+            cancellable ? cancel : camera === 'table' && !playback.view.summon ? () => setCamera('board') : undefined
+          }
           from={from}
           hint={hint}
           hinted={hinted}
