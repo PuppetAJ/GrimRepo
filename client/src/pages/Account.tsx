@@ -20,8 +20,10 @@ import { api } from '../lib/api.ts'
 import { authClient, authError, DEMO, settled } from '../lib/auth.ts'
 import { useAsync } from '../lib/useAsync.ts'
 import { P03Line } from '../components/p03/P03Line.tsx'
+import { useRise } from '../lib/rise.ts'
 
 export function Account() {
+  const rise = useRise()
   const session = authClient.useSession()
   const navigate = useNavigate()
   const user = session.data?.user as { displayUsername?: string; username?: string; email?: string } | undefined
@@ -67,7 +69,7 @@ export function Account() {
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-10">
-      <div className="flex flex-col gap-3">
+      <div {...rise(0)} className="flex flex-col gap-3">
         <h1 className="font-display text-5xl">Account</h1>
         <P03Line>
           Rename yourself all you like.{' '}
@@ -76,7 +78,7 @@ export function Account() {
         <p className="text-muted-foreground">Signed in as {user?.email}.</p>
       </div>
 
-      <form onSubmit={rename} className="flex flex-col gap-3 border-t pt-6" noValidate>
+      <form {...rise(1)} onSubmit={rename} className="flex flex-col gap-3 border-t pt-6" noValidate>
         <h2 className="text-xl font-semibold">Username</h2>
         <Label htmlFor="username">New username</Label>
         <Input
@@ -96,7 +98,7 @@ export function Account() {
         </Button>
       </form>
 
-      <section className="flex flex-col gap-3 border-t pt-6">
+      <section {...rise(2)} className="flex flex-col gap-3 border-t pt-6">
         <h2 className="text-xl font-semibold">Delete your account</h2>
         <p className="text-sm text-muted-foreground">
           Your account, your runs and your place on the leaderboard go for good.
@@ -147,11 +149,14 @@ export function Account() {
 
 /** Replaces the forms, which the server would refuse for the demo account anyway. */
 function DemoNotice() {
+  const rise = useRise()
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
-      <h1 className="font-display text-5xl">Account</h1>
-      <P03Line>Everyone shares this one. I can&apos;t tell any of you apart. Not that I try.</P03Line>
-      <section className="flex flex-col gap-3 rounded-lg border bg-card p-6">
+      <h1 {...rise(0)} className="font-display text-5xl">
+        Account
+      </h1>
+      <P03Line {...rise(1)}>Everyone shares this one. I can&apos;t tell any of you apart. Not that I try.</P03Line>
+      <section {...rise(2)} className="flex flex-col gap-3 rounded-lg border bg-card p-6">
         <h2 className="text-xl font-semibold">You are using the demo account</h2>
         <p className="text-muted-foreground">
           Everyone shares it, so it can&apos;t be renamed or deleted. Make your own to keep your runs and scores.
@@ -165,11 +170,16 @@ function DemoNotice() {
 }
 
 function GuestNotice({ name }: { name: string }) {
+  const rise = useRise()
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
-      <h1 className="font-display text-5xl">Account</h1>
-      <P03Line>A guest. You&apos;ll be gone in a week, and so will your record. Unless you sign up.</P03Line>
-      <section className="flex flex-col gap-3 rounded-lg border bg-card p-6">
+      <h1 {...rise(0)} className="font-display text-5xl">
+        Account
+      </h1>
+      <P03Line {...rise(1)}>
+        A guest. You&apos;ll be gone in a week, and so will your record. Unless you sign up.
+      </P03Line>
+      <section {...rise(2)} className="flex flex-col gap-3 rounded-lg border bg-card p-6">
         <h2 className="text-xl font-semibold">You are playing as a guest, {name}</h2>
         <p className="text-muted-foreground">
           Guest accounts last a week and stay off the leaderboard. Sign up to keep your games, runs and death card; they

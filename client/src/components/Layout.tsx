@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu.tsx'
 import { authClient, settled } from '../lib/auth.ts'
+import { markLanded } from '../lib/rise.ts'
 import { homeVariant } from '../lib/homeVariant.ts'
 import { Avatar } from './Avatar.tsx'
 import { Logo } from './Logo.tsx'
@@ -33,9 +34,8 @@ export function Layout() {
   const { pathname } = useLocation()
   // The game's tables set their own widths, the site's or wider; a run's mockup is a run's table.
   const playing = ['/game', '/run', '/mockups/'].some((path) => pathname.startsWith(path))
-  // The first page arrives prerendered; only the pages moved to after it fade in.
-  const [firstPath] = useState(pathname)
-  const moved = pathname !== firstPath
+  // The first page arrives prerendered; the pages moved to after it rise in.
+  useEffect(() => markLanded(), [])
   // While the session loads, a placeholder holds the header's height; what replaces it fades in.
   const holding = session.isPending && homeVariant()?.signedIn !== false
   const [heldAtFirst] = useState(holding)
@@ -158,8 +158,7 @@ export function Layout() {
 
       <main className="flex-1 px-(--gutter) py-8">
         {/* Capped so a browser zoomed far out stays readable; the game's tables cap themselves. */}
-        {/* Keyed by the path, so each page fades in as it arrives. */}
-        <div key={pathname} className={`${playing ? '' : PAGE} ${moved ? 'appear' : ''}`}>
+        <div className={playing ? '' : PAGE}>
           {/* Keyed by the path, so leaving a page that failed clears the failure. */}
           <LoadFailed key={pathname} fallback={<ReloadPage />}>
             <Suspense fallback={<Loading label="Loading" />}>

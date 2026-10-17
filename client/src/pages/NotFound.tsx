@@ -2,10 +2,15 @@ import { Suspense } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Glass } from '../components/p03/Glass.tsx'
 import { FaultyScreen } from '../components/p03/FaultyScreen.ts'
+import { useRise } from '../lib/rise.ts'
 
 export function NotFound() {
+  const rise = useRise()
   return (
-    <div className="p03-screen p03-glow relative flex max-w-xl flex-col gap-3 overflow-hidden rounded-md border border-p03-edge p-6 font-terminal text-2xl">
+    <div
+      {...rise(0)}
+      className="p03-screen p03-glow relative flex max-w-xl flex-col gap-3 overflow-hidden rounded-md border border-p03-edge p-6 font-terminal text-2xl"
+    >
       <Suspense fallback={null}>
         <FaultyScreen bright={0.35} />
       </Suspense>

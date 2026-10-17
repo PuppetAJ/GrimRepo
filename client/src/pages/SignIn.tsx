@@ -7,8 +7,10 @@ import { Label } from '@/components/ui/label.tsx'
 import { PasswordInput } from '../components/PasswordInput.tsx'
 import { authClient, authError, DEMO, settled } from '../lib/auth.ts'
 import { P03Line } from '../components/p03/P03Line.tsx'
+import { useRise } from '../lib/rise.ts'
 
 export function SignIn() {
+  const rise = useRise()
   const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -41,9 +43,11 @@ export function SignIn() {
 
   return (
     <div className="mx-auto flex w-full max-w-sm flex-col gap-6">
-      <h1 className="font-display text-5xl">Sign in</h1>
-      <P03Line>Back again? Identify yourself.</P03Line>
-      <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
+      <h1 {...rise(0)} className="font-display text-5xl">
+        Sign in
+      </h1>
+      <P03Line {...rise(1)}>Back again? Identify yourself.</P03Line>
+      <form {...rise(2)} onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
         <div className="flex flex-col gap-2">
           <Label htmlFor="identifier">Username or email</Label>
           <Input id="identifier" name="identifier" autoComplete="username" required />

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button.tsx'
 import { Input } from '@/components/ui/input.tsx'
 import { Cost } from './cards/CardFacts.tsx'
 import { DECK } from '../game/deck.ts'
+import { useRise } from '../lib/rise.ts'
 import { COSTS, matches, SORTS, sorted, type Sort } from './cards/deck.ts'
 import { Grid } from './cards/Grid.tsx'
 import { Viewer } from './cards/Viewer.tsx'
@@ -14,6 +15,7 @@ import type { CardsSearch } from '../router.tsx'
 const GROUP = 'flex divide-x overflow-hidden rounded-md border'
 
 export function Cards() {
+  const rise = useRise()
   const search = useSearch({ from: '/cards' })
   const navigate = useNavigate({ from: '/cards' })
   const query = search.q ?? ''
@@ -43,14 +45,14 @@ export function Cards() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-2">
+      <div {...rise(0)} className="flex flex-col gap-2">
         <h1 className="font-display text-6xl leading-none">Compendium</h1>
         <p role="status" className="font-mono text-sm text-muted-foreground">
           ls ./cards · {cards.length} of {DECK.length} cards
         </p>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div {...rise(1)} className="flex flex-wrap items-center gap-3">
         <label htmlFor={field} className="sr-only">
           Search the cards
         </label>
@@ -148,7 +150,9 @@ export function Cards() {
       ) : view === 'grid' ? (
         <Grid cards={cards} onOpen={(id) => change({ view: '3d', card: id })} />
       ) : (
-        <Viewer cards={cards} chosen={chosen} onChoose={(id) => change({ card: id })} />
+        <div {...rise(2)}>
+          <Viewer cards={cards} chosen={chosen} onChoose={(id) => change({ card: id })} />
+        </div>
       )}
     </div>
   )
