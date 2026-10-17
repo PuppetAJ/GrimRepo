@@ -70,7 +70,7 @@ In development, `window.__game` exposes the 3D table's state and where things ar
 
 - **Unit tests** (`pnpm test`): the rules engine, including a bot that plays whole seeded games and runs and a check that replay always agrees; the server's routes, auth, guests, rate limits and name filter against a real Postgres database whose name must end in `_test`; and the client's playback, table layout and P03's lines.
 - **Browser suites** (`pnpm test:e2e`): Playwright Test specs in `e2e/`, run in Chromium and Firefox. A failing test keeps a trace to step through with `pnpm exec playwright show-trace`. Smoke, auth, leaderboard, a whole game and a whole run on the text table, the 3D table (clicking its models through `window.__game`), a run at the 3D table, and an axe accessibility check of every page but the game on a laptop and a phone.
-- **CI:** `ci.yml` runs lint, formatting, types, the unit tests and the build on every pull request and on `main`, and Railway deploys only once it passes. `browser.yml` runs every browser suite on pull requests, in both engines, against a production build.
+- **CI:** `ci.yml` runs lint, formatting, types, the unit tests and the build on every pull request and on `main`, and Railway deploys only once it passes. `browser.yml` runs the browser suites against a production build: on a pull request, the ones its changes can reach, in Chromium; every night, all of them in both engines.
 - **The live site** (`pnpm test:prod`): a short check of the critical path after a deploy, ending with a whole run played by a bot. It plays as a guest and signs nobody up.
 
 ## Scripts
