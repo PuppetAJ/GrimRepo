@@ -24,6 +24,9 @@ type Played = { state: GameState; progress: Progress; log: string[]; moves: numb
 
 let generations = 0
 
+/** What P03 says as the tutorial is won, in place of a battle's usual win line. */
+const TUTORIAL_WIN = 'You win. I let you, obviously. Next time the cards are shuffled.'
+
 function begin(step: number): Played {
   const { state, progress } = tutorialAt(step)
   return { state, progress, log: [`P03> ${TUTORIAL_ENCOUNTER.intro}`], moves: 0 }
@@ -46,7 +49,10 @@ export function useTutorial(start = 0): Ready {
       const outcome = apply(played.state, action)
       if (!outcome.ok) return
       for (const listener of listeners.current) listener(outcome.events)
-      const lines = narrate(played.state, outcome.events).map((line) => `P03> ${line}`)
+      const said = narrate(played.state, outcome.events)
+      // The tutorial's win is its own, in place of a battle's usual last line.
+      if (outcome.state.status === 'won') said.splice(-1, 1, TUTORIAL_WIN)
+      const lines = said.map((line) => `P03> ${line}`)
       setPlayed({
         state: outcome.state,
         progress: expectedMove(played.progress) ? afterMove(played.progress) : played.progress,

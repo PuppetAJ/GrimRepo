@@ -39,10 +39,11 @@ export function MonitorAndTools() {
             aria-hidden
             className="grid size-24 shrink-0 place-items-center rounded-md border-2 border-[#1f3a26] bg-[#050d07] p-2"
           >
-            <P03Face face={face} className="w-full" />
+            {/* Nudged so the monitor's body is what's centered, not the art with its fins and corner stub. */}
+            <P03Face face={face} className="w-full translate-x-[2.9%] -translate-y-[4.8%]" />
           </div>
           {/* Beside him, left to right, level with his face. */}
-          <Items className="h-24 items-center" />
+          <Items className="h-24 items-center" keepSlots />
         </>
       ) : (
         <Items className="w-full justify-center self-start" />
