@@ -21,19 +21,19 @@ concurrency:
 env:
   # A pull request: Chromium only, without the leaderboard, whose seeded players rarely change.
   PULL_REQUEST: >-
-    [{"suite":"smoke","engine":"chromium"},{"suite":"auth","engine":"chromium"},{"suite":"game","engine":"chromium"},
+    [{"suite":"smoke","engine":"chromium"},{"suite":"auth","engine":"chromium"},
     {"suite":"run-mode","engine":"chromium"},{"suite":"run-3d","engine":"chromium"},{"suite":"table","engine":"chromium"},
     {"suite":"tutorial","engine":"chromium"},{"suite":"a11y","part":"pages","engine":"chromium"},
     {"suite":"a11y","part":"run","engine":"chromium"},{"suite":"a11y","part":"tables","engine":"chromium"}]
   # Nightly and on demand: every suite on both engines.
   FULL: >-
     [{"suite":"smoke","engine":"chromium"},{"suite":"auth","engine":"chromium"},
-    {"suite":"leaderboard","engine":"chromium"},{"suite":"game","engine":"chromium"},
+    {"suite":"leaderboard","engine":"chromium"},
     {"suite":"run-mode","engine":"chromium"},{"suite":"run-3d","engine":"chromium"},{"suite":"table","engine":"chromium"},
     {"suite":"tutorial","engine":"chromium"},{"suite":"a11y","part":"pages","engine":"chromium"},
     {"suite":"a11y","part":"run","engine":"chromium"},{"suite":"a11y","part":"tables","engine":"chromium"},
     {"suite":"smoke","engine":"firefox"},{"suite":"auth","engine":"firefox"},{"suite":"leaderboard","engine":"firefox"},
-    {"suite":"game","engine":"firefox"},{"suite":"run-mode","engine":"firefox"},{"suite":"run-3d","engine":"firefox"},
+    {"suite":"run-mode","engine":"firefox"},{"suite":"run-3d","engine":"firefox"},
     {"suite":"table","engine":"firefox"},{"suite":"tutorial","engine":"firefox"},{"suite":"a11y","part":"pages","engine":"firefox"},
     {"suite":"a11y","part":"run","engine":"firefox"},{"suite":"a11y","part":"tables","engine":"firefox"}]
 

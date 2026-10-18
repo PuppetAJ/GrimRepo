@@ -107,8 +107,8 @@ export function Home() {
             </li>
           </ul>
           <p className="max-w-2xl text-lg leading-relaxed text-foreground/85">
-            A card game of sacrifices, played on floppy disks against P03 in his factory. Every card costs something: to
-            play the strong ones you give up the weak. Take a deck across his map, from Localhost to Production, or
+            A card game of sacrifices, played on floppy disks against P03 in its factory. Every card costs something: to
+            play the strong ones you give up the weak. Take a deck across its map, from Localhost to Production, or
             learn the rules first in a short tutorial.
           </p>
           <div className="flex flex-wrap gap-3">
@@ -122,7 +122,12 @@ export function Home() {
               <Link to="/leaderboard">Leaderboard</Link>
             </Button>
             {import.meta.env.DEV ? (
-              <Button size="lg" variant="ghost" onClick={() => window.dispatchEvent(new Event(REPLAY_EVENT))}>
+              <Button
+                size="lg"
+                variant="ghost"
+                className="order-4"
+                onClick={() => window.dispatchEvent(new Event(REPLAY_EVENT))}
+              >
                 Replay takeover
               </Button>
             ) : null}
@@ -166,7 +171,8 @@ export function Home() {
         <section {...rise(1)} className="flex flex-col gap-2">
           <h2 className="font-semibold">About</h2>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            An Inscryption-style card game: a roguelike run across three stages of P03's map, and quick battles.
+            An Inscryption-style card game: a roguelike run across three stages of P03's map, with a tutorial to learn
+            it.
           </p>
         </section>
         <section {...rise(2)} className="flex flex-col gap-3 border-t pt-5">

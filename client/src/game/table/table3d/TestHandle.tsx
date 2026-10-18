@@ -2,7 +2,7 @@ import { useThree } from '@react-three/fiber'
 import { useEffect, useRef } from 'react'
 import type { Action, GameState } from 'shared'
 import * as THREE from 'three'
-import type { Ready } from '../../useGame.ts'
+import type { Ready } from '../../ready.ts'
 import type { View } from '../../view.ts'
 import { BELL, CARD, DECK, PILE, slot } from '../layout.ts'
 

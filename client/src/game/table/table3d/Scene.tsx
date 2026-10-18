@@ -2,7 +2,7 @@ import { TableMark } from './TutorialMark.tsx'
 import { useEffect, useLayoutEffect, useState } from 'react'
 import { ITEMS, PLAYER_DECK, reshuffleSize, type Action } from 'shared'
 import { has, hasEnded, laneAction, legalFor, skippedDraw } from '../../controls.tsx'
-import type { Ready } from '../../useGame.ts'
+import type { Ready } from '../../ready.ts'
 import type { View } from '../../view.ts'
 import { CardBatch } from '../Batch.tsx'
 import { Card, Popup, type Look, type Place } from '../Cards.tsx'
@@ -134,7 +134,7 @@ export function Scene({
     view.summon?.uid === uid ? 'selected' : can({ type: 'select', uid } as Partial<Action>) ? 'plain' : 'dim'
 
   const handFull = !busy && !hasEnded(game) && skippedDraw(state)
-  // Gliding in from another view, the table is set piece by piece; a quick battle's was set behind the loading screen.
+  // Gliding in from another view, the table is set piece by piece; a table opened on its own is set behind the loading screen.
   const setting = Boolean(from) && !STILL
   const at = (seconds: number) => (setting ? seconds : undefined)
   const dealt = useDeal(setting)

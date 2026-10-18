@@ -52,12 +52,11 @@ test('The live site', async ({ page, browser }) => {
     await page.goto(BASE, { waitUntil: 'networkidle' })
     await page.evaluate(() => localStorage.setItem('grimrepo:table', 'text'))
     await page.getByRole('link', { name: 'Play', exact: true }).click()
-    await page.locator('[data-table="text"]').waitFor()
-    check('Play deals a guest into a game', (await page.locator('[data-action="draw-deck"]').count()) === 1)
-    await page.goto(`${BASE}/game?fixture=worst`, { waitUntil: 'networkidle' })
-    await page.locator('[data-table="text"]').waitFor()
+    await page.locator('[data-run-seed]').waitFor()
+    check('Play deals a guest into a run', page.url() === `${BASE}/run`, page.url())
+    await page.goto(`${BASE}/mockups/board/worst`, { waitUntil: 'networkidle' })
     check(
-      'asking for a test fixture changes nothing',
+      'a test board is not served from the live site',
       (await page.getByText('destroyEverything(everyone)').count()) === 0,
     )
 

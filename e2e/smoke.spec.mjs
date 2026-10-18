@@ -1,4 +1,3 @@
-import { apply, createGame, nextBotAction, summary } from '../shared/src/index.ts'
 import { BASE, check, deletePlayer, freshPage, newPlayer, resetRateLimits, test } from './lib.mjs'
 
 test.beforeAll(resetRateLimits)
@@ -189,44 +188,26 @@ test('Accounts and scores', async ({ page }) => {
   if (served.includes('data-home='))
     check('and a build sends them the signed-in README', served.includes('data-home="signed-in'))
 
-  const cheat = await page.request.post(`${BASE}/api/games`, { data: { outcome: 'win', turns: 3, score: 9_999_999 } })
+  const cheat = await page.request.post(`${BASE}/api/runs`, { data: { seed: 1, score: 9_999_999 } })
   const opened = await cheat.json().catch(() => ({}))
   check(
-    'a game starts with a seed the server chose, whatever the request says',
-    typeof opened.seed === 'number',
+    'a run starts with a seed the server chose, whatever the request says',
+    typeof opened.seed === 'number' && opened.seed !== 1,
     JSON.stringify(opened),
   )
-
-  // The bot plays the dealt game here, then sends the whole record for the server to replay.
-  let state = createGame({ seed: opened.seed })
-  const actions = []
-  while (state.status === 'playing') {
-    const action = nextBotAction(state)
-    const result = apply(state, action)
-    if (!result.ok) throw new Error(result.reason)
-    state = result.state
-    actions.push(action)
-  }
-  const illegal = await page.request.post(`${BASE}/api/games/${opened.id}/moves`, {
-    data: { from: 0, actions: [{ type: 'ringBell' }] },
+  const illegal = await page.request.post(`${BASE}/api/runs/${opened.id}/moves`, {
+    data: { from: 0, actions: [{ type: 'play', action: { type: 'ringBell' } }] },
   })
   check('an illegal move is refused', illegal.status() === 400, String(illegal.status()))
-  const game = await page.request.post(`${BASE}/api/games/${opened.id}/moves`, { data: { from: 0, actions } })
-  const scored = await game.json().catch(() => ({}))
-  check(
-    'a finished game is replayed and scored by the server',
-    game.ok() && scored.status === 'finished' && scored.outcome === summary(state).outcome,
-    JSON.stringify(scored),
-  )
 
   const ranked = async () =>
     (await (await page.request.get(`${BASE}/api/leaderboard`)).json()).players.some(
       (row) => row.username === player.username,
     )
-  check('a quick battle stays off the leaderboard, which ranks runs', !(await ranked()))
+  check('an unfinished run stays off the leaderboard', !(await ranked()))
 
   // Abandoning a run at once finishes it, scored on how far it got.
-  const run = await (await page.request.post(`${BASE}/api/runs`)).json()
+  const run = opened
   const abandoned = await page.request.post(`${BASE}/api/runs/${run.id}/forfeit`)
   check('an abandoned run is finished as lost', (await abandoned.json()).status === 'lost')
   const board = await (await page.request.get(`${BASE}/api/leaderboard`)).json()
@@ -234,7 +215,7 @@ test('Accounts and scores', async ({ page }) => {
   check('which shows no email addresses', !JSON.stringify(board).includes('@'))
 
   const stats = await (await page.request.get(`${BASE}/api/players/${player.username}/stats`)).json()
-  check('their stats count the run and not the quick battle', stats.runs === 1, JSON.stringify(stats))
+  check('and their stats count it', stats.runs === 1, JSON.stringify(stats))
 
   // A browser always sends Origin on a POST; one without it is how a cross-site forgery looks.
   const forged = await page.request.post(`${BASE}/api/auth/sign-out`, { data: {} })

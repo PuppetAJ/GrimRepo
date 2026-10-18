@@ -367,3 +367,23 @@ describe('the runs leaderboard', () => {
     assert.equal(body.top, body.players[0].bestScore)
   })
 })
+
+describe('a request the API cannot read', () => {
+  it('answers malformed JSON with a 400, not a stack trace', async () => {
+    const player = await signedIn()
+    const run = await start(player.cookie)
+    const reply = await app.call('POST', `/api/runs/${run.id}/moves`, { cookie: player.cookie, raw: '{"from": 0,' })
+    assert.equal(reply.status, 400)
+    assert.equal(reply.body.error, 'Malformed JSON')
+  })
+
+  it('refuses a body far larger than any turn', async () => {
+    const player = await signedIn()
+    const run = await start(player.cookie)
+    const reply = await app.call('POST', `/api/runs/${run.id}/moves`, {
+      cookie: player.cookie,
+      raw: JSON.stringify({ pad: 'x'.repeat(40_000) }),
+    })
+    assert.equal(reply.status, 413)
+  })
+})

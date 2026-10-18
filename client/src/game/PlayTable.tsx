@@ -1,23 +1,20 @@
-import { useSearch } from '@tanstack/react-router'
 import { lazy, Suspense, useState } from 'react'
 import { Button } from '@/components/ui/button.tsx'
 import { LoadFailed } from '../components/LoadFailed.tsx'
 import { Failure, Loading } from '../components/States.tsx'
-import { useSeat } from '../game/controls.tsx'
-import { FIXTURES_ON } from '../game/fixtures.ts'
-import { useLeaveFullScreen } from '../game/fullScreen.ts'
-import { useKeepTableFocus } from '../game/shortcuts.ts'
-import { TableBox } from '../game/TableBox.tsx'
-import { Boot } from '../game/table/Boot.tsx'
-import { TableFailed, TurnSideways } from '../game/tableNotices.tsx'
-import { TerminalTable } from '../game/TerminalTable.tsx'
-import { useLayoutChoice } from '../game/layoutChoice.ts'
-import { useGame, type Game as GameLoad } from '../game/useGame.ts'
-import type { Layout } from '../game/text/useTextTable.ts'
-import { MotionRoot } from '../components/MotionRoot.tsx'
+import { FIXTURES_ON } from './fixtures.ts'
+import { useLeaveFullScreen } from './fullScreen.ts'
+import { useLayoutChoice } from './layoutChoice.ts'
+import type { Game } from './ready.ts'
+import { useKeepTableFocus } from './shortcuts.ts'
+import { TableBox } from './TableBox.tsx'
+import { Boot } from './table/Boot.tsx'
+import { TableFailed, TurnSideways } from './tableNotices.tsx'
+import { TerminalTable } from './TerminalTable.tsx'
+import type { Layout } from './text/useTextTable.ts'
 
 // three.js is most of the table's weight, so it loads only when the 3D table is shown.
-const Table3D = lazy(() => import('../game/table/Table3D.tsx'))
+const Table3D = lazy(() => import('./table/Table3D.tsx'))
 
 type Mode = '3d' | 'text'
 const MODE_KEY = 'grimrepo:table'
@@ -31,35 +28,20 @@ function savedMode(text: boolean): Mode {
   }
 }
 
-export function Game() {
-  return (
-    <MotionRoot>
-      <GameTable />
-    </MotionRoot>
-  )
-}
-
-function GameTable() {
-  const game = useGame()
-  // ?text picks the text table; ?layout forces a layout, for comparing them in development and tests.
-  const search = useSearch({ from: '/game' })
-  return <PlayTable game={game} text={search.text !== undefined} layout={search.layout} title="Play against P03" />
-}
-
+/** A battle on whichever table the player last chose, the 3D one by default; nothing on it is saved, so it carries no account notes. */
 export function PlayTable({
   game,
   text,
   layout: forced,
   title,
 }: {
-  game: GameLoad
+  game: Game
   text: boolean
   layout?: Layout
   title: string
 }) {
   useKeepTableFocus()
   useLeaveFullScreen()
-  const seat = useSeat()
   const [mode, setMode] = useState<Mode>(() => savedMode(text))
   const { layout, upright } = useLayoutChoice(FIXTURES_ON ? forced : undefined)
 
@@ -81,7 +63,7 @@ export function PlayTable({
       <div className={layout === 'phone' ? '-mx-(--gutter)' : '-mx-[calc(var(--gutter)-0.75rem)]'}>
         <h1 className="sr-only">{title}</h1>
         {/* Remount on a new deal or reload so playback never shows the last game. */}
-        <TerminalTable key={game.generation} game={game} seat={seat} on3d={() => choose('3d')} layout={layout} />
+        <TerminalTable key={game.generation} game={game} seat={null} on3d={() => choose('3d')} layout={layout} />
       </div>
     )
 
@@ -98,7 +80,7 @@ export function PlayTable({
       <LoadFailed fallback={(error) => <TableFailed error={error} onText={() => choose('text')} />}>
         <Suspense fallback={<Boot stage="code" />}>
           {/* Remount on a new deal or reload so the table rebuilds from the current state. */}
-          <Table3D key={game.generation} game={game} seat={seat} onText={() => choose('text')} />
+          <Table3D key={game.generation} game={game} seat={null} onText={() => choose('text')} />
         </Suspense>
       </LoadFailed>
       {/* Over the table, not in its place, so turning the phone back finds it as it was rather than set again. */}

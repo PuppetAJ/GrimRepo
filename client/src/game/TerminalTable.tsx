@@ -5,7 +5,7 @@ import { PhoneLayout } from './text/PhoneLayout.tsx'
 import { Announcer } from './text/Reading.tsx'
 import { useTextTable, type Layout, type RunControls } from './text/useTextTable.ts'
 import { WideLayout } from './text/WideLayout.tsx'
-import type { Ready } from './useGame.ts'
+import type { Ready } from './ready.ts'
 
 export function TerminalTable({
   game,

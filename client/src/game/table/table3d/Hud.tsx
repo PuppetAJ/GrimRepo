@@ -39,7 +39,7 @@ import {
   type Seat,
 } from '../../controls.tsx'
 import type { useFullScreen } from '../../fullScreen.ts'
-import type { Ready } from '../../useGame.ts'
+import type { Ready } from '../../ready.ts'
 import type { View } from '../../view.ts'
 import type { CameraView } from '../layout.ts'
 import { useWideTable } from '../../wideTable.ts'
@@ -81,7 +81,7 @@ export function Hud({
   onAim?: (slot: number | null) => void
   /** In a run, glides back to look at the map on the projector. */
   onMap?: () => void
-  /** A run's inventory, the deck and tools carried; a quick battle has none. */
+  /** A run's inventory, the deck and tools carried; the tutorial has none. */
   onInventory?: () => void
   /** The item picked up to aim at a card, and how to put it back. */
   aimed?: ItemId | null

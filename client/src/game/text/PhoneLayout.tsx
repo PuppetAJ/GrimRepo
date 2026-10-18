@@ -67,7 +67,7 @@ function Menu() {
     >
       {/* The battle's name and the save note, which the status line leaves out to keep the phase in view. */}
       <p className="flex items-baseline justify-between gap-2 px-1 font-terminal text-base">
-        <span className="truncate text-p03">{name ?? 'Quick battle'}</span>
+        <span className="truncate text-p03">{name}</span>
         <SaveStatus className="shrink-0 text-p03-dim" />
       </p>
       {/* A phone has no room beside the board for the tools. */}

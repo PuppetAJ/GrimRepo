@@ -1,6 +1,17 @@
-import { card, CARDS, deckCard, PLAYER_DECK, SIGILS, TIP, type GameState, type SigilId, type Unit } from 'shared'
+import {
+  card,
+  CARDS,
+  createGame,
+  deckCard,
+  PLAYER_DECK,
+  SIGILS,
+  TIP,
+  type GameState,
+  type SigilId,
+  type Unit,
+} from 'shared'
 
-// Fixed states for checking layouts, loaded with ?fixture=<name> in dev and test builds.
+// Fixed states for checking layouts, opened at /mockups/board/<name> in dev and test builds.
 export const FIXTURES_ON = import.meta.env.DEV || import.meta.env.VITE_TEST_HANDLE === '1'
 
 // The three sigils with the longest text, since a card carries three at most.
@@ -94,13 +105,15 @@ function auras(): GameState {
   }
 }
 
-const FIXTURES: Record<string, () => GameState> = { worst, auras }
+// A normal opening deal, for checking the tables play as a battle does.
+const fresh = () => createGame({ seed: 7 })
 
-export function fixture(): { name: string; state: GameState; log: string[] } | null {
+const FIXTURES: Record<string, () => GameState> = { worst, auras, fresh }
+
+export function fixture(name: string): { name: string; state: GameState; log: string[] } | null {
   if (!FIXTURES_ON) return null
-  const name = new URLSearchParams(window.location.search).get('fixture')
-  const make = name ? FIXTURES[name] : undefined
-  if (!name || !make) return null
+  const make = FIXTURES[name]
+  if (!make) return null
   const log = [...Array(40).keys()].map(
     (i) =>
       `P03> ${i % 3 ? 'destroyEnemy(you) hit JSONFoorhees in lane 2 for 8, and it was destroyed.' : `Turn ${60 + i}. Draw.`}`,

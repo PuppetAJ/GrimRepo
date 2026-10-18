@@ -71,7 +71,7 @@ export function SignIn() {
           Play as the demo account
         </Button>
         <Button asChild variant="ghost">
-          <Link to="/game">Or play a game of your own as a guest</Link>
+          <Link to="/run">Or start a run of your own as a guest</Link>
         </Button>
       </div>
       <p className="text-sm text-muted-foreground">

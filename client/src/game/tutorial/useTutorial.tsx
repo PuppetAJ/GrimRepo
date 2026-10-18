@@ -15,7 +15,7 @@ import {
   type Progress,
 } from 'shared'
 import { narrate } from '../../lib/narrate.ts'
-import type { Ready } from '../useGame.ts'
+import type { Ready } from '../ready.ts'
 import { TutorialEnding } from './TutorialBlurb.tsx'
 
 type Listener = (events: GameEvent[]) => void
@@ -84,7 +84,6 @@ export function useTutorial(start = 0): Ready {
     log: played.log,
     unsaved: 0,
     saving: false,
-    result: null,
     act,
     forfeit: async () => {},
     subscribe,
