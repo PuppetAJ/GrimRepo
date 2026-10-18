@@ -236,6 +236,7 @@ export function apply(current: GameState, action: Action): Result {
     state.player.board[action.lane] = unit
     state.summon = null
     events.push({ type: 'placed', lane: action.lane, unit })
+    state.placed = [...(state.placed ?? []), unit.uid]
     reinforce(state.player.board, action.lane, events)
     for (const victim of refactored) {
       unit.attack += victim.attack
@@ -397,6 +398,7 @@ function playTurn(state: GameState, rng: Rng, events: GameEvent[]): void {
 
   if (state.turn >= TURN_LIMIT) return finish(state, 'loss', events)
   state.turn += 1
+  delete state.placed
   events.push({ type: 'turnStarted', turn: state.turn })
   // While P03 leads a run's battle, the player may draw a second card from the deck this turn, after the first.
   state.catchUp =

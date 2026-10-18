@@ -43,6 +43,17 @@ describe('the console', () => {
     assert.deepEqual(history(23, actions)?.lines, live)
   })
 
+  it('calls a card destroyed the turn it was played a misplay', () => {
+    let state = step(createGame({ seed: 11 }), { type: 'draw', from: 'boilerplate' }).state
+    state.opponent.front[0] = { uid: 999, card: 'Mainframe', attack: 13, health: 13, maxHealth: 13, sigils: [] }
+    const filler = state.player.hand.find((unit) => unit.card === 'Boilerplate')?.uid as number
+    state = step(state, { type: 'select', uid: filler }).state
+    state = step(state, { type: 'place', lane: 0 }).state
+    const bell = step(state, { type: 'ringBell' })
+    assert.ok(narrate(state, bell.events).some((line) => line.endsWith('Total misplay.')))
+    assert.equal(bell.state.placed, undefined)
+  })
+
   it('refuses a record that breaks the rules', () => {
     assert.equal(history(23, [{ type: 'ringBell' }]), null)
   })

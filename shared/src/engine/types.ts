@@ -76,6 +76,8 @@ export type GameState = {
   integrity?: { left: number; max: number }
   /** An unshuffled deck, and P03 plays its plan exactly, then nothing. */
   scripted?: boolean
+  /** Cards the player placed this turn; no rule reads it, only P03's commentary. */
+  placed?: number[]
 }
 
 export type Action =

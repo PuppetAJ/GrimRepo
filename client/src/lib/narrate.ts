@@ -97,7 +97,9 @@ export function narrate(before: GameState, events: GameEvent[]): string[] {
       case 'killed':
         return [
           mine(event.uid)
-            ? `Your ${name(event.uid)} died. Obviously.`
+            ? before.placed?.includes(event.uid)
+              ? `Your ${name(event.uid)} died the turn you played it. Total misplay.`
+              : `Your ${name(event.uid)} died. Obviously.`
             : `My ${name(event.uid)} died. ${pick(LOSSES, event.uid)}`.trimEnd(),
         ]
       case 'overkill':
