@@ -6,7 +6,7 @@ import { useSettled } from '../tutorial/TutorialBlurb.tsx'
 import { useTable } from './context.ts'
 import { Items } from './Items.tsx'
 
-// The heading and a face big enough to read, plus padding; below this the column has no room for him.
+// His square; the most the column holds beside three tools in a row. Below this height there's no room for him.
 const FITS_REM = 6
 
 /**
@@ -31,20 +31,21 @@ export function MonitorAndTools() {
     return () => observer.disconnect()
   }, [box])
   return (
-    <div ref={setBox} className="flex min-h-0 flex-1 gap-2">
+    <div ref={setBox} className="flex min-h-0 flex-1 items-start gap-2">
       {fits ? (
         <>
-          {/* Only a picture of what the 3D table shows; the log says what happened. */}
+          {/* A square, only a picture of what the 3D table shows; the log says what happened. */}
           <div
             aria-hidden
-            className="flex min-w-0 flex-1 flex-col rounded-md border-2 border-[#1f3a26] bg-[#050d07] p-2 text-base"
+            className="flex size-24 shrink-0 flex-col rounded-md border-2 border-[#1f3a26] bg-[#050d07] p-1.5 text-sm"
           >
             <p className="text-p03">// P03</p>
-            <div className="flex min-h-0 flex-1 items-center justify-center pt-1">
-              <P03Face face={face} className="h-full max-h-28 w-auto max-w-full" />
+            <div className="flex min-h-0 flex-1 items-center justify-center">
+              <P03Face face={face} className="w-full" />
             </div>
           </div>
-          <Items className="flex-col justify-center" />
+          {/* Beside him, left to right, level with his face. */}
+          <Items className="h-24 items-center" />
         </>
       ) : (
         <Items className="w-full justify-center self-start" />

@@ -23,7 +23,7 @@ export function P03Face({ face, className = '' }: { face: Face; className?: stri
 
 // A bright glow close in and a wider, fainter one, drawn around the whole shape, the name tab and any ledge
 // included, so it draws the eye off the busy table.
-const GLOW = '[filter:drop-shadow(0_0_5px_rgb(125_255_154/0.6))_drop-shadow(0_0_16px_rgb(125_255_154/0.3))]'
+const GLOW = '[filter:drop-shadow(0_0_5px_rgb(125_255_154/0.51))_drop-shadow(0_0_16px_rgb(125_255_154/0.255))]'
 
 /**
  * P03 speaking, as a game's dialogue box: his name on a tab, his head on the left with the words beside it, and the
@@ -58,7 +58,8 @@ export function P03Dialogue({
         ledge ? '' : GLOW,
         // His head and words sit in the middle of the box, so a short line leaves no gap under them; the name tab may
         // sit over the top of his head, which keeps the box short.
-        compact ? 'gap-2 px-2 py-1.5' : 'gap-3 px-3 py-2',
+        // A little more room under the words than over them, so they don't sit on the bottom edge.
+        compact ? 'gap-2 px-2 pt-1.5 pb-2' : 'gap-3 px-3 pt-2 pb-3.5',
         ledge ? 'w-full rounded-br-none bg-p03-ground/95' : className,
       )}
     >
