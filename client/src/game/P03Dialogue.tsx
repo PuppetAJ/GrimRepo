@@ -44,31 +44,35 @@ export function P03Dialogue({
   compact?: boolean
 } & Omit<ComponentProps<'section'>, 'children'>) {
   const words = cn('leading-snug [text-shadow:0_0_4px_#000]', compact ? 'text-sm' : 'text-xl @max-[28rem]:text-base')
-  const box = (
-    <section
-      {...section}
-      className={cn(
-        '@container relative flex items-center rounded-md border-2 border-p03-edge bg-p03-ground/85 font-terminal text-p03 backdrop-blur-md',
-        // With a ledge, the wrapper carries the glow so it covers both.
-        ledge ? '' : GLOW,
-        compact ? 'gap-2 px-2 pt-1.5 pb-2' : 'gap-3 px-3 pt-2 pb-3.5',
-        ledge ? 'w-full rounded-br-none bg-p03-ground/95' : className,
-      )}
-    >
+  const boxClass = cn(
+    '@container relative flex items-center rounded-md border-2 border-p03-edge bg-p03-ground/85 font-terminal text-p03 backdrop-blur-md',
+    // With a ledge, the wrapper carries the glow so it covers both.
+    ledge ? '' : GLOW,
+    compact ? 'gap-2 px-2 pt-1.5 pb-2' : 'gap-3 px-3 pt-2 pb-3.5',
+    ledge ? 'w-full rounded-br-none bg-p03-ground/95' : className,
+  )
+  const inner = (
+    <>
       <span className="absolute -top-3.5 left-3 z-10 rounded-sm border-2 border-p03-edge bg-p03-ground px-3 text-base leading-tight">
         P03
       </span>
       <P03Face face={face} className={compact ? 'w-16' : 'w-24 @max-[28rem]:w-16'} />
       <div className={cn('min-w-0 flex-1', words)}>{children}</div>
       {actions ? <div className="absolute right-2 bottom-1">{actions}</div> : null}
-    </section>
+    </>
   )
-  if (!ledge) return box
+  if (!ledge)
+    return (
+      <section {...section} className={boxClass}>
+        {inner}
+      </section>
+    )
+  // The label and role go on the wrapper, so the choices are part of what it names.
   return (
-    <div className={cn('@container flex flex-col items-end font-terminal text-p03', GLOW, className)}>
-      {box}
+    <section {...section} className={cn('@container flex flex-col items-end font-terminal text-p03', GLOW, className)}>
+      <div className={boxClass}>{inner}</div>
       <Ledge className={words}>{ledge}</Ledge>
-    </div>
+    </section>
   )
 }
 
