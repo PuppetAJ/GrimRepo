@@ -11,8 +11,8 @@ export function MonitorAndTools() {
   const scripted = useSettled(game.tutorial?.face, busy)
   const face = scripted ?? felt
   return (
-    // A tool's height, or twice it on a screen tall enough; the scale above shrinks to make room.
-    <div className="flex h-12 shrink-0 gap-4 [@media(min-height:880px)]:h-24">
+    // Taller screens give the face more room; the scale above shrinks to make it.
+    <div className="flex h-12 shrink-0 gap-4 [@media(min-height:780px)]:h-18 [@media(min-height:940px)]:h-24">
       {/* Hidden from screen readers: the log says what happened. */}
       <div
         aria-hidden
