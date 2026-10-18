@@ -210,8 +210,13 @@ export function MockupIndex() {
         </ol>
       </section>
       <section className="flex flex-col gap-3">
-        <h2 className="text-xl font-semibold">The quick battle</h2>
-        <Link to="/game" search={{ fixture: 'worst', text: '' }} className="text-primary underline underline-offset-2">
+        <h2 className="text-xl font-semibold">Fixed boards</h2>
+        <Link
+          to="/mockups/board/$name"
+          params={{ name: 'worst' }}
+          search={{ text: '' }}
+          className="text-primary underline underline-offset-2"
+        >
           The worst board, at the text table
         </Link>
       </section>

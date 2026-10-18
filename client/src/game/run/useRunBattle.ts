@@ -1,6 +1,6 @@
 import { useCallback, type ReactNode } from 'react'
 import type { Action, GameEvent } from 'shared'
-import type { Ready } from '../useGame.ts'
+import type { Ready } from '../ready.ts'
 import type { RunReady } from './useRun.ts'
 
 /** The run's battle in the shape the tables play, so both play it unchanged; null off the board. */
@@ -26,7 +26,6 @@ export function useRunBattle(run: RunReady, ending: ReactNode | null): Ready | n
     log: run.log,
     unsaved: run.unsaved,
     saving: run.saving,
-    result: null,
     act,
     forfeit: run.abandon,
     subscribe,

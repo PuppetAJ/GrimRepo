@@ -39,7 +39,7 @@ export function RunText({ run, layout, seat, on3d }: { run: RunReady; layout: La
   const shown = lookingAtMap ? 'map' : view
   return (
     <div data-run-seed={run.state.seed} data-run-moves={run.moves} data-run-unsaved={run.unsaved} data-run-view={shown}>
-      {/* Negative margins give the table most of the gutter, as on the quick battle's page. */}
+      {/* Negative margins give the table most of the gutter. */}
       <div className={layout === 'phone' ? '-mx-(--gutter)' : '-mx-[calc(var(--gutter)-0.75rem)]'}>
         {battle && fighting && !lookingAtMap ? (
           // Remounted for each battle, so its playback never starts from the last one.

@@ -3,7 +3,7 @@ import type { Action } from 'shared'
 import { type Seat, has, hasEnded, legalFor, outcomeOf } from '../controls.tsx'
 import { useSettled } from '../tutorial/TutorialBlurb.tsx'
 import { useFullScreen } from '../fullScreen.ts'
-import type { Ready } from '../useGame.ts'
+import type { Ready } from '../ready.ts'
 import { cardTones, FlatReaderBody } from '../CardReader.tsx'
 import { forTable, useEscapeCancel } from '../shortcuts.ts'
 import { loadCardAssets } from './faces.ts'
@@ -32,7 +32,7 @@ type Props = {
   onInventory?: () => void
 }
 
-/** A quick battle's own table: the stage and the battle on it, loaded with the page. */
+/** A table of its own, for the tutorial and fixed boards: the stage and the battle on it, loaded with the page. */
 export default function Table3D(props: Props) {
   return (
     <TableStage>

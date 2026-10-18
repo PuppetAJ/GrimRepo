@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { CARDS, SIGILS, TIP, type CardDef, type SigilId } from 'shared'
 
-export type Page = '/' | '/leaderboard' | '/cards' | '/game' | '/account' | '/stats'
+export type Page = '/' | '/leaderboard' | '/cards' | '/run' | '/account' | '/stats'
 
 export const PAGES: Record<string, Page> = {
   '~': '/',
@@ -10,8 +10,8 @@ export const PAGES: Record<string, Page> = {
   readme: '/',
   leaderboard: '/leaderboard',
   cards: '/cards',
-  game: '/game',
-  play: '/game',
+  run: '/run',
+  play: '/run',
   account: '/account',
   stats: '/stats',
 }

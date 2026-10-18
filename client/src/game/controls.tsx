@@ -33,11 +33,9 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog.tsx'
 import { Button } from '@/components/ui/button.tsx'
-import type { Finished } from '../lib/api.ts'
 import { authClient, DEMO } from '../lib/auth.ts'
-import { number } from '../lib/format.ts'
 import type { Shown } from './shown.ts'
-import type { Ready } from './useGame.ts'
+import type { Ready } from './ready.ts'
 import { drift } from './moves.ts'
 
 export const has = (legal: Action[], match: Partial<Action>) =>
@@ -112,34 +110,6 @@ export function prompt(
   return `Summoning ${name}: pick a lane.`
 }
 
-export function GameOver({ result, className = '' }: { result: Finished; className?: string }) {
-  return (
-    <section role="status" className={`flex flex-col gap-3 rounded border border-p03 p-4 ${className}`}>
-      <p className="text-3xl text-p03">
-        {result.outcome === 'win' ? `You win in ${result.turns} turns.` : `You lose on turn ${result.turns}.`}
-      </p>
-      <p>
-        {number(result.score)} points
-        {result.first
-          ? ". Everyone's first score is bad."
-          : result.isBest
-            ? '. A new best.'
-            : `. Your best is ${number(result.best)}.`}
-      </p>
-      <div className="flex flex-wrap gap-3 font-sans text-base">
-        {/* Only runs rank, so a quick battle points the way to one. */}
-        <Button asChild>
-          <Link to="/run">Start a run</Link>
-        </Button>
-        <Button variant="outline" onClick={() => window.location.reload()}>
-          Play again
-        </Button>
-      </div>
-    </section>
-  )
-}
-
-/** A run battle's name, with "Phase 1 of 2" beside a boss's, which starts its next phase when the scale tips; null in a quick battle. */
 /** A boss's phase, "Phase 2 of 2"; null in a battle of one phase. */
 export function bossPhase(state: GameState, phase: number): string | null {
   const id = state.opponent.encounter
@@ -147,7 +117,7 @@ export function bossPhase(state: GameState, phase: number): string | null {
   return phases > 1 ? `Phase ${phase + 1} of ${phases}` : null
 }
 
-/** A run battle's name; null in a quick battle. */
+/** A run battle's name. */
 export const encounterName = (state: GameState): string | null =>
   state.opponent.encounter ? encounter(state.opponent.encounter).name : null
 
@@ -161,20 +131,15 @@ export function phaseText(state: GameState, phase: number): string | null {
 const localEnding = (game: Ready): ReactNode | null | undefined => game.run?.ending ?? game.tutorial?.ending
 
 export function Ending({ game }: { game: Ready }) {
-  if (game.run || game.tutorial) return localEnding(game)
-  return game.result ? (
-    <GameOver result={game.result} className="w-full max-w-md bg-p03-ground/95 font-terminal text-xl" />
-  ) : null
+  return localEnding(game) ?? null
 }
 
-export const hasEnded = (game: Ready) => Boolean(game.run || game.tutorial ? localEnding(game) : game.result)
+export const hasEnded = (game: Ready) => Boolean(localEnding(game))
 
 export const outcomeOf = (game: Ready): Outcome | undefined =>
-  game.result?.outcome ?? (localEnding(game) ? (game.state.status === 'won' ? 'win' : 'loss') : undefined)
+  localEnding(game) ? (game.state.status === 'won' ? 'win' : 'loss') : undefined
 
-/** For the prompt: a run's battle is decided locally, while a quick battle waits for the server. */
-export const overText = (game: Ready) =>
-  game.state.status !== 'playing' && (game.run || game.tutorial ? 'The battle is over.' : true)
+export const overText = (game: Ready) => game.state.status !== 'playing' && 'The battle is over.'
 
 /** In the tutorial, only the move the current step waits for. */
 export const legalFor = (game: Ready): Action[] => game.tutorial?.legal(game.state) ?? legalActions(game.state)

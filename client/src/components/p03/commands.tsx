@@ -86,7 +86,7 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
                 .{'  '}..{'  '}.y2k{'  '}.OLD_DATA{'  '}
               </Dim>
             ) : null}
-            README.md{'  '}cards/{'  '}leaderboard/{'  '}game/
+            README.md{'  '}cards/{'  '}leaderboard/{'  '}run/
           </p>
         )
       return (
@@ -212,7 +212,7 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
         </div>
       )
     case 'play':
-      context.navigate('/game')
+      context.navigate('/run')
       return null
     case 'cd': {
       const to = PAGES[argument.toLowerCase().replace(/^~?\//, '').replace(/\/$/, '') || '~']

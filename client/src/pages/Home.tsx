@@ -166,7 +166,8 @@ export function Home() {
         <section {...rise(1)} className="flex flex-col gap-2">
           <h2 className="font-semibold">About</h2>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            An Inscryption-style card game: a roguelike run across three stages of P03's map, and quick battles.
+            An Inscryption-style card game: a roguelike run across three stages of P03's map, with a tutorial to learn
+            it.
           </p>
         </section>
         <section {...rise(2)} className="flex flex-col gap-3 border-t pt-5">

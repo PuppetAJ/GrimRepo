@@ -2,7 +2,7 @@ import { useSearch } from '@tanstack/react-router'
 import { MotionRoot } from '../components/MotionRoot.tsx'
 import { FIXTURES_ON } from '../game/fixtures.ts'
 import { useTutorial } from '../game/tutorial/useTutorial.tsx'
-import { PlayTable } from './Game.tsx'
+import { PlayTable } from '../game/PlayTable.tsx'
 
 export function Tutorial() {
   // ?step opens a later step, counted from 1, outside production.

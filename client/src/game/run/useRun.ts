@@ -266,7 +266,7 @@ export function useRun(mockup: Mockup | null = null): Run {
       // With debugging on, every move and what it did goes to the console.
       if (debugging()) console.debug('[run]', table.moves + 1, action, outcome.events)
       setTable({ ...table, moves: table.moves + 1, history: [...table.history, action], ...story, aftermath })
-      // On the board, saves wait for a draw or the bell, as a quick battle's do, or a reload could peek at a draw.
+      // On the board, saves wait for a draw or the bell, or a reload could peek at a draw.
       const quiet = action.type === 'play' && action.action.type !== 'draw' && action.action.type !== 'ringBell'
       if (!quiet || outcome.state.status !== 'playing') void save()
     },

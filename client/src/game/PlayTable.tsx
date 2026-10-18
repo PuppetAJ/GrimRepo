@@ -1,23 +1,21 @@
-import { useSearch } from '@tanstack/react-router'
 import { lazy, Suspense, useState } from 'react'
 import { Button } from '@/components/ui/button.tsx'
 import { LoadFailed } from '../components/LoadFailed.tsx'
 import { Failure, Loading } from '../components/States.tsx'
-import { useSeat } from '../game/controls.tsx'
-import { FIXTURES_ON } from '../game/fixtures.ts'
-import { useLeaveFullScreen } from '../game/fullScreen.ts'
-import { useKeepTableFocus } from '../game/shortcuts.ts'
-import { TableBox } from '../game/TableBox.tsx'
-import { Boot } from '../game/table/Boot.tsx'
-import { TableFailed, TurnSideways } from '../game/tableNotices.tsx'
-import { TerminalTable } from '../game/TerminalTable.tsx'
-import { useLayoutChoice } from '../game/layoutChoice.ts'
-import { useGame, type Game as GameLoad } from '../game/useGame.ts'
-import type { Layout } from '../game/text/useTextTable.ts'
-import { MotionRoot } from '../components/MotionRoot.tsx'
+import { useSeat } from './controls.tsx'
+import { FIXTURES_ON } from './fixtures.ts'
+import { useLeaveFullScreen } from './fullScreen.ts'
+import { useLayoutChoice } from './layoutChoice.ts'
+import type { Game } from './ready.ts'
+import { useKeepTableFocus } from './shortcuts.ts'
+import { TableBox } from './TableBox.tsx'
+import { Boot } from './table/Boot.tsx'
+import { TableFailed, TurnSideways } from './tableNotices.tsx'
+import { TerminalTable } from './TerminalTable.tsx'
+import type { Layout } from './text/useTextTable.ts'
 
 // three.js is most of the table's weight, so it loads only when the 3D table is shown.
-const Table3D = lazy(() => import('../game/table/Table3D.tsx'))
+const Table3D = lazy(() => import('./table/Table3D.tsx'))
 
 type Mode = '3d' | 'text'
 const MODE_KEY = 'grimrepo:table'
@@ -31,28 +29,14 @@ function savedMode(text: boolean): Mode {
   }
 }
 
-export function Game() {
-  return (
-    <MotionRoot>
-      <GameTable />
-    </MotionRoot>
-  )
-}
-
-function GameTable() {
-  const game = useGame()
-  // ?text picks the text table; ?layout forces a layout, for comparing them in development and tests.
-  const search = useSearch({ from: '/game' })
-  return <PlayTable game={game} text={search.text !== undefined} layout={search.layout} title="Play against P03" />
-}
-
+/** A battle on whichever table the player last chose, the 3D one by default. */
 export function PlayTable({
   game,
   text,
   layout: forced,
   title,
 }: {
-  game: GameLoad
+  game: Game
   text: boolean
   layout?: Layout
   title: string

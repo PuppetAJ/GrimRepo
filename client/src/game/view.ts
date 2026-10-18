@@ -15,7 +15,7 @@ export type View = {
   summon: { uid: number; marked: number[] } | null
   /** A boss's phase, counted from 0. */
   phase: number
-  /** A run's integrity; null in a quick battle. */
+  /** A run's integrity; null outside a run. */
   integrity: { left: number; max: number } | null
   /** P03 has made its one desperate play this battle. */
   desperate: boolean

@@ -3,6 +3,7 @@ import {
   createRoute,
   createRouter,
   lazyRouteComponent,
+  redirect,
   type RouterHistory,
 } from '@tanstack/react-router'
 import * as z from 'zod/mini'
@@ -16,11 +17,11 @@ import { NotFound } from './pages/NotFound.tsx'
 // Home and the leaderboard ship in the first load; every other page loads on demand.
 const Account = lazyRouteComponent(() => import('./pages/Account.tsx'), 'Account')
 const Cards = lazyRouteComponent(() => import('./pages/Cards.tsx'), 'Cards')
-const Game = lazyRouteComponent(() => import('./pages/Game.tsx'), 'Game')
 const MyStats = lazyRouteComponent(() => import('./pages/MyStats.tsx'), 'MyStats')
 const Player = lazyRouteComponent(() => import('./pages/Player.tsx'), 'Player')
 const Run = lazyRouteComponent(() => import('./pages/Run.tsx'), 'Run')
 const Tutorial = lazyRouteComponent(() => import('./pages/Tutorial.tsx'), 'Tutorial')
+const Board = lazyRouteComponent(() => import('./pages/Board.tsx'), 'Board')
 const MockupIndex = lazyRouteComponent(() => import('./pages/Mockups.tsx'), 'MockupIndex')
 const MockupRun = lazyRouteComponent(() => import('./pages/Mockups.tsx'), 'MockupRun')
 const ArtEditor = lazyRouteComponent(() => import('./pages/ArtEditor.tsx'), 'ArtEditor')
@@ -45,10 +46,9 @@ const cardsSearch = z.object({
   card: optional(z.string()),
 })
 
-const gameSearch = z.object({
+const boardSearch = z.object({
   text: optional(z.string()),
   layout: optional(z.enum(['wide', 'mid', 'phone'])),
-  fixture: optional(z.string()),
 })
 
 const runSearch = z.object({ layout: optional(z.enum(['wide', 'mid', 'phone'])) })
@@ -63,7 +63,6 @@ const mockupSearch = z.object({
 })
 
 export type CardsSearch = z.infer<typeof cardsSearch>
-export type GameSearch = z.infer<typeof gameSearch>
 
 const root = createRootRoute({ component: Layout, notFoundComponent: NotFound })
 
@@ -104,15 +103,13 @@ const account = createRoute({
     </RequireAuth>
   ),
 })
+// Quick battles are gone; their old address leads to a run.
 const game = createRoute({
   getParentRoute: parent,
   path: '/game',
-  validateSearch: gameSearch,
-  component: () => (
-    <RequireAuth guest>
-      <Game />
-    </RequireAuth>
-  ),
+  beforeLoad: () => {
+    throw redirect({ to: '/run', replace: true })
+  },
 })
 
 const run = createRoute({
@@ -136,6 +133,12 @@ const tutorial = createRoute({
 
 // Development and test builds only; production shows the not-found page.
 const mockups = createRoute({ getParentRoute: parent, path: '/mockups', component: MockupIndex })
+const board = createRoute({
+  getParentRoute: parent,
+  path: '/mockups/board/$name',
+  validateSearch: boardSearch,
+  component: Board,
+})
 const mockup = createRoute({
   getParentRoute: parent,
   path: '/mockups/$name',
@@ -163,6 +166,7 @@ const tree = root.addChildren([
   mockups,
   art,
   anatomy,
+  board,
   mockup,
 ])
 

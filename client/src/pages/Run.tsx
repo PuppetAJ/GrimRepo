@@ -20,7 +20,7 @@ import { MotionRoot } from '../components/MotionRoot.tsx'
 const Run3D = lazy(() => import('../game/run/three/Run3D.tsx'))
 
 export type Mode = '3d' | 'text'
-// The same choice as the quick battle's, so a player picks a table once.
+// The same choice as the tutorial's, so a player picks a table once.
 const MODE_KEY = 'grimrepo:table'
 
 function savedMode(): Mode {

@@ -1,4 +1,4 @@
-import type { Action, DeathChoice, Outcome, RunAction } from 'shared'
+import type { DeathChoice, Outcome, RunAction } from 'shared'
 
 /** Players by their best run; `wins` counts the runs they cleared. */
 export type LeaderboardRow = { rank: number; username: string; bestScore: number; runs: number; wins: number }
@@ -37,19 +37,6 @@ export type FinishedRun = {
   playedAt: string
 }
 export type RunsPage = { runs: FinishedRun[]; page: number; pages: number; total: number }
-
-export type OpenGame = { id: number; seed: number; actions: Action[]; resumed: boolean; rulesChanged: boolean }
-
-export type Finished = {
-  status: 'finished'
-  outcome: Outcome
-  turns: number
-  score: number
-  best: number
-  first: boolean
-  isBest: boolean
-}
-export type Saved = { status: 'playing'; saved: number } | Finished
 
 export type OpenRun = {
   id: number
@@ -93,10 +80,6 @@ export const api = {
   stats: (username: string) => request<PlayerStats>(`/api/players/${encodeURIComponent(username)}/stats`),
   runs: (username: string, page: number) =>
     request<RunsPage>(`/api/players/${encodeURIComponent(username)}/runs?page=${page}`),
-  startGame: () => request<OpenGame>('/api/games', { method: 'POST' }),
-  saveMoves: (id: number, from: number, actions: Action[]) =>
-    request<Saved>(`/api/games/${id}/moves`, { method: 'POST', body: JSON.stringify({ from, actions }) }),
-  forfeit: (id: number) => request<Finished>(`/api/games/${id}/forfeit`, { method: 'POST' }),
   startRun: () => request<OpenRun>('/api/runs', { method: 'POST' }),
   saveRunMoves: (id: number, from: number, actions: RunAction[]) =>
     request<RunSaved>(`/api/runs/${id}/moves`, { method: 'POST', body: JSON.stringify({ from, actions }) }),
