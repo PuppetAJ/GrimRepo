@@ -148,6 +148,8 @@ const takesKeys = (target: EventTarget | null) =>
   target instanceof Element && target.closest('button, a, input, select, textarea, [role="button"]') !== null
 
 const GAP = 8
+// The name tab's height above the box, which must stay inside the table.
+const TAB_CLEAR = 16
 type Box = { left: number; right: number; top: number; bottom: number }
 const overlap = (a: Box, b: Box) =>
   Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) *
@@ -175,7 +177,11 @@ export function TutorialBlurb({
 }) {
   const { step, move, onPressOn } = blurb
   const box = useRef<HTMLElement>(null)
-  const [place, setPlace] = useState<{ center: number | null; bottom: boolean }>({ center: null, bottom: false })
+  const [place, setPlace] = useState<{ center: number | null; top: number | null; bottom: boolean }>({
+    center: null,
+    top: null,
+    bottom: false,
+  })
   const [tick, setTick] = useState(0)
   const pressOn = useRef(onPressOn)
   useEffect(() => {
@@ -232,7 +238,12 @@ export function TutorialBlurb({
     const targets = selector ? [...root.querySelectorAll(selector)].map((found) => found.getBoundingClientRect()) : []
     const covered = (bottom: boolean) => targets.reduce((sum, target) => sum + overlap(at(bottom), target), 0)
     const bottom = covered(false) > 0 && covered(true) < covered(false)
-    setPlace((now) => (now.center === center && now.bottom === bottom ? now : { center, bottom }))
+    // At the top, level with the board's own top edge, so that edge never shows above the box; the name tab needs
+    // its height clear above.
+    const top = board && !fixed ? Math.max(TAB_CLEAR, Math.round(board.top - frame.top - 2)) : null
+    setPlace((now) =>
+      now.center === center && now.bottom === bottom && now.top === top ? now : { center, top, bottom },
+    )
   }, [selector, fixed, step, tick])
 
   if (!step) return null
@@ -251,7 +262,10 @@ export function TutorialBlurb({
         compact={compact}
         aria-label="P03's tutorial"
         onClick={onClick}
-        style={place.center === null ? undefined : { left: place.center }}
+        style={{
+          ...(place.center === null ? {} : { left: place.center }),
+          ...(place.top === null || place.bottom ? {} : { top: place.top }),
+        }}
         className={cn(
           'pointer-events-auto z-40 -translate-x-1/2 bg-p03-ground/80',
           fixed ? 'fixed' : 'absolute',

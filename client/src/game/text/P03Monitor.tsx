@@ -31,18 +31,15 @@ export function MonitorAndTools() {
     return () => observer.disconnect()
   }, [box])
   return (
-    <div ref={setBox} className="flex min-h-0 flex-1 items-start gap-2">
+    <div ref={setBox} className="flex min-h-0 flex-1 items-start gap-4">
       {fits ? (
         <>
           {/* A square, only a picture of what the 3D table shows; the log says what happened. */}
           <div
             aria-hidden
-            className="flex size-24 shrink-0 flex-col rounded-md border-2 border-[#1f3a26] bg-[#050d07] p-1.5 text-sm"
+            className="grid size-24 shrink-0 place-items-center rounded-md border-2 border-[#1f3a26] bg-[#050d07] p-2"
           >
-            <p className="text-p03">// P03</p>
-            <div className="flex min-h-0 flex-1 items-center justify-center">
-              <P03Face face={face} className="w-full" />
-            </div>
+            <P03Face face={face} className="w-full" />
           </div>
           {/* Beside him, left to right, level with his face. */}
           <Items className="h-24 items-center" />

@@ -21,9 +21,9 @@ export function P03Face({ face, className = '' }: { face: Face; className?: stri
   )
 }
 
-// A bright glow close in and a wider, fainter one, drawn around the whole shape, the name tab and any ledge
+// A faint glow close in and a fainter, wider one, drawn around the whole shape, the name tab and any ledge
 // included, so it draws the eye off the busy table.
-const GLOW = '[filter:drop-shadow(0_0_5px_rgb(125_255_154/0.51))_drop-shadow(0_0_16px_rgb(125_255_154/0.255))]'
+const GLOW = '[filter:drop-shadow(0_0_4px_rgb(125_255_154/0.3))_drop-shadow(0_0_14px_rgb(125_255_154/0.12))]'
 
 /**
  * P03 speaking, as a game's dialogue box: his name on a tab, his head on the left with the words beside it, and the
@@ -86,8 +86,9 @@ export function P03Dialogue({
  * the box's own. It starts under the box's bottom border, which is all that parts the two.
  */
 function Ledge({ children, className }: { children: ReactNode; className: string }) {
+  // Its slant takes some of the left; the rest matches the right, and the top matches the bottom.
   return (
-    <div className={cn('relative py-2 pr-4 pl-9', className)}>
+    <div className={cn('relative pt-1 pr-4 pb-2 pl-[2.125rem]', className)}>
       {/* The edge's color behind, and the fill two pixels in, both cut to the slant. */}
       <span
         aria-hidden
