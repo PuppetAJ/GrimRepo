@@ -61,7 +61,7 @@ export function WideLayout() {
         </aside>
         <section
           aria-label="Your hand"
-          className="relative z-10 col-span-3 flex h-[clamp(8rem,19dvh,13rem)] items-end gap-4 border-t-2 border-p03-edge pt-3"
+          className="relative z-10 col-span-3 flex h-[clamp(9.25rem,19dvh,13rem)] items-end gap-4 border-t-2 border-p03-edge pt-3"
         >
           <Controls />
           <Hand />
