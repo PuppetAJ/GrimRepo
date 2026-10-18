@@ -738,7 +738,7 @@ export const MOCKUPS: Record<string, Entry> = {
   'boss-beaten': {
     title: 'A boss just beaten',
     group: 'reached',
-    revision: 10,
+    revision: 11,
     make: () => reached((s) => isBoss(s) && s.visit?.kind === 'battle' && s.visit.game.status === 'won'),
   },
   'low-integrity': {
@@ -750,7 +750,7 @@ export const MOCKUPS: Record<string, Entry> = {
   'integrity-lost': {
     title: 'A run lost when its integrity ran out',
     group: 'reached',
-    revision: 7,
+    revision: 8,
     make: () => {
       const found = lastIntegrity()
       const rung = found && applyRun(found.state, { type: 'play', action: { type: 'ringBell' } })
@@ -806,7 +806,7 @@ export const MOCKUPS: Record<string, Entry> = {
   lost: {
     title: 'A run lost in battle',
     group: 'reached',
-    revision: 14,
+    revision: 15,
     make: () => reached((s) => s.status === 'lost'),
   },
   won: { title: 'A cleared run', group: 'reached', revision: 6, make: () => reached((s) => s.status === 'won') },

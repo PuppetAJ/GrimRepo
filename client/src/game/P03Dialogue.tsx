@@ -71,42 +71,43 @@ export function P03Dialogue({
 }
 
 // Where body.svg is sliced, in its own pixels: top, right, bottom, left.
-const SLICES = [2, 44, 10, 28] as const
-// Must match the key notch drawn in body.svg, in pixels from the right end.
-const KEY = { from: 32, to: 40 }
+const SLICES = [2, 10, 10, 10] as const
 
-const tiled = (url: string) =>
-  ({ maskImage: `url("${url}")`, maskRepeat: 'repeat-x', maskPosition: 'left center' }) as const
+// Whole copies only, so no chip or pin is cut off at the end of its run.
+const tiled = (url: string) => ({ maskImage: `url("${url}")`, maskRepeat: 'space', maskPosition: 'center' }) as const
 
 function Ledge({ children, className }: { children: ReactNode; className: string }) {
   const [top, right, bottom, left] = SLICES
+  const half = {
+    borderStyle: 'solid',
+    borderWidth: `${top}px ${right}px ${bottom}px ${left}px`,
+    borderImage: `url("${bodyArt}") ${SLICES.join(' ')} fill / ${top}px ${right}px ${bottom}px ${left}px stretch`,
+  } as const
   return (
-    <div className={cn('relative min-w-[13rem] pt-4 pr-6 pb-4 pl-[2.125rem]', className)}>
+    <div className={cn('relative px-6 pt-4 pb-4', className)}>
+      {/* One half drawn twice, mirrored, so the key notch sits in the middle. */}
+      <span aria-hidden className="absolute inset-y-0 left-0 w-[calc(50%+1px)]" style={half} />
+      <span aria-hidden className="absolute inset-y-0 right-0 w-[calc(50%+1px)] -scale-x-100" style={half} />
+      {/* Up to three chips a side, fewer as the stick narrows. */}
       <span
         aria-hidden
-        className="absolute inset-0"
-        style={{
-          borderStyle: 'solid',
-          borderWidth: `${top}px ${right}px ${bottom}px ${left}px`,
-          borderImage: `url("${bodyArt}") ${SLICES.join(' ')} fill / ${top}px ${right}px ${bottom}px ${left}px stretch`,
-        }}
-      />
-      {/* 66px holds three chips; the stick's min width keeps the two ends apart. */}
-      <span
-        aria-hidden
-        className="absolute top-1.5 left-[2.125rem] h-2.5 w-[66px] bg-p03-edge"
+        className="absolute top-1.5 left-3 h-2.5 w-[clamp(24px,calc(50%-30px),72px)] bg-p03-edge"
         style={tiled(chipArt)}
       />
-      <span aria-hidden className="absolute top-1.5 right-6 h-2.5 w-[66px] bg-p03-edge" style={tiled(chipArt)} />
       <span
         aria-hidden
-        className="absolute bottom-1 left-[1.875rem] h-2 bg-[#c9a640]/75"
-        style={{ ...tiled(pinArt), right: KEY.to + 4 }}
+        className="absolute top-1.5 right-3 h-2.5 w-[clamp(24px,calc(50%-30px),72px)] bg-p03-edge"
+        style={tiled(chipArt)}
       />
       <span
         aria-hidden
-        className="absolute bottom-1 h-2 bg-[#c9a640]/75"
-        style={{ ...tiled(pinArt), left: `calc(100% - ${KEY.from - 4}px)`, right: 8 }}
+        className="absolute bottom-1 left-3 h-2 w-[calc(50%-18px)] bg-[#c9a640]/75"
+        style={tiled(pinArt)}
+      />
+      <span
+        aria-hidden
+        className="absolute right-3 bottom-1 h-2 w-[calc(50%-18px)] bg-[#c9a640]/75"
+        style={tiled(pinArt)}
       />
       <div className="relative">{children}</div>
     </div>
