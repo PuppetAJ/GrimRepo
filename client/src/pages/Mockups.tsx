@@ -6,6 +6,7 @@ import { MOCKUPS } from '../game/run/mockups.ts'
 import { NotFound } from './NotFound.tsx'
 import { RunTable } from './Run.tsx'
 import { MotionRoot } from '../components/MotionRoot.tsx'
+import { CornerOption } from './CornerOption.tsx'
 
 const LAYOUTS = ['wide', 'mid', 'phone'] as const
 
@@ -174,6 +175,13 @@ export function MockupIndex() {
           </Link>
         </section>
       ) : null}
+      <section id="corner-option" className="flex flex-col gap-3">
+        <h2 className="text-xl font-semibold">End box: the slant on the box's corner</h2>
+        <p className="text-sm text-muted-foreground">
+          The box's bottom-left corner is cut, as a card's top-right is, and the RAM stick stays straight.
+        </p>
+        <CornerOption />
+      </section>
       <section className="flex flex-col gap-3">
         <h2 className="text-xl font-semibold">The tutorial</h2>
         <p className="text-sm text-muted-foreground">

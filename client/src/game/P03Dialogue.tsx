@@ -24,7 +24,9 @@ export function P03Face({ face, className = '' }: { face: Face; className?: stri
 }
 
 // drop-shadow, not box-shadow, so the glow follows the name tab and the ledge.
-const GLOW = '[filter:drop-shadow(0_0_4px_rgb(125_255_154/0.3))_drop-shadow(0_0_14px_rgb(125_255_154/0.12))]'
+// --glow scales it where something dims the box, as the board's end-of-battle overlay does.
+const GLOW =
+  '[filter:drop-shadow(0_0_4px_rgb(125_255_154/calc(0.3*var(--glow,1))))_drop-shadow(0_0_14px_rgb(125_255_154/calc(0.12*var(--glow,1))))]'
 
 export function P03Dialogue({
   face,
@@ -86,8 +88,10 @@ function Ledge({ children, className }: { children: ReactNode; className: string
   return (
     <div className={cn('relative px-6 pt-4 pb-4', className)}>
       {/* One half drawn twice, mirrored, so the key notch sits in the middle. */}
-      <span aria-hidden className="absolute inset-y-0 left-0 w-[calc(50%+1px)]" style={half} />
-      <span aria-hidden className="absolute inset-y-0 right-0 w-[calc(50%+1px)] -scale-x-100" style={half} />
+      <span aria-hidden className="absolute inset-y-0 left-0 w-[calc(50%+2px)]" style={half} />
+      <span aria-hidden className="absolute inset-y-0 right-0 w-[calc(50%+2px)] -scale-x-100" style={half} />
+      {/* Stretched slices leave a sliver of edge color where the halves meet; this covers it, above the key notch. */}
+      <span aria-hidden className="absolute top-0.5 bottom-2 left-[calc(50%-3px)] w-1.5 bg-p03-ground" />
       {/* Up to three chips a side, fewer as the stick narrows. */}
       <span
         aria-hidden

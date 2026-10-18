@@ -342,7 +342,7 @@ export function Board() {
           })}
       </div>
       {gameOver ? (
-        <div className="absolute inset-0 grid place-items-center bg-black/60 p-4">
+        <div className="absolute inset-0 grid place-items-center bg-black/60 p-4 [--glow:1.8]">
           <Ending game={game} />
         </div>
       ) : null}
