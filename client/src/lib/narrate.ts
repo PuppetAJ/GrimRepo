@@ -68,7 +68,8 @@ export function narrate(before: GameState, events: GameEvent[]): string[] {
       case 'drew':
         return [
           event.from === 'boilerplate'
-            ? before.player.hand.some((unit) => unit.card === 'Boilerplate')
+            ? // Every second Boilerplate in hand, so it never fires twice running.
+              before.player.hand.filter((unit) => unit.card === 'Boilerplate').length % 2 === 1
               ? 'Boilerplate again. Bold strategy, choosing nothing.'
               : `You took a Boilerplate from the side pile. Filler.`
             : event.catchUp
