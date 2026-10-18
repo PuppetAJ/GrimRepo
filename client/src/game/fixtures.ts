@@ -1,4 +1,15 @@
-import { card, CARDS, deckCard, PLAYER_DECK, SIGILS, TIP, type GameState, type SigilId, type Unit } from 'shared'
+import {
+  card,
+  CARDS,
+  createGame,
+  deckCard,
+  PLAYER_DECK,
+  SIGILS,
+  TIP,
+  type GameState,
+  type SigilId,
+  type Unit,
+} from 'shared'
 
 // Fixed states for checking layouts, opened at /mockups/board/<name> in dev and test builds.
 export const FIXTURES_ON = import.meta.env.DEV || import.meta.env.VITE_TEST_HANDLE === '1'
@@ -94,7 +105,10 @@ function auras(): GameState {
   }
 }
 
-const FIXTURES: Record<string, () => GameState> = { worst, auras }
+// A normal opening deal, for checking the tables play as a battle does.
+const fresh = () => createGame({ seed: 7 })
+
+const FIXTURES: Record<string, () => GameState> = { worst, auras, fresh }
 
 export function fixture(name: string): { name: string; state: GameState; log: string[] } | null {
   if (!FIXTURES_ON) return null

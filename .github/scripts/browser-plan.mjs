@@ -6,23 +6,23 @@ const base = JSON.parse(process.env.MATRIX)
 const changed = process.env.CHANGED?.split('\n').filter(Boolean)
 
 const key = (entry) => (entry.part ? `${entry.suite}:${entry.part}` : entry.suite)
-const GAME = ['game', 'table', 'run-mode', 'run-3d', 'tutorial', 'a11y:run', 'a11y:tables']
+const GAME = ['table', 'run-mode', 'run-3d', 'tutorial', 'a11y:run', 'a11y:tables']
 
 // Most specific first; each file takes the first folder it starts with.
 const REACH = [
   ['client/src/game/run/', ['run-mode', 'run-3d', 'a11y:run', 'a11y:tables']],
   ['client/src/game/tutorial/', ['tutorial']],
   ['client/src/game/table/', ['table', 'run-3d', 'tutorial', 'a11y:tables']],
-  ['client/src/game/text/', ['game', 'table', 'run-mode', 'tutorial', 'a11y:run', 'a11y:tables']],
+  ['client/src/game/text/', ['table', 'run-mode', 'tutorial', 'a11y:run', 'a11y:tables']],
   ['client/src/game/', GAME],
   // The pages that hold the tables are the game's, not the site's.
-  ['client/src/pages/Game.tsx', GAME],
+  ['client/src/pages/Board.tsx', ['table', 'a11y:tables']],
   ['client/src/pages/Run.tsx', GAME],
   ['client/src/pages/Mockups.tsx', GAME],
   ['client/src/pages/Tutorial.tsx', ['tutorial']],
   ['client/src/pages/', ['smoke', 'auth', 'leaderboard', 'a11y:pages']],
   // The site's pages show what the API sends, so they're checked against it too.
-  ['server/src/', ['smoke', 'auth', 'leaderboard', 'game', 'run-mode', 'a11y:pages']],
+  ['server/src/', ['smoke', 'auth', 'leaderboard', 'run-mode', 'a11y:pages']],
 ]
 
 function reached() {

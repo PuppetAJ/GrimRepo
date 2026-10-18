@@ -93,12 +93,11 @@ test('Playing as a guest', async ({ browser }) => {
   const { context, page } = await freshPage(browser, { table: 'text' })
   await page.goto(BASE)
   await page.getByRole('link', { name: 'Play', exact: true }).click()
-  await page.locator('[data-table="text"]').waitFor()
-  check('Play deals a signed-out visitor straight in', page.url() === `${BASE}/game`, page.url())
+  await page.locator('[data-run-seed]').waitFor()
+  check('Play deals a signed-out visitor straight into a run', page.url() === `${BASE}/run`, page.url())
   const menu = page.getByRole('button', { name: 'Account menu' })
   check('as a guest, under a guest name', /guest_[a-z0-9]{6}/.test(await menu.innerText()), await menu.innerText())
-  check('who is told so at the table', await page.getByText('You are playing as a guest').isVisible())
-  const game = await page.locator('[data-game-id]').getAttribute('data-game-id')
+  const seed = await page.locator('[data-run-seed]').getAttribute('data-run-seed')
 
   const player = newPlayer('Claimed')
   await page.getByRole('banner').getByRole('link', { name: 'Sign up' }).click()
@@ -109,15 +108,40 @@ test('Playing as a guest', async ({ browser }) => {
   await page.getByLabel('Password', { exact: true }).fill(player.password)
   await page.getByRole('button', { name: 'Create account' }).click()
   await page.getByRole('button', { name: 'Account menu' }).filter({ hasText: player.username }).waitFor()
-  await page.goto(`${BASE}/game`)
-  await page.locator('[data-game-id]').waitFor()
+  await page.goto(`${BASE}/run`)
+  await page.locator('[data-run-seed]').waitFor()
   check(
-    'and the game they were playing is still theirs',
-    (await page.locator('[data-game-id]').getAttribute('data-game-id')) === game,
+    'and the run they were playing is still theirs',
+    (await page.locator('[data-run-seed]').getAttribute('data-run-seed')) === seed,
   )
   check('and the test player is removed afterwards', await deletePlayer(page, player))
   await context.close()
 })
+
+/** Plays the signed-in account's run up to its first battle, as the bot would, saving the moves. */
+async function toFirstBattle(page) {
+  const { applyRun, createRun, nextRunAction } = await import('../shared/src/index.ts')
+  const opened = await (await page.request.post(`${BASE}/api/runs`, { headers: { origin: BASE } })).json()
+  let state = createRun({ seed: opened.seed, death: opened.death, rival: opened.rival })
+  // An open run comes back with the moves it already has, which are replayed first.
+  for (const action of opened.actions) {
+    const result = applyRun(state, action)
+    if (!result.ok) throw new Error(result.reason)
+    state = result.state
+  }
+  const actions = []
+  while (state.visit?.kind !== 'battle') {
+    const action = nextRunAction(state)
+    const result = applyRun(state, action)
+    if (!result.ok) throw new Error(result.reason)
+    state = result.state
+    actions.push(action)
+  }
+  await page.request.post(`${BASE}/api/runs/${opened.id}/moves`, {
+    data: { from: opened.actions.length, actions },
+    headers: { origin: BASE },
+  })
+}
 
 test('The demo account and redirects', async ({ browser }) => {
   const { context, page } = await freshPage(browser)
@@ -127,7 +151,9 @@ test('The demo account and redirects', async ({ browser }) => {
   check('signing in always lands on the home page', page.url() === `${BASE}/`, page.url())
   check('as the demo account', (await page.getByRole('button', { name: 'Account menu' }).innerText()).includes('demo'))
 
-  await page.goto(`${BASE}/game`)
+  // The note is on the table, so the demo's run is played through the API up to its first battle.
+  await toFirstBattle(page)
+  await page.goto(`${BASE}/run`)
   await page.getByRole('note').waitFor()
   check(
     'the table warns that the demo game is shared',

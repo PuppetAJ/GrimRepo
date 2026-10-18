@@ -64,7 +64,7 @@ The seed creates a demo account anyone can use, `demo` with the password `demo-p
 
 The client is at http://localhost:3000 and proxies `/api` and `/health` to the API on port 3001. The database listens on 5433 so it can run beside another project's Postgres on 5432.
 
-In development, `window.__game` exposes the 3D table's state and where things are on screen, `/game?fixture=worst` loads a worst-case board to lay the tables out against, and `/mockups` holds every run screen, stopped at the point a run reaches it. None of them exist in a production build.
+In development, `window.__game` exposes the 3D table's state and where things are on screen, `/mockups/board/worst` loads a worst-case board to lay the tables out against, and `/mockups` holds every run screen, stopped at the point a run reaches it. None of them exist in a production build.
 
 ## Tests
 
@@ -75,22 +75,22 @@ In development, `window.__game` exposes the 3D table's state and where things ar
 
 ## Scripts
 
-| Script                        | Does                                                                                                                                                                                 |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `pnpm dev`                    | Client and API together, reloading on change                                                                                                                                         |
-| `pnpm build`                  | Builds the client into `client/dist`, with the home page prerendered                                                                                                                 |
-| `pnpm start`                  | The API, serving the built client when `NODE_ENV=production`                                                                                                                         |
-| `pnpm lint` / `pnpm format`   | oxlint / Prettier                                                                                                                                                                    |
-| `pnpm typecheck`              | TypeScript across every package                                                                                                                                                      |
-| `pnpm test`                   | Unit tests in every package                                                                                                                                                          |
-| `pnpm test:e2e`               | The browser suites in Chromium and then Firefox, against `E2E_BASE_URL` (default http://localhost:3000); `pnpm test:e2e e2e/game.spec.mjs --project=firefox` runs one in one browser |
-| `pnpm test:prod`              | The live site's critical path, or another production build's with `E2E_BASE_URL`                                                                                                     |
-| `pnpm db:up` / `pnpm db:down` | Start and stop the local Postgres                                                                                                                                                    |
-| `pnpm db:migrate`             | Apply the migrations in `server/migrations`                                                                                                                                          |
-| `pnpm db:seed`                | Wipe the database and reseed the demo state                                                                                                                                          |
-| `pnpm db:seed:empty`          | Seed only if there are no players yet; Railway runs this on every boot                                                                                                               |
-| `pnpm db:cleanup`             | The nightly clean-up, by hand                                                                                                                                                        |
-| `pnpm moderate`               | Rename, remove, list or scan accounts; see Looking after the live site                                                                                                               |
+| Script                        | Does                                                                                                                                                                                     |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm dev`                    | Client and API together, reloading on change                                                                                                                                             |
+| `pnpm build`                  | Builds the client into `client/dist`, with the home page prerendered                                                                                                                     |
+| `pnpm start`                  | The API, serving the built client when `NODE_ENV=production`                                                                                                                             |
+| `pnpm lint` / `pnpm format`   | oxlint / Prettier                                                                                                                                                                        |
+| `pnpm typecheck`              | TypeScript across every package                                                                                                                                                          |
+| `pnpm test`                   | Unit tests in every package                                                                                                                                                              |
+| `pnpm test:e2e`               | The browser suites in Chromium and then Firefox, against `E2E_BASE_URL` (default http://localhost:3000); `pnpm test:e2e e2e/tutorial.spec.mjs --project=firefox` runs one in one browser |
+| `pnpm test:prod`              | The live site's critical path, or another production build's with `E2E_BASE_URL`                                                                                                         |
+| `pnpm db:up` / `pnpm db:down` | Start and stop the local Postgres                                                                                                                                                        |
+| `pnpm db:migrate`             | Apply the migrations in `server/migrations`                                                                                                                                              |
+| `pnpm db:seed`                | Wipe the database and reseed the demo state                                                                                                                                              |
+| `pnpm db:seed:empty`          | Seed only if there are no players yet; Railway runs this on every boot                                                                                                                   |
+| `pnpm db:cleanup`             | The nightly clean-up, by hand                                                                                                                                                            |
+| `pnpm moderate`               | Rename, remove, list or scan accounts; see Looking after the live site                                                                                                                   |
 
 The browser suites need `pnpm exec playwright install chromium firefox` once.
 
@@ -123,7 +123,6 @@ Imports run one way, and oxlint enforces it: the client and the server may use `
 | `GET /api/leaderboard?page=`       | Players ranked by their best run, twenty to a page; guests are left off                                |
 | `GET /api/players/:username/stats` | A player's record: runs, runs cleared, rank, favorite card, best run, death card, recent runs          |
 | `GET /api/players/:username/runs`  | A player's whole history, ten runs to a page                                                           |
-| `POST /api/games` and `/:id/moves` | Quick battles, which still play until a tutorial replaces them, and no longer rank                     |
 
 Every figure is computed from the stored runs, and a player can only ever be shown under their own username. Sign-in attempts are rate limited by the client's real address, and games and runs per player.
 
@@ -148,7 +147,6 @@ A clean-up runs every night at 04:00 UTC as its own Railway service. It clears t
 
 ## Future plans
 
-- **A tutorial in place of quick battles.** A scripted first battle on both tables, with P03 talking the player through each move, replaces quick battle as the way in. Old quick battle scores stay in the database.
 - **Offense leads, currently by design.** The scale is a race, so damage is the only way to win, and defense buys time rather than winning on its own. Inscryption's factory plays the same way. Changing that would mean another way to win, such as wearing P03's deck down, and the cards to build around it: a new game more than a tune-up.
 - **Five lanes.** P03's board in Inscryption's third act is five lanes wide. Grim Repo keeps four for now: every encounter and boss is tuned to four, and five cards across is tight on a phone. The rules engine counts lanes in one place, so a fifth is mostly a matter of the 3D board, the camera views and a rebalance.
 - **Conduits.** Act 3's conduit cards power the cards between them. A fifth lane would leave room for three cards between two conduits, where four lanes leaves two, so conduits would come with it.

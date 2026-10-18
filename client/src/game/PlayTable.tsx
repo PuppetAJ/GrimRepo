@@ -2,7 +2,6 @@ import { lazy, Suspense, useState } from 'react'
 import { Button } from '@/components/ui/button.tsx'
 import { LoadFailed } from '../components/LoadFailed.tsx'
 import { Failure, Loading } from '../components/States.tsx'
-import { useSeat } from './controls.tsx'
 import { FIXTURES_ON } from './fixtures.ts'
 import { useLeaveFullScreen } from './fullScreen.ts'
 import { useLayoutChoice } from './layoutChoice.ts'
@@ -29,7 +28,7 @@ function savedMode(text: boolean): Mode {
   }
 }
 
-/** A battle on whichever table the player last chose, the 3D one by default. */
+/** A battle on whichever table the player last chose, the 3D one by default; nothing on it is saved, so it carries no account notes. */
 export function PlayTable({
   game,
   text,
@@ -43,7 +42,6 @@ export function PlayTable({
 }) {
   useKeepTableFocus()
   useLeaveFullScreen()
-  const seat = useSeat()
   const [mode, setMode] = useState<Mode>(() => savedMode(text))
   const { layout, upright } = useLayoutChoice(FIXTURES_ON ? forced : undefined)
 
@@ -65,7 +63,7 @@ export function PlayTable({
       <div className={layout === 'phone' ? '-mx-(--gutter)' : '-mx-[calc(var(--gutter)-0.75rem)]'}>
         <h1 className="sr-only">{title}</h1>
         {/* Remount on a new deal or reload so playback never shows the last game. */}
-        <TerminalTable key={game.generation} game={game} seat={seat} on3d={() => choose('3d')} layout={layout} />
+        <TerminalTable key={game.generation} game={game} seat={null} on3d={() => choose('3d')} layout={layout} />
       </div>
     )
 
@@ -82,7 +80,7 @@ export function PlayTable({
       <LoadFailed fallback={(error) => <TableFailed error={error} onText={() => choose('text')} />}>
         <Suspense fallback={<Boot stage="code" />}>
           {/* Remount on a new deal or reload so the table rebuilds from the current state. */}
-          <Table3D key={game.generation} game={game} seat={seat} onText={() => choose('text')} />
+          <Table3D key={game.generation} game={game} seat={null} onText={() => choose('text')} />
         </Suspense>
       </LoadFailed>
       {/* Over the table, not in its place, so turning the phone back finds it as it was rather than set again. */}

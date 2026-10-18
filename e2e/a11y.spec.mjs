@@ -129,7 +129,7 @@ test.describe('A run', { tag: '@run' }, () => {
 
 test.describe('The tables', { tag: '@tables' }, () => {
   test('The game', async ({ page }) => {
-    // Signed out, the game deals a guest in; the text table in each layout, then the 3D table's controls.
+    // A fresh deal on a fixed board: the text table in each layout, then the 3D table's controls.
     await page.goto(BASE)
     const textTable = () => page.locator('[data-table="text"]').waitFor()
     for (const [layout, width, height] of [
@@ -139,11 +139,11 @@ test.describe('The tables', { tag: '@tables' }, () => {
     ]) {
       await page.setViewportSize({ width, height })
       await page.evaluate(() => localStorage.setItem('grimrepo:table', 'text'))
-      await audit(page, `the text table, ${layout}`, `/game?layout=${layout}`, textTable)
+      await audit(page, `the text table, ${layout}`, `/mockups/board/fresh?layout=${layout}`, textTable)
     }
     await page.setViewportSize({ width: 1280, height: 800 })
     await page.evaluate(() => localStorage.setItem('grimrepo:table', '3d'))
-    await audit(page, 'the 3D table', '/game', () => tableReady(page))
+    await audit(page, 'the 3D table', '/mockups/board/fresh', () => tableReady(page))
   })
 
   test('A run on the projector', async ({ page }) => {
@@ -168,7 +168,7 @@ test.describe('The tables', { tag: '@tables' }, () => {
   test('The table keeps its shortcuts', async ({ page }) => {
     await page.goto(BASE)
     await page.evaluate(() => localStorage.setItem('grimrepo:table', 'text'))
-    await page.goto(`${BASE}/game`)
+    await page.goto(`${BASE}/mockups/board/fresh`)
     const table = page.locator('[data-table="text"]')
     await table.waitFor()
     const at = async () => Number(await table.getAttribute('data-moves'))
