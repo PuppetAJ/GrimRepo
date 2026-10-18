@@ -59,7 +59,7 @@ describe('the console', () => {
     const filler = start.player.hand.find((unit) => unit.card === 'Boilerplate')
     const said = [1, 2, 3, 4].map((held) => {
       const state = structuredClone(start)
-      state.player.hand = [...state.player.hand.filter((unit) => unit.card !== 'Boilerplate')]
+      state.player.hand = state.player.hand.filter((unit) => unit.card !== 'Boilerplate')
       for (let n = 0; n < held; n++)
         state.player.hand.push({ ...(filler as (typeof state.player.hand)[number]), uid: 900 + n })
       const drew = step(state, { type: 'draw', from: 'boilerplate' })
