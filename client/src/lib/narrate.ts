@@ -81,7 +81,10 @@ export function narrate(before: GameState, events: GameEvent[]): string[] {
         return [`You played ${played.name} in ${lane(event.lane)}.${aside}`]
       }
       case 'phaseChanged':
-        return [`Phase ${event.phase + 1}. The scale is level again, and I'm not done.`]
+        return [
+          'Rerouting power from the OL— Never mind.',
+          `Phase ${event.phase + 1}. The scale is level again, and I'm not done.`,
+        ]
       case 'wiped':
         return [`Segfault?! ${event.uids.length} of my cards, gone. That's not a strategy, that's just cheap.`]
       case 'hit': {
