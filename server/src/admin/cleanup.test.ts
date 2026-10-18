@@ -14,7 +14,15 @@ after(async () => {
 })
 beforeEach(resetDatabase)
 
-const openGame = async (cookie: string) => (await app.call('POST', '/api/games', { cookie })).body.id as number
+// Quick battles can no longer be started, so the open ones cleanup still clears are made directly.
+async function openGame(cookie: string): Promise<number> {
+  const user = (await app.call('GET', '/api/auth/get-session', { cookie })).body.user.id as string
+  const { rows } = await pool.query<{ id: number }>(
+    `INSERT INTO games (user_id, seed, status, rules_version, actions) VALUES ($1, 1234, 'playing', 1, '[]') RETURNING id`,
+    [user],
+  )
+  return rows[0]?.id as number
+}
 
 it('clears the demo account’s open game and month-old abandoned games, and nothing else', async () => {
   await auth.api.signUpEmail({ body: demoAccount })

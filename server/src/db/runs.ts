@@ -15,7 +15,7 @@ import {
 import { demoAccount } from '../auth/demo.ts'
 import { isOffensive, NAME_REFUSED } from '../auth/names.ts'
 import { pool } from '../config/db.ts'
-import { GameError } from './games.ts'
+import { GameError } from './errors.ts'
 import { runCardsPlayed } from './players.ts'
 
 export type LeaderboardRow = { rank: number; username: string; bestScore: number; runs: number; wins: number }

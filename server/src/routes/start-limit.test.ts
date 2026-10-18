@@ -11,12 +11,11 @@ after(async () => {
   await pool.end()
 })
 
-it('stops a script hammering the game routes, one player at a time', async () => {
+it('stops a script hammering the run routes, one player at a time', async () => {
   await resetDatabase()
   const { cookie } = await app.call('POST', '/api/auth/sign-up/email', { body: newPlayer() })
   const statuses: number[] = []
-  for (let attempt = 0; attempt < 25; attempt++)
-    statuses.push((await app.call('POST', '/api/games', { cookie })).status)
+  for (let attempt = 0; attempt < 25; attempt++) statuses.push((await app.call('POST', '/api/runs', { cookie })).status)
   assert.equal(statuses.filter((status) => status === 200 || status === 201).length, 20)
   assert.ok(
     statuses.slice(20).every((status) => status === 429),
@@ -25,5 +24,5 @@ it('stops a script hammering the game routes, one player at a time', async () =>
 
   // Keyed per player, so another player on the same address is unaffected.
   const other = await app.call('POST', '/api/auth/sign-up/email', { body: newPlayer() })
-  assert.equal((await app.call('POST', '/api/games', { cookie: other.cookie })).status, 201)
+  assert.equal((await app.call('POST', '/api/runs', { cookie: other.cookie })).status, 201)
 })

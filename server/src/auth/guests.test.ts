@@ -24,11 +24,11 @@ const boardNames = async () =>
   (await app.call('GET', '/api/leaderboard')).body.players.map((row: { username: string }) => row.username)
 
 describe('a guest', () => {
-  it('gets a guest name and can start a game at once', async () => {
+  it('gets a guest name and can start a run at once', async () => {
     const visitor = await guest()
     assert.match(visitor.username, /^guest_[a-z0-9]{6}$/)
-    const game = await app.call('POST', '/api/games', { cookie: visitor.cookie })
-    assert.equal(game.status, 201, 'a new deal')
+    const run = await app.call('POST', '/api/runs', { cookie: visitor.cookie })
+    assert.equal(run.status, 201, 'a new run')
   })
 
   it('stays off the leaderboard', async () => {
@@ -37,33 +37,33 @@ describe('a guest', () => {
     assert.deepEqual(await boardNames(), [])
   })
 
-  it('brings their runs and games to the account they sign up for, open game included', async () => {
+  it('brings their runs to the account they sign up for, open run included', async () => {
     const visitor = await guest()
     await insertRun(visitor.username, { battles: 3 })
-    const open = await app.call('POST', '/api/games', { cookie: visitor.cookie })
+    const open = await app.call('POST', '/api/runs', { cookie: visitor.cookie })
     const player = newPlayer()
     const signedUp = await app.call('POST', '/api/auth/sign-up/email', { body: player, cookie: visitor.cookie })
     assert.equal(signedUp.status, 200, JSON.stringify(signedUp.body))
 
     assert.deepEqual(await boardNames(), [player.username])
-    const resumed = await app.call('POST', '/api/games', { cookie: signedUp.cookie })
-    assert.equal(resumed.body.id, open.body.id, 'the same open game carries on')
+    const resumed = await app.call('POST', '/api/runs', { cookie: signedUp.cookie })
+    assert.equal(resumed.body.id, open.body.id, 'the same open run carries on')
     const left = await pool.query('SELECT 1 FROM users WHERE id = $1', [visitor.id])
     assert.equal(left.rowCount, 0, 'the guest account is gone')
   })
 
-  it('keeps an account’s own open game over the guest’s when signing in', async () => {
+  it('keeps an account’s own open run over the guest’s when signing in', async () => {
     const player = newPlayer()
     const own = await app.call('POST', '/api/auth/sign-up/email', { body: player })
-    const theirs = await app.call('POST', '/api/games', { cookie: own.cookie })
+    const theirs = await app.call('POST', '/api/runs', { cookie: own.cookie })
     const visitor = await guest()
-    await app.call('POST', '/api/games', { cookie: visitor.cookie })
+    await app.call('POST', '/api/runs', { cookie: visitor.cookie })
     const back = await app.call('POST', '/api/auth/sign-in/username', {
       body: { username: player.username, password: player.password },
       cookie: visitor.cookie,
     })
     assert.equal(back.status, 200)
-    const open = await app.call('POST', '/api/games', { cookie: back.cookie })
+    const open = await app.call('POST', '/api/runs', { cookie: back.cookie })
     assert.equal(open.body.id, theirs.body.id)
   })
 

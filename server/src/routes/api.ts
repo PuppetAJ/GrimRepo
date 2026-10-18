@@ -4,7 +4,7 @@ import { DEATH_NAME_LIMIT, RUN_SAVE_LIMIT, SIGILS, STARTER_DECKS, type RunAction
 import { z } from 'zod'
 import { USERNAME_PATTERN } from '../auth/auth.ts'
 import { requireUser, type SignedIn } from '../auth/session.ts'
-import { forfeitGame, GameError, recordMoves, startGame } from '../db/games.ts'
+import { GameError } from '../db/errors.ts'
 import { playerRuns, playerStats } from '../db/players.ts'
 import { buildRunDeathCard, forfeitRun, recordRunMoves, runLeaderboard, startRun } from '../db/runs.ts'
 
@@ -28,8 +28,6 @@ const action = z.discriminatedUnion('type', [
     lane: lane.optional(),
   }),
 ])
-
-const moves = z.strictObject({ from: z.number().int().min(0), actions: z.array(action).max(1_000) })
 
 const small = z.number().int().min(0).max(9)
 const cardId = z.number().int().positive()
@@ -100,7 +98,6 @@ const idOf = (raw: unknown): number | null => {
 
 const pageQuery = z.coerce.number().int().min(1).catch(1)
 
-// Runs only: quick battles are giving way to the tutorial, so they no longer rank.
 api.get('/leaderboard', async (req, res) => {
   res.json(await runLeaderboard(pageQuery.parse(req.query['page'] ?? 1)))
 })
@@ -109,40 +106,6 @@ api.get('/me', requireUser, async (_req, res) => {
   const user = res.locals['user'] as SignedIn
   const stats = await playerStats(user.username)
   res.json({ username: user.displayUsername, bestScore: stats?.bestScore ?? 0, runs: stats?.runs ?? 0 })
-})
-
-api.post('/games', requireUser, startLimiter, async (_req, res) => {
-  const game = await startGame((res.locals['user'] as SignedIn).id)
-  res.status(game.resumed ? 200 : 201).json(game)
-})
-
-api.post('/games/:id/moves', requireUser, movesLimiter, async (req, res) => {
-  const id = idOf(req.params['id'])
-  const parsed = moves.safeParse(req.body)
-  if (!id || !parsed.success) {
-    res.status(400).json({ error: 'Invalid moves', issues: parsed.error?.issues.map((issue) => issue.message) ?? [] })
-    return
-  }
-  try {
-    res.json(await recordMoves((res.locals['user'] as SignedIn).id, id, parsed.data.from, parsed.data.actions))
-  } catch (error) {
-    if (!(error instanceof GameError)) throw error
-    res.status(error.status).json(error.body)
-  }
-})
-
-api.post('/games/:id/forfeit', requireUser, movesLimiter, async (req, res) => {
-  const id = idOf(req.params['id'])
-  if (!id) {
-    res.status(404).json({ error: 'No such game in progress' })
-    return
-  }
-  try {
-    res.json(await forfeitGame((res.locals['user'] as SignedIn).id, id))
-  } catch (error) {
-    if (!(error instanceof GameError)) throw error
-    res.status(error.status).json(error.body)
-  }
 })
 
 api.post('/runs', requireUser, startLimiter, async (_req, res) => {
