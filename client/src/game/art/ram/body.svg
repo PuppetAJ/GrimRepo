@@ -1,0 +1,5 @@
+<!-- The RAM stick's body, a nine-slice: slices of 2, 44, 10 and 28 from the top, right, bottom and left edges. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="40" viewBox="0 0 96 40">
+  <polygon fill="#2f6c3d" points="0,0 96,0 96,14 91,14 91,26 96,26 96,40 64,40 64,34 56,34 56,40 24,40" />
+  <polygon fill="#0a0e0a" points="2.3,0 94,0 94,12 89,12 89,28 94,28 94,38 66,38 66,32 54,32 54,38 25.1,38" />
+</svg>

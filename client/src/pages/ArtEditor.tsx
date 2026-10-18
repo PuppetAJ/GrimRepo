@@ -6,10 +6,7 @@ import { FIRE, LOGS, LOGS_OUTLINE } from '../game/run/text/Fire.tsx'
 import { NotFound } from './NotFound.tsx'
 
 type Kind = 'cards' | 'icons' | 'p03'
-/**
- * `size` overrides the kind's width, for an icon drawn larger, and `height` its height, for art that isn't square;
- * `frames` marks an animation, saved as a strip of frames.
- */
+/** `size` and `height` override the kind's; `frames` marks an animation strip. */
 type Item = { kind: Kind; id: string; name: string; size?: number; height?: number; frames?: boolean }
 
 /** The most frames an animation holds. */
@@ -36,7 +33,7 @@ const ITEMS: Item[] = [
   { kind: 'icons', id: 'fire', name: 'Fire (16 × 16, animated)', size: 16, frames: true },
   { kind: 'icons', id: 'logs', name: 'Campfire logs (16 × 16)', size: 16 },
   { kind: 'icons', id: 'death', name: "Death card's skull" },
-  // Traced from his 3D model by docs/tools/p03-frame.mjs; his faces go on its screen, so the screen's place is fixed.
+  // P03's faces sit on its screen, so keep the screen where it is.
   { kind: 'p03', id: 'frame', name: "P03's head, around his face (136 × 105)" },
 ]
 
@@ -354,7 +351,6 @@ export function ArtEditor() {
               width={size}
               height={height}
               className="bg-[#07130b] [image-rendering:pixelated]"
-              // Large art shows at twice its size, small art at four times.
               style={{ width: size * (size > 32 ? 2 : 4), height: height * (size > 32 ? 2 : 4) }}
             />
             {selected.frames && frames.length > 1 && !campfire ? (

@@ -46,7 +46,6 @@ function GameTable() {
   return <PlayTable game={game} text={search.text !== undefined} layout={search.layout} title="Play against P03" />
 }
 
-/** A battle on whichever table the player last chose, the 3D one by default. */
 export function PlayTable({
   game,
   text,
@@ -54,9 +53,7 @@ export function PlayTable({
   title,
 }: {
   game: GameLoad
-  /** Opens on the text table, and remembers it. */
   text: boolean
-  /** Forces a layout of the text table, in development and tests. */
   layout?: Layout
   title: string
 }) {

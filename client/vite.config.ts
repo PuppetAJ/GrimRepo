@@ -19,8 +19,7 @@ const viewerSlash: Plugin = {
   },
 }
 
-// The /art page's editor saves a card's art (24x24), an icon (8x8, the fire and logs 16x16) or P03's head frame (136x105)
-// as a PNG into src/game/art; development only.
+// The /art editor saves its art as PNGs into src/game/art; development only.
 const ART_DIR = fileURLToPath(new URL('./src/game/art/', import.meta.url))
 const ART_SIZE = { cards: 24, icons: 8, p03: 136 } as const
 // Art that isn't square, by its height.

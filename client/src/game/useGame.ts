@@ -26,16 +26,13 @@ export type Game =
       subscribe: (listener: Listener) => () => void
       /** Set for a battle in a run, whose panel replaces the result and whose forfeit abandons the run. */
       run?: { ending: ReactNode | null }
-      /** Set for the tutorial, which narrows the moves to the one it waits for and sets P03's face. */
       tutorial?: Tutorial
     }
 
-/** What the tables need from the tutorial; its own panel replaces the result, and leaving it forfeits nothing. */
 export type Tutorial = {
   face: Face
-  /** The moves the rules allow, narrowed to the one the current step waits for. */
   legal: (state: GameState) => Action[]
-  /** P03's words and the step's controls, laid over each table; null once the battle is won. */
+  /** Null once the battle is won. */
   blurb: Blurb | null
   ending: ReactNode | null
 }

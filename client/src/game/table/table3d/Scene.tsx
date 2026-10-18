@@ -96,14 +96,13 @@ export function Scene({
   // The turn's own draw is owed; a catch-up draw after it is only offered.
   const owesDraw = !state.drawn && can({ type: 'draw' })
   const count = view.hand.length
-  // What the tutorial's step waits on, framed in white dots; nothing while P03's turn plays out.
   const asked = busy ? null : (game.tutorial?.blurb?.move ?? null)
   const askedUid =
     asked?.type === 'select'
       ? state.player.hand.find((unit) => unit.card === asked.card)?.uid
       : asked?.type === 'mark'
         ? state.player.board[asked.lane]?.uid
-        : // Once the item is picked up, the card it can reach is already lit as a target.
+        : // An aimed item already lights its target.
           asked?.type === 'use' && aiming === null
           ? (asked.row === 'board'
               ? state.player.board

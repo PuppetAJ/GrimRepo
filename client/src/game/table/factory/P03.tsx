@@ -124,7 +124,7 @@ function P03({ mood }: { mood: Mood }) {
 
 export function FactoryP03({ view, outcome, face }: { view: View; outcome?: 'win' | 'loss'; face?: ScriptedFace }) {
   const felt = useP03Face(view, outcome)
-  // The tutorial's script sets his face over what he'd make; neutral is his resting smug one.
+  // The tutorial's neutral face is the smug texture.
   const shown = face ?? felt
   const mood = shown === 'neutral' ? 'smug' : shown
   return (

@@ -579,7 +579,7 @@ export const MOCKUPS: Record<string, Entry> = {
     group: 'reached',
     revision: 3,
     make: () => {
-      // The extra draw comes from the deck, so it needs cards left there and room in the hand.
+      // The extra draw needs cards in the deck and room in the hand.
       const found = reached(
         (s) =>
           s.visit?.kind === 'battle' &&

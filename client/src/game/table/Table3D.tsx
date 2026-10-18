@@ -157,7 +157,7 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
     })
     return () => stage.onContext(() => false)
   })
-  // His face follows the table, not the moves, so it never changes ahead of the turn playing out.
+  // Settled, so the face never changes ahead of the turn's playback.
   const face = useSettled(game.tutorial?.face, busy)
   useLayoutEffect(() =>
     stage.room({

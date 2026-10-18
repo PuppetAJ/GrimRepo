@@ -5,7 +5,7 @@ import { card, gloss, ITEMS, said, type Move, type TutorialStep } from 'shared'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover.tsx'
 import { Choices, P03Dialogue } from '../P03Dialogue.tsx'
 
-/** What the step waits for, in the words the table's own controls use; lanes count from 1. */
+/** Lanes count from 1, as the table labels them. */
 export function moveText(move: Move): string {
   switch (move.type) {
     case 'draw':
@@ -25,13 +25,11 @@ export function moveText(move: Move): string {
 
 export type Blurb = { step: TutorialStep | null; move: Move | null; onPressOn: (() => void) | null }
 
-/** The table's prompt while a step waits; null once play is free, where the table's own prompt applies. */
 export function tutorialPrompt(blurb: Blurb | null): string | null {
   if (!blurb?.step || blurb.step.free) return null
   return blurb.move ? moveText(blurb.move) : 'Read what P03 says, then click it to go on.'
 }
 
-/** The table's controls for the move, which the blurb keeps clear of. */
 export function targetSelector(move: Move): string {
   switch (move.type) {
     case 'draw':
@@ -44,21 +42,16 @@ export function targetSelector(move: Move): string {
     case 'ringBell':
       return '[data-action="ringBell"]'
     case 'use':
-      // A phone keeps its tools in the menu, so its button is the way to them.
+      // Phones keep the tools in the menu.
       return `[data-action="use"][aria-label^="${ITEMS[move.item].name}:"], [data-action="aim"][data-row="${move.row}"][data-lane="${move.lane}"], button[aria-label="Menu"]`
   }
 }
 
-// How far out every outline sits from what it marks, the same all round.
 const GAP_OUT = 4
 
-/** A control to outline, and the corner radius its outline follows where the control has none of its own. */
 type Outline = { selector: string; radius?: number }
 
-/**
- * What gets the dotted outline: only what the table doesn't already mark. A lane to play or sacrifice into, and the
- * card an item is aimed at, label themselves on the text table, so they go without; so does a pile's count.
- */
+/** Only what the table doesn't already mark: text-table lanes and targets label themselves. */
 export function outlinesFor(move: Move): Outline[] {
   const text = '[data-table="text"]'
   const hud = '[data-table="3d"]'
@@ -69,7 +62,7 @@ export function outlinesFor(move: Move): Outline[] {
         { selector: `${hud} [data-action="draw-${move.from}"]` },
       ]
     case 'select':
-      // Around the card inside its button, in the button's own padding, since the hand scrolls and clips past it.
+      // Inside the button, since the scrolling hand clips past its padding.
       return [
         {
           selector: `${text} [data-action="select"][aria-label^="${card(move.card).name},"] > span`,
@@ -77,7 +70,6 @@ export function outlinesFor(move: Move): Outline[] {
         },
       ]
     case 'ringBell':
-      // EXECUTE fills its column; the column leaves room for this.
       return [{ selector: `${text} [data-action="ringBell"]` }, { selector: `${hud} [data-action="ringBell"]` }]
     case 'use':
       return [
@@ -90,12 +82,10 @@ export function outlinesFor(move: Move): Outline[] {
   }
 }
 
-/** The outlines as a style sheet: dotted white, pulsing bright and dim, still for anyone who asks for less motion. */
 function outlineCss(outlines: Outline[]): string {
   if (!outlines.length) return ''
   const all = outlines.map((one) => one.selector).join(', ')
-  // Only the width, style and offset win over the control's own; the color is left to the pulse, which can't
-  // override an important one.
+  // The color isn't important, so the animation can change it.
   return [
     `${all} { outline-width: 2px !important; outline-style: dotted !important; outline-color: #fff; animation: tutorial-pulse 0.9s ease-in-out infinite alternate; }`,
     ...outlines.map(
@@ -107,14 +97,13 @@ function outlineCss(outlines: Outline[]): string {
   ].join('\n')
 }
 
-/** The last value seen while the table was still, so nothing changes ahead of P03's turn playing out. */
+/** Holds a value until playback ends, so nothing changes ahead of the animation. */
 export function useSettled<T>(value: T, busy: boolean): T {
   const [settled, setSettled] = useState(value)
   if (!busy && settled !== value) setSettled(value)
   return busy ? settled : value
 }
 
-/** What P03 says, with each linked word underlined and opening its explanation. */
 function Line({ text }: { text: string }) {
   return (
     <>
@@ -142,23 +131,19 @@ function Line({ text }: { text: string }) {
   )
 }
 
-// Keys that press on only when nothing else on the table would take them.
 const PRESS_KEYS = new Set(['Enter', ' '])
 const takesKeys = (target: EventTarget | null) =>
   target instanceof Element && target.closest('button, a, input, select, textarea, [role="button"]') !== null
 
 const GAP = 8
-// The name tab's height above the box, which must stay inside the table.
+// The name tab's height above the box.
 const TAB_CLEAR = 16
 type Box = { left: number; right: number; top: number; bottom: number }
 const overlap = (a: Box, b: Box) =>
   Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) *
   Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top))
 
-/**
- * P03 talks the player through the battle, a line at a time, over the table so nothing moves to make room. It sits
- * at the top, centered on the board, unless that would cover what the step points at; then it drops to the bottom.
- */
+/** Drops to the bottom when the top would cover what the step points at. */
 export function TutorialBlurb({
   blurb,
   busy,
@@ -167,11 +152,8 @@ export function TutorialBlurb({
   className = '',
 }: {
   blurb: Blurb
-  /** While P03's turn plays out, the step's controls aren't outlined. */
   busy: boolean
-  /** A smaller head and text, for a phone. */
   compact?: boolean
-  /** Placed against the screen rather than the table, for a table taller than the screen. */
   fixed?: boolean
   className?: string
 }) {
@@ -193,8 +175,7 @@ export function TutorialBlurb({
       event.preventDefault()
       pressOn.current()
     }
-    // The table settles its size after the first paint and changes it with the window, and a control the step
-    // points at can appear between moves, as a lane's "use here" does once an item is picked up; each measures again.
+    // Controls the step points at can appear between moves, so changes measure again.
     let frame = 0
     const onResize = () => {
       cancelAnimationFrame(frame)
@@ -219,7 +200,6 @@ export function TutorialBlurb({
   }, [])
 
   const selector = move && !busy ? targetSelector(move) : null
-  // Measured again for each step and move, since the controls it points at come and go with them.
   useLayoutEffect(() => {
     const element = box.current
     if (!element) return
@@ -238,8 +218,7 @@ export function TutorialBlurb({
     const targets = selector ? [...root.querySelectorAll(selector)].map((found) => found.getBoundingClientRect()) : []
     const covered = (bottom: boolean) => targets.reduce((sum, target) => sum + overlap(at(bottom), target), 0)
     const bottom = covered(false) > 0 && covered(true) < covered(false)
-    // At the top, level with the board's own top edge, so that edge never shows above the box; the name tab needs
-    // its height clear above.
+    // Level with the board's top edge, so that edge never shows above the box.
     const top = board && !fixed ? Math.max(TAB_CLEAR, Math.round(board.top - frame.top - 2)) : null
     setPlace((now) =>
       now.center === center && now.bottom === bottom && now.top === top ? now : { center, top, bottom },
@@ -254,7 +233,6 @@ export function TutorialBlurb({
   const outlines = move && !busy ? outlineCss(outlinesFor(move)) : ''
   return (
     <>
-      {/* What to press, outlined in flashing white dots. */}
       {outlines ? <style>{outlines}</style> : null}
       <P03Dialogue
         ref={box}
@@ -299,7 +277,6 @@ export function TutorialBlurb({
   )
 }
 
-/** Where the tutorial's Forfeit would be: leaving costs nothing, since nothing is saved. */
 export function SkipTutorial({ className = '' }: { className?: string }) {
   return (
     <Link to="/" className={className}>
@@ -308,11 +285,9 @@ export function SkipTutorial({ className = '' }: { className?: string }) {
   )
 }
 
-/** The hand-off once the tutorial is won: straight to a real run, or the tutorial once more. */
 export function TutorialEnding() {
   const navigate = useNavigate()
   return (
-    // As wide as the board it sits over, and no wider, so it stays centered on it.
     <P03Dialogue
       face="whiteflag"
       aria-label="Tutorial complete"
@@ -321,7 +296,7 @@ export function TutorialEnding() {
         <Choices
           choices={[
             { label: 'Start a run', onChoose: () => void navigate({ to: '/run' }) },
-            // A fresh page, so the battle deals again from the start.
+            // Reload, so the battle deals again from the start.
             { label: 'Play tutorial again', onChoose: () => window.location.reload() },
           ]}
         />

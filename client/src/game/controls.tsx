@@ -158,10 +158,8 @@ export function phaseText(state: GameState, phase: number): string | null {
   return phases.length > 1 ? `${name} · Phase ${phase + 1} of ${phases.length}` : name
 }
 
-/** A run's or the tutorial's own ending panel, which is decided locally rather than by the server. */
 const localEnding = (game: Ready): ReactNode | null | undefined => game.run?.ending ?? game.tutorial?.ending
 
-/** The panel over the board once a game ends: the run's or the tutorial's own, or the quick battle's result. */
 export function Ending({ game }: { game: Ready }) {
   if (game.run || game.tutorial) return localEnding(game)
   return game.result ? (
@@ -171,7 +169,6 @@ export function Ending({ game }: { game: Ready }) {
 
 export const hasEnded = (game: Ready) => Boolean(game.run || game.tutorial ? localEnding(game) : game.result)
 
-/** How the game ended, for P03's face; a run's battle and the tutorial know at once. */
 export const outcomeOf = (game: Ready): Outcome | undefined =>
   game.result?.outcome ?? (localEnding(game) ? (game.state.status === 'won' ? 'win' : 'loss') : undefined)
 
@@ -179,7 +176,7 @@ export const outcomeOf = (game: Ready): Outcome | undefined =>
 export const overText = (game: Ready) =>
   game.state.status !== 'playing' && (game.run || game.tutorial ? 'The battle is over.' : true)
 
-/** The moves that can be made now: the rules', narrowed in the tutorial to the one it waits for. */
+/** In the tutorial, only the move the current step waits for. */
 export const legalFor = (game: Ready): Action[] => game.tutorial?.legal(game.state) ?? legalActions(game.state)
 
 export function Forfeit({

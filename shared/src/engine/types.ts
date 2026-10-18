@@ -74,7 +74,7 @@ export type GameState = {
   skipOpponent?: boolean
   /** A run's integrity, carried into the battle: each card P03 destroys costs 1, and the run is lost at 0. */
   integrity?: { left: number; max: number }
-  /** The tutorial's battle: the deck is dealt in order and P03 plays its plan exactly, then nothing. */
+  /** An unshuffled deck, and P03 plays its plan exactly, then nothing. */
   scripted?: boolean
 }
 

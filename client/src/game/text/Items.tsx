@@ -10,7 +10,6 @@ export function Items({
 }: {
   className?: string
   onPick?: () => void
-  /** Shows the rack's empty slots even once every item is used, where a battle carries items at all. */
   keepSlots?: boolean
 }) {
   const { state, legal, busy, act, aiming, setAiming } = useTable()

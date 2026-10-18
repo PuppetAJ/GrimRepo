@@ -34,7 +34,7 @@ const LOWEST = 6
 type Attributes = Record<string, string | number>
 
 /** What the room shows: the factory's battery and monitors, and P03's mood. */
-/** `face` is set by the tutorial, whose script says how P03 looks. */
+/** `face` is the tutorial's, and overrides P03's mood. */
 type RoomState = { view: View; log: string[]; outcome?: 'win' | 'loss'; face?: Face }
 type RoomHandlers = {
   onHold?: (screen: Screen, x: number, y: number, sticky?: boolean) => void

@@ -37,7 +37,7 @@ export type GameOptions = {
   haunt?: { card: string; by: string | null } | null
   /** A run's integrity, which the cards P03 destroys wear down. */
   integrity?: { left: number; max: number }
-  /** Deals the deck in order and has P03 play its encounter's plan exactly, for the tutorial. */
+  /** An unshuffled deck, and P03 plays its plan exactly, then nothing. */
   scripted?: boolean
 }
 

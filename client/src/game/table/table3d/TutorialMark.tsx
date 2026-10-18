@@ -4,7 +4,6 @@ import { useRef } from 'react'
 import { CARD, type Vec3 } from '../layout.ts'
 import { STILL } from '../factory/constants.ts'
 
-/** The tutorial's mark, white and dotted like the text table's, its dots marching so it reads at a glance; anything in front of it hides it, as it would a real outline. */
 function Frame({ width, height, plane }: { width: number; height: number; plane: 'flat' | 'upright' }) {
   const line = useRef<{ material: { dashOffset: number } }>(null)
   useFrame((_, delta) => {
@@ -32,7 +31,6 @@ function Frame({ width, height, plane }: { width: number; height: number; plane:
   )
 }
 
-/** Flat on the table around a place, such as the deck, the pile or the button. */
 export function TableMark({ at, width, depth }: { at: Vec3; width: number; depth: number }) {
   return (
     <group position={[at[0], at[1] + 0.01, at[2]]}>
@@ -41,7 +39,7 @@ export function TableMark({ at, width, depth }: { at: Vec3; width: number; depth
   )
 }
 
-/** Around a card, in the card's own space, so it follows the card into the hand or across the board. */
+/** In the card's own space, so it follows the card. */
 export function CardMark() {
   return (
     <group position={[0, 0, CARD.depth]}>

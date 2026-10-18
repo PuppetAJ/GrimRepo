@@ -11,10 +11,8 @@ const PACKS = byName(
   import.meta.glob<string>('./art/packs/*.png', { eager: true, query: '?no-inline', import: 'default' }),
 )
 
-// P03's own art, such as the line-art head his dialogue box shows.
 const P03 = byName(import.meta.glob<string>('./art/p03/*.png', { eager: true, import: 'default' }))
 
-/** P03's art by name, such as his head's frame. */
 export const p03Art = (id: string): string | undefined => P03[id]
 
 /** A pack's art: a starter deck's, a card choice's, a face-down trait's, or the rare one after a boss. */

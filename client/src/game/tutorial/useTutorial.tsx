@@ -24,7 +24,6 @@ type Played = { state: GameState; progress: Progress; log: string[]; moves: numb
 
 let generations = 0
 
-/** What P03 says as the tutorial is won, in place of a battle's usual win line. */
 const TUTORIAL_WIN = 'You win. I let you, obviously. Next time the cards are shuffled.'
 
 function begin(step: number): Played {
@@ -32,7 +31,6 @@ function begin(step: number): Played {
   return { state, progress, log: [`P03> ${TUTORIAL_ENCOUNTER.intro}`], moves: 0 }
 }
 
-/** The tutorial's battle, played locally and never saved: only the move its step waits for gets through. */
 export function useTutorial(start = 0): Ready {
   const [played, setPlayed] = useState(() => begin(start))
   const [generation] = useState(() => (generations += 1))
@@ -44,13 +42,12 @@ export function useTutorial(start = 0): Ready {
 
   const act = useCallback(
     (action: Action) => {
-      // Anything but the awaited move is quietly ignored; the drawer already says what to do.
+      // Other moves are ignored; the dialogue already says what to do.
       if (!tutorialAllows(played.state, played.progress, action)) return
       const outcome = apply(played.state, action)
       if (!outcome.ok) return
       for (const listener of listeners.current) listener(outcome.events)
       const said = narrate(played.state, outcome.events)
-      // The tutorial's win is its own, in place of a battle's usual last line.
       if (outcome.state.status === 'won') said.splice(-1, 1, TUTORIAL_WIN)
       const lines = said.map((line) => `P03> ${line}`)
       setPlayed({
@@ -89,7 +86,6 @@ export function useTutorial(start = 0): Ready {
     saving: false,
     result: null,
     act,
-    // Leaving is a link in the drawer; there is nothing to forfeit.
     forfeit: async () => {},
     subscribe,
     tutorial,

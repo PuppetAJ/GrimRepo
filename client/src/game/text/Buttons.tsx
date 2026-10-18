@@ -6,7 +6,6 @@ import { SIDE_BUTTON } from './Panel.tsx'
 
 export function SaveStatus({ className }: { className: string }) {
   const { game } = useTable()
-  // The tutorial is never saved, so there is nothing to report.
   if (game.tutorial) return null
   return (
     // Not live: a failed save is announced by its toast, and "saved" after every move would only be noise.

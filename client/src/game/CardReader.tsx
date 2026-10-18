@@ -187,7 +187,6 @@ export function PixelCard({ unit, blank }: { unit: Shown; blank?: Blank }) {
   )
 }
 
-/** A type or sigil and what it means: the name on its own line, so a long one never splits the sentence after it. */
 function Note({
   icon,
   name,

@@ -99,10 +99,8 @@ export function Magnifier() {
               <span className="mt-0.5 shrink-0">
                 <Sigil id={note.id} size={16} color="var(--p03)" />
               </span>
-              {/* The name on its own line, so a long one never splits the sentence after it. */}
               <span className="flex min-w-0 flex-col leading-tight">
                 <span className="text-p03">{note.name}</span>
-                {/* Balanced, so its lines end near the right edge and the padding looks even on both sides. */}
                 <span className="font-sans text-xs text-balance">{note.text}</span>
               </span>
             </li>
@@ -113,17 +111,14 @@ export function Magnifier() {
   )
 }
 
-/**
- * Narrows a box of wrapped text to its longest line, so its padding is the same on both sides. Wrapped text never
- * shrinks its box by itself; this measures the lines once laid out and sets the width to fit them.
- */
+/** Shrinks a box of wrapped text to its longest line, which CSS can't. */
 function useShrinkWrap(key: unknown) {
   const ref = useRef<HTMLUListElement>(null)
   useLayoutEffect(() => {
     const box = ref.current
     if (!box) return
     box.style.width = ''
-    // The text's own lines, not the boxes around them, which always fill the width.
+    // Text nodes, since element boxes always fill the width.
     const walker = document.createTreeWalker(box, NodeFilter.SHOW_TEXT)
     const range = document.createRange()
     let right = 0

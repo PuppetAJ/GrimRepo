@@ -126,7 +126,7 @@ const run = createRoute({
   ),
 })
 
-// No sign-in: the tutorial is played locally and never saved.
+// No sign-in: the tutorial is never saved.
 const tutorial = createRoute({
   getParentRoute: parent,
   path: '/tutorial',

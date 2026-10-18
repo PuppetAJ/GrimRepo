@@ -104,7 +104,6 @@ export function Hud({
   const finished = hasEnded(game)
   const legal = busy || finished ? [] : legalFor(game)
   const blurb = useSettled(game.tutorial?.blurb ?? null, busy)
-  // Below the corner buttons and narrower, so it sits between the scale and the buttons over P03's head.
   const place3d = 'top-14 h-26 w-[min(36rem,calc(100%-1rem))]'
   // The turn's own draw; a catch-up draw after it gets its own button, never owed.
   const mustDraw = !state.drawn && has(legal, { type: 'draw' })
@@ -284,7 +283,6 @@ export function Hud({
         ) : null}
       </div>
 
-      {/* In the tutorial, P03 talks from the top of the screen, above his own head. */}
       {blurb && !ended ? <TutorialBlurb blurb={blurb} busy={busy} className={place3d} /> : null}
       {ended ? (
         <div className="absolute inset-0 grid place-items-center bg-black/40 p-4">

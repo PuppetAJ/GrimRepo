@@ -4,9 +4,8 @@ import { FIXTURES_ON } from '../game/fixtures.ts'
 import { useTutorial } from '../game/tutorial/useTutorial.tsx'
 import { PlayTable } from './Game.tsx'
 
-/** The scripted first battle, played locally: nothing is saved, so no account is needed. */
 export function Tutorial() {
-  // ?step opens on a later step, counted from 1, for the mockups and tests.
+  // ?step opens a later step, counted from 1, outside production.
   const search = useSearch({ from: '/tutorial' })
   const step = FIXTURES_ON ? Math.max(0, (Number(search.step) || 1) - 1) : 0
   return (

@@ -27,7 +27,7 @@ export function WideLayout() {
       >
         <FaultyScreenShader />
         <span aria-hidden className="crt-glass pointer-events-none absolute inset-0 z-30" />
-        {/* Its padding, given back by the margin, leaves room inside the clip for the tutorial's outline on EXECUTE. */}
+        {/* Room inside the clip for the tutorial's outline on EXECUTE. */}
         <aside
           aria-label="Turn and scale"
           className="relative z-10 -m-2 flex min-h-0 flex-col gap-3 overflow-hidden p-2"

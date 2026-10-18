@@ -195,7 +195,7 @@ export const DESPERATE_CARDS: string[][] = [
 
 export const ENCOUNTERS: Record<string, Encounter> = Object.fromEntries(list.map((found) => [found.id, found]))
 
-/** The tutorial's battle; kept out of ENCOUNTERS, so no run ever picks it. */
+/** Kept out of ENCOUNTERS, so no run picks it. */
 export const TUTORIAL_ENCOUNTER: Encounter = {
   id: 'tutorial',
   name: 'Tutorial',

@@ -5,10 +5,10 @@ import { TIP, type Action, type GameEvent, type GameState } from './engine/types
 import { deckCard } from './engine/units.ts'
 import { ITEMS as ITEM_DEFS, type ItemId } from './items.ts'
 
-/** The faces P03's monitor shows, as named in client/public/p03/screen. */
+/** As named in client/public/p03/screen. */
 export type Face = 'neutral' | 'happy' | 'impatient' | 'choking' | 'dying' | 'whiteflag'
 
-/** A move a step waits for: an action, with cards and items named rather than numbered. */
+/** An action, with cards and items named rather than numbered. */
 export type Move =
   | { type: 'draw'; from: 'deck' | 'boilerplate' }
   | { type: 'select'; card: string }
@@ -17,20 +17,16 @@ export type Move =
   | { type: 'ringBell' }
   | { type: 'use'; item: ItemId; row: 'board' | 'front' | 'back'; lane: number }
 
-/** One thing P03 says. Its moves are the only ones allowed until they are made; with none, the player presses on. */
+/** With no moves, the player presses on. */
 export type TutorialStep = { id: string; face: Face; says: string; moves?: Move[]; free?: boolean }
 
-/** How far through the script a player is: the step, and the moves of it already made. */
 export type Progress = { step: number; move: number }
 
 // Dealt in this order: the first three and a Boilerplate make the opening hand.
 const DECK = ['CopyPaste', 'Phishing', 'HelloWorld', 'Documentation', 'CopyPaste', 'Crawler', 'Sandbox']
 const TOOLS: ItemId[] = ['scissors']
 
-/**
- * What P03 says may link a word to its explanation: `[Bypass](sigil:bypass)`, or a card, a type, an item or one of
- * the terms below. The table underlines it, and the explanation opens from it, so the lines themselves stay short.
- */
+/** Linked as `[Bypass](sigil:bypass)`; the table underlines the word and opens this. */
 export const TERMS = {
   scale: {
     title: 'The scale',
@@ -64,12 +60,10 @@ export const TERMS = {
 
 export type Term = keyof typeof TERMS
 
-/** A stretch of what P03 says: plain text, or a word linked to its explanation. */
 export type Said = string | { text: string; kind: 'term' | 'card' | 'type' | 'sigil' | 'item'; id: string }
 
 const LINK = /\[([^\]]+)\]\((term|card|type|sigil|item):([\w]+)\)/g
 
-/** Splits a line into its plain text and its linked words. */
 export function said(line: string): Said[] {
   const parts: Said[] = []
   let at = 0
@@ -82,7 +76,7 @@ export function said(line: string): Said[] {
   return parts
 }
 
-/** The explanation a linked word opens; throws for a link to nothing, which the tests catch. */
+/** Throws for a link to nothing. */
 export function gloss(link: Exclude<Said, string>): { title: string; text: string } {
   switch (link.kind) {
     case 'term': {
@@ -249,12 +243,10 @@ export function createTutorial(): GameState {
 
 export const tutorialStep = (progress: Progress): TutorialStep | null => TUTORIAL[progress.step] ?? null
 
-/** The move the current step waits for; null on a step to press on from, or once play is free. */
 export function expectedMove(progress: Progress): Move | null {
   return tutorialStep(progress)?.moves?.[progress.move] ?? null
 }
 
-/** Whether an action is the move, with the card or item it names. */
 export function fits(state: GameState, move: Move, action: Action): boolean {
   switch (move.type) {
     case 'draw':
@@ -276,7 +268,6 @@ export function fits(state: GameState, move: Move, action: Action): boolean {
   }
 }
 
-/** Whether the tutorial lets this action through now: only the expected move, or anything once play is free. */
 export function tutorialAllows(state: GameState, progress: Progress, action: Action): boolean {
   if (tutorialStep(progress)?.free) return true
   const move = expectedMove(progress)
@@ -287,19 +278,17 @@ export function tutorialActions(state: GameState, progress: Progress): Action[] 
   return legalActions(state).filter((action) => tutorialAllows(state, progress, action))
 }
 
-/** Where the player is once the expected move is made. */
 export function afterMove(progress: Progress): Progress {
   const step = tutorialStep(progress)
   if (!step?.moves || step.free) return progress
   return progress.move + 1 < step.moves.length ? { ...progress, move: progress.move + 1 } : afterStep(progress)
 }
 
-/** On to the next step, from one with nothing to do but read. */
 export function afterStep(progress: Progress): Progress {
   return { step: Math.min(progress.step + 1, TUTORIAL.length - 1), move: 0 }
 }
 
-/** The battle as it stands at a step, reached by making every move before it; for mockups and tests. */
+/** The battle at a step, with every earlier move made. */
 export function tutorialAt(step: number): { state: GameState; progress: Progress; events: GameEvent[] } {
   let state = createTutorial()
   let progress: Progress = { step: 0, move: 0 }

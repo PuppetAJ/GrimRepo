@@ -73,7 +73,6 @@ export function Card({
   /** Shown as hovered, for a hand card tapped once on touch. */
   raised?: boolean
   cursor?: CursorKind
-  /** The card the tutorial's step waits on, framed in white dots. */
   tutorialMark?: boolean
 }) {
   const mesh = useRef<THREE.Object3D>(null)

@@ -70,7 +70,7 @@ function Menu() {
         <span className="truncate text-p03">{name ?? 'Quick battle'}</span>
         <SaveStatus className="shrink-0 text-p03-dim" />
       </p>
-      {/* A phone has no room beside the board for the tools, upright or sideways, so they're here. */}
+      {/* A phone has no room beside the board for the tools. */}
       <div className="flex flex-col items-center gap-1">
         {state.items?.length ? <span className="font-terminal text-base text-p03-dim">Tools</span> : null}
         <Items className="justify-center" onPick={() => setMenu(false)} />
@@ -140,7 +140,6 @@ export function PhoneLayout() {
     useTable()
   // Once the battle ends, its panel over the board may run past the board, so the board rises above the rest.
   const over = hasEnded(game)
-  // In the tutorial, P03 talks over the table, out of the way of whatever the step points at.
   const blurb = useSettled(game.tutorial?.blurb ?? null, busy)
   // Too short in the page, the page scrolls; covering the screen, the frame scrolls instead.
   const flowing = scrolling && !covering
@@ -224,7 +223,7 @@ export function PhoneLayout() {
           <SeatNote seat={seat} />
         </div>
       ) : null}
-      {/* Pinned to the screen, since the table can be taller than it and scroll. */}
+      {/* Fixed, since the phone's table can scroll. */}
       {blurb ? <TutorialBlurb blurb={blurb} busy={busy} compact fixed /> : null}
       <Menu />
       <LogDialog />

@@ -11,11 +11,9 @@ export function BattleOver({ run, onSummary }: { run: RunReady; onSummary: () =>
   const overkill = Math.max(0, visit.game.scale - TIP)
   const won = visit.game.status === 'won'
   return (
-    // P03 says it, with his white flag for a win and his grin for a loss, and offers the way on.
     <P03Dialogue
       role="status"
       face={won ? 'whiteflag' : 'happy'}
-      // As wide as the board it sits over, and no wider, so it stays centered on it.
       className="w-full max-w-[36rem]"
       ledge={
         <Choices

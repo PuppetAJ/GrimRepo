@@ -19,7 +19,6 @@ import {
   type Progress,
 } from './tutorial.ts'
 
-/** Follows the script: makes each expected move, presses on where there is none, and stops where play is free. */
 function follow(): { state: GameState; progress: Progress } {
   let state = createTutorial()
   let progress: Progress = { step: 0, move: 0 }
