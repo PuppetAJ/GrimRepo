@@ -12,6 +12,9 @@ import {
   buildDeathCard,
   deathCost,
   deathCostHand,
+  deathNameProblem,
+  isOldData,
+  OLD_DATA_REFUSED,
   deathParts,
   deathSigilHand,
   deathSkipBonus,
@@ -313,5 +316,13 @@ describe('a boss bringing a death card', () => {
     assert.ok(rivalAllowed(RIVAL))
     assert.ok(!rivalAllowed(STRONG))
     assert.equal(createRun({ seed: 4, rival: { card: STRONG, by: 'someone' } }).rival, null)
+  })
+})
+
+describe('the name OLD_DATA', () => {
+  it('is refused in any spelling', () => {
+    for (const name of ['OLD_DATA', 'old data', 'Old-Data', '0LD_DATA', 'o1d.data'])
+      assert.equal(deathNameProblem(name), OLD_DATA_REFUSED, name)
+    assert.ok(!isOldData('OLD_DATABASE'))
   })
 })

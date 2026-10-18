@@ -20,6 +20,17 @@ export const deathCost = (costCard: RunCard, statsCard: RunCard): number => {
   return Math.max(card(costCard.card).cost, statsCost - 1, Math.min(statsCost, 1))
 }
 
+/** What P03 says to anyone who tries the name; it is reserved for something that does not exist. */
+export const OLD_DATA_REFUSED = 'That name is reserved. For nothing. Pick another.'
+
+/** Any spelling of OLD_DATA, with 0 for o and 1 for l. */
+export const isOldData = (name: string): boolean =>
+  name
+    .toLowerCase()
+    .replaceAll('0', 'o')
+    .replaceAll('1', 'l')
+    .replace(/[^a-z]/g, '') === 'olddata'
+
 /** Spaces trimmed and runs of them folded into one. */
 export const tidyDeathName = (name: string): string => name.trim().replace(/\s+/g, ' ')
 
@@ -27,6 +38,7 @@ export function deathNameProblem(name: string): string | null {
   const tidy = tidyDeathName(name)
   if (!tidy) return 'Give it a name'
   if (tidy.length > DEATH_NAME_LIMIT) return `At most ${DEATH_NAME_LIMIT} characters`
+  if (isOldData(tidy)) return OLD_DATA_REFUSED
   if (!DEATH_NAME_PATTERN.test(tidy))
     return "Letters, numbers, spaces and . _ ' ! ? - only, starting with a letter or number"
   return null

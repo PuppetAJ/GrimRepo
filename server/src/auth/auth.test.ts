@@ -254,6 +254,12 @@ describe('names', () => {
     assert.equal(reply.body.message, 'That name is not allowed. Pick another.')
   })
 
+  it('refuses OLD_DATA with a line of its own', async () => {
+    const reply = await signUp({ ...newPlayer(), username: 'OLD_DATA' })
+    assert.equal(reply.status, 400)
+    assert.equal(reply.body.message, 'That name is reserved. For nothing. Pick another.')
+  })
+
   it('refuses names that pass for the game or its staff', async () => {
     for (const username of ['Admin', 'P03', 'grim_repo', 'demo']) {
       assert.equal((await signUp({ ...newPlayer(), username })).status, 400, username)

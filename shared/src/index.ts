@@ -66,6 +66,8 @@ export {
   rivalAllowed,
   RIVAL_THREAT_CAP,
   deathNameProblem,
+  isOldData,
+  OLD_DATA_REFUSED,
   deathParts,
   tidyDeathName,
   type DeathChoice,
