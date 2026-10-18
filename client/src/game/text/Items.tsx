@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import { ITEM_SLOTS, ITEMS } from 'shared'
 import { ItemButton } from '../ItemButton.tsx'
 import { useTable } from './context.ts'
@@ -7,16 +8,18 @@ export function Items({
   className = '',
   onPick,
   keepSlots = false,
+  style,
 }: {
   className?: string
   onPick?: () => void
   keepSlots?: boolean
+  style?: CSSProperties
 }) {
   const { state, legal, busy, act, aiming, setAiming } = useTable()
   const items = state.items ?? []
   if (!items.length && !(keepSlots && state.items)) return null
   return (
-    <div role="group" aria-label="Your items" className={`flex gap-2 ${className}`}>
+    <div role="group" aria-label="Your items" className={`flex gap-2 ${className}`} style={style}>
       {items.map((item, slot) => {
         const usable = !busy && legal.some((action) => action.type === 'use' && action.slot === slot)
         const def = ITEMS[item]

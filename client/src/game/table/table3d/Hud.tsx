@@ -13,13 +13,14 @@ import {
   Type,
   UnfoldHorizontal,
 } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
 import { ITEMS, type Action, type ItemId, type Unit } from 'shared'
 import { Button } from '@/components/ui/button.tsx'
 import { cardTones, FlatReaderBody } from '../../CardReader.tsx'
 import { ItemButton } from '../../ItemButton.tsx'
 import { TutorialBlurb, tutorialPrompt, useSettled } from '../../tutorial/TutorialBlurb.tsx'
+import { useStage } from '../TableStage.tsx'
 import {
   Ending,
   Forfeit,
@@ -104,6 +105,14 @@ export function Hud({
   const finished = hasEnded(game)
   const legal = busy || finished ? [] : legalFor(game)
   const blurb = useSettled(game.tutorial?.blurb ?? null, busy)
+  // Not over the loading screen, which takes 450ms to fade once the stage warms.
+  const stage = useStage()
+  const [loaded, setLoaded] = useState(false)
+  useEffect(() => {
+    if (!stage.warmed) return
+    const shown = setTimeout(() => setLoaded(true), 450)
+    return () => clearTimeout(shown)
+  }, [stage.warmed])
   const place3d = 'top-14 h-26 w-[min(36rem,calc(100%-1rem))]'
   // The turn's own draw; a catch-up draw after it gets its own button, never owed.
   const mustDraw = !state.drawn && has(legal, { type: 'draw' })
@@ -283,7 +292,7 @@ export function Hud({
         ) : null}
       </div>
 
-      {blurb && !ended ? <TutorialBlurb blurb={blurb} busy={busy} className={place3d} /> : null}
+      {blurb && !ended && loaded ? <TutorialBlurb blurb={blurb} busy={busy} className={place3d} /> : null}
       {ended ? (
         <div className="absolute inset-0 grid place-items-center bg-black/40 p-4">
           <Ending game={game} />

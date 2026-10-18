@@ -77,7 +77,7 @@ export function Controls() {
           </button>
         ) : null}
         {game.tutorial ? (
-          <SkipTutorial className={`${SIDE_BUTTON} h-auto flex-1 justify-center`} />
+          <SkipTutorial className={`${SIDE_BUTTON} flex h-auto flex-1 items-center justify-center text-center`} />
         ) : (
           <Forfeit
             forfeit={game.forfeit}

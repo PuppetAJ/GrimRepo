@@ -6,8 +6,9 @@ import { useSettled } from '../tutorial/TutorialBlurb.tsx'
 import { useTable } from './context.ts'
 import { Items } from './Items.tsx'
 
-// Rem: the face's square; shorter than this, only the tools show.
-const FITS_REM = 6
+// Pixels: the face's square shrinks to the room left, down to SMALLEST; with less room, only the tools show.
+const LARGEST = 96
+const SMALLEST = 64
 
 export function MonitorAndTools() {
   const { view, game, busy } = useTable()
@@ -15,11 +16,10 @@ export function MonitorAndTools() {
   const scripted = useSettled(game.tutorial?.face, busy)
   const face = scripted ?? felt
   const [box, setBox] = useState<HTMLDivElement | null>(null)
-  const [fits, setFits] = useState(true)
+  const [size, setSize] = useState(LARGEST)
   useEffect(() => {
     if (!box) return
-    const measure = () =>
-      setFits(box.clientHeight >= FITS_REM * parseFloat(getComputedStyle(document.documentElement).fontSize))
+    const measure = () => setSize(Math.min(LARGEST, Math.floor(box.clientHeight)))
     measure()
     const observer = new ResizeObserver(measure)
     observer.observe(box)
@@ -27,17 +27,18 @@ export function MonitorAndTools() {
   }, [box])
   return (
     <div ref={setBox} className="flex min-h-0 flex-1 items-start gap-4">
-      {fits ? (
+      {size >= SMALLEST ? (
         <>
           {/* Hidden from screen readers: the log says what happened. */}
           <div
             aria-hidden
-            className="grid size-24 shrink-0 place-items-center rounded-md border-2 border-[#1f3a26] bg-[#050d07] p-2"
+            className="grid shrink-0 place-items-center rounded-md border-2 border-[#1f3a26] bg-[#050d07] p-2"
+            style={{ width: size, height: size }}
           >
             {/* Offsets the fins, so the monitor's body is what's centered. */}
             <P03Face face={face} className="w-full translate-x-[2.9%] -translate-y-[4.8%]" />
           </div>
-          <Items className="h-24 items-center" keepSlots />
+          <Items className="items-center" keepSlots style={{ height: size }} />
         </>
       ) : (
         <Items className="w-full justify-center self-start" />

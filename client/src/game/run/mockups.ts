@@ -312,19 +312,19 @@ export const MOCKUPS: Record<string, Entry> = {
   'death-start': {
     title: 'The starter deck choice, with a death card to leave out',
     group: 'reached',
-    revision: 17,
+    revision: 18,
     make: () => ({ state: createRun({ seed: 1, death: SAMPLE_DEATH }), path: [] }),
   },
   'death-offer': {
     title: 'The first card choice, offering the death card',
     group: 'reached',
-    revision: 5,
+    revision: 6,
     make: () => reached((s) => s.visit?.kind === 'card' && s.visit.offer.some(isDeathCard), { death: SAMPLE_DEATH }),
   },
   'death-build': {
     title: 'A lost run, building a death card from three hands',
     group: 'reached',
-    revision: 12,
+    revision: 13,
     make: () => {
       const found = reached((s) => s.status === 'lost' && s.deck.length >= 5)
       return (
@@ -691,13 +691,13 @@ export const MOCKUPS: Record<string, Entry> = {
   'death-haunt': {
     title: 'The Postmortem bringing back your death card',
     group: 'reached',
-    revision: 6,
+    revision: 7,
     make: () => reached((s) => haunted(s, 2), { death: SAMPLE_DEATH }),
   },
   'rival-haunt': {
     title: "The Staging boss bringing another player's death card",
     group: 'reached',
-    revision: 4,
+    revision: 5,
     make: () => reached((s) => haunted(s, 1), { rival: { card: SAMPLE_RIVAL, by: 'ajimp' } }),
   },
   'card-types': {
