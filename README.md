@@ -1,6 +1,6 @@
 # Grim Repo
 
-A card game of sacrifices, played on floppy disks against P03 in his factory. Inspired by [Inscryption](https://www.inscryption.com/), with a deck of programming jokes: every card costs something, and to play the strong ones you give up the weak.
+A card game of sacrifices, played on floppy disks against P03 in its factory. Inspired by [Inscryption](https://www.inscryption.com/), with a deck of programming jokes: every card costs something, and to play the strong ones you give up the weak.
 
 It started in 2022 as a bootcamp group project (Express, Handlebars, MySQL and a single three.js script) and is rebuilt here as a portfolio project.
 

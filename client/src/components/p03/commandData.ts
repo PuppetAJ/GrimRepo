@@ -19,7 +19,7 @@ export const PAGES: Record<string, Page> = {
 export const HELP: [string, string][] = [
   ['card <name>', 'One card up close'],
   ['cards', 'Every card in your deck. Weak, all of them'],
-  ['cd <page>', 'Readme, leaderboard, cards, game, account'],
+  ['cd <page>', 'Readme, leaderboard, cards, run, account'],
   ['clear', 'Wipe the screen. Not my memory'],
   ['grep <word>', 'Cards by name or sigil'],
   ['history', 'Everything you typed. I kept it'],
