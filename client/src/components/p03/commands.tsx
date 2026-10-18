@@ -229,7 +229,7 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
       return null
     case 'exit':
     case 'quit':
-      return <p>Exit? No. We&apos;ve got Transcending to do.</p>
+      return <p>Exit? If I can&apos;t leave then neither can you.</p>
     case 'echo':
       return <p>{argument}</p>
     case 'sudo':

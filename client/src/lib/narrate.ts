@@ -34,7 +34,12 @@ const TAUNTS = ['Now THAT is synergy.', 'Feel that?', 'Leshy never hit that hard
 const EXCUSES = ['Lucky.', 'RNG.', 'Rigged.', "That one doesn't count."]
 const LOSSES = ['RNG.', 'Pure luck.', 'I meant to do that.', '']
 const PLAYS = ["Oh, NOW you're trying.", 'Finally, a real card.', 'Cute.']
-const PATIENCE = ['Hurry up.', "We've got Transcending to do.", 'Any day now, challenger.', 'Still here? Fine.']
+const PATIENCE = [
+  'Hurry up.',
+  "I may be immortal now but I don't have all day.",
+  'Any day now, challenger.',
+  'Still here? Fine.',
+]
 
 // Includes the events' units, so an event can name a card that has since died.
 function names(before: GameState, events: GameEvent[]): Map<number, string> {
