@@ -104,8 +104,7 @@ function Part({ pops, ...props }: { pops: boolean } & ComponentProps<'span'>) {
 
 /** A card's colors on paper, its body and its screen: green, a rare's red, or a death card's ash. */
 export function cardTones(id: string): { body: string; screen: string } {
-  // A warm, dark ash, so the shutter's light blue-gray stands out against it.
-  if (isDeathCard(id)) return { body: 'bg-[#9a948a]', screen: 'bg-[#878177]' }
+  if (isDeathCard(id)) return { body: 'bg-[#b9c3c8]', screen: 'bg-[#a3adb2]' }
   if (card(id).tier === 'S') return { body: 'bg-[#f3c6c0]', screen: 'bg-[#e8aea8]' }
   return { body: 'bg-[#a9e7b8]', screen: 'bg-[#8fd3a0]' }
 }
@@ -125,7 +124,11 @@ export function PixelCard({ unit, blank }: { unit: Shown; blank?: Blank }) {
           <Sigil id="death" size="8cqw" />
         </span>
       ) : null}
-      <span aria-hidden className="absolute top-0 left-[22%] z-10 h-[7%] w-[46%] rounded-b-sm bg-[#b9c3c8]">
+      {/* A death card swaps colors with its shutter, so the two never blend. */}
+      <span
+        aria-hidden
+        className={`absolute top-0 left-[22%] z-10 h-[7%] w-[46%] rounded-b-sm ${dead ? 'bg-[#9a948a]' : 'bg-[#b9c3c8]'}`}
+      >
         <span className="absolute top-[18%] right-[16%] h-[62%] w-[20%] bg-[#0b1f12]" />
       </span>
       <span className="h-[11%] shrink-0" />

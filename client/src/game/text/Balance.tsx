@@ -11,7 +11,8 @@ const PANS = [
   { who: 'P03', side: 'left-[57cqw]' },
 ]
 
-export function Balance({ scale }: { scale: number }) {
+/** `fit` lets the picture shrink to the height its column leaves it. */
+export function Balance({ scale, fit = false }: { scale: number; fit?: boolean }) {
   const lean = Math.max(-1, Math.min(1, scale / TIP))
   const ticks = [...Array(TIP * 2 + 1).keys()].map((i) => i - TIP)
   // The pans rotate back by the same angle so they hang straight.
@@ -24,9 +25,13 @@ export function Balance({ scale }: { scale: number }) {
       aria-valuemax={TIP}
       aria-valuenow={Math.max(-TIP, Math.min(TIP, scale))}
       aria-valuetext={scaleWords(scale)}
-      className="flex flex-col items-center"
+      className={`flex flex-col items-center ${fit ? 'min-h-0 flex-1' : ''}`}
     >
-      <div aria-hidden className="@container relative aspect-[4/3] w-[min(100%,calc(14dvh*4/3))]" style={tilt}>
+      <div
+        aria-hidden
+        className={`@container relative aspect-[4/3] ${fit ? 'max-h-[14dvh] min-h-0 max-w-full flex-1' : 'w-[min(100%,calc(14dvh*4/3))]'}`}
+        style={tilt}
+      >
         <img src={stand} alt="" className="absolute inset-0 size-full" />
         <div className="absolute top-[21cqw] left-[15cqw] w-[70cqw] rotate-(--tilt)">
           <img src={arm} alt="" className="absolute top-[-1cqw] h-[2cqw] w-full max-w-none" />

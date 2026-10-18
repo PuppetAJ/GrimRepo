@@ -36,8 +36,8 @@ export function WideLayout() {
             <TurnLabel stack />
             <SaveStatus className="text-base text-p03-dim" />
           </Panel>
-          <Panel className="flex flex-col gap-2">
-            <Balance scale={view.scale} />
+          <Panel className="flex min-h-0 flex-1 flex-col gap-2">
+            <Balance scale={view.scale} fit />
             {view.integrity ? (
               <IntegrityBar left={view.integrity.left} max={view.integrity.max} fluid className="text-xl" />
             ) : null}
