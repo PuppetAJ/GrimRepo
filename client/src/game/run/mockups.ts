@@ -324,7 +324,7 @@ export const MOCKUPS: Record<string, Entry> = {
   'death-build': {
     title: 'A lost run, building a death card from three hands',
     group: 'reached',
-    revision: 14,
+    revision: 15,
     make: () => {
       const found = reached((s) => s.status === 'lost' && s.deck.length >= 5)
       return (

@@ -141,7 +141,7 @@ export function DeathCardBuilder({ run }: { run: RunReady }) {
       ),
     },
     {
-      title: 'Its sigils, every one this card has',
+      title: 'Its sigils',
       body: (
         <CardList
           units={sigilHand.map((entry) => asUnit(entry))}
