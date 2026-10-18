@@ -30,12 +30,17 @@ const lane = (index: number) => `lane ${index + 1}`
 // Picked by a number from the game, not at random, so a reload replays the same lines.
 const pick = (lines: string[], key: number) => lines[Math.abs(key) % lines.length] as string
 const BIG_HIT = 5
-const TAUNTS = ['Now THAT is synergy.', 'Feel that?', 'Leshy never hit that hard.', 'Too easy.']
-const EXCUSES = ['Lucky.', 'RNG.', 'Rigged.', "That one doesn't count."]
-const LOSSES = ['RNG.', 'Pure luck.', 'I meant to do that.', '']
+const TAUNTS = [
+  'Now THAT is synergy.',
+  "Feel that? That's what optimized code looks like.",
+  'Leshy never hit that hard.',
+  'Too easy.',
+]
+const EXCUSES = ["A rounding error. I'm filing a bug report against you.", 'RNG.', 'Rigged.', "That one doesn't count."]
+const LOSSES = ['RNG.', 'Pure luck.', 'Fine. That card was deprecated anyway.', '']
 const PLAYS = ["Oh, NOW you're trying.", 'Finally, a real card.', 'Cute.']
 const PATIENCE = [
-  'Hurry up.',
+  'My CPU idles faster than you think.',
   "I may be immortal now but I don't have all day.",
   'Any day now, challenger.',
   'Still here? Fine.',
@@ -57,12 +62,15 @@ export function narrate(before: GameState, events: GameEvent[]): string[] {
   const mine = (uid: number) =>
     before.player.board.some((unit) => unit?.uid === uid) || before.player.hand.some((unit) => unit.uid === uid)
 
-  return events.flatMap((event): string[] => {
+  const firstSacrifice = events.findIndex((event) => event.type === 'sacrificed')
+  return events.flatMap((event, index): string[] => {
     switch (event.type) {
       case 'drew':
         return [
           event.from === 'boilerplate'
-            ? `You took a Boilerplate from the side pile. Filler.`
+            ? before.player.hand.some((unit) => unit.card === 'Boilerplate')
+              ? 'Boilerplate again. Bold strategy, choosing nothing.'
+              : `You took a Boilerplate from the side pile. Filler.`
             : event.catchUp
               ? `You're behind, so you take an extra card: ${card(event.unit.card).name}. Charity.`
               : `You drew ${card(event.unit.card).name}.`,
@@ -74,10 +82,14 @@ export function narrate(before: GameState, events: GameEvent[]): string[] {
           event.survived
             ? `${name(event.uid)} was offered and survived. try/catch. Cheap.`
             : `${name(event.uid)} was sacrificed. Deprecated.`,
+          // Once per summon, however many cards pay for it.
+          ...(index === firstSacrifice ? ['Delete your own cards for me. Saves me the trouble.'] : []),
         ]
       case 'placed': {
         const played = card(event.unit.card)
-        const aside = played.cost >= 2 ? ` ${pick(PLAYS, event.unit.uid)}` : ''
+        // Boilerplates are fodder, so only a real card with no attack counts as a weak play.
+        const weak = event.unit.attack === 0 && event.unit.card !== 'Boilerplate'
+        const aside = weak ? " That's your play? Cute." : played.cost >= 2 ? ` ${pick(PLAYS, event.unit.uid)}` : ''
         return [`You played ${played.name} in ${lane(event.lane)}.${aside}`]
       }
       case 'phaseChanged':
