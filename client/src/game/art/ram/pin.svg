@@ -1,0 +1,4 @@
+<!-- One gold contact on the end box's RAM stick, repeated along its bottom edge. Used as a mask; the page colors it. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="6" height="8" viewBox="0 0 6 8">
+  <rect x="0" y="0" width="3" height="8" fill="#000" />
+</svg>

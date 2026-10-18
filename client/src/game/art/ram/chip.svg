@@ -1,0 +1,5 @@
+<!-- One memory chip on the end box's RAM stick, in outline, with room after it before the next. Used as a mask, so only
+     its shape matters; the page colors it. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="10" viewBox="0 0 24 10">
+  <rect x="1" y="1" width="16" height="8" rx="1" fill="none" stroke="#000" stroke-width="2" />
+</svg>

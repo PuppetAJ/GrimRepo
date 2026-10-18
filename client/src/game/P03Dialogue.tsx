@@ -2,6 +2,8 @@ import { cn } from 'cn'
 import { useEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react'
 import type { Face } from 'shared'
 import { p03Art } from './art.ts'
+import chipArt from './art/ram/chip.svg'
+import pinArt from './art/ram/pin.svg'
 
 // Where the screen sits in the frame, traced from P03's model and editable on /art, as fractions of the image.
 const SCREEN = { left: '11%', top: '24.8%', width: '72.8%', height: '60%' }
@@ -81,22 +83,67 @@ export function P03Dialogue({
   )
 }
 
+// The RAM stick's measures, in pixels: the slant under the box, the bite out of its right end, and the key notch
+// cut into its bottom edge, as on a real stick.
+const SLANT = 24
+const BITE = { top: '45%', bottom: '70%', depth: 5 }
+const KEY = { at: '62%', width: 8, height: 6 }
+
+/** The stick's outline as a clip-path, shrunk `inset` pixels from every edge but the top, which the box closes. */
+function stick(inset: number): string {
+  const i = inset
+  const x = (base: string, by: number) => (by ? `calc(${base} ${by < 0 ? '-' : '+'} ${Math.abs(by)}px)` : base)
+  return `polygon(${[
+    // The slant runs about 1.5 times further across than a straight edge does, so its inset does too.
+    `${i * 1.5}px 0`,
+    `${x('100%', -i)} 0`,
+    `${x('100%', -i)} ${x(BITE.top, -i)}`,
+    `${x('100%', -BITE.depth - i)} ${x(BITE.top, -i)}`,
+    `${x('100%', -BITE.depth - i)} ${x(BITE.bottom, i)}`,
+    `${x('100%', -i)} ${x(BITE.bottom, i)}`,
+    `${x('100%', -i)} ${x('100%', -i)}`,
+    `${x(KEY.at, KEY.width + i)} ${x('100%', -i)}`,
+    `${x(KEY.at, KEY.width + i)} ${x('100%', -KEY.height - i)}`,
+    `${x(KEY.at, -i)} ${x('100%', -KEY.height - i)}`,
+    `${x(KEY.at, -i)} ${x('100%', -i)}`,
+    `${SLANT + i / 2}px ${x('100%', -i)}`,
+  ].join(', ')})`
+}
+const OUTLINE = stick(0)
+const FILL = stick(2)
+
+/** A row of art repeated across a width, colored by the page; `space` fits whole copies only, spread evenly. */
+const tiled = (url: string, repeat: 'repeat-x' | 'space') =>
+  // Quoted, since a small file arrives inlined as a data URL, whose characters an unquoted url() can't hold.
+  ({ maskImage: `url("${url}")`, maskRepeat: repeat, maskPosition: 'left center' }) as const
+
 /**
- * The ledge, shaped \___: its left edge slants in under the box, its bottom runs flat, and its right edge carries on
- * the box's own. It starts under the box's bottom border, which is all that parts the two.
+ * The ledge, a stick of RAM: shaped \\___ like a ledge, its left edge slanting in under the box and its right edge
+ * carrying on the box's own, with chips along the top, gold contacts along the bottom, and a key notch between them.
+ * It starts under the box's bottom border, which is all that parts the two.
  */
 function Ledge({ children, className }: { children: ReactNode; className: string }) {
-  // Its slant takes some of the left; the rest matches the right, and the top matches the bottom.
   return (
-    <div className={cn('relative pt-1 pr-4 pb-2 pl-[2.125rem]', className)}>
-      {/* The edge's color behind, and the fill two pixels in, both cut to the slant. */}
+    <div className={cn('relative pt-4 pr-6 pb-4 pl-[2.125rem]', className)}>
+      {/* The edge's color behind, and the fill two pixels in, both cut to the stick's outline. */}
+      <span aria-hidden className="absolute inset-0 bg-p03-edge" style={{ clipPath: OUTLINE }} />
+      <span aria-hidden className="absolute inset-0 bg-p03-ground" style={{ clipPath: FILL }} />
+      {/* Chips along the top, as many whole ones as fit. */}
       <span
         aria-hidden
-        className="absolute inset-0 bg-p03-edge [clip-path:polygon(0_0,100%_0,100%_100%,1.5rem_100%)]"
+        className="absolute top-1.5 right-6 left-[2.125rem] h-2.5 bg-p03-edge"
+        style={tiled(chipArt, 'space')}
+      />
+      {/* Gold contacts along the bottom, on either side of the key notch. */}
+      <span
+        aria-hidden
+        className="absolute bottom-1 left-[1.875rem] h-2 bg-[#c9a640]/75"
+        style={{ ...tiled(pinArt, 'repeat-x'), right: `calc(100% - ${KEY.at} + 4px)` }}
       />
       <span
         aria-hidden
-        className="absolute top-0 right-0.5 bottom-0.5 left-0 bg-p03-ground [clip-path:polygon(3px_0,100%_0,100%_100%,calc(1.5rem+1px)_100%)]"
+        className="absolute right-2 bottom-1 h-2 bg-[#c9a640]/75"
+        style={{ ...tiled(pinArt, 'repeat-x'), left: `calc(${KEY.at} + ${KEY.width + 4}px)` }}
       />
       <div className="relative">{children}</div>
     </div>
@@ -159,14 +206,14 @@ export function Choices({ choices }: { choices: Choice[] }) {
           onClick={choice.onChoose}
           onPointerEnter={() => setPicked(index)}
           onFocus={() => setPicked(index)}
-          className="group flex items-center gap-1.5 font-bold text-[#c9ffd5] outline-none"
+          className="flex items-center gap-1.5 font-bold text-[#c9ffd5] outline-none"
         >
           {/* Every choice keeps the pointer's room, so picking another never shifts the line. */}
           <span aria-hidden className={index === picked ? '' : 'invisible'}>
             ▸
           </span>
-          {/* Underlined on keyboard focus, the label alone, not the pointer. */}
-          <span className="underline-offset-4 group-focus-visible:underline">{choice.label}</span>
+          {/* The picked one is underlined, the label alone, not the pointer; it follows the pointer and the keys alike. */}
+          <span className={index === picked ? 'underline underline-offset-4' : ''}>{choice.label}</span>
         </button>
       ))}
     </div>

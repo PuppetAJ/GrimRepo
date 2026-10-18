@@ -6,7 +6,6 @@ import { MOCKUPS } from '../game/run/mockups.ts'
 import { NotFound } from './NotFound.tsx'
 import { RunTable } from './Run.tsx'
 import { MotionRoot } from '../components/MotionRoot.tsx'
-import { RamOptions } from './RamOptions.tsx'
 
 const LAYOUTS = ['wide', 'mid', 'phone'] as const
 
@@ -175,10 +174,6 @@ export function MockupIndex() {
           </Link>
         </section>
       ) : null}
-      <section className="flex flex-col gap-3">
-        <h2 className="text-xl font-semibold">End box: a RAM stick in place of the ledge</h2>
-        <RamOptions />
-      </section>
       <section className="flex flex-col gap-3">
         <h2 className="text-xl font-semibold">The tutorial</h2>
         <p className="text-sm text-muted-foreground">
