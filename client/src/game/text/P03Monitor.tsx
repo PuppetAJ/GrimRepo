@@ -18,8 +18,8 @@ export function MonitorAndTools() {
         aria-hidden
         className="grid aspect-square h-full shrink-0 place-items-center rounded-md border-2 border-[#1f3a26] bg-[#050d07] p-1.5"
       >
-        {/* Offsets the fins, so the monitor's body is what's centered. */}
-        <P03Face face={face} className="w-full translate-x-[2.9%] -translate-y-[4.8%]" />
+        {/* Offsets the art's empty top rows and right columns, so the head is centered. */}
+        <P03Face face={face} className="w-full translate-x-[2.9%] -translate-y-[4.3%]" />
       </div>
       <Items className="h-full items-center" keepSlots />
     </div>
