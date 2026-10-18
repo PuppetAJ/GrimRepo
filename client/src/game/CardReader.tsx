@@ -104,7 +104,7 @@ function Part({ pops, ...props }: { pops: boolean } & ComponentProps<'span'>) {
 
 /** A card's colors on paper, its body and its screen: green, a rare's red, or a death card's ash. */
 export function cardTones(id: string): { body: string; screen: string } {
-  if (isDeathCard(id)) return { body: 'bg-[#c6ccc7]', screen: 'bg-[#a7afa9]' }
+  if (isDeathCard(id)) return { body: 'bg-[#b9c3c8]', screen: 'bg-[#a3adb2]' }
   if (card(id).tier === 'S') return { body: 'bg-[#f3c6c0]', screen: 'bg-[#e8aea8]' }
   return { body: 'bg-[#a9e7b8]', screen: 'bg-[#8fd3a0]' }
 }
@@ -124,7 +124,11 @@ export function PixelCard({ unit, blank }: { unit: Shown; blank?: Blank }) {
           <Sigil id="death" size="8cqw" />
         </span>
       ) : null}
-      <span aria-hidden className="absolute top-0 left-[22%] z-10 h-[7%] w-[46%] rounded-b-sm bg-[#b9c3c8]">
+      {/* A death card swaps colors with its shutter, so the two never blend. */}
+      <span
+        aria-hidden
+        className={`absolute top-0 left-[22%] z-10 h-[7%] w-[46%] rounded-b-sm ${dead ? 'bg-[#9a948a]' : 'bg-[#b9c3c8]'}`}
+      >
         <span className="absolute top-[18%] right-[16%] h-[62%] w-[20%] bg-[#0b1f12]" />
       </span>
       <span className="h-[11%] shrink-0" />
@@ -187,19 +191,44 @@ export function PixelCard({ unit, blank }: { unit: Shown; blank?: Blank }) {
   )
 }
 
+function Note({
+  icon,
+  name,
+  text,
+  className,
+  size,
+}: {
+  icon: IconId
+  name: string
+  text: string
+  className: string
+  size: number
+}) {
+  return (
+    <p className={className}>
+      <span className="shrink-0 pt-0.5">
+        <Sigil id={icon} size={size} />
+      </span>
+      <span className="flex min-w-0 flex-col">
+        <strong>{name}</strong>
+        <span>{text}</span>
+      </span>
+    </p>
+  )
+}
+
 /** The card's type and what it means, for the sigils that count cards of a type. */
 function TypeLine({ id, className, icon }: { id: string; className: string; icon: number }) {
   const type = card(id).type
   if (!type) return null
   return (
-    <p className={className}>
-      <span className="shrink-0 pt-0.5">
-        <Sigil id={`type-${type}`} size={icon} />
-      </span>
-      <span>
-        <strong>{CARD_TYPES[type].name}.</strong> {CARD_TYPES[type].about}
-      </span>
-    </p>
+    <Note
+      icon={`type-${type}`}
+      name={`${CARD_TYPES[type].name} type`}
+      text={CARD_TYPES[type].about}
+      className={className}
+      size={icon}
+    />
   )
 }
 
@@ -226,14 +255,14 @@ export function ReaderBody({ unit }: { unit: Shown }) {
       >
         <TypeLine id={unit.card} className="flex gap-2 text-xl leading-tight" icon={20} />
         {unit.sigils.map((sigil) => (
-          <p key={sigil} className="flex gap-2 text-xl leading-tight">
-            <span className="shrink-0 pt-0.5">
-              <Sigil id={sigil} size={20} />
-            </span>
-            <span>
-              <strong>{SIGILS[sigil].name}.</strong> {SIGILS[sigil].text}
-            </span>
-          </p>
+          <Note
+            key={sigil}
+            icon={sigil}
+            name={SIGILS[sigil].name}
+            text={SIGILS[sigil].text}
+            className="flex gap-2 text-xl leading-tight"
+            size={20}
+          />
         ))}
       </div>
       <Stats unit={unit} icon={20} className="mt-auto pt-1 text-3xl" />
@@ -262,14 +291,14 @@ export function FlatReaderBody({ unit }: { unit: Shown }) {
         >
           <TypeLine id={unit.card} className="flex gap-1" icon={14} />
           {unit.sigils.map((sigil) => (
-            <p key={sigil} className="flex gap-1">
-              <span className="shrink-0 pt-0.5">
-                <Sigil id={sigil} size={14} />
-              </span>
-              <span>
-                <strong>{SIGILS[sigil].name}.</strong> {SIGILS[sigil].text}
-              </span>
-            </p>
+            <Note
+              key={sigil}
+              icon={sigil}
+              name={SIGILS[sigil].name}
+              text={SIGILS[sigil].text}
+              className="flex gap-1"
+              size={14}
+            />
           ))}
         </div>
         <Stats unit={unit} icon={16} className="pt-0.5 text-2xl leading-none" />

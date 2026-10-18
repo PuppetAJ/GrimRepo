@@ -35,6 +35,8 @@ export function Boot({ stage, progress = 0, files = [] }: { stage: BootStage; pr
     step('fetching the table', loaded ? 'ok' : 'run'),
     step('loading models', stage === 'assets' ? 'run' : loaded ? 'ok' : 'wait', `${Math.round(progress)}%`),
     ...(stage === 'assets' ? files.slice(-3).map((file) => `    ${file}`) : []),
+    // A glimpse of OLD_DATA: half a second in every two of loading, then gone.
+    ...(stage === 'assets' && tick % 24 < 6 ? [`> mounting ${'████████'.padEnd(20, '.')} denied`] : []),
     step('warming shaders', stage === 'warming' ? 'run' : stage === 'done' ? 'ok' : 'wait'),
   ]
   const share = stage === 'code' ? null : stage === 'assets' ? progress / 100 : 1

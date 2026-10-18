@@ -19,7 +19,7 @@ export function Hand() {
           : 'aspect-[5/7] h-full'
   return (
     <div
-      className={`flex min-w-0 flex-1 gap-2 rounded-md border-2 border-[#1f3a26] bg-[#050d07]/70 px-1 pb-1 ${sideways ? 'min-h-0 flex-wrap content-start justify-center overflow-y-auto pt-4' : `justify-[safe_center] items-center overflow-x-auto ${phone ? 'pt-4' : 'pt-5'}`} ${compact ? '' : 'h-full'}`}
+      className={`flex min-w-0 flex-1 gap-2 rounded-md border-2 border-[#1f3a26] bg-[#050d07]/70 px-1 ${phone || sideways ? 'pb-1' : 'pb-3.5'} ${sideways ? 'min-h-0 flex-wrap content-start justify-center overflow-y-auto pt-4' : `justify-[safe_center] items-center overflow-x-auto ${phone ? 'pt-4' : 'pt-3.5'}`} ${compact ? '' : 'h-full'}`}
     >
       {view.hand.map((unit) => {
         const selected = unit.uid === state.summon?.uid
@@ -83,7 +83,14 @@ export function Piles() {
   const deckDraws = has(legal, { type: 'draw', from: 'deck' } as Partial<Action>)
   // An empty deck shows what a draw would shuffle back in, not a bare 0.
   const reshuffle = view.deck ? null : reshuffleNote(state)
-  const size = sideways ? 'w-10' : phone ? 'w-8 tall:w-10' : compact ? 'w-12 sm:w-16' : 'w-20'
+  // On the wide table, sized from the hand row's height (WideLayout's clamp) less its padding and the count below.
+  const size = sideways
+    ? 'w-10'
+    : phone
+      ? 'w-8 tall:w-10'
+      : compact
+        ? 'w-12 sm:w-16'
+        : 'w-[min(5rem,calc((clamp(9.25rem,19dvh,13rem)-3rem)*5/7))]'
   const full = handFull ? `Your hand is full (${HAND_LIMIT})` : undefined
   // While P03 leads, a second card can be drawn from the deck once the turn's draw is done.
   const extra = !mustDraw && Boolean(state.catchUp) && deckDraws
@@ -130,7 +137,9 @@ export function Piles() {
         aria-label="Take a Boilerplate"
         className={`flex flex-col items-center gap-1 text-p03 disabled:brightness-50 disabled:saturate-50 ${size}`}
       >
-        <span className="grid aspect-[5/7] w-full place-items-center rounded-md border-2 border-[#0b1f12] bg-[#a9e7b8] text-lg text-[#0b1f12] shadow-[3px_3px_0_#1f3a26,6px_6px_0_#13261a]">
+        <span
+          className={`grid aspect-[5/7] w-full place-items-center rounded-md border-2 border-[#0b1f12] bg-[#a9e7b8] text-lg text-[#0b1f12] shadow-[3px_3px_0_#1f3a26,6px_6px_0_#13261a]`}
+        >
           {'</>'}
         </span>
         <span className="text-lg">∞</span>

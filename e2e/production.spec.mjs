@@ -51,9 +51,9 @@ test('The live site', async ({ page, browser }) => {
   await test.step('Playing', async () => {
     await page.goto(BASE, { waitUntil: 'networkidle' })
     await page.evaluate(() => localStorage.setItem('grimrepo:table', 'text'))
-    await page.getByRole('link', { name: 'Quick battle' }).click()
+    await page.getByRole('link', { name: 'Play', exact: true }).click()
     await page.locator('[data-table="text"]').waitFor()
-    check('Quick battle deals a guest into a game', (await page.locator('[data-action="draw-deck"]').count()) === 1)
+    check('Play deals a guest into a game', (await page.locator('[data-action="draw-deck"]').count()) === 1)
     await page.goto(`${BASE}/game?fixture=worst`, { waitUntil: 'networkidle' })
     await page.locator('[data-table="text"]').waitFor()
     check(

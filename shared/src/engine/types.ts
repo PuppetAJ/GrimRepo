@@ -74,6 +74,10 @@ export type GameState = {
   skipOpponent?: boolean
   /** A run's integrity, carried into the battle: each card P03 destroys costs 1, and the run is lost at 0. */
   integrity?: { left: number; max: number }
+  /** An unshuffled deck, and P03 plays its plan exactly, then nothing. */
+  scripted?: boolean
+  /** Cards the player placed this turn; no rule reads it, only P03's commentary. */
+  placed?: number[]
 }
 
 export type Action =

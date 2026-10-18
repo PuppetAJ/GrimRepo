@@ -1,3 +1,4 @@
+import { cn } from 'cn'
 import type { ReactNode, Ref } from 'react'
 
 export const SIDE_BUTTON =
@@ -15,7 +16,7 @@ export function Panel({
   ref?: Ref<HTMLDivElement>
 }) {
   return (
-    <div ref={ref} className={`rounded-md border-2 border-p03-edge bg-[#07130b] p-3 ${className}`}>
+    <div ref={ref} className={cn('rounded-md border-2 border-p03-edge bg-[#07130b] p-3', className)}>
       {children}
     </div>
   )

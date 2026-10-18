@@ -11,6 +11,10 @@ const PACKS = byName(
   import.meta.glob<string>('./art/packs/*.png', { eager: true, query: '?no-inline', import: 'default' }),
 )
 
+const P03 = byName(import.meta.glob<string>('./art/p03/*.png', { eager: true, import: 'default' }))
+
+export const p03Art = (id: string): string | undefined => P03[id]
+
 /** A pack's art: a starter deck's, a card choice's, a face-down trait's, or the rare one after a boss. */
 export const packArt = (id: string): string | undefined => PACKS[id]
 
@@ -20,8 +24,8 @@ export const SPRITE_FPS = 8
 export type IconId = SigilId | ItemId | 'attack' | 'health' | 'fire' | 'logs' | 'death' | `type-${CardType}`
 
 /** Whether a card or icon has art of its own yet, rather than the stand-in. */
-export const hasArt = (kind: 'cards' | 'icons', id: string): boolean =>
-  (kind === 'cards' ? CARDS[artId(id)] : ICONS[id]) !== undefined
+export const hasArt = (kind: 'cards' | 'icons' | 'p03', id: string): boolean =>
+  (kind === 'cards' ? CARDS[artId(id)] : kind === 'p03' ? P03[id] : ICONS[id]) !== undefined
 
 // A death card wears the art of the card its stats came from.
 const artId = (id: string): string => parseDeathCard(id)?.art ?? id

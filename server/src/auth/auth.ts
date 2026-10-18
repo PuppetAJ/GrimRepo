@@ -5,6 +5,7 @@ import { pool } from '../config/db.ts'
 import { env } from '../config/env.ts'
 import { demoAccount } from './demo.ts'
 import { claimGuest, guestName } from './guests.ts'
+import { isOldData, OLD_DATA_REFUSED } from 'shared'
 import { isOffensive, isReserved, NAME_REFUSED } from './names.ts'
 
 export const USERNAME_PATTERN = /^[A-Za-z0-9_]{3,20}$/
@@ -78,6 +79,7 @@ export const authOptions = {
       const username = body['username']
       if (typeof username === 'string') {
         // Reserved names bind HTTP requests only, since the seed creates the demo account through this API.
+        if (isOldData(username)) throw new APIError('BAD_REQUEST', { message: OLD_DATA_REFUSED })
         if (isOffensive(username) || (ctx.request && isReserved(username))) {
           throw new APIError('BAD_REQUEST', { message: NAME_REFUSED })
         }

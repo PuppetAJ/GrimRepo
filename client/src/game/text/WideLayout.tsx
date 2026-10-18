@@ -6,14 +6,15 @@ import { CancelButton, Controls, ExecuteButton, SaveStatus } from './Buttons.tsx
 import { useTable } from './context.ts'
 import { TurnLabel } from './TurnLabel.tsx'
 import { Hand, Piles } from './Hand.tsx'
-import { Items } from './Items.tsx'
 import { ConsolePanel } from './Log.tsx'
 import { Panel } from './Panel.tsx'
-import { Processes } from './Processes.tsx'
+import { MonitorAndTools } from './P03Monitor.tsx'
 import { Magnifier, PromptLine, ReaderPanel } from './Reading.tsx'
+import { TutorialBlurb, useSettled } from '../tutorial/TutorialBlurb.tsx'
 
 export function WideLayout() {
-  const { frameProps, frame, size, fullScreen, seat, setArea, view } = useTable()
+  const { frameProps, frame, size, fullScreen, seat, setArea, view, game, busy } = useTable()
+  const blurb = useSettled(game.tutorial?.blurb ?? null, busy)
   return (
     <>
       {fullScreen.on ? <div aria-hidden className="fixed inset-0 z-40 bg-[#030604]" /> : null}
@@ -26,20 +27,23 @@ export function WideLayout() {
       >
         <FaultyScreenShader />
         <span aria-hidden className="crt-glass pointer-events-none absolute inset-0 z-30" />
-        <aside aria-label="Turn and scale" className="relative z-10 flex min-h-0 flex-col gap-3 overflow-hidden">
+        {/* Room inside the clip for the tutorial's outline on EXECUTE. */}
+        <aside
+          aria-label="Turn and scale"
+          className="relative z-10 -m-2 flex min-h-0 flex-col gap-3 overflow-hidden p-2"
+        >
           <Panel className="flex items-center justify-between gap-2 text-2xl">
             <TurnLabel stack />
             <SaveStatus className="text-base text-p03-dim" />
           </Panel>
-          <Panel className="flex flex-col gap-2">
-            <Balance scale={view.scale} />
+          <Panel className="flex min-h-0 flex-1 flex-col gap-2">
+            <Balance scale={view.scale} fit />
             {view.integrity ? (
               <IntegrityBar left={view.integrity.left} max={view.integrity.max} fluid className="text-xl" />
             ) : null}
           </Panel>
           <ExecuteButton />
-          <Items className="justify-center" />
-          <Processes />
+          <MonitorAndTools />
         </aside>
         <section aria-label="The table" className="relative z-10 flex min-h-0 flex-col items-center gap-2">
           {seat ? <SeatNote seat={seat} /> : null}
@@ -57,12 +61,13 @@ export function WideLayout() {
         </aside>
         <section
           aria-label="Your hand"
-          className="relative z-10 col-span-3 flex h-[clamp(8rem,19dvh,13rem)] items-end gap-4 border-t-2 border-p03-edge pt-3"
+          className="relative z-10 col-span-3 flex h-[clamp(9.25rem,19dvh,13rem)] items-end gap-4 border-t-2 border-p03-edge pt-3"
         >
           <Controls />
           <Hand />
           <Piles />
         </section>
+        {blurb ? <TutorialBlurb blurb={blurb} busy={busy} /> : null}
         <Magnifier />
       </div>
     </>

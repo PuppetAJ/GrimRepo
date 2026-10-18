@@ -1,0 +1,4 @@
+<!-- One contact on the RAM stick; a mask, so the page sets its color. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="6" height="8" viewBox="0 0 6 8">
+  <rect x="0" y="0" width="3" height="8" fill="#000" />
+</svg>

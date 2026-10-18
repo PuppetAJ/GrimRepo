@@ -174,9 +174,11 @@ export function Board() {
           act(use)
           setAiming(null)
         }}
-        className="absolute inset-0 z-20 grid place-items-end rounded-md border-2 border-dashed border-[#ffb454] bg-[#ffb454]/10 p-1 text-base text-[#ffb454] hover:bg-[#ffb454]/25 focus-visible:outline-2 focus-visible:outline-[#ffb454]"
+        className="absolute inset-0 z-20 grid place-items-center rounded-md border-2 border-dashed border-[#ffb454] bg-[#ffb454]/10 p-1 text-[#ffb454] hover:bg-[#ffb454]/25 focus-visible:outline-2 focus-visible:outline-[#ffb454]"
       >
-        use here
+        <span className="rounded-sm bg-[#07130b]/90 px-1.5 py-0.5 text-[min(1.125rem,17cqw)] leading-none whitespace-nowrap">
+          use here
+        </span>
       </button>
     )
   }
@@ -340,7 +342,7 @@ export function Board() {
           })}
       </div>
       {gameOver ? (
-        <div className="absolute inset-0 grid place-items-center bg-black/60 p-4">
+        <div className="absolute inset-0 grid place-items-center bg-black/60 p-4 [--glow:1.8]">
           <Ending game={game} />
         </div>
       ) : null}

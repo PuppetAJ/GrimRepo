@@ -1,12 +1,16 @@
 import { Sparkles, useGLTF, useTexture } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
-import { memo, Suspense, useMemo, useRef } from 'react'
+import { memo, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import type { View } from '../view.ts'
 import { Battery } from './factory/Battery.tsx'
 import { DUST, lamp, STILL } from './factory/constants.ts'
 import { Monitor } from './factory/Monitor.tsx'
 import { logLines, MONITOR_COLUMNS, MONITOR_ROWS, statusLines } from './factory/monitorLines.ts'
+
+const GLITCH_EVERY = 17
+const GLITCH_MS = 700
+const GLITCH_LINE = '> OLD_D█T█ checksum ok'
 import { DrumRack, GemModule, Lamp, Props } from './factory/Props.tsx'
 import { Room } from './factory/Room.tsx'
 import { GRIMY_TABLE, surfaces } from './factory/surfaces.ts'
@@ -34,7 +38,22 @@ export function Factory({
   onHold?: (screen: Screen, x: number, y: number, sticky?: boolean) => void
 }) {
   // Wrapped to the screen's width, so a long line never runs off its edge.
-  const lines = useMemo(() => logLines(log, MONITOR_ROWS - 1, MONITOR_COLUMNS), [log])
+  const plain = useMemo(() => logLines(log, MONITOR_ROWS - 1, MONITOR_COLUMNS), [log])
+  // Every 17th line, a corrupted glimpse of OLD_DATA, wiped a beat later.
+  const [glitch, setGlitch] = useState(false)
+  useEffect(() => {
+    if (log.length === 0 || log.length % GLITCH_EVERY) return
+    const show = setTimeout(() => setGlitch(true), 0)
+    const hide = setTimeout(() => setGlitch(false), GLITCH_MS)
+    return () => {
+      clearTimeout(show)
+      clearTimeout(hide)
+    }
+  }, [log.length])
+  const lines = useMemo(
+    () => (glitch ? [...plain.slice(0, 1), ...plain.slice(2), GLITCH_LINE] : plain),
+    [plain, glitch],
+  )
   const status = useMemo(
     () => statusLines({ scale: view.scale, turn: view.turn, deck: view.deck, integrity: view.integrity }),
     [view.scale, view.turn, view.deck, view.integrity],

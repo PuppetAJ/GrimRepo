@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { card, CARD_TYPES, SIGILS, type Action } from 'shared'
 import { describe, has } from '../controls.tsx'
 import { cardTones, FlatReaderBody, PixelCard, ReaderBody, Sigil } from '../CardReader.tsx'
@@ -60,6 +60,7 @@ export function ReaderPanel() {
 
 export function Magnifier() {
   const { magnified } = useTable()
+  const notesRef = useShrinkWrap(magnified)
   if (!magnified) return null
   const { unit } = magnified
   const type = card(unit.card).type
@@ -89,14 +90,18 @@ export function Magnifier() {
         <span className="crt-glass absolute inset-0 [clip-path:polygon(0_0,86%_0,100%_9%,100%_100%,0_100%)]" />
       </div>
       {notes.length ? (
-        <ul className="flex w-full flex-col gap-1.5 rounded-md border-2 border-p03-edge bg-p03-ground p-2 font-terminal text-[#b8f5c4]">
+        <ul
+          ref={notesRef}
+          className="flex w-full flex-col gap-1.5 rounded-md border-2 border-p03-edge bg-p03-ground px-3 py-2 font-terminal text-[#b8f5c4]"
+        >
           {notes.map((note) => (
             <li key={note.id} className="flex items-start gap-2">
               <span className="mt-0.5 shrink-0">
                 <Sigil id={note.id} size={16} color="var(--p03)" />
               </span>
-              <span className="leading-tight">
-                <span className="text-p03">{note.name}.</span> <span className="font-sans text-xs">{note.text}</span>
+              <span className="flex min-w-0 flex-col leading-tight">
+                <span className="text-p03">{note.name}</span>
+                <span className="font-sans text-xs text-balance">{note.text}</span>
               </span>
             </li>
           ))}
@@ -104,6 +109,30 @@ export function Magnifier() {
       ) : null}
     </div>
   )
+}
+
+/** Shrinks a box of wrapped text to its longest line, which CSS can't. */
+function useShrinkWrap(key: unknown) {
+  const ref = useRef<HTMLUListElement>(null)
+  useLayoutEffect(() => {
+    const box = ref.current
+    if (!box) return
+    box.style.width = ''
+    // Text nodes, since element boxes always fill the width.
+    const walker = document.createTreeWalker(box, NodeFilter.SHOW_TEXT)
+    const range = document.createRange()
+    let right = 0
+    for (let text = walker.nextNode(); text; text = walker.nextNode()) {
+      range.selectNodeContents(text)
+      for (const line of range.getClientRects()) right = Math.max(right, line.right)
+    }
+    const left = box.getBoundingClientRect().left
+    if (!right) return
+    const style = getComputedStyle(box)
+    const edge = parseFloat(style.paddingRight) + parseFloat(style.borderRightWidth)
+    box.style.width = `${Math.ceil(right - left + edge)}px`
+  }, [key])
+  return ref
 }
 
 /** The phone's card reader. */

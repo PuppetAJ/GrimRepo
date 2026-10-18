@@ -92,9 +92,9 @@ test('Signing up', async ({ browser }) => {
 test('Playing as a guest', async ({ browser }) => {
   const { context, page } = await freshPage(browser, { table: 'text' })
   await page.goto(BASE)
-  await page.getByRole('link', { name: 'Quick battle' }).click()
+  await page.getByRole('link', { name: 'Play', exact: true }).click()
   await page.locator('[data-table="text"]').waitFor()
-  check('Quick battle deals a signed-out visitor straight in', page.url() === `${BASE}/game`, page.url())
+  check('Play deals a signed-out visitor straight in', page.url() === `${BASE}/game`, page.url())
   const menu = page.getByRole('button', { name: 'Account menu' })
   check('as a guest, under a guest name', /guest_[a-z0-9]{6}/.test(await menu.innerText()), await menu.innerText())
   check('who is told so at the table', await page.getByText('You are playing as a guest').isVisible())

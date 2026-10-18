@@ -13,6 +13,7 @@ import {
 import { Link } from '@tanstack/react-router'
 import FaultyScreenShader from '../../components/p03/FaultyScreenShader.tsx'
 import { encounterName, Forfeit, hasEnded, IntegrityBar, ScaleBar, SeatNote } from '../controls.tsx'
+import { SkipTutorial, TutorialBlurb, useSettled } from '../tutorial/TutorialBlurb.tsx'
 import { Balance } from './Balance.tsx'
 import { Board } from './Board.tsx'
 import { CancelButton, ExecuteButton, SaveStatus } from './Buttons.tsx'
@@ -69,13 +70,11 @@ function Menu() {
         <span className="truncate text-p03">{name ?? 'Quick battle'}</span>
         <SaveStatus className="shrink-0 text-p03-dim" />
       </p>
-      {/* Upright, the board has no room for the tools, so they're here. */}
-      {sideways ? null : (
-        <div className="flex flex-col items-center gap-1">
-          {state.items?.length ? <span className="font-terminal text-base text-p03-dim">Tools</span> : null}
-          <Items className="justify-center" onPick={() => setMenu(false)} />
-        </div>
-      )}
+      {/* A phone has no room beside the board for the tools. */}
+      <div className="flex flex-col items-center gap-1">
+        {state.items?.length ? <span className="font-terminal text-base text-p03-dim">Tools</span> : null}
+        <Items className="justify-center" onPick={() => setMenu(false)} />
+      </div>
       <div className="grid grid-cols-2 gap-2 [&_svg]:size-4 [&_svg]:shrink-0">
         {/* A run's own first: its deck and tools, and its map. */}
         {run ? (
@@ -108,15 +107,19 @@ function Menu() {
             {fullScreen.on ? 'Exit full screen' : 'Full screen'}
           </button>
         ) : null}
-        <Forfeit
-          forfeit={game.forfeit}
-          run={Boolean(game.run)}
-          disabled={game.state.status !== 'playing'}
-          className={`${MENU_BUTTON} h-auto`}
-        >
-          <Flag aria-hidden />
-          {game.run ? 'Abandon run' : 'Forfeit'}
-        </Forfeit>
+        {game.tutorial ? (
+          <SkipTutorial className={`${MENU_BUTTON} h-auto`} />
+        ) : (
+          <Forfeit
+            forfeit={game.forfeit}
+            run={Boolean(game.run)}
+            disabled={game.state.status !== 'playing'}
+            className={`${MENU_BUTTON} h-auto`}
+          >
+            <Flag aria-hidden />
+            {game.run ? 'Abandon run' : 'Forfeit'}
+          </Forfeit>
+        )}
         {on3d ? (
           <button type="button" onClick={on3d} className={MENU_BUTTON}>
             <Box aria-hidden />
@@ -133,10 +136,11 @@ function Menu() {
 }
 
 export function PhoneLayout() {
-  const { frameProps, phoneFrame, covering, sideways, scrolling, seat, setArea, setHandSection, view, game } =
+  const { frameProps, phoneFrame, covering, sideways, scrolling, seat, setArea, setHandSection, view, game, busy } =
     useTable()
   // Once the battle ends, its panel over the board may run past the board, so the board rises above the rest.
   const over = hasEnded(game)
+  const blurb = useSettled(game.tutorial?.blurb ?? null, busy)
   // Too short in the page, the page scrolls; covering the screen, the frame scrolls instead.
   const flowing = scrolling && !covering
   const pieces = `z-10 gap-2 pt-[max(0.5rem,env(safe-area-inset-top))] pr-[max(0.5rem,env(safe-area-inset-right))] pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(0.5rem,env(safe-area-inset-left))] ${flowing ? 'relative min-h-svh' : 'absolute inset-0'}`
@@ -185,7 +189,6 @@ export function PhoneLayout() {
                 <ExecuteButton />
               </div>
             </div>
-            <Items />
             <LogBox className="min-h-0 flex-1" />
             <CancelButton />
           </aside>
@@ -220,6 +223,8 @@ export function PhoneLayout() {
           <SeatNote seat={seat} />
         </div>
       ) : null}
+      {/* Fixed, since the phone's table can scroll. */}
+      {blurb ? <TutorialBlurb blurb={blurb} busy={busy} compact fixed /> : null}
       <Menu />
       <LogDialog />
       <Inspector />

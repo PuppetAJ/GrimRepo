@@ -1,3 +1,4 @@
+import { SkipTutorial } from '../tutorial/TutorialBlurb.tsx'
 import { MouseRight } from 'lucide-react'
 import { Forfeit } from '../controls.tsx'
 import { useTable } from './context.ts'
@@ -5,6 +6,7 @@ import { SIDE_BUTTON } from './Panel.tsx'
 
 export function SaveStatus({ className }: { className: string }) {
   const { game } = useTable()
+  if (game.tutorial) return null
   return (
     // Not live: a failed save is announced by its toast, and "saved" after every move would only be noise.
     <span className={className}>{game.saving ? 'saving…' : game.unsaved ? `${game.unsaved} unsaved` : 'saved'}</span>
@@ -74,12 +76,16 @@ export function Controls() {
             {fullScreen.on ? 'Exit full screen' : 'Full screen'}
           </button>
         ) : null}
-        <Forfeit
-          forfeit={game.forfeit}
-          run={Boolean(game.run)}
-          disabled={game.state.status !== 'playing'}
-          className={`${SIDE_BUTTON} h-auto flex-1 justify-center`}
-        />
+        {game.tutorial ? (
+          <SkipTutorial className={`${SIDE_BUTTON} flex h-auto flex-1 items-center justify-center text-center`} />
+        ) : (
+          <Forfeit
+            forfeit={game.forfeit}
+            run={Boolean(game.run)}
+            disabled={game.state.status !== 'playing'}
+            className={`${SIDE_BUTTON} h-auto flex-1 justify-center`}
+          />
+        )}
       </div>
       <div className="flex justify-between font-sans text-sm text-p03-dim">
         {on3d ? (

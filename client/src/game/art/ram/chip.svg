@@ -1,0 +1,4 @@
+<!-- One chip on the RAM stick, with its gap; a mask, so the page sets its color. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="10" viewBox="0 0 24 10">
+  <rect x="1" y="1" width="16" height="8" rx="1" fill="none" stroke="#000" stroke-width="2" />
+</svg>

@@ -7,6 +7,7 @@ import {
   findNode,
   reachable,
   generateStage,
+  HAND_LIMIT,
   Rng,
   nextRunAction,
   SCENES,
@@ -311,19 +312,19 @@ export const MOCKUPS: Record<string, Entry> = {
   'death-start': {
     title: 'The starter deck choice, with a death card to leave out',
     group: 'reached',
-    revision: 17,
+    revision: 19,
     make: () => ({ state: createRun({ seed: 1, death: SAMPLE_DEATH }), path: [] }),
   },
   'death-offer': {
     title: 'The first card choice, offering the death card',
     group: 'reached',
-    revision: 5,
+    revision: 7,
     make: () => reached((s) => s.visit?.kind === 'card' && s.visit.offer.some(isDeathCard), { death: SAMPLE_DEATH }),
   },
   'death-build': {
     title: 'A lost run, building a death card from three hands',
     group: 'reached',
-    revision: 12,
+    revision: 15,
     make: () => {
       const found = reached((s) => s.status === 'lost' && s.deck.length >= 5)
       return (
@@ -558,13 +559,13 @@ export const MOCKUPS: Record<string, Entry> = {
   battle: {
     title: 'A battle in a run',
     group: 'reached',
-    revision: 8,
+    revision: 11,
     make: () => reached((s) => s.visit?.kind === 'battle' && s.visit.game.turn > 2),
   },
   'battle-empty-deck': {
     title: 'A battle whose deck has run out, with a draw owed',
     group: 'reached',
-    revision: 4,
+    revision: 6,
     make: () => {
       const found = reached((s) => s.visit?.kind === 'battle' && s.visit.game.turn > 1 && !s.visit.game.drawn)
       if (!found || found.state.visit?.kind !== 'battle') return null
@@ -576,9 +577,17 @@ export const MOCKUPS: Record<string, Entry> = {
   'catch-up': {
     title: 'P03 ahead, with the turn drawn and an extra draw waiting',
     group: 'reached',
-    revision: 1,
+    revision: 4,
     make: () => {
-      const found = reached((s) => s.visit?.kind === 'battle' && s.visit.game.turn > 2 && s.visit.game.drawn)
+      // The extra draw needs cards in the deck and room in the hand.
+      const found = reached(
+        (s) =>
+          s.visit?.kind === 'battle' &&
+          s.visit.game.turn > 2 &&
+          s.visit.game.drawn &&
+          s.visit.game.player.deck.length > 0 &&
+          s.visit.game.player.hand.length < HAND_LIMIT,
+      )
       if (!found || found.state.visit?.kind !== 'battle') return null
       const game = { ...found.state.visit.game, scale: -6, drawn: true, catchUp: true }
       return { ...found, state: { ...found.state, visit: { ...found.state.visit, game } } }
@@ -587,7 +596,7 @@ export const MOCKUPS: Record<string, Entry> = {
   'battle-items': {
     title: 'A battle in a run, with three items to use',
     group: 'reached',
-    revision: 5,
+    revision: 8,
     make: () => {
       const found = reached((s) => s.visit?.kind === 'battle' && s.visit.game.turn > 2 && s.visit.game.drawn)
       if (!found || found.state.visit?.kind !== 'battle') return null
@@ -610,7 +619,7 @@ export const MOCKUPS: Record<string, Entry> = {
   'items-own': {
     title: 'Items: the Hammer on your Bug, the Pliers on a sigil, the Hourglass',
     group: 'reached',
-    revision: 5,
+    revision: 9,
     make: () =>
       itemBattle(['hammer', 'pliers', 'hourglass'], {
         board: ['Bug', 'CopyPaste'],
@@ -621,7 +630,7 @@ export const MOCKUPS: Record<string, Entry> = {
   'items-steal': {
     title: 'Items: the Hook on a Mainframe, the Bottled Boilerplate, the Scissors on the queue',
     group: 'reached',
-    revision: 5,
+    revision: 9,
     make: () =>
       itemBattle(['hook', 'bottle', 'scissors'], {
         board: [null, null, 'Watchdog'],
@@ -682,19 +691,19 @@ export const MOCKUPS: Record<string, Entry> = {
   'death-haunt': {
     title: 'The Postmortem bringing back your death card',
     group: 'reached',
-    revision: 5,
+    revision: 8,
     make: () => reached((s) => haunted(s, 2), { death: SAMPLE_DEATH }),
   },
   'rival-haunt': {
     title: "The Staging boss bringing another player's death card",
     group: 'reached',
-    revision: 3,
+    revision: 6,
     make: () => reached((s) => haunted(s, 1), { rival: { card: SAMPLE_RIVAL, by: 'ajimp' } }),
   },
   'card-types': {
     title: 'Card types: Botnet scaling with its Bots, Monolith beside its Legacy',
     group: 'reached',
-    revision: 3,
+    revision: 6,
     make: () =>
       itemBattle([], {
         board: ['Botnet', 'SpamBot', 'Crawler', 'Heisenbug'],
@@ -723,25 +732,25 @@ export const MOCKUPS: Record<string, Entry> = {
   'boss-phase': {
     title: "A boss's second phase",
     group: 'reached',
-    revision: 3,
+    revision: 5,
     make: () => reached((s) => isBoss(s) && s.visit?.kind === 'battle' && s.visit.game.opponent.phase === 1),
   },
   'boss-beaten': {
     title: 'A boss just beaten',
     group: 'reached',
-    revision: 6,
+    revision: 12,
     make: () => reached((s) => isBoss(s) && s.visit?.kind === 'battle' && s.visit.game.status === 'won'),
   },
   'low-integrity': {
     title: 'A battle with one integrity left, a Cron Job about to fall',
     group: 'reached',
-    revision: 3,
+    revision: 5,
     make: lastIntegrity,
   },
   'integrity-lost': {
     title: 'A run lost when its integrity ran out',
     group: 'reached',
-    revision: 3,
+    revision: 9,
     make: () => {
       const found = lastIntegrity()
       const rung = found && applyRun(found.state, { type: 'play', action: { type: 'ringBell' } })
@@ -751,7 +760,7 @@ export const MOCKUPS: Record<string, Entry> = {
   desperate: {
     title: 'P03 20 behind: ring the bell to see its desperate play',
     group: 'reached',
-    revision: 4,
+    revision: 6,
     make: () => {
       // An empty table, so nothing lands on the bell and P03's turn finds the scale where it was left.
       const found = itemBattle([], {})
@@ -797,7 +806,7 @@ export const MOCKUPS: Record<string, Entry> = {
   lost: {
     title: 'A run lost in battle',
     group: 'reached',
-    revision: 10,
+    revision: 16,
     make: () => reached((s) => s.status === 'lost'),
   },
   won: { title: 'A cleared run', group: 'reached', revision: 6, make: () => reached((s) => s.status === 'won') },

@@ -88,6 +88,6 @@ export const STEPS: Step[] = [
   },
   {
     title: 'Reading the table',
-    body: "Hold left click on a card or monitor to read it up close. Click a monitor to pin it. That's everything. Type play. We've got Transcending to do.",
+    body: "Hold left click on a card or monitor to read it up close. Click a monitor to pin it. That's everything. Type play already. I can't believe I Transcended for this.",
   },
 ]

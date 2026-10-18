@@ -1,13 +1,14 @@
+import { TableMark } from './TutorialMark.tsx'
 import { useEffect, useLayoutEffect, useState } from 'react'
-import { ITEMS, legalActions, PLAYER_DECK, reshuffleSize, type Action } from 'shared'
-import { has, hasEnded, laneAction, skippedDraw } from '../../controls.tsx'
+import { ITEMS, PLAYER_DECK, reshuffleSize, type Action } from 'shared'
+import { has, hasEnded, laneAction, legalFor, skippedDraw } from '../../controls.tsx'
 import type { Ready } from '../../useGame.ts'
 import type { View } from '../../view.ts'
 import { CardBatch } from '../Batch.tsx'
 import { Card, Popup, type Look, type Place } from '../Cards.tsx'
 import type { loadCardAssets } from '../faces.ts'
 import { TechBoard } from '../Factory.tsx'
-import { DECK, P03_HAND, type CameraView } from '../layout.ts'
+import { BELL, CARD, DECK, DISK, P03_HAND, PILE, slot, type CameraView } from '../layout.ts'
 import { TINT } from '../palette.ts'
 import { Deck, Pile } from '../Piles.tsx'
 import type { usePlayback } from '../usePlayback.ts'
@@ -90,11 +91,25 @@ export function Scene({
 }) {
   const { state, act } = game
   // Legal moves come from the real state, not the view being played back.
-  const legal = busy || hasEnded(game) ? [] : legalActions(state)
+  const legal = busy || hasEnded(game) ? [] : legalFor(game)
   const can = (match: Partial<Action>) => has(legal, match)
   // The turn's own draw is owed; a catch-up draw after it is only offered.
   const owesDraw = !state.drawn && can({ type: 'draw' })
   const count = view.hand.length
+  const asked = busy ? null : (game.tutorial?.blurb?.move ?? null)
+  const askedUid =
+    asked?.type === 'select'
+      ? state.player.hand.find((unit) => unit.card === asked.card)?.uid
+      : asked?.type === 'mark'
+        ? state.player.board[asked.lane]?.uid
+        : // An aimed item already lights its target.
+          asked?.type === 'use' && aiming === null
+          ? (asked.row === 'board'
+              ? state.player.board
+              : asked.row === 'front'
+                ? state.opponent.front
+                : state.opponent.back)[asked.lane]?.uid
+          : undefined
   // What an empty deck's draw would shuffle back, held while a turn plays out, so it never shows ahead of the table.
   const reshuffleNow = view.deck ? 0 : reshuffleSize(state)
   const [reshuffle, setReshuffle] = useState(reshuffleNow)
@@ -165,6 +180,17 @@ export function Scene({
             onIdle={onFocusBoard}
           />
         </Arrive>
+        {asked?.type === 'draw' ? (
+          <TableMark
+            at={asked.from === 'deck' ? DECK : PILE}
+            width={CARD.width * 1.25}
+            depth={CARD.height * DISK.compact * 1.25}
+          />
+        ) : asked?.type === 'place' ? (
+          <TableMark at={slot('board', asked.lane)} width={CARD.width * 1.24} depth={CARD.height * 1.16} />
+        ) : asked?.type === 'ringBell' ? (
+          <TableMark at={BELL} width={1.6} depth={1.6} />
+        ) : null}
         <Arrive delay={at(SET.deck)} leave={leaving}>
           <Deck
             count={view.deck}
@@ -203,6 +229,7 @@ export function Scene({
               assets={assets}
               shake={hinted === unit.uid ? hint : 0}
               raised={reader.peek === unit.uid}
+              tutorialMark={askedUid === unit.uid}
               onHold={(x, y, sticky) => reader.hold({ card: unit.uid }, x, y, sticky)}
               onClick={
                 // On touch every card is tappable, to read it; with a mouse, only one that can act.
@@ -248,6 +275,7 @@ export function Scene({
                     : undefined
                 }
                 cursor={action?.type === 'mark' || action?.type === 'unmark' ? 'mark' : 'point'}
+                tutorialMark={askedUid === unit.uid}
                 leavingAt={leftAt}
                 // A board card covers its lane, so it passes the hover on to it.
                 onHover={row === 'board' ? (on) => setAimed(on ? lane : null) : undefined}

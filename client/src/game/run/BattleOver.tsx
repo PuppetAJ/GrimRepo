@@ -1,5 +1,5 @@
+import { Choices, P03Dialogue } from '../P03Dialogue.tsx'
 import { findNode, STAGES, TIP } from 'shared'
-import { Button } from '@/components/ui/button.tsx'
 import type { RunReady } from './useRun.ts'
 
 /** The panel over the board when a run's battle ends; both tables show it. */
@@ -11,12 +11,26 @@ export function BattleOver({ run, onSummary }: { run: RunReady; onSummary: () =>
   const overkill = Math.max(0, visit.game.scale - TIP)
   const won = visit.game.status === 'won'
   return (
-    <section
+    <P03Dialogue
       role="status"
-      className="flex w-full max-w-lg flex-col gap-3 rounded border border-p03 bg-p03-ground/95 p-4 font-terminal text-xl"
+      face={won ? 'whiteflag' : 'happy'}
+      className="w-full max-w-[36rem]"
+      ledge={
+        <Choices
+          choices={[
+            state.status === 'playing'
+              ? {
+                  label: boss ? 'Claim the reward' : 'Back to the map',
+                  action: 'leave',
+                  onChoose: () => run.act({ type: 'leave' }),
+                }
+              : { label: 'See how the run went', action: 'summary', onChoose: onSummary },
+          ]}
+        />
+      }
     >
       {/* The sentences run on together, so the second shares the first's line where it fits; a turn never parts from its number. */}
-      <p className="text-3xl text-p03">
+      <p>
         {!won
           ? visit.game.integrity?.left === 0
             ? `Out of integrity on turn\u00a0${visit.game.turn}. The run ends here.`
@@ -27,18 +41,9 @@ export function BattleOver({ run, onSummary }: { run: RunReady; onSummary: () =>
               ? `The boss is down. ${STAGES[state.stage]} is cleared.`
               : `You win in ${visit.game.turn}\u00a0turns.`}
       </p>
-      {won && overkill ? <p>{overkill} overkill, which counts toward the run's score.</p> : null}
-      <div className="flex flex-wrap gap-3 font-sans text-base">
-        {state.status === 'playing' ? (
-          <Button data-action="leave" onClick={() => run.act({ type: 'leave' })}>
-            {boss ? 'Claim the reward' : 'Back to the map'}
-          </Button>
-        ) : (
-          <Button data-action="summary" onClick={onSummary}>
-            See how the run went
-          </Button>
-        )}
-      </div>
-    </section>
+      {won && overkill ? (
+        <p className="text-p03-dim">{overkill} overkill, which counts toward the run's score.</p>
+      ) : null}
+    </P03Dialogue>
   )
 }

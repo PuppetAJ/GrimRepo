@@ -1,6 +1,7 @@
 import { use, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { legalActions, type Action } from 'shared'
-import { type Seat, has, hasEnded, outcomeOf } from '../controls.tsx'
+import type { Action } from 'shared'
+import { type Seat, has, hasEnded, legalFor, outcomeOf } from '../controls.tsx'
+import { useSettled } from '../tutorial/TutorialBlurb.tsx'
 import { useFullScreen } from '../fullScreen.ts'
 import type { Ready } from '../useGame.ts'
 import { cardTones, FlatReaderBody } from '../CardReader.tsx'
@@ -67,7 +68,7 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
   useEffect(() => {
     mapKey.current = () => onMap?.()
     ringKey.current = () => {
-      if (!busy && !hasEnded(game) && has(legalActions(game.state), { type: 'ringBell' })) act({ type: 'ringBell' })
+      if (!busy && !hasEnded(game) && has(legalFor(game), { type: 'ringBell' })) act({ type: 'ringBell' })
     }
   })
   useEffect(() => {
@@ -90,7 +91,7 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
     game.act(action)
   }
   const playing = { ...game, act }
-  const cancellable = aiming === null && !busy && !hasEnded(game) && has(legalActions(game.state), { type: 'cancel' })
+  const cancellable = aiming === null && !busy && !hasEnded(game) && has(legalFor(game), { type: 'cancel' })
   const cancel = () => act({ type: 'cancel' })
   useEscapeCancel(cancellable, cancel)
 
@@ -156,11 +157,14 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
     })
     return () => stage.onContext(() => false)
   })
+  // Settled, so the face never changes ahead of the turn's playback.
+  const face = useSettled(game.tutorial?.face, busy)
   useLayoutEffect(() =>
     stage.room({
       view: playback.view,
       log: game.log,
       outcome: busy ? undefined : outcomeOf(game),
+      face,
       onHold: (screen, x, y) => reader.hold({ screen }, x, y),
       onPin: (screen) => reader.pin(screen),
     }),

@@ -8,9 +8,11 @@ import { Hand, Piles } from './Hand.tsx'
 import { Items } from './Items.tsx'
 import { ConsolePanel } from './Log.tsx'
 import { Magnifier, PromptLine, ReaderPanel } from './Reading.tsx'
+import { TutorialBlurb, useSettled } from '../tutorial/TutorialBlurb.tsx'
 
 export function MidLayout() {
-  const { frameProps, fullScreen, seat, setArea, setHandSection, view } = useTable()
+  const { frameProps, fullScreen, seat, setArea, setHandSection, view, game, busy } = useTable()
+  const blurb = useSettled(game.tutorial?.blurb ?? null, busy)
   return (
     <div
       {...frameProps}
@@ -62,6 +64,7 @@ export function MidLayout() {
       <div className="relative z-10">
         <Controls />
       </div>
+      {blurb ? <TutorialBlurb blurb={blurb} busy={busy} /> : null}
       <Magnifier />
     </div>
   )

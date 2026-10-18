@@ -1,19 +1,20 @@
 import { useEffect, useRef, useState, type PointerEvent } from 'react'
 import { CARD_TYPES, CARDS, ITEMS as TOOLS, SIGILS, type CardType } from 'shared'
-import { cardArt, hasArt, iconArt, SPRITE_FPS, type IconId } from '../game/art.ts'
+import { cardArt, hasArt, iconArt, p03Art, SPRITE_FPS, type IconId } from '../game/art.ts'
 import { WORST_CARD } from '../game/fixtures.ts'
 import { FIRE, LOGS, LOGS_OUTLINE } from '../game/run/text/Fire.tsx'
 import { NotFound } from './NotFound.tsx'
 
-type Kind = 'cards' | 'icons'
-/** `size` overrides the kind's, for an icon drawn larger; `frames` marks an animation, saved as a strip of frames. */
-type Item = { kind: Kind; id: string; name: string; size?: number; frames?: boolean }
+type Kind = 'cards' | 'icons' | 'p03'
+/** `size` and `height` override the kind's; `frames` marks an animation strip. */
+type Item = { kind: Kind; id: string; name: string; size?: number; height?: number; frames?: boolean }
 
 /** The most frames an animation holds. */
 const MOST_FRAMES = 16
 
-const SIZE: Record<Kind, number> = { cards: 24, icons: 8 }
-const CELL: Record<Kind, number> = { cards: 18, icons: 44 }
+const SIZE: Record<Kind, number> = { cards: 24, icons: 8, p03: 136 }
+const CELL: Record<Kind, number> = { cards: 18, icons: 44, p03: 6 }
+const HEIGHT: Partial<Record<Kind, number>> = { p03: 105 }
 
 const ITEMS: Item[] = [
   // The worst-case card is a layout test with no art of its own.
@@ -32,6 +33,8 @@ const ITEMS: Item[] = [
   { kind: 'icons', id: 'fire', name: 'Fire (16 × 16, animated)', size: 16, frames: true },
   { kind: 'icons', id: 'logs', name: 'Campfire logs (16 × 16)', size: 16 },
   { kind: 'icons', id: 'death', name: "Death card's skull" },
+  // P03's faces sit on its screen, so keep the screen where it is.
+  { kind: 'p03', id: 'frame', name: "P03's head, around his face (136 × 105)" },
 ]
 
 /** Art drafted for Adrian to redraw, or that he flagged for edits; each shows under Needs your look until ticked off. */
@@ -47,15 +50,16 @@ function lookedAtFirst(): string[] {
 }
 
 const sizeOf = (item: Item) => item.size ?? SIZE[item.kind]
+const heightOf = (item: Item) => item.height ?? HEIGHT[item.kind] ?? sizeOf(item)
 const cellOf = (item: Item) =>
   item.size ? Math.round((CELL[item.kind] * SIZE[item.kind]) / item.size) : CELL[item.kind]
 
 /** Every pixel moved one step, wrapping round, so shifting back restores the drawing. */
-function shifted(pixels: boolean[], size: number, dx: number, dy: number): boolean[] {
+function shifted(pixels: boolean[], width: number, height: number, dx: number, dy: number): boolean[] {
   return pixels.map((_, index) => {
-    const x = (index % size) - dx
-    const y = Math.floor(index / size) - dy
-    return pixels[((y + size) % size) * size + ((x + size) % size)] as boolean
+    const x = (index % width) - dx
+    const y = Math.floor(index / width) - dy
+    return pixels[((y + height) % height) * width + ((x + width) % width)] as boolean
   })
 }
 
@@ -67,19 +71,23 @@ const ARROWS: Record<string, [number, number]> = {
 }
 
 const keyOf = (item: Item) => `${item.kind}:${item.id}`
-const urlOf = (item: Item) => (item.kind === 'cards' ? cardArt(item.id) : iconArt(item.id as IconId))
+const urlOf = (item: Item) =>
+  item.kind === 'cards' ? cardArt(item.id) : item.kind === 'p03' ? (p03Art(item.id) ?? '') : iconArt(item.id as IconId)
 
 /** Reads an image's pixels as on or off, by their alpha. */
-async function pixelsOf(url: string, size: number): Promise<boolean[]> {
+async function pixelsOf(url: string, width: number, height = width): Promise<boolean[]> {
+  const blank = () => Array.from({ length: width * height }, () => false)
+  if (!url) return blank()
   const image = new Image()
   image.src = url
   await image.decode()
   const canvas = document.createElement('canvas')
-  canvas.width = canvas.height = size
+  canvas.width = width
+  canvas.height = height
   const context = canvas.getContext('2d') as CanvasRenderingContext2D
-  context.drawImage(image, 0, 0, size, size)
-  const { data } = context.getImageData(0, 0, size, size)
-  return Array.from({ length: size * size }, (_, index) => (data[index * 4 + 3] as number) > 127)
+  context.drawImage(image, 0, 0, width, height)
+  const { data } = context.getImageData(0, 0, width, height)
+  return blank().map((_, index) => (data[index * 4 + 3] as number) > 127)
 }
 
 /** An animation's frames, read from its strip: frames side by side, each as wide as the art is tall. */
@@ -104,15 +112,15 @@ async function framesOf(url: string, size: number): Promise<boolean[][]> {
 }
 
 /** The frames as a black-on-transparent PNG strip, base64; a single frame is just the image. */
-function pngOf(frames: boolean[][], size: number): string {
+function pngOf(frames: boolean[][], width: number, height = width): string {
   const canvas = document.createElement('canvas')
-  canvas.width = size * frames.length
-  canvas.height = size
+  canvas.width = width * frames.length
+  canvas.height = height
   const context = canvas.getContext('2d') as CanvasRenderingContext2D
   context.fillStyle = '#000'
   frames.forEach((pixels, frame) =>
     pixels.forEach(
-      (on, index) => on && context.fillRect(frame * size + (index % size), Math.floor(index / size), 1, 1),
+      (on, index) => on && context.fillRect(frame * width + (index % width), Math.floor(index / width), 1, 1),
     ),
   )
   return canvas.toDataURL('image/png').split(',')[1] as string
@@ -124,6 +132,7 @@ export function ArtEditor() {
     () => ITEMS.find((item) => keyOf(item) === location.hash.slice(1)) ?? ITEMS[0]!,
   )
   const size = sizeOf(selected)
+  const height = heightOf(selected)
   // Every drawing is frames; most have one.
   const [frames, setFrames] = useState<boolean[][]>([[]])
   const [loaded, setLoaded] = useState<boolean[][]>([[]])
@@ -166,7 +175,7 @@ export function ArtEditor() {
     let live = true
     const read = selected.frames
       ? framesOf(urlOf(selected), sizeOf(selected))
-      : pixelsOf(urlOf(selected), sizeOf(selected)).then((one) => [one])
+      : pixelsOf(urlOf(selected), sizeOf(selected), heightOf(selected)).then((one) => [one])
     void read.then((read) => {
       if (!live) return
       // A stand-in starts blank, so the new drawing doesn't begin as a question mark.
@@ -189,15 +198,15 @@ export function ArtEditor() {
   const cellAt = (event: PointerEvent<HTMLDivElement>) => {
     const box = event.currentTarget.getBoundingClientRect()
     const x = Math.floor(((event.clientX - box.left) / box.width) * size)
-    const y = Math.floor(((event.clientY - box.top) / box.height) * size)
-    return x >= 0 && y >= 0 && x < size && y < size ? y * size + x : null
+    const y = Math.floor(((event.clientY - box.top) / box.height) * height)
+    return x >= 0 && y >= 0 && x < size && y < height ? y * size + x : null
   }
   const save = async () => {
     setStatus('Saving…')
     const response = await fetch('/__art/save', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ kind: selected.kind, id: selected.id, png: pngOf(frames, size) }),
+      body: JSON.stringify({ kind: selected.kind, id: selected.id, png: pngOf(frames, size, height) }),
     })
     setStatus(response.ok ? 'Saved' : `Not saved: ${await response.text()}`)
     if (response.ok) setLoaded(frames)
@@ -241,9 +250,11 @@ export function ArtEditor() {
             ))}
           </section>
         ) : null}
-        {(['cards', 'icons'] as const).map((kind) => (
+        {(['cards', 'icons', 'p03'] as const).map((kind) => (
           <section key={kind} className="flex flex-col gap-1">
-            <h2 className="font-semibold">{kind === 'cards' ? 'Card art (24 × 24)' : 'Icons (8 × 8)'}</h2>
+            <h2 className="font-semibold">
+              {kind === 'cards' ? 'Card art (24 × 24)' : kind === 'p03' ? 'P03' : 'Icons (8 × 8)'}
+            </h2>
             {ITEMS.filter((item) => item.kind === kind).map((item) => (
               <button
                 key={keyOf(item)}
@@ -288,13 +299,13 @@ export function ArtEditor() {
         <div className="flex flex-wrap items-start gap-6">
           <div
             role="img"
-            aria-label={`${selected.name}, ${size} by ${size} pixels; arrow keys shift it`}
+            aria-label={`${selected.name}, ${size} by ${height} pixels; arrow keys shift it`}
             tabIndex={0}
             onKeyDown={(event) => {
               const step = ARROWS[event.key]
               if (!step) return
               event.preventDefault()
-              setPixels(shifted(pixels, size, ...step))
+              setPixels(shifted(pixels, size, height, ...step))
             }}
             className="grid touch-none border border-border bg-white select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             style={{ gridTemplateColumns: `repeat(${size}, ${cellOf(selected)}px)` }}
@@ -333,14 +344,14 @@ export function ArtEditor() {
               ref={(canvas) => {
                 const context = canvas?.getContext('2d')
                 if (!canvas || !context) return
-                context.clearRect(0, 0, size, size)
+                context.clearRect(0, 0, size, height)
                 context.fillStyle = '#7dff9a'
                 pixels.forEach((on, index) => on && context.fillRect(index % size, Math.floor(index / size), 1, 1))
               }}
               width={size}
-              height={size}
+              height={height}
               className="bg-[#07130b] [image-rendering:pixelated]"
-              style={{ width: size * 4, height: size * 4 }}
+              style={{ width: size * (size > 32 ? 2 : 4), height: height * (size > 32 ? 2 : 4) }}
             />
             {selected.frames && frames.length > 1 && !campfire ? (
               <>
@@ -429,7 +440,7 @@ export function ArtEditor() {
               aria-label={`Shift ${way}`}
               title={`Shift ${way}`}
               className={button}
-              onClick={() => setPixels(shifted(pixels, size, ...(ARROWS[key] as [number, number])))}
+              onClick={() => setPixels(shifted(pixels, size, height, ...(ARROWS[key] as [number, number])))}
             >
               {arrow}
             </button>

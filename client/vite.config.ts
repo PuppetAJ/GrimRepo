@@ -19,9 +19,11 @@ const viewerSlash: Plugin = {
   },
 }
 
-// The /art page's editor saves a card's art (24x24) or an icon (8x8, the fire and logs 16x16) as a PNG into src/game/art; development only.
+// The /art editor saves its art as PNGs into src/game/art; development only.
 const ART_DIR = fileURLToPath(new URL('./src/game/art/', import.meta.url))
-const ART_SIZE = { cards: 24, icons: 8 } as const
+const ART_SIZE = { cards: 24, icons: 8, p03: 136 } as const
+// Art that isn't square, by its height.
+const ART_HEIGHT: Partial<Record<keyof typeof ART_SIZE, number>> = { p03: 105 }
 // Must match the art editor's own sizes, or a save is refused, as the logs' once were.
 const LARGER_ICONS: Record<string, number> = { fire: 16, logs: 16 }
 // An animation's frames sit side by side in one strip, up to this many.
@@ -44,18 +46,19 @@ const artEditor: Plugin = {
           return refuse('not JSON')
         }
         const { kind, id, png } = sent
-        if (kind !== 'cards' && kind !== 'icons') return refuse('no such kind of art')
+        if (kind !== 'cards' && kind !== 'icons' && kind !== 'p03') return refuse('no such kind of art')
         // Hyphens too, for the type icons such as type-bot.
         if (typeof id !== 'string' || !/^[A-Za-z0-9_-]+$/.test(id)) return refuse('no such art')
         if (typeof png !== 'string') return refuse('no image')
         const bytes = Buffer.from(png, 'base64')
         // A PNG's width and height are the first two numbers of its header chunk.
         const size = (kind === 'icons' ? LARGER_ICONS[id] : undefined) ?? ART_SIZE[kind]
+        const height = ART_HEIGHT[kind] ?? size
         const width = bytes.readUInt32BE(16)
         const frames = ANIMATED.has(id) ? width / size : 1
         if (
           bytes.toString('latin1', 1, 4) !== 'PNG' ||
-          bytes.readUInt32BE(20) !== size ||
+          bytes.readUInt32BE(20) !== height ||
           !Number.isInteger(frames) ||
           frames < 1 ||
           frames > MOST_FRAMES ||
@@ -64,7 +67,7 @@ const artEditor: Plugin = {
           return refuse(
             ANIMATED.has(id)
               ? `this art is up to ${MOST_FRAMES} frames of ${size} by ${size}`
-              : `this art is ${size} by ${size}`,
+              : `this art is ${size} by ${height}`,
           )
         writeFileSync(`${ART_DIR}${kind}/${id}.png`, bytes)
         res.writeHead(204).end()

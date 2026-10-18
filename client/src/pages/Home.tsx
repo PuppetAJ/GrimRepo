@@ -62,7 +62,15 @@ export function Home() {
   }, [fresh])
   const top: Async<LeaderboardRow[]> = fresh.status === 'loading' && stale ? { status: 'ready', data: stale } : fresh
   const first = top.status === 'ready' ? top.data[0] : undefined
-  const user = (authClient.useSession().data?.user as { displayUsername?: string } | undefined)?.displayUsername
+  const session = authClient.useSession()
+  const account = session.data?.user as { displayUsername?: string; username?: string } | undefined
+  const user = account?.displayUsername
+  // Anyone without a finished run sees the tutorial first; until that's known, a run stays first.
+  const finished = useAsync(
+    () => (account?.username ? api.runs(account.username, 1).then((page) => page.total) : Promise.resolve(0)),
+    session.isPending ? 'pending' : (account?.username ?? 'signed out'),
+  )
+  const newcomer = !session.isPending && finished.status === 'ready' && finished.data === 0
   const lines =
     top.status === 'loading'
       ? null
@@ -100,17 +108,17 @@ export function Home() {
           </ul>
           <p className="max-w-2xl text-lg leading-relaxed text-foreground/85">
             A card game of sacrifices, played on floppy disks against P03 in his factory. Every card costs something: to
-            play the strong ones you give up the weak. Take a deck across his map, from Localhost to Production, or beat
-            him in a quick battle.
+            play the strong ones you give up the weak. Take a deck across his map, from Localhost to Production, or
+            learn the rules first in a short tutorial.
           </p>
           <div className="flex flex-wrap gap-3">
-            <Button asChild size="lg">
+            <Button asChild size="lg" variant={newcomer ? 'outline' : 'default'} className={newcomer ? 'order-2' : ''}>
               <Link to="/run">Start a run</Link>
             </Button>
-            <Button asChild size="lg" variant="outline">
-              <Link to="/game">Quick battle</Link>
+            <Button asChild size="lg" variant={newcomer ? 'default' : 'outline'} className={newcomer ? 'order-1' : ''}>
+              <Link to="/tutorial">Learn to play</Link>
             </Button>
-            <Button asChild size="lg" variant="outline">
+            <Button asChild size="lg" variant="outline" className="order-3">
               <Link to="/leaderboard">Leaderboard</Link>
             </Button>
             {import.meta.env.DEV ? (

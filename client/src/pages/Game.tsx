@@ -12,7 +12,8 @@ import { Boot } from '../game/table/Boot.tsx'
 import { TableFailed, TurnSideways } from '../game/tableNotices.tsx'
 import { TerminalTable } from '../game/TerminalTable.tsx'
 import { useLayoutChoice } from '../game/layoutChoice.ts'
-import { useGame } from '../game/useGame.ts'
+import { useGame, type Game as GameLoad } from '../game/useGame.ts'
+import type { Layout } from '../game/text/useTextTable.ts'
 import { MotionRoot } from '../components/MotionRoot.tsx'
 
 // three.js is most of the table's weight, so it loads only when the 3D table is shown.
@@ -39,14 +40,28 @@ export function Game() {
 }
 
 function GameTable() {
-  useKeepTableFocus()
-  useLeaveFullScreen()
   const game = useGame()
-  const seat = useSeat()
   // ?text picks the text table; ?layout forces a layout, for comparing them in development and tests.
   const search = useSearch({ from: '/game' })
-  const [mode, setMode] = useState<Mode>(() => savedMode(search.text !== undefined))
-  const { layout, upright } = useLayoutChoice(FIXTURES_ON ? search.layout : undefined)
+  return <PlayTable game={game} text={search.text !== undefined} layout={search.layout} title="Play against P03" />
+}
+
+export function PlayTable({
+  game,
+  text,
+  layout: forced,
+  title,
+}: {
+  game: GameLoad
+  text: boolean
+  layout?: Layout
+  title: string
+}) {
+  useKeepTableFocus()
+  useLeaveFullScreen()
+  const seat = useSeat()
+  const [mode, setMode] = useState<Mode>(() => savedMode(text))
+  const { layout, upright } = useLayoutChoice(FIXTURES_ON ? forced : undefined)
 
   const choose = (next: Mode) => {
     setMode(next)
@@ -64,7 +79,7 @@ function GameTable() {
     return (
       // Negative margins give the table most of the gutter; on phones, all of it.
       <div className={layout === 'phone' ? '-mx-(--gutter)' : '-mx-[calc(var(--gutter)-0.75rem)]'}>
-        <h1 className="sr-only">Play against P03</h1>
+        <h1 className="sr-only">{title}</h1>
         {/* Remount on a new deal or reload so playback never shows the last game. */}
         <TerminalTable key={game.generation} game={game} seat={seat} on3d={() => choose('3d')} layout={layout} />
       </div>
@@ -72,7 +87,7 @@ function GameTable() {
 
   return (
     <TableBox>
-      <h1 className="sr-only">Play against P03</h1>
+      <h1 className="sr-only">{title}</h1>
       {/* The 3D table is drawn, not read, so the first stop offers the text table; it shows once focused, like a skip link. */}
       <Button
         onClick={() => choose('text')}

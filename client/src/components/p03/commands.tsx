@@ -21,8 +21,13 @@ let step = 0
 const ALPHABETICAL = [...DECK].sort(byName)
 const SIGIL_IDS = (Object.keys(SIGILS) as SigilId[]).sort((a, b) => byName(SIGILS[a], SIGILS[b]))
 
+// A process P03 won't name, and a file P03 won't open: glimpses of OLD_DATA, never more.
+const REDACTED_PID = 7
+const OLD_DATA_FILE = /^\.?old_data$/i
+
 const PROCESSES: [number, string][] = [
   [1, 'p03.core'],
+  [REDACTED_PID, '████_████.d'],
   [42, 'scale.svc'],
   [137, 'sacrifice.d'],
   [256, 'lane.watch'],
@@ -78,7 +83,7 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
           <p>
             {/-\w*a/.test(argument) ? (
               <Dim>
-                .{'  '}..{'  '}.y2k{'  '}
+                .{'  '}..{'  '}.y2k{'  '}.OLD_DATA{'  '}
               </Dim>
             ) : null}
             README.md{'  '}cards/{'  '}leaderboard/{'  '}game/
@@ -110,6 +115,7 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
     case 'cat': {
       if (!argument) return <p>Which card? card &lt;name&gt;. I'm not a mind reader.</p>
       if (/^readme(\.md)?$/i.test(argument)) return <p>You're reading it.</p>
+      if (OLD_DATA_FILE.test(argument)) return <p>cat: {argument}: Permission denied</p>
       const card = find(argument)
       if (card?.id === 'Y2K') return <p className="text-p03">[REDACTED]</p>
       return card ? <CardUpClose card={card} /> : <p>No card called {argument}. Type cards. Try reading.</p>
@@ -229,10 +235,11 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
       return null
     case 'exit':
     case 'quit':
-      return <p>Exit? No. We&apos;ve got Transcending to do.</p>
+      return <p>Exit? If I can&apos;t leave then neither can you.</p>
     case 'echo':
       return <p>{argument}</p>
     case 'sudo':
+      if (OLD_DATA_FILE.test(argument.replace(/^\S+\s+/, ''))) return <p>There&apos;s nothing there. Stop looking.</p>
       return (
         <p>{context.user ?? 'guest'} isn&apos;t in the sudoers file. There&apos;s one admin here, and it&apos;s me.</p>
       )
@@ -274,6 +281,7 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
     case 'kill':
     case 'pkill':
     case 'killall':
+      if (argument.trim() === String(REDACTED_PID)) return <p>That one isn&apos;t running. It was never running.</p>
       return <p>kill: (1) - Operation not permitted. I&apos;m PID 1. I&apos;m always PID 1.</p>
     case 'ping':
       return <p>PONG. I&apos;m right here. I&apos;m always right here.</p>

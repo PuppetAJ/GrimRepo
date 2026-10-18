@@ -13,18 +13,21 @@ import {
   Type,
   UnfoldHorizontal,
 } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
-import { ITEMS, legalActions, type Action, type ItemId, type Unit } from 'shared'
+import { ITEMS, type Action, type ItemId, type Unit } from 'shared'
 import { Button } from '@/components/ui/button.tsx'
 import { cardTones, FlatReaderBody } from '../../CardReader.tsx'
 import { ItemButton } from '../../ItemButton.tsx'
+import { TutorialBlurb, tutorialPrompt, useSettled } from '../../tutorial/TutorialBlurb.tsx'
+import { useStage } from '../TableStage.tsx'
 import {
   Ending,
   Forfeit,
   has,
   hasEnded,
   IntegrityBar,
+  legalFor,
   overText,
   owed,
   phaseText,
@@ -100,7 +103,17 @@ export function Hud({
 }) {
   const { state, act } = game
   const finished = hasEnded(game)
-  const legal = busy || finished ? [] : legalActions(state)
+  const legal = busy || finished ? [] : legalFor(game)
+  const blurb = useSettled(game.tutorial?.blurb ?? null, busy)
+  // Not over the loading screen, which takes 450ms to fade once the stage warms.
+  const stage = useStage()
+  const [loaded, setLoaded] = useState(false)
+  useEffect(() => {
+    if (!stage.warmed) return
+    const shown = setTimeout(() => setLoaded(true), 450)
+    return () => clearTimeout(shown)
+  }, [stage.warmed])
+  const place3d = 'top-14 h-26 w-[min(36rem,calc(100%-1rem))]'
   // The turn's own draw; a catch-up draw after it gets its own button, never owed.
   const mustDraw = !state.drawn && has(legal, { type: 'draw' })
   const summoning = view.summon ? view.hand.find((unit) => unit.uid === view.summon?.uid) : undefined
@@ -252,7 +265,14 @@ export function Hud({
               <Label>Exit</Label>
             </Link>
           </Button>
-          {finished ? null : (
+          {game.tutorial ? (
+            <Button size="sm" variant="ghost" asChild className="h-8 px-3">
+              <Link to="/">
+                <LogOut aria-hidden />
+                <Label>Skip tutorial</Label>
+              </Link>
+            </Button>
+          ) : finished ? null : (
             <Forfeit
               forfeit={game.forfeit}
               run={Boolean(game.run)}
@@ -272,6 +292,7 @@ export function Hud({
         ) : null}
       </div>
 
+      {blurb && !ended && loaded ? <TutorialBlurb blurb={blurb} busy={busy} className={place3d} /> : null}
       {ended ? (
         <div className="absolute inset-0 grid place-items-center bg-black/40 p-4">
           <Ending game={game} />
@@ -296,13 +317,14 @@ export function Hud({
                 ? "P03's turn…"
                 : aimed
                   ? `Use the ${ITEMS[aimed].name} on which card? Esc to put it back.`
-                  : prompt(
+                  : (tutorialPrompt(game.tutorial?.blurb ?? null) ??
+                    prompt(
                       mustDraw,
                       summoning,
                       summoning ? owed(summoning, view.board, view.summon?.marked ?? []) : 0,
                       overText(game),
                       !busy && !finished && skippedDraw(state),
-                    )}
+                    ))}
             </p>
           </div>
 
