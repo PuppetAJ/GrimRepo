@@ -843,7 +843,7 @@ for (const [note, screen, title] of NOTE_SCREENS)
   MOCKUPS[`note-${note}`] = {
     title,
     group: 'notes',
-    revision: 1,
+    revision: 2,
     make: () => {
       const found = MOCKUPS[screen]?.make()
       return found ? { ...found, note } : null

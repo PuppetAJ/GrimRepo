@@ -154,14 +154,15 @@ export function TutorialBlurb({
   busy,
   compact = false,
   fixed = false,
-  label = "P03's tutorial",
+  note = false,
   className = '',
 }: {
   blurb: Blurb
   busy: boolean
   compact?: boolean
   fixed?: boolean
-  label?: string
+  /** A run's first-time note, not a tutorial step: shown once, so it grows to fit rather than keeping one size. */
+  note?: boolean
   className?: string
 }) {
   const { step, move, onPressOn } = blurb
@@ -245,7 +246,7 @@ export function TutorialBlurb({
         ref={box}
         face={step.face}
         compact={compact}
-        aria-label={label}
+        aria-label={note ? "P03's note" : "P03's tutorial"}
         onClick={onClick}
         style={{
           ...(place.center === null ? {} : { left: place.center }),
@@ -260,6 +261,7 @@ export function TutorialBlurb({
           compact ? 'h-21 w-[min(30rem,calc(100vw-1rem))]' : 'h-26 w-[min(36rem,calc(100%-1rem))]',
           onPressOn ? 'cursor-pointer' : '',
           className,
+          note ? (compact ? 'h-auto min-h-21' : 'h-auto min-h-26') : '',
         )}
         actions={
           onPressOn ? (

@@ -224,9 +224,7 @@ export function PhoneLayout() {
         </div>
       ) : null}
       {/* Fixed, since the phone's table can scroll. */}
-      {blurb ? (
-        <TutorialBlurb blurb={blurb} busy={busy} compact fixed label={game.tutorial ? undefined : "P03's note"} />
-      ) : null}
+      {blurb ? <TutorialBlurb blurb={blurb} busy={busy} compact fixed note={!game.tutorial} /> : null}
       <Menu />
       <LogDialog />
       <Inspector />

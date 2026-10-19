@@ -293,7 +293,7 @@ export function Hud({
       </div>
 
       {blurb && !ended && loaded ? (
-        <TutorialBlurb blurb={blurb} busy={busy} className={place3d} label={game.tutorial ? undefined : "P03's note"} />
+        <TutorialBlurb blurb={blurb} busy={busy} className={place3d} note={!game.tutorial} />
       ) : null}
       {ended ? (
         <div className="absolute inset-0 grid place-items-center bg-black/40 p-4">

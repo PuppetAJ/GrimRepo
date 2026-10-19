@@ -67,7 +67,7 @@ export function WideLayout() {
           <Hand />
           <Piles />
         </section>
-        {blurb ? <TutorialBlurb blurb={blurb} busy={busy} label={game.tutorial ? undefined : "P03's note"} /> : null}
+        {blurb ? <TutorialBlurb blurb={blurb} busy={busy} note={!game.tutorial} /> : null}
         <Magnifier />
       </div>
     </>

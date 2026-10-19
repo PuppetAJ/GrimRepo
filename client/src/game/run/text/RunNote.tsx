@@ -13,7 +13,7 @@ export function RunNote({ note, compact = false }: { note: ShownNote; compact?: 
       compact={compact}
       aria-label="P03's note"
       // Room above for the name tab.
-      className="mt-3 shrink-0 pr-9"
+      className="mt-3 w-full max-w-[36rem] shrink-0 pr-9"
       actions={
         <button
           type="button"

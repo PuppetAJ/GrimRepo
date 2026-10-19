@@ -279,7 +279,7 @@ test("P03's run notes", async ({ browser }) => {
   await root.waitFor()
   const note = page.locator('section[aria-label="P03\'s note"]')
   await note.waitFor()
-  check('a first run opens with a note from P03', (await note.innerText()).includes('A run.'))
+  check('a first run opens with a note from P03', (await note.innerText()).includes('This is a run.'))
   await page.getByRole('button', { name: 'Close the note' }).click()
   check('which closes', (await note.count()) === 0)
   await page.reload()
@@ -290,7 +290,7 @@ test("P03's run notes", async ({ browser }) => {
   let mirror = { state: createRun({ seed: Number(await root.getAttribute('data-run-seed')) }), moves: 0 }
   mirror = await playRun(page, mirror, { done: (state) => state.visit === null })
   await note.waitFor()
-  check('the map has its own, which never stops a move', (await note.innerText()).includes('My map.'))
+  check('the map has its own, which never stops a move', (await note.innerText()).includes('This is the map.'))
 
   await page.getByRole('button', { name: /^Run menu/ }).click()
   await page.getByRole('menuitemcheckbox', { name: "P03's run notes" }).click()
