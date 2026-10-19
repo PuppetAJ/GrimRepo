@@ -1,27 +1,34 @@
-import { X } from 'lucide-react'
+import type { MouseEvent } from 'react'
 import { RUN_NOTES } from 'shared'
 import { P03Dialogue } from '../../P03Dialogue.tsx'
 import { Line } from '../../tutorial/TutorialBlurb.tsx'
 import type { ShownNote } from '../notes.ts'
 
-/** P03's first-time note above a screen's content, pushing it down rather than covering any of it. */
+const takesClicks = (target: EventTarget | null) =>
+  target instanceof Element && target.closest('button, a, [role="button"]') !== null
+
+/** P03's first-time note over the top of a screen, as the board's box sits over the board; a click closes it. */
 export function RunNote({ note, compact = false }: { note: ShownNote; compact?: boolean }) {
   const { face, says } = RUN_NOTES[note.id]
+  const onClick = (event: MouseEvent) => {
+    if (!takesClicks(event.target)) note.close()
+  }
   return (
     <P03Dialogue
       face={face}
       compact={compact}
       aria-label="P03's note"
-      // Room above for the name tab.
-      className="mt-3 w-full max-w-[36rem] shrink-0 pr-9"
+      onClick={onClick}
+      // Clear of the name tab above it, and grown to fit, since each note shows once.
+      className={`absolute top-4 left-1/2 z-40 -translate-x-1/2 cursor-pointer bg-p03-ground/80 ${compact ? 'min-h-21 w-[min(30rem,calc(100%-1rem))]' : 'min-h-26 w-[min(36rem,calc(100%-1rem))]'}`}
       actions={
         <button
           type="button"
           onClick={note.close}
           aria-label="Close the note"
-          className="grid size-7 place-items-center"
+          className="-mr-1 -mb-1 text-lg leading-none motion-safe:animate-pulse"
         >
-          <X aria-hidden className="size-5" />
+          ▼
         </button>
       }
     >

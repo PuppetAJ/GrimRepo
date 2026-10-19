@@ -48,6 +48,7 @@ const HAND_SIZE = 3
 const COST_SALT = 0x6d0c_a4d5
 const STATS_SALT = 0x2b7e_1516
 const SIGIL_SALT = 0x5f35_76a1
+const FAR_SALT = 0x0ad3_93c7
 
 /** A stream of its own off the run's, so the cards dealt are the same wherever the run is replayed. */
 const stream = (state: RunState, salt: number) => new Rng((state.rng ^ salt) >>> 0)
@@ -57,14 +58,21 @@ export function deathCostHand(state: RunState): RunCard[] {
   return stream(state, COST_SALT).shuffle(deathParts(state.deck)).slice(0, HAND_SIZE)
 }
 
-/** The second hand, once the cost is picked: three cards within one cost of it, one to give its stats and art. */
+/**
+ * The second hand, once the cost is picked: three cards within one cost of it, one to give its stats and art. A deck
+ * with fewer than three that near fills the hand with the next nearest; deathCost keeps a far one from coming cheap.
+ */
 export function deathStatsHand(state: RunState, cost: number): RunCard[] {
   const costCard = deathCostHand(state).find((entry) => entry.id === cost)
   if (!costCard) return []
-  const near = deathParts(state.deck).filter((entry) => Math.abs(card(entry.card).cost - card(costCard.card).cost) <= 1)
-  return stream(state, STATS_SALT ^ cost)
-    .shuffle(near)
-    .slice(0, HAND_SIZE)
+  const apart = (entry: RunCard) => Math.abs(card(entry.card).cost - card(costCard.card).cost)
+  const parts = deathParts(state.deck)
+  const near = stream(state, STATS_SALT ^ cost).shuffle(parts.filter((entry) => apart(entry) <= 1))
+  if (near.length >= HAND_SIZE) return near.slice(0, HAND_SIZE)
+  const far = stream(state, FAR_SALT ^ cost)
+    .shuffle(parts.filter((entry) => apart(entry) > 1))
+    .sort((a, b) => apart(a) - apart(b))
+  return [...near, ...far].slice(0, HAND_SIZE)
 }
 
 /** The third hand, once the stats are picked: three cards from the deck, one to give every sigil it has. */
