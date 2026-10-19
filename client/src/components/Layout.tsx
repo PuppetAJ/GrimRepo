@@ -169,7 +169,15 @@ export function Layout() {
       </main>
 
       <footer className="border-t px-(--gutter) py-6 text-sm text-muted-foreground">
-        <div className={PAGE}>A tribute to Inscryption. Built by Adrian Jimenez.</div>
+        <div className={PAGE}>
+          A tribute to Inscryption.{' '}
+          <a
+            href="https://github.com/PuppetAJ/GrimRepo"
+            className="underline-offset-4 hover:text-foreground hover:underline"
+          >
+            Built by Adrian Jimenez.
+          </a>
+        </div>
       </footer>
     </div>
   )
