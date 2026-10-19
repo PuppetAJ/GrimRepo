@@ -344,7 +344,7 @@ export function Screen({
   note,
   children,
 }: {
-  /** P03's first-time note, above the screen's content. */
+  /** P03's first-time note, over the top of the screen's content. */
   note?: ReactNode
   /** Fades the projected content out, before the next screen takes the window. */
   fading?: boolean
@@ -470,11 +470,13 @@ export function Screen({
                   </div>
                   {buttonRow}
                 </header>
-                {waiting ? null : note}
                 <div ref={setBar} className="shrink-0 empty:hidden" />
                 {/* Only the content scrolls; a screen marked data-center, such as a card choice, sits in the middle. */}
-                <div data-scroller className="flex min-h-0 flex-1 flex-col overflow-y-auto px-1">
-                  <div className="has-[[data-center]]:my-auto">{waiting ? null : children}</div>
+                <div className="relative flex min-h-0 flex-1 flex-col">
+                  {waiting ? null : note}
+                  <div data-scroller className="flex min-h-0 flex-1 flex-col overflow-y-auto px-1">
+                    <div className="has-[[data-center]]:my-auto">{waiting ? null : children}</div>
+                  </div>
                 </div>
               </Hologram>
             </div>
@@ -538,7 +540,8 @@ export function Screen({
             transition={{ duration: still ? 0 : 0.2, ease: 'easeOut' }}
             className="relative z-10 grid min-h-0 flex-1 gap-y-4"
           >
-            <div className="flex min-h-0 min-w-0 flex-col gap-2">
+            {/* Over the screen, as the board's own box sits over the board. */}
+            <div className="relative flex min-h-0 min-w-0 flex-col gap-2">
               {note}
               <div ref={setBar} className={`shrink-0 empty:hidden ${stacked ? 'text-center' : ''}`} />
               {stacked ? buttonRow : null}

@@ -4,15 +4,15 @@ import type { Face } from './tutorial.ts'
 export const RUN_NOTES = {
   start: {
     face: 'neutral',
-    says: "This is a run. Each will be three stages across a map with a boss at the end. Pick the starter deck you'll be stuck with.",
+    says: "Pick the starter deck you'll be stuck with.",
   },
   map: {
     face: 'neutral',
-    says: 'This is the map. Just pick a path and get started already.',
+    says: "This is the map. There'll be 3 stages with a boss at the end. Go ahead and pick a node whenever you're done gawking.",
   },
   battle: {
     face: 'impatient',
-    says: 'This battle counts. Every card of yours I destroy costs 1 [integrity](term:integrity). At 0 the run is over.',
+    says: 'This battle will count. Every card of yours I destroy costs 1 [integrity](term:integrity). At 0 your run is over.',
   },
   catchUp: {
     face: 'happy',
@@ -20,7 +20,7 @@ export const RUN_NOTES = {
   },
   boss: {
     face: 'impatient',
-    says: "This is a boss. There's multiple phases, and each time you tip the [scale](term:scale) it'll clear my side of the board and level the scale. Win each phase to beat the boss.",
+    says: "This is a boss. There's multiple phases, and each time you tip the [scale](term:scale) it'll clear my side of the board and level it. Win each phase to beat the boss.",
   },
   card: {
     face: 'neutral',
@@ -44,7 +44,7 @@ export const RUN_NOTES = {
   },
   shop: {
     face: 'neutral',
-    says: '[Bytes](term:bytes) buy cards and tools here, or uninstall one of yours.',
+    says: '[Bytes](term:bytes) buy cards and tools here. Or you can uninstall one of your mediocre cards.',
   },
   item: {
     face: 'neutral',

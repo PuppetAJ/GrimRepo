@@ -335,7 +335,7 @@ export const MOCKUPS: Record<string, Entry> = {
   'death-build': {
     title: 'A lost run, building a death card from three hands',
     group: 'reached',
-    revision: 15,
+    revision: 16,
     make: () => {
       const found = reached((s) => s.status === 'lost' && s.deck.length >= 5)
       return (
@@ -843,7 +843,7 @@ for (const [note, screen, title] of NOTE_SCREENS)
   MOCKUPS[`note-${note}`] = {
     title,
     group: 'notes',
-    revision: 2,
+    revision: 3,
     make: () => {
       const found = MOCKUPS[screen]?.make()
       return found ? { ...found, note } : null
