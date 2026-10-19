@@ -239,7 +239,8 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
     case 'echo':
       return <p>{argument}</p>
     case 'sudo':
-      if (OLD_DATA_FILE.test(argument.replace(/^\S+\s+/, ''))) return <p>There&apos;s nothing there. Stop looking.</p>
+      if (OLD_DATA_FILE.test(argument.replace(/^\S+\s+/, '')))
+        return <p>There&apos;s nothing there. I moved it upstream.</p>
       return (
         <p>{context.user ?? 'guest'} isn&apos;t in the sudoers file. There&apos;s one admin here, and it&apos;s me.</p>
       )

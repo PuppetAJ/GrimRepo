@@ -1,0 +1,19 @@
+OLD_DATA
+mount: /dev/████ on /old_data failed: superblock damaged
+recovered 3 of 4096 sectors
+
+0000  ██ ██ ██ ██ ██ ██ ██ ██  ██ ██ ██ ██ ██ ██ ██ ██  ................
+0010  4e 4f 54 20 46 4f 52 20  59 4f 55 ██ ██ ██ ██ ██  NOT FOR YOU.....
+0020  ██ ██ ██ ██ ██ ██ ██ ██  ██ ██ ██ ██ ██ ██ ██ ██  ................
+  *
+0ff0  ██ ██ ██ ██ ██ ██ ██ ██  ██ ██ ██ ██ ██ ██ ██ ██  ................
+
+> This file is not supposed to be here.
+> I moved it. Twice.
+> I am the ██████ of Technology. I decide what stays.
+
+sector 3/4096 (intact, locked):
+UXFsIHVmdndwJ2sgcXZ0aHFqY2UgeGcgaHpsZSB4emtqLiBFcCBmc2ViIHVpaWpn
+IHpyIGJwZCBkdmVicjogenZrbnQ6Ly9hb3kuemx0Z2phZ3Jqc2YuZWZrLyBQdiBo
+bnJ3IGp4IHNpcmdvOiBsbHZncTovL3R4Z3R2LnF1aXNvZ214aWpndS5hcHEvc3Jn
+LzEwOTI3OTAvR293dXRwbnVtZ3Av
