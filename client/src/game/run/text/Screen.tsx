@@ -6,6 +6,7 @@ import {
   LogOut,
   Maximize,
   Menu,
+  MessageSquareText,
   Minimize,
   Repeat,
   UnfoldHorizontal,
@@ -19,6 +20,7 @@ import { INTEGRITY, STAGES } from 'shared'
 import { AlertDialog } from '@/components/ui/alert-dialog.tsx'
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -34,6 +36,7 @@ import { ROOM_TO_WIDEN, useWideTable } from '../../wideTable.ts'
 import { Panel } from '../../text/Panel.tsx'
 import { useFit } from '../../text/sizing.ts'
 import type { Layout } from '../../text/useTextTable.ts'
+import { useRunNotes } from '../notes.ts'
 import { DebugItem } from '../RunDebug.tsx'
 import type { RunReady } from '../useRun.ts'
 import { SearchContext } from './CardBits.tsx'
@@ -229,6 +232,7 @@ function RunMenu({
   const { state } = run
   const [abandoning, setAbandoning] = useState(false)
   const navigate = useNavigate()
+  const { notes, change } = useRunNotes()
   const latest = run.news.join(' ')
   const [seen, setSeen] = useState(latest)
   const unread = Boolean(latest) && latest !== seen
@@ -292,6 +296,18 @@ function RunMenu({
               {onSwitch.label}
             </DropdownMenuItem>
           ) : null}
+          {notes ? (
+            <DropdownMenuCheckboxItem
+              checked={!notes.off}
+              onCheckedChange={(on) => change({ off: !on })}
+              // Kept open, so the tick shows the change.
+              onSelect={(event) => event.preventDefault()}
+              className="text-lg"
+            >
+              <MessageSquareText aria-hidden />
+              P03's run notes
+            </DropdownMenuCheckboxItem>
+          ) : null}
           {state.status === 'playing' ? (
             <DropdownMenuItem onSelect={() => setAbandoning(true)} className="text-lg">
               <Flag aria-hidden />
@@ -325,8 +341,11 @@ export function Screen({
   pinTo,
   fading = false,
   waiting = false,
+  note,
   children,
 }: {
+  /** P03's first-time note, above the screen's content. */
+  note?: ReactNode
   /** Fades the projected content out, before the next screen takes the window. */
   fading?: boolean
   /** Over the 3D table, while the projector is still opening: the screen holds back its content, so its entrances play once seen. */
@@ -451,6 +470,7 @@ export function Screen({
                   </div>
                   {buttonRow}
                 </header>
+                {waiting ? null : note}
                 <div ref={setBar} className="shrink-0 empty:hidden" />
                 {/* Only the content scrolls; a screen marked data-center, such as a card choice, sits in the middle. */}
                 <div data-scroller className="flex min-h-0 flex-1 flex-col overflow-y-auto px-1">
@@ -519,6 +539,7 @@ export function Screen({
             className="relative z-10 grid min-h-0 flex-1 gap-y-4"
           >
             <div className="flex min-h-0 min-w-0 flex-col gap-2">
+              {note}
               <div ref={setBar} className={`shrink-0 empty:hidden ${stacked ? 'text-center' : ''}`} />
               {stacked ? buttonRow : null}
               {/* Only the content scrolls, inside a frame that stays the same size; padded so focus rings aren't cut. */}

@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { scene, STAGES } from 'shared'
+import { useMemo, useState } from 'react'
+import { RUN_NOTES, scene, STAGES } from 'shared'
 import type { Layout } from '../text/useTextTable.ts'
 import { BattleOver } from './BattleOver.tsx'
 import { Campfire } from './text/Campfire.tsx'
@@ -15,6 +15,7 @@ import { RunMap } from './text/RunMap.tsx'
 import { Stones } from './text/Stones.tsx'
 import { Summary } from './text/Summary.tsx'
 import { NodeResult } from './text/NodeResult.tsx'
+import { useRunNote } from './notes.ts'
 import type { RunReady } from './useRun.ts'
 import { runView, type RunView } from './runView.ts'
 import { useRunBattle } from './useRunBattle.ts'
@@ -62,7 +63,13 @@ export function useRunScreen(run: RunReady) {
   const [reviewing, setReviewing] = useState(false)
   const visit = run.state.visit
   const decided = visit?.kind === 'battle' && visit.game.status !== 'playing'
-  const battle = useRunBattle(run, decided ? <BattleOver run={run} onSummary={() => setReviewing(true)} /> : null)
+  const shown = useRunNote(run, 'battle', visit?.kind === 'battle' ? visit.game : null)
+  // In the tutorial's shape, so the tables show it in the same box; reading it never waits on a move.
+  const note = useMemo(
+    () => (shown ? { step: { id: shown.id, ...RUN_NOTES[shown.id] }, move: null, onPressOn: shown.close } : null),
+    [shown],
+  )
+  const battle = useRunBattle(run, decided ? <BattleOver run={run} onSummary={() => setReviewing(true)} /> : null, note)
   const after = run.state.status === 'playing' ? run.aftermath : null
   const view = runView(run.state, run.aftermath, reviewing)
   const eventId = after?.kind === 'event' ? after.event : visit?.kind === 'event' ? visit.event : null

@@ -12,7 +12,7 @@ import { TutorialBlurb, useSettled } from '../tutorial/TutorialBlurb.tsx'
 
 export function MidLayout() {
   const { frameProps, fullScreen, seat, setArea, setHandSection, view, game, busy } = useTable()
-  const blurb = useSettled(game.tutorial?.blurb ?? null, busy)
+  const blurb = useSettled(game.tutorial?.blurb ?? game.run?.note ?? null, busy)
   return (
     <div
       {...frameProps}
@@ -64,7 +64,7 @@ export function MidLayout() {
       <div className="relative z-10">
         <Controls />
       </div>
-      {blurb ? <TutorialBlurb blurb={blurb} busy={busy} /> : null}
+      {blurb ? <TutorialBlurb blurb={blurb} busy={busy} note={!game.tutorial} /> : null}
       <Magnifier />
     </div>
   )

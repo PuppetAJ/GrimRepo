@@ -1,4 +1,4 @@
-import type { DeathChoice, Outcome, RunAction } from 'shared'
+import type { DeathChoice, Outcome, RunAction, RunNote } from 'shared'
 
 /** Players by their best run; `wins` counts the runs they cleared. */
 export type LeaderboardRow = { rank: number; username: string; bestScore: number; runs: number; wins: number }
@@ -51,6 +51,10 @@ export type OpenRun = {
 }
 /** `saved` is false for the demo account, which sees its card but doesn't keep it; a guest's is kept until they sign up. */
 export type BuiltDeathCard = { card: string; saved: boolean; guest?: boolean }
+/** P03's run notes the player has seen, and whether they want them at all. */
+export type Notes = { seen: RunNote[]; off: boolean }
+/** `reset` clears the notes seen, before `seen` adds to them. */
+export type NotesChange = { seen?: RunNote[]; off?: boolean; reset?: boolean }
 export type RunOver = { status: 'won' | 'lost'; score: number; stage: number; bosses: number; forfeited: boolean }
 export type RunSaved = { status: 'playing'; saved: number } | RunOver
 
@@ -86,4 +90,6 @@ export const api = {
   forfeitRun: (id: number) => request<RunOver>(`/api/runs/${id}/forfeit`, { method: 'POST' }),
   buildDeathCard: (id: number, choice: DeathChoice) =>
     request<BuiltDeathCard>(`/api/runs/${id}/death-card`, { method: 'POST', body: JSON.stringify(choice) }),
+  notes: () => request<Notes>('/api/notes'),
+  changeNotes: (change: NotesChange) => request<Notes>('/api/notes', { method: 'PATCH', body: JSON.stringify(change) }),
 }

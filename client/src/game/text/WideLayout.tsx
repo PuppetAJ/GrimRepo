@@ -14,7 +14,7 @@ import { TutorialBlurb, useSettled } from '../tutorial/TutorialBlurb.tsx'
 
 export function WideLayout() {
   const { frameProps, frame, size, fullScreen, seat, setArea, view, game, busy } = useTable()
-  const blurb = useSettled(game.tutorial?.blurb ?? null, busy)
+  const blurb = useSettled(game.tutorial?.blurb ?? game.run?.note ?? null, busy)
   return (
     <>
       {fullScreen.on ? <div aria-hidden className="fixed inset-0 z-40 bg-[#030604]" /> : null}
@@ -67,7 +67,7 @@ export function WideLayout() {
           <Hand />
           <Piles />
         </section>
-        {blurb ? <TutorialBlurb blurb={blurb} busy={busy} /> : null}
+        {blurb ? <TutorialBlurb blurb={blurb} busy={busy} note={!game.tutorial} /> : null}
         <Magnifier />
       </div>
     </>

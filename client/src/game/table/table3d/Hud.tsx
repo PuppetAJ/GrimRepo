@@ -104,7 +104,7 @@ export function Hud({
   const { state, act } = game
   const finished = hasEnded(game)
   const legal = busy || finished ? [] : legalFor(game)
-  const blurb = useSettled(game.tutorial?.blurb ?? null, busy)
+  const blurb = useSettled(game.tutorial?.blurb ?? game.run?.note ?? null, busy)
   // Not over the loading screen, which takes 450ms to fade once the stage warms.
   const stage = useStage()
   const [loaded, setLoaded] = useState(false)
@@ -292,7 +292,9 @@ export function Hud({
         ) : null}
       </div>
 
-      {blurb && !ended && loaded ? <TutorialBlurb blurb={blurb} busy={busy} className={place3d} /> : null}
+      {blurb && !ended && loaded ? (
+        <TutorialBlurb blurb={blurb} busy={busy} className={place3d} note={!game.tutorial} />
+      ) : null}
       {ended ? (
         <div className="absolute inset-0 grid place-items-center bg-black/40 p-4">
           <Ending game={game} />

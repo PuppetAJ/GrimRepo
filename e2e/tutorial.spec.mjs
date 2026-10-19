@@ -99,11 +99,20 @@ test('The tutorial on the 3D table', async ({ browser }) => {
 
   const dev = await page.evaluate(() => Boolean(window.__game))
   if (!dev) return void (await context.close())
-  const act = (action) => page.evaluate((a) => window.__game?.act(a), action)
+  // The handle sees each move a render later, so the next move waits for this one to land; on a slow runner it
+  // could otherwise reach the game as it was, and be refused.
+  const snapshot = () => page.evaluate(() => JSON.stringify(window.__game?.state()))
+  const act = async (action) => {
+    const before = await snapshot()
+    await page.evaluate((a) => window.__game?.act(a), action)
+    await page.waitForFunction((was) => JSON.stringify(window.__game?.state()) !== was, before, { timeout: 30_000 })
+  }
   const settled = () => page.waitForFunction(() => !window.__game?.busy(), null, { timeout: 30_000 })
   const hand = (name) => page.evaluate((n) => window.__game?.state().player.hand.find((u) => u.card === n)?.uid, name)
 
-  await act({ type: 'draw', from: 'boilerplate' })
+  // Refused, so nothing changes to wait for.
+  await page.evaluate(() => window.__game?.act({ type: 'draw', from: 'boilerplate' }))
+  await page.waitForTimeout(500)
   check(
     'a move the step does not ask for is refused',
     (await page.evaluate(() => window.__game?.state().drawn)) === false,

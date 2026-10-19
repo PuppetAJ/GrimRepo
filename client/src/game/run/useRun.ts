@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { applyRun, createRun, encounter, RUN_SAVE_LIMIT, type RunAction, type RunEvent, type RunState } from 'shared'
+import {
+  applyRun,
+  createRun,
+  encounter,
+  RUN_SAVE_LIMIT,
+  type RunAction,
+  type RunEvent,
+  type RunNote,
+  type RunState,
+} from 'shared'
 import { toast } from 'sonner'
 import { api, ApiError, type OpenRun, type RunOver } from '../../lib/api.ts'
 import { narrate, opening } from '../../lib/narrate.ts'
@@ -42,6 +51,8 @@ export type Run =
       /** The nodes entered on this stage's map, in order. */
       path: string[]
       aftermath: Aftermath | null
+      /** A mockup's note from P03, shown on its screen whether or not it's been seen. */
+      note?: RunNote | null
       /** Closes the aftermath, back to the map. */
       dismiss: () => void
       unsaved: number
@@ -69,6 +80,7 @@ type Table = {
   news: string[]
   path: string[]
   aftermath: Aftermath | null
+  note?: RunNote | null
 }
 
 const LOG_LINES = 2_000
@@ -166,6 +178,7 @@ export function useRun(mockup: Mockup | null = null): Run {
           news: mockup.news ?? [],
           path: mockup.path,
           aftermath: mockup.aftermath ?? null,
+          note: mockup.note ?? null,
         })
         setOver(mockup.over ?? null)
       })

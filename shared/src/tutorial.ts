@@ -4,6 +4,7 @@ import { apply, createGame, legalActions } from './engine/game.ts'
 import { TIP, type Action, type GameEvent, type GameState } from './engine/types.ts'
 import { deckCard } from './engine/units.ts'
 import { ITEMS as ITEM_DEFS, type ItemId } from './items.ts'
+import { INTEGRITY } from './run/types.ts'
 
 /** As named in client/public/p03/screen. */
 export type Face = 'neutral' | 'happy' | 'impatient' | 'choking' | 'dying' | 'whiteflag'
@@ -30,7 +31,7 @@ const TOOLS: ItemId[] = ['scissors']
 export const TERMS = {
   scale: {
     title: 'The scale',
-    text: `Your damage tips it your way, P03's tips it his. First to tip it to ${TIP} wins.`,
+    text: `Your damage tips it your way, P03's tips it its way. First to tip it to ${TIP} wins.`,
   },
   cost: {
     title: 'Cost',
@@ -42,7 +43,7 @@ export const TERMS = {
   },
   queue: {
     title: "P03's queue",
-    text: "P03's cards wait in his back row, and each steps up when the lane in front of it clears.",
+    text: "P03's cards wait in its back row, and each steps up when the lane in front of it clears.",
   },
   sacrifice: {
     title: 'Sacrifices',
@@ -55,6 +56,14 @@ export const TERMS = {
   sigils: {
     title: 'Sigils',
     text: 'Abilities printed on a card. Hold a card, or right click it, to read what its sigils do.',
+  },
+  integrity: {
+    title: 'Integrity',
+    text: `A run's health. Each of your cards P03 destroys costs 1, and the run is lost at 0. It starts at ${INTEGRITY}.`,
+  },
+  bytes: {
+    title: 'Bytes',
+    text: `Winning a battle past ${TIP} banks the extra as bytes, which buy cards and tools at the Package Registry.`,
   },
 } as const
 
