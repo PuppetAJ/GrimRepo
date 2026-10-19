@@ -14,7 +14,7 @@ export function Items({
 }) {
   const { state, legal, busy, act, aiming, setAiming } = useTable()
   const items = state.items ?? []
-  if (!items.length && !(keepSlots && state.items)) return null
+  if (!items.length && !keepSlots) return null
   return (
     <div role="group" aria-label="Your items" className={`flex gap-2 ${className}`}>
       {items.map((item, slot) => {
