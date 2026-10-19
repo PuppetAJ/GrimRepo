@@ -10,6 +10,8 @@ import { TableBox } from '../../TableBox.tsx'
 import { TableStage, useStage } from '../../table/TableStage.tsx'
 import type { Layout } from '../../text/useTextTable.ts'
 import { BACK_TO, mapTitle, ScreenBody, useRunScreen, type RunView } from '../screens.tsx'
+import { useRunNote } from '../notes.ts'
+import { RunNote } from '../text/RunNote.tsx'
 import { HEADER_BUTTON, Screen, ScreenActions } from '../text/Screen.tsx'
 import type { RunReady } from '../useRun.ts'
 import { BetweenBattles, warp, windowHeight } from './RunStage.tsx'
@@ -79,6 +81,7 @@ function Between({
   const projecting = projects(shown)
   const body: RunView = toFloat ? 'map' : shown
   const title = fading ? seen.title : body === 'map' ? mapTitle(run.state) : screen.title
+  const note = useRunNote(run, body)
   // With no projector to shut, it leaves at once.
   useEffect(() => {
     if (leaving && !projecting) onLeft()
@@ -115,6 +118,7 @@ function Between({
           waiting={projecting && !open}
           pinTo={pin}
           onSwitch={{ label: 'Play on the text table', go: onText }}
+          note={note && !fading ? <RunNote note={note} compact={layout === 'phone'} /> : null}
         >
           {/* In the hologram's own button style; the site's gray buttons wash out under its glow. */}
           {onBack ? (

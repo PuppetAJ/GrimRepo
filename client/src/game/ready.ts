@@ -19,8 +19,8 @@ export type Game =
       act: (action: Action) => void
       forfeit: () => Promise<void>
       subscribe: (listener: Listener) => () => void
-      /** Set for a battle in a run, whose panel ends it and whose forfeit abandons the run. */
-      run?: { ending: ReactNode | null }
+      /** Set for a battle in a run, whose panel ends it and whose forfeit abandons the run; `note` is P03's first-time note. */
+      run?: { ending: ReactNode | null; note?: Blurb | null }
       tutorial?: Tutorial
     }
 

@@ -3,7 +3,11 @@ import { cn } from 'cn'
 import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from 'react'
 import { card, gloss, ITEMS, said, type Move, type TutorialStep } from 'shared'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover.tsx'
+import { api } from '../../lib/api.ts'
+import { authClient } from '../../lib/auth.ts'
+import { useAsync } from '../../lib/useAsync.ts'
 import { Choices, P03Dialogue } from '../P03Dialogue.tsx'
+import { useRunNotes } from '../run/notes.ts'
 
 /** Lanes count from 1, as the table labels them. */
 export function moveText(move: Move): string {
@@ -104,7 +108,8 @@ export function useSettled<T>(value: T, busy: boolean): T {
   return busy ? settled : value
 }
 
-function Line({ text }: { text: string }) {
+/** P03's words, with each linked word underlined and opening what it means. */
+export function Line({ text }: { text: string }) {
   return (
     <>
       {said(text).map((part, index) => {
@@ -149,12 +154,14 @@ export function TutorialBlurb({
   busy,
   compact = false,
   fixed = false,
+  label = "P03's tutorial",
   className = '',
 }: {
   blurb: Blurb
   busy: boolean
   compact?: boolean
   fixed?: boolean
+  label?: string
   className?: string
 }) {
   const { step, move, onPressOn } = blurb
@@ -238,7 +245,7 @@ export function TutorialBlurb({
         ref={box}
         face={step.face}
         compact={compact}
-        aria-label="P03's tutorial"
+        aria-label={label}
         onClick={onClick}
         style={{
           ...(place.center === null ? {} : { left: place.center }),
@@ -285,8 +292,33 @@ export function SkipTutorial({ className = '' }: { className?: string }) {
   )
 }
 
+/**
+ * Whether the next run shows P03's notes again, offered to a player with an account: ticked until they've finished a
+ * run, so a newcomer gets the walkthrough and a player brushing up on the rules isn't nagged.
+ */
+function useShowNotesAgain() {
+  const user = authClient.useSession().data?.user as { username?: string } | undefined
+  const stats = useAsync(
+    () => (user?.username ? api.stats(user.username) : Promise.resolve(null)),
+    `tutorial-stats:${user?.username}`,
+  )
+  const { notes, change } = useRunNotes()
+  const finished = stats.status === 'ready' ? (stats.data?.runs ?? 0) > 0 : null
+  const [picked, setPicked] = useState<boolean | null>(null)
+  const ticked = picked ?? finished === false
+  return {
+    offered: Boolean(user && notes && finished !== null),
+    ticked,
+    setTicked: setPicked,
+    apply: () => {
+      if (user && ticked) change({ reset: true, off: false })
+    },
+  }
+}
+
 export function TutorialEnding() {
   const navigate = useNavigate()
+  const again = useShowNotesAgain()
   return (
     <P03Dialogue
       face="whiteflag"
@@ -295,7 +327,13 @@ export function TutorialEnding() {
       ledge={
         <Choices
           choices={[
-            { label: 'Start a run', onChoose: () => void navigate({ to: '/run' }) },
+            {
+              label: 'Start a run',
+              onChoose: () => {
+                again.apply()
+                void navigate({ to: '/run' })
+              },
+            },
             // Reload, so the battle deals again from the start.
             { label: 'Play tutorial again', onChoose: () => window.location.reload() },
           ]}
@@ -303,6 +341,17 @@ export function TutorialEnding() {
       }
     >
       <p aria-live="polite">Fine. You know the rules. Now a real game, where it actually counts.</p>
+      {again.offered ? (
+        <label className="mt-1 flex w-fit cursor-pointer items-center gap-2 text-base text-p03-dim hover:text-p03">
+          <input
+            type="checkbox"
+            checked={again.ticked}
+            onChange={(event) => again.setTicked(event.target.checked)}
+            className="size-4 accent-p03"
+          />
+          Show run notes again
+        </label>
+      ) : null}
     </P03Dialogue>
   )
 }

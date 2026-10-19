@@ -140,7 +140,7 @@ export function PhoneLayout() {
     useTable()
   // Once the battle ends, its panel over the board may run past the board, so the board rises above the rest.
   const over = hasEnded(game)
-  const blurb = useSettled(game.tutorial?.blurb ?? null, busy)
+  const blurb = useSettled(game.tutorial?.blurb ?? game.run?.note ?? null, busy)
   // Too short in the page, the page scrolls; covering the screen, the frame scrolls instead.
   const flowing = scrolling && !covering
   const pieces = `z-10 gap-2 pt-[max(0.5rem,env(safe-area-inset-top))] pr-[max(0.5rem,env(safe-area-inset-right))] pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(0.5rem,env(safe-area-inset-left))] ${flowing ? 'relative min-h-svh' : 'absolute inset-0'}`
@@ -224,7 +224,9 @@ export function PhoneLayout() {
         </div>
       ) : null}
       {/* Fixed, since the phone's table can scroll. */}
-      {blurb ? <TutorialBlurb blurb={blurb} busy={busy} compact fixed /> : null}
+      {blurb ? (
+        <TutorialBlurb blurb={blurb} busy={busy} compact fixed label={game.tutorial ? undefined : "P03's note"} />
+      ) : null}
       <Menu />
       <LogDialog />
       <Inspector />

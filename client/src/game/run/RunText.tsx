@@ -8,6 +8,8 @@ import { BACK_TO, mapTitle, ScreenBody, useRunScreen } from './screens.tsx'
 import { BattleMenu } from './text/BattleMenu.tsx'
 import { InventoryDialog } from './text/InventoryDialog.tsx'
 import { HEADER_BUTTON, Screen, ScreenActions } from './text/Screen.tsx'
+import { useRunNote } from './notes.ts'
+import { RunNote } from './text/RunNote.tsx'
 import type { RunReady } from './useRun.ts'
 
 /** The run at the text table: its battles on the text table itself, and every other screen as a terminal panel. */
@@ -37,6 +39,7 @@ export function RunText({ run, layout, seat, on3d }: { run: RunReady; layout: La
     return () => window.removeEventListener('keydown', onKey)
   }, [])
   const shown = lookingAtMap ? 'map' : view
+  const note = useRunNote(run, shown)
   return (
     <div data-run-seed={run.state.seed} data-run-moves={run.moves} data-run-unsaved={run.unsaved} data-run-view={shown}>
       {/* Negative margins give the table most of the gutter. */}
@@ -64,6 +67,7 @@ export function RunText({ run, layout, seat, on3d }: { run: RunReady; layout: La
             stack={shown === 'map'}
             deck={shown !== 'summary' && shown !== 'start'}
             onSwitch={{ label: 'Play on the 3D table', go: on3d }}
+            note={note ? <RunNote note={note} compact={layout === 'phone'} /> : null}
           >
             {lookingAtMap ? (
               <ScreenActions>
