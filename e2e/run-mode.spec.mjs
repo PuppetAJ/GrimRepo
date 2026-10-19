@@ -272,6 +272,37 @@ test('A run, from the first choice to the summary', async ({ browser }) => {
   await context.close()
 })
 
+test("P03's run notes", async ({ browser }) => {
+  const { context, page } = await freshPage(browser, { width: 1440, height: 900, table: 'text' })
+  await page.goto(`${BASE}/run`)
+  const root = page.locator(ROOT)
+  await root.waitFor()
+  const note = page.locator('section[aria-label="P03\'s note"]')
+  await note.waitFor()
+  check('a first run opens with a note from P03', (await note.innerText()).includes('A run.'))
+  await page.getByRole('button', { name: 'Close the note' }).click()
+  check('which closes', (await note.count()) === 0)
+  await page.reload()
+  await root.waitFor()
+  await page.waitForTimeout(1_000)
+  check('and never shows again', (await note.count()) === 0)
+
+  let mirror = { state: createRun({ seed: Number(await root.getAttribute('data-run-seed')) }), moves: 0 }
+  mirror = await playRun(page, mirror, { done: (state) => state.visit === null })
+  await note.waitFor()
+  check('the map has its own, which never stops a move', (await note.innerText()).includes('My map.'))
+
+  await page.getByRole('button', { name: /^Run menu/ }).click()
+  await page.getByRole('menuitemcheckbox', { name: "P03's run notes" }).click()
+  await page.keyboard.press('Escape')
+  check('the run menu turns them off', (await note.count()) === 0)
+  await playRun(page, mirror, { done: inBattle })
+  await page.locator('[data-table="text"]').waitFor()
+  await page.waitForTimeout(1_000)
+  check('and then the first battle has none', (await note.count()) === 0)
+  await context.close()
+})
+
 test('The campfire, from a mockup', async ({ browser }) => {
   const { context, page } = await freshPage(browser, { width: 1440, height: 900, table: 'text' })
   await page.goto(`${BASE}/mockups/campfire`, MOCKUP)

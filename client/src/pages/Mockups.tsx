@@ -2,7 +2,7 @@ import { Link, useParams, useSearch } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
 import { FIXTURES_ON } from '../game/fixtures.ts'
 import { TUTORIAL } from 'shared'
-import { MOCKUPS } from '../game/run/mockups.ts'
+import { MOCKUPS, type MockupGroup } from '../game/run/mockups.ts'
 import { NotFound } from './NotFound.tsx'
 import { RunTable } from './Run.tsx'
 import { MotionRoot } from '../components/MotionRoot.tsx'
@@ -51,7 +51,7 @@ function List({
   onApprove,
   hideApproved,
 }: {
-  group: 'worst' | 'reached'
+  group: MockupGroup
   approved: Approved
   onApprove: (name: string, revision: number | null) => void
   hideApproved: boolean
@@ -165,6 +165,13 @@ export function MockupIndex() {
         <h2 className="text-xl font-semibold">As a run reaches them</h2>
         <p className="text-sm text-muted-foreground">Stopped from a bot's seeded run, so each follows the rules.</p>
         <List group="reached" approved={approved} onApprove={setApproved} hideApproved={hideApproved} />
+      </section>
+      <section className="flex flex-col gap-3">
+        <h2 className="text-xl font-semibold">P03's run notes</h2>
+        <p className="text-sm text-muted-foreground">
+          Each note on the screen it first comes up on. In a run, each shows once.
+        </p>
+        <List group="notes" approved={approved} onApprove={setApproved} hideApproved={hideApproved} />
       </section>
       {import.meta.env.DEV ? (
         <section className="flex flex-col gap-3">

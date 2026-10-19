@@ -16,6 +16,7 @@ import {
   type ItemId,
   type RunCard,
   type RunDealt,
+  type RunNote,
   type RunState,
   type SigilId,
   type StageMap,
@@ -26,10 +27,20 @@ import type { Aftermath } from './useRun.ts'
 import { MOST_SIGILS, withWorstCard, WORST_CARD } from '../fixtures.ts'
 
 /** A run state to look at, played locally and never saved. */
-export type Mockup = { state: RunState; path: string[]; news?: string[]; over?: RunOver; aftermath?: Aftermath }
+export type Mockup = {
+  state: RunState
+  path: string[]
+  news?: string[]
+  over?: RunOver
+  aftermath?: Aftermath
+  /** P03's note to show on the screen, seen or not. */
+  note?: RunNote
+}
 
 /** `revision` goes up when the screen changes, so an approval of an older one shows as needing another look. */
-type Entry = { title: string; group: 'worst' | 'reached'; revision?: number; make: () => Mockup | null }
+export type MockupGroup = 'worst' | 'reached' | 'notes'
+
+type Entry = { title: string; group: MockupGroup; revision?: number; make: () => Mockup | null }
 
 // The longest names, the most sigils and the biggest numbers the screens may have to hold.
 const LONG_NEWS = [
@@ -811,3 +822,30 @@ export const MOCKUPS: Record<string, Entry> = {
   },
   won: { title: 'A cleared run', group: 'reached', revision: 6, make: () => reached((s) => s.status === 'won') },
 }
+
+/** Each of P03's run notes, over the mockup of the screen it comes up on. */
+const NOTE_SCREENS: [RunNote, string, string][] = [
+  ['start', 'start', 'The starter deck choice'],
+  ['map', 'map', 'The map'],
+  ['battle', 'battle', 'A first battle in a run'],
+  ['catchUp', 'catch-up', 'A first extra draw, with P03 ahead'],
+  ['boss', 'boss-phase', 'A first boss'],
+  ['card', 'card', 'A card choice'],
+  ['blind', 'blind', 'Blind packs'],
+  ['campfire', 'campfire', 'A campfire'],
+  ['stones', 'stones', 'Sigil stones'],
+  ['event', 'event', 'An event'],
+  ['shop', 'shop', 'The Package Registry'],
+  ['item', 'item', 'A tool rack'],
+]
+
+for (const [note, screen, title] of NOTE_SCREENS)
+  MOCKUPS[`note-${note}`] = {
+    title,
+    group: 'notes',
+    revision: 1,
+    make: () => {
+      const found = MOCKUPS[screen]?.make()
+      return found ? { ...found, note } : null
+    },
+  }
