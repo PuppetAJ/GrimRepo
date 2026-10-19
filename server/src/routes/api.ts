@@ -1,10 +1,21 @@
 import express from 'express'
 import { rateLimit } from 'express-rate-limit'
-import { DEATH_NAME_LIMIT, RUN_SAVE_LIMIT, SIGILS, STARTER_DECKS, type RunAction, type SigilId } from 'shared'
+import {
+  DEATH_NAME_LIMIT,
+  RUN_NOTE_IDS,
+  RUN_SAVE_LIMIT,
+  SIGILS,
+  STARTER_DECKS,
+  type RunAction,
+  type RunNote,
+  type SigilId,
+} from 'shared'
 import { z } from 'zod'
-import { USERNAME_PATTERN } from '../auth/auth.ts'
+import { DEMO_IS_READ_ONLY, USERNAME_PATTERN } from '../auth/auth.ts'
+import { demoAccount } from '../auth/demo.ts'
 import { requireUser, type SignedIn } from '../auth/session.ts'
 import { GameError } from '../db/errors.ts'
+import { changeNotes, playerNotes } from '../db/notes.ts'
 import { playerRuns, playerStats } from '../db/players.ts'
 import { buildRunDeathCard, forfeitRun, recordRunMoves, runLeaderboard, startRun } from '../db/runs.ts'
 
@@ -76,6 +87,15 @@ const deathChoice = z.strictObject({
   name: z.string().max(DEATH_NAME_LIMIT * 4),
 })
 
+const notesChange = z.strictObject({
+  seen: z
+    .array(z.enum(RUN_NOTE_IDS as [RunNote, ...RunNote[]]))
+    .max(RUN_NOTE_IDS.length)
+    .optional(),
+  off: z.boolean().optional(),
+  reset: z.boolean().optional(),
+})
+
 // Keyed per player, since only signed-in players reach these routes.
 const perPlayer = (limit: number) =>
   rateLimit({
@@ -106,6 +126,25 @@ api.get('/me', requireUser, async (_req, res) => {
   const user = res.locals['user'] as SignedIn
   const stats = await playerStats(user.username)
   res.json({ username: user.displayUsername, bestScore: stats?.bestScore ?? 0, runs: stats?.runs ?? 0 })
+})
+
+api.get('/notes', requireUser, async (_req, res) => {
+  res.json(await playerNotes((res.locals['user'] as SignedIn).id))
+})
+
+api.patch('/notes', requireUser, movesLimiter, async (req, res) => {
+  const user = res.locals['user'] as SignedIn
+  const parsed = notesChange.safeParse(req.body)
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Invalid notes', issues: parsed.error.issues.map((issue) => issue.message) })
+    return
+  }
+  // Everyone shares the demo account, so its notes are kept in each browser instead.
+  if (user.username === demoAccount.username) {
+    res.status(403).json({ error: DEMO_IS_READ_ONLY })
+    return
+  }
+  res.json(await changeNotes(user.id, parsed.data))
 })
 
 api.post('/runs', requireUser, startLimiter, async (_req, res) => {

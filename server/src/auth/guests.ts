@@ -10,7 +10,8 @@ export function guestName(): string {
 }
 
 /**
- * Everything a guest made comes with them when they sign up or sign in: their games, their runs and their death card.
+ * Everything a guest made comes with them when they sign up or sign in: their games, their runs, their death card and
+ * the run notes they've seen.
  * The account's own open game or run, and its own death card, win over the guest's.
  */
 export async function claimGuest(guestId: string, account: { id: string; username?: string | null }) {
@@ -30,6 +31,12 @@ export async function claimGuest(guestId: string, account: { id: string; usernam
     await client.query(
       `UPDATE users SET death_card = (SELECT death_card FROM users WHERE id = $1)
        WHERE id = $2 AND death_card IS NULL`,
+      [guestId, account.id],
+    )
+    await client.query(
+      `UPDATE users SET notes_seen = ARRAY(
+         SELECT DISTINCT unnest(notes_seen || (SELECT notes_seen FROM users WHERE id = $1)))
+       WHERE id = $2`,
       [guestId, account.id],
     )
     await client.query('COMMIT')

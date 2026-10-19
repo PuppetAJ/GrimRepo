@@ -5,6 +5,7 @@ import { apply, legalActions } from './engine/game.ts'
 import { TIP, type Action, type GameState } from './engine/types.ts'
 import { generateStage } from './run/map.ts'
 import { Rng } from './rng.ts'
+import { RUN_NOTES } from './runNotes.ts'
 import {
   afterMove,
   afterStep,
@@ -118,10 +119,13 @@ describe('the tutorial', () => {
     assert.deepEqual(tutorialActions(state, progress), legalActions(state))
   })
 
-  it('links only to things that exist', () => {
+  it('links only to things that exist, in the tutorial and the run notes', () => {
     for (const step of TUTORIAL)
       for (const part of said(step.says))
         if (typeof part !== 'string') assert.doesNotThrow(() => gloss(part), `${step.id}: ${part.kind}:${part.id}`)
+    for (const [id, note] of Object.entries(RUN_NOTES))
+      for (const part of said(note.says))
+        if (typeof part !== 'string') assert.doesNotThrow(() => gloss(part), `${id}: ${part.kind}:${part.id}`)
   })
 
   it('splits a line into plain text and linked words', () => {

@@ -102,6 +102,7 @@ export {
   type Term,
   type TutorialStep,
 } from './tutorial.ts'
+export { isRunNote, RUN_NOTE_IDS, RUN_NOTES, type RunNote } from './runNotes.ts'
 export { nextRunAction, playRun } from './run/bot.ts'
 export { findNode, generateStage, MAP_COLUMNS } from './run/map.ts'
 export {
