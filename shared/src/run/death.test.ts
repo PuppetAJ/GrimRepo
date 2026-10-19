@@ -111,12 +111,33 @@ describe('building a death card', () => {
     assert.deepEqual(deathStatsHand(state, 999), [], 'nothing for a cost card not dealt')
   })
 
-  it('deals stats only from cards within one cost of the cost card', () => {
+  it('deals stats from cards within one cost of the cost card, the near ones first', () => {
     for (let rng = 1; rng < 200; rng++) {
       const state = lost(rng)
-      for (const costCard of deathCostHand(state))
-        for (const statsCard of deathStatsHand(state, costCard.id))
-          assert.ok(Math.abs(card(statsCard.card).cost - card(costCard.card).cost) <= 1)
+      for (const costCard of deathCostHand(state)) {
+        const near = (part: RunCard) => Math.abs(card(part.card).cost - card(costCard.card).cost) <= 1
+        const nearby = deathParts(state.deck).filter(near).length
+        const hand = deathStatsHand(state, costCard.id)
+        assert.equal(hand.length, Math.min(3, deathParts(state.deck).length))
+        assert.deepEqual(
+          hand.map(near),
+          hand.map((_, index) => index < nearby),
+        )
+      }
+    }
+  })
+
+  it('fills the stats hand with the nearest costs when fewer than three are that near', () => {
+    // One costly card among cheap ones: picked for its cost, it has only one card within one cost of it, itself.
+    const lopsided = [entry(1, 'Mainframe'), entry(2, 'HelloWorld'), entry(3, 'HelloWorld'), entry(4, 'CronJob')]
+    for (let rng = 1; rng < 50; rng++) {
+      const state = lost(rng, lopsided)
+      const mainframe = deathCostHand(state).find((part) => part.card === 'Mainframe')
+      if (!mainframe) continue
+      const hand = deathStatsHand(state, mainframe.id)
+      assert.equal(hand.length, 3)
+      assert.equal(hand[0]?.card, 'Mainframe', 'the near one first')
+      assert.deepEqual(deathStatsHand(lost(rng, lopsided), mainframe.id), hand, 'the same hand every replay')
     }
   })
 
