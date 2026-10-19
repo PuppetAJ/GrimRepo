@@ -279,7 +279,7 @@ test("P03's run notes", async ({ browser }) => {
   await root.waitFor()
   const note = page.locator('section[aria-label="P03\'s note"]')
   await note.waitFor()
-  check('a first run opens with a note from P03', (await note.innerText()).includes('This is a run.'))
+  check('a first run opens with a note from P03', (await note.innerText()).includes('Pick the starter deck'))
   await page.getByRole('button', { name: 'Close the note' }).click()
   check('which closes', (await note.count()) === 0)
   await page.reload()
