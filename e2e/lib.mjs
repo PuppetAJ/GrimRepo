@@ -63,7 +63,7 @@ export function check(name, ok, detail = '') {
 
 /** Waits for the table's controls and for P03's boot screen to go. */
 export async function tableReady(page, timeout = 60_000) {
-  await page.getByRole('button', { name: /Look at the board|Sit back/ }).waitFor({ timeout })
+  await page.getByRole('button', { name: /^(Board|Sit back)$/ }).waitFor({ timeout })
   await page.getByRole('status', { name: /^Setting the table/ }).waitFor({ state: 'detached', timeout })
 }
 

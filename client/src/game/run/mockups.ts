@@ -570,13 +570,13 @@ export const MOCKUPS: Record<string, Entry> = {
   battle: {
     title: 'A battle in a run',
     group: 'reached',
-    revision: 11,
+    revision: 12,
     make: () => reached((s) => s.visit?.kind === 'battle' && s.visit.game.turn > 2),
   },
   'battle-empty-deck': {
     title: 'A battle whose deck has run out, with a draw owed',
     group: 'reached',
-    revision: 6,
+    revision: 7,
     make: () => {
       const found = reached((s) => s.visit?.kind === 'battle' && s.visit.game.turn > 1 && !s.visit.game.drawn)
       if (!found || found.state.visit?.kind !== 'battle') return null
@@ -588,7 +588,7 @@ export const MOCKUPS: Record<string, Entry> = {
   'catch-up': {
     title: 'P03 ahead, with the turn drawn and an extra draw waiting',
     group: 'reached',
-    revision: 4,
+    revision: 5,
     make: () => {
       // The extra draw needs cards in the deck and room in the hand.
       const found = reached(
@@ -607,7 +607,7 @@ export const MOCKUPS: Record<string, Entry> = {
   'battle-items': {
     title: 'A battle in a run, with three items to use',
     group: 'reached',
-    revision: 8,
+    revision: 9,
     make: () => {
       const found = reached((s) => s.visit?.kind === 'battle' && s.visit.game.turn > 2 && s.visit.game.drawn)
       if (!found || found.state.visit?.kind !== 'battle') return null
@@ -630,7 +630,7 @@ export const MOCKUPS: Record<string, Entry> = {
   'items-own': {
     title: 'Items: the Hammer on your Bug, the Pliers on a sigil, the Hourglass',
     group: 'reached',
-    revision: 9,
+    revision: 11,
     make: () =>
       itemBattle(['hammer', 'pliers', 'hourglass'], {
         board: ['Bug', 'CopyPaste'],
@@ -641,7 +641,7 @@ export const MOCKUPS: Record<string, Entry> = {
   'items-steal': {
     title: 'Items: the Hook on a Mainframe, the Bottled Boilerplate, the Scissors on the queue',
     group: 'reached',
-    revision: 9,
+    revision: 10,
     make: () =>
       itemBattle(['hook', 'bottle', 'scissors'], {
         board: [null, null, 'Watchdog'],
@@ -702,19 +702,19 @@ export const MOCKUPS: Record<string, Entry> = {
   'death-haunt': {
     title: 'The Postmortem bringing back your death card',
     group: 'reached',
-    revision: 8,
+    revision: 9,
     make: () => reached((s) => haunted(s, 2), { death: SAMPLE_DEATH }),
   },
   'rival-haunt': {
     title: "The Staging boss bringing another player's death card",
     group: 'reached',
-    revision: 6,
+    revision: 7,
     make: () => reached((s) => haunted(s, 1), { rival: { card: SAMPLE_RIVAL, by: 'ajimp' } }),
   },
   'card-types': {
     title: 'Card types: Botnet scaling with its Bots, Monolith beside its Legacy',
     group: 'reached',
-    revision: 6,
+    revision: 7,
     make: () =>
       itemBattle([], {
         board: ['Botnet', 'SpamBot', 'Crawler', 'Heisenbug'],
@@ -743,25 +743,25 @@ export const MOCKUPS: Record<string, Entry> = {
   'boss-phase': {
     title: "A boss's second phase",
     group: 'reached',
-    revision: 5,
+    revision: 7,
     make: () => reached((s) => isBoss(s) && s.visit?.kind === 'battle' && s.visit.game.opponent.phase === 1),
   },
   'boss-beaten': {
     title: 'A boss just beaten',
     group: 'reached',
-    revision: 12,
+    revision: 13,
     make: () => reached((s) => isBoss(s) && s.visit?.kind === 'battle' && s.visit.game.status === 'won'),
   },
   'low-integrity': {
     title: 'A battle with one integrity left, a Cron Job about to fall',
     group: 'reached',
-    revision: 5,
+    revision: 6,
     make: lastIntegrity,
   },
   'integrity-lost': {
     title: 'A run lost when its integrity ran out',
     group: 'reached',
-    revision: 9,
+    revision: 10,
     make: () => {
       const found = lastIntegrity()
       const rung = found && applyRun(found.state, { type: 'play', action: { type: 'ringBell' } })
@@ -771,7 +771,7 @@ export const MOCKUPS: Record<string, Entry> = {
   desperate: {
     title: 'P03 20 behind: ring the bell to see its desperate play',
     group: 'reached',
-    revision: 6,
+    revision: 7,
     make: () => {
       // An empty table, so nothing lands on the bell and P03's turn finds the scale where it was left.
       const found = itemBattle([], {})
@@ -817,10 +817,10 @@ export const MOCKUPS: Record<string, Entry> = {
   lost: {
     title: 'A run lost in battle',
     group: 'reached',
-    revision: 16,
+    revision: 17,
     make: () => reached((s) => s.status === 'lost'),
   },
-  won: { title: 'A cleared run', group: 'reached', revision: 6, make: () => reached((s) => s.status === 'won') },
+  won: { title: 'A cleared run', group: 'reached', revision: 7, make: () => reached((s) => s.status === 'won') },
 }
 
 /** Each of P03's run notes, over the mockup of the screen it comes up on. */
@@ -843,7 +843,7 @@ for (const [note, screen, title] of NOTE_SCREENS)
   MOCKUPS[`note-${note}`] = {
     title,
     group: 'notes',
-    revision: 3,
+    revision: note === 'battle' || note === 'catchUp' || note === 'boss' ? 4 : 3,
     make: () => {
       const found = MOCKUPS[screen]?.make()
       return found ? { ...found, note } : null

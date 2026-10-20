@@ -58,7 +58,7 @@ test('The map on the projector', async ({ browser }) => {
 
 test('A battle and the map', async ({ browser }) => {
   const { context, page } = await open(browser, 'battle')
-  const look = page.getByRole('button', { name: 'Look at the map' })
+  const look = page.getByRole('button', { name: 'Map', exact: true })
   check('the battle offers a look at the map', await shown(look))
   await look.click()
   const back = page.getByRole('button', { name: 'Back to the battle' })
@@ -104,7 +104,7 @@ test('Into a battle from the map', async ({ browser }) => {
   check('a battle is reached', (await view(page)) === 'battle')
   check(
     'and the table is set without a loading screen',
-    await shown(page.getByRole('button', { name: /Look at the board|Sit back/ })),
+    await shown(page.getByRole('button', { name: /^(Board|Sit back)$/ })),
   )
   check('on the same canvas', (await page.locator('canvas').count()) === 1)
   await context.close()

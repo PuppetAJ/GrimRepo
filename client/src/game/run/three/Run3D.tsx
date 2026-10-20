@@ -117,7 +117,7 @@ function Between({
           mode={projecting ? 'hologram' : 'floating'}
           waiting={projecting && !open}
           pinTo={pin}
-          onSwitch={{ label: 'Play on the text table', go: onText }}
+          onSwitch={{ label: 'Text table', go: onText }}
           note={note && !fading ? <RunNote note={note} compact={layout === 'phone'} /> : null}
         >
           {/* In the hologram's own button style; the site's gray buttons wash out under its glow. */}
@@ -253,6 +253,7 @@ export default function Run3D({
             <Battle3D
               key={`${kept.key}:${shown.count}`}
               game={battle ?? kept.game}
+              run={run}
               seat={seat}
               onText={onText}
               from={shown.after ? 'map' : undefined}
