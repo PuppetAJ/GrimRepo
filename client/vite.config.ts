@@ -5,8 +5,14 @@ import { fileURLToPath } from 'node:url'
 import { gzipSync } from 'node:zlib'
 import { defineConfig, type Plugin } from 'vite'
 
-// API_PORT points a second client at a second API.
-const api = `http://localhost:${process.env['API_PORT'] ?? 3001}`
+// The root .env sets both ports, so each worktree's dev servers keep to their own; a variable already set wins.
+try {
+  process.loadEnvFile(fileURLToPath(new URL('../.env', import.meta.url)))
+} catch {
+  // No .env, as on CI and Railway.
+}
+const api = `http://localhost:${process.env['API_PORT'] ?? process.env['PORT'] ?? 3001}`
+const port = Number(new URL(process.env['APP_URL'] ?? 'http://localhost:3000').port || 3000)
 
 // Without the trailing slash Vite serves the app instead of the local viewer/ page.
 const viewerSlash: Plugin = {
@@ -110,7 +116,9 @@ export default defineConfig({
   assetsInclude: ['**/*.glb', '**/*.gltf'],
 
   server: {
-    port: 3000,
+    port,
+    // Another worktree's server on the same port would otherwise push this one to the next free port, away from APP_URL.
+    strictPort: true,
     // Same origin in development, so cookies behave as they will in production.
     proxy: { '/api': api, '/health': api },
   },

@@ -27,7 +27,7 @@ export default defineConfig({
   forbidOnly: CI,
   reporter: CI ? [['list'], ['html', { open: 'never' }]] : [['list']],
   use: {
-    baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:3000',
+    baseURL: process.env.E2E_BASE_URL ?? process.env.APP_URL ?? 'http://localhost:3000',
     viewport: { width: 1280, height: 800 },
     navigationTimeout: 30_000,
     // A failure keeps a trace to step through: each action, the page before and after it, and the network. Recording

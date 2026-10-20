@@ -3,7 +3,7 @@ import pg from 'pg'
 import { isOffensive } from '../server/src/auth/names.ts'
 import { apply, createGame, nextBotAction } from '../shared/src/index.ts'
 
-export const BASE = process.env.E2E_BASE_URL ?? 'http://localhost:3000'
+export const BASE = process.env.E2E_BASE_URL ?? process.env.APP_URL ?? 'http://localhost:3000'
 
 // Collected from every page a test opens, so an error on any of them fails the test.
 const pageErrors = []
