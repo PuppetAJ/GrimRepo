@@ -241,7 +241,9 @@ test('The 3D table', async ({ browser }) => {
 
   // Full screen
   // The page reacts to fullscreenchange a moment after the request, so wait for what it shows.
-  await page.getByRole('button', { name: 'Full screen' }).click()
+  const menu = page.getByRole('button', { name: 'Menu', exact: true })
+  await menu.click()
+  await page.getByRole('menuitem', { name: 'Full screen' }).click()
   await page.getByRole('link', { name: 'Exit' }).waitFor({ state: 'visible' })
   const filled = await page.evaluate(() => {
     const box = document.querySelector('[data-table="3d"]').getBoundingClientRect()
@@ -249,12 +251,14 @@ test('The 3D table', async ({ browser }) => {
   })
   check('the table can take the whole screen', filled)
   check('with a way out, since the header is covered', true)
-  await page.getByRole('button', { name: 'Leave full screen' }).click()
+  await menu.click()
+  await page.getByRole('menuitem', { name: 'Leave full screen' }).click()
   await page.getByRole('link', { name: 'Exit' }).waitFor({ state: 'hidden' })
   check('and give it back', !(await page.evaluate(() => Boolean(document.fullscreenElement))))
 
   // The text table
-  await page.getByRole('button', { name: 'Text table', exact: true }).click()
+  await menu.click()
+  await page.getByRole('menuitem', { name: 'Text table' }).click()
   await page.locator('[data-table="text"]').waitFor()
   check('the table can switch to text', true)
   await page.reload()

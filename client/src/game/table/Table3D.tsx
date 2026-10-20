@@ -4,6 +4,7 @@ import { type Seat, has, hasEnded, legalFor, outcomeOf } from '../controls.tsx'
 import { useSettled } from '../tutorial/TutorialBlurb.tsx'
 import { useFullScreen } from '../fullScreen.ts'
 import type { Ready } from '../ready.ts'
+import type { RunReady } from '../run/useRun.ts'
 import { cardTones, FlatReaderBody } from '../CardReader.tsx'
 import { forTable, useEscapeCancel } from '../shortcuts.ts'
 import { loadCardAssets } from './faces.ts'
@@ -30,6 +31,7 @@ type Props = {
   /** In a run, looks back at the map. */
   onMap?: () => void
   onInventory?: () => void
+  run?: RunReady
 }
 
 /** A table of its own, for the tutorial and fixed boards: the stage and the battle on it, loaded with the page. */
@@ -42,7 +44,7 @@ export default function Table3D(props: Props) {
 }
 
 /** A battle on whichever stage it's put on: its cards and controls come and go, the stage stays. */
-export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, onMap, onInventory }: Props) {
+export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, onMap, onInventory, run }: Props) {
   const assets = use(loadCardAssets())
   const stage = useStage()
   const { playback, busy, skip } = usePlayback(game)
@@ -212,6 +214,7 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
       </stage.Scene>
       {stage.ready && !leaving ? (
         <Hud
+          run={run}
           onMap={onMap}
           onInventory={onInventory}
           game={playing}

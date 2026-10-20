@@ -1,43 +1,17 @@
-import { useNavigate } from '@tanstack/react-router'
-import {
-  Backpack,
-  Flag,
-  FoldHorizontal,
-  LogOut,
-  Maximize,
-  Menu,
-  MessageSquareText,
-  Minimize,
-  Repeat,
-  UnfoldHorizontal,
-  X,
-} from 'lucide-react'
+import { Backpack, X } from 'lucide-react'
 import { Dialog as DialogPrimitive } from 'radix-ui'
 import { use, useEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, m, useReducedMotion } from 'motion/react'
-import { INTEGRITY, STAGES } from 'shared'
-import { AlertDialog } from '@/components/ui/alert-dialog.tsx'
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu.tsx'
 import FaultyScreenShader from '../../../components/p03/FaultyScreenShader.tsx'
 import { prefersReducedMotion } from '../../../lib/motion.ts'
-import { ForfeitConfirm } from '../../controls.tsx'
 import { useFullScreen } from '../../fullScreen.ts'
+import { TableMenu, type Switch } from '../../TableMenu.tsx'
 import { useMedia } from '../../../lib/useMedia.ts'
 import { ROOM_TO_WIDEN, useWideTable } from '../../wideTable.ts'
 import { Panel } from '../../text/Panel.tsx'
 import { useFit } from '../../text/sizing.ts'
 import type { Layout } from '../../text/useTextTable.ts'
-import { useRunNotes } from '../notes.ts'
-import { DebugItem } from '../RunDebug.tsx'
 import type { RunReady } from '../useRun.ts'
 import { SearchContext } from './CardBits.tsx'
 import { DeckTable } from './DeckTable.tsx'
@@ -203,131 +177,6 @@ function DeckDrawer({
   )
 }
 
-/** The menu's way to the other table. */
-export type Switch = { label: string; go: () => void }
-
-export function saveWords(run: RunReady): string {
-  if (run.id === -1) return 'mockup, never saved'
-  return run.saving ? 'saving…' : run.unsaved ? `${run.unsaved} unsaved` : 'saved'
-}
-
-/** Everything a screen needn't show all the time: where the run stands, P03's last word, the deck, and the way out. */
-function RunMenu({
-  run,
-  fullScreen,
-  onDeck,
-  onSwitch,
-  button,
-  widen,
-}: {
-  run: RunReady
-  fullScreen: ReturnType<typeof useFullScreen>
-  /** Over the 3D table, its width: the site's, or the window's. */
-  widen?: ReturnType<typeof useWideTable>
-  /** Set where the deck isn't beside the screen, so the menu opens it. */
-  onDeck?: () => void
-  onSwitch?: Switch
-  button: React.RefObject<HTMLButtonElement | null>
-}) {
-  const { state } = run
-  const [abandoning, setAbandoning] = useState(false)
-  const navigate = useNavigate()
-  const { notes, change } = useRunNotes()
-  const latest = run.news.join(' ')
-  const [seen, setSeen] = useState(latest)
-  const unread = Boolean(latest) && latest !== seen
-  return (
-    <>
-      {/* Screen readers hear P03 as it speaks; everyone else finds the line in the menu. */}
-      <p role="status" className="sr-only">
-        {latest ? `P03: ${latest}` : null}
-      </p>
-      <DropdownMenu onOpenChange={(open) => open && setSeen(latest)}>
-        <DropdownMenuTrigger asChild>
-          <button
-            ref={button}
-            type="button"
-            aria-label={unread ? 'Run menu, with a new word from P03' : 'Run menu'}
-            title="Menu"
-            className={ICON_BUTTON}
-          >
-            <Menu aria-hidden className="size-5" />
-            {unread ? <span aria-hidden className="absolute -top-1 -right-1 size-3 rounded-full bg-[#ffb347]" /> : null}
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-72 border-p03-edge bg-p03-ground font-terminal text-lg">
-          <DropdownMenuLabel className="font-normal">
-            <span className="block text-lg text-p03">
-              Stage {state.stage + 1} of {STAGES.length}: {STAGES[state.stage]}
-            </span>
-            <span className="block text-base text-p03">
-              Integrity {state.integrity}/{INTEGRITY}
-            </span>
-            <span className="block text-base text-p03-dim">
-              {state.record.battles} {state.record.battles === 1 ? 'battle' : 'battles'} won · {state.record.bosses}{' '}
-              {state.record.bosses === 1 ? 'boss' : 'bosses'} beaten · {saveWords(run)}
-            </span>
-          </DropdownMenuLabel>
-          {latest ? (
-            <DropdownMenuLabel className="text-base font-normal text-[#b8f5c4]">P03&gt; {latest}</DropdownMenuLabel>
-          ) : null}
-          <DropdownMenuSeparator />
-          {onDeck ? (
-            <DropdownMenuItem onSelect={onDeck} className="text-lg">
-              <Backpack aria-hidden />
-              Inventory
-            </DropdownMenuItem>
-          ) : null}
-          {fullScreen.supported ? (
-            <DropdownMenuItem onSelect={fullScreen.toggle} className="text-lg">
-              {fullScreen.on ? <Minimize aria-hidden /> : <Maximize aria-hidden />}
-              {fullScreen.on ? 'Leave full screen' : 'Full screen'}
-            </DropdownMenuItem>
-          ) : null}
-          {widen?.offered && !fullScreen.on ? (
-            <DropdownMenuItem onSelect={widen.toggle} className="text-lg">
-              {widen.wide ? <FoldHorizontal aria-hidden /> : <UnfoldHorizontal aria-hidden />}
-              {widen.wide ? 'Narrow the table' : 'Widen the table'}
-            </DropdownMenuItem>
-          ) : null}
-          {onSwitch ? (
-            <DropdownMenuItem onSelect={onSwitch.go} className="text-lg">
-              <Repeat aria-hidden />
-              {onSwitch.label}
-            </DropdownMenuItem>
-          ) : null}
-          {notes ? (
-            <DropdownMenuCheckboxItem
-              checked={!notes.off}
-              onCheckedChange={(on) => change({ off: !on })}
-              // Kept open, so the tick shows the change.
-              onSelect={(event) => event.preventDefault()}
-              className="text-lg"
-            >
-              <MessageSquareText aria-hidden />
-              P03's run notes
-            </DropdownMenuCheckboxItem>
-          ) : null}
-          {state.status === 'playing' ? (
-            <DropdownMenuItem onSelect={() => setAbandoning(true)} className="text-lg">
-              <Flag aria-hidden />
-              Abandon run
-            </DropdownMenuItem>
-          ) : null}
-          <DebugItem />
-          <DropdownMenuItem onSelect={() => void navigate({ to: '/' })} className="text-lg">
-            <LogOut aria-hidden />
-            Leave, saving the run
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-      <AlertDialog open={abandoning} onOpenChange={setAbandoning}>
-        <ForfeitConfirm forfeit={run.abandon} run />
-      </AlertDialog>
-    </>
-  )
-}
-
 /** The frame every screen off the board shares: one header row, the screen, and the deck. */
 export function Screen({
   run,
@@ -411,13 +260,14 @@ export function Screen({
   )
   // The screen's own buttons, the deck and the menu, beside the title or, stacked, under the screen's line.
   const menu = (
-    <RunMenu
+    <TableMenu
       run={run}
       fullScreen={fullScreen}
       onDeck={deck && !roomy ? () => setDrawer(true) : undefined}
       onSwitch={onSwitch}
       button={menuButton}
       widen={terminal ? undefined : widen}
+      className={`${ICON_BUTTON} [&>svg]:size-5`}
     />
   )
   // Stacked, the menu keeps to the top right corner, so it has room, and the screen's own buttons sit centered below.
