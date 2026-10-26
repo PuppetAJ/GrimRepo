@@ -13,6 +13,17 @@ const openTable = async (page) => {
 
 const until = (page, test, arg, timeout = 15_000) => page.waitForFunction(test, arg, { timeout, polling: 100 })
 
+/** Where a card or spot comes to rest: a card called back to the hand can still be sliding after a fixed wait. */
+const resting = async (page, what) => {
+  let last = null
+  for (const end = Date.now() + 15_000; Date.now() < end; await page.waitForTimeout(150)) {
+    const at = await page.evaluate((target) => window.__game.screen(target), what)
+    if (at && last && Math.hypot(at.x - last.x, at.y - last.y) < 0.5) return at
+    last = at
+  }
+  throw new Error(`${JSON.stringify(what)} never came to rest`)
+}
+
 test('The 3D table', async ({ browser }) => {
   const { context, page } = await freshPage(browser)
   await openTable(page)
@@ -33,7 +44,7 @@ test('The 3D table', async ({ browser }) => {
   } else {
     // A first turn, clicking the models
     const click = async (what) => {
-      const at = await page.evaluate((target) => window.__game.screen(target), what)
+      const at = await resting(page, what)
       await page.mouse.click(at.x, at.y)
     }
     const hand = () => page.evaluate(() => window.__game.state().player.hand.length)
@@ -167,7 +178,7 @@ test('The 3D table', async ({ browser }) => {
       check('and so does a click on nothing', await offBy(() => page.mouse.click(nothing.x, nothing.y)))
       // With nothing being played, a right-click on a card magnifies it until the next click, which plays nothing.
       await page.waitForTimeout(600)
-      const at = await page.evaluate((uid) => window.__game.screen({ uid }), fuel.uid)
+      const at = await resting(page, { uid: fuel.uid })
       await page.mouse.click(at.x, at.y, { button: 'right' })
       const magnifier = page.locator('[data-magnifier]')
       const magnified = await magnifier
@@ -240,20 +251,31 @@ test('The 3D table', async ({ browser }) => {
   }
 
   // Full screen
-  // The page reacts to fullscreenchange a moment after the request, so wait for what it shows.
+  // The page reacts to fullscreenchange a moment after the request, and the window resizes after that, so wait for what
+  // it shows. The open menu hides the rest of the page from role queries, so Exit is found even while hidden that way:
+  // otherwise it would count as gone before full screen is.
   const menu = page.getByRole('button', { name: 'Menu', exact: true })
+  const exit = page.getByRole('link', { name: 'Exit', includeHidden: true })
   await menu.click()
   await page.getByRole('menuitem', { name: 'Full screen' }).click()
-  await page.getByRole('link', { name: 'Exit' }).waitFor({ state: 'visible' })
-  const filled = await page.evaluate(() => {
-    const box = document.querySelector('[data-table="3d"]').getBoundingClientRect()
-    return box.top === 0 && box.left === 0 && box.width === window.innerWidth && box.height === window.innerHeight
-  })
+  await exit.waitFor({ state: 'visible' })
+  const filled = await until(
+    page,
+    () => {
+      const box = document.querySelector('[data-table="3d"]').getBoundingClientRect()
+      return box.top === 0 && box.left === 0 && box.width === window.innerWidth && box.height === window.innerHeight
+    },
+    undefined,
+    5_000,
+  ).then(
+    () => true,
+    () => false,
+  )
   check('the table can take the whole screen', filled)
   check('with a way out, since the header is covered', true)
   await menu.click()
   await page.getByRole('menuitem', { name: 'Leave full screen' }).click()
-  await page.getByRole('link', { name: 'Exit' }).waitFor({ state: 'hidden' })
+  await exit.waitFor({ state: 'hidden' })
   check('and give it back', !(await page.evaluate(() => Boolean(document.fullscreenElement))))
 
   // The text table

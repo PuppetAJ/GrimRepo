@@ -38,11 +38,19 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      // Without a GPU, headless Chromium draws WebGL in software only when asked, and the 3D table needs it.
+      // Without a GPU, headless Chromium draws WebGL in software only when asked, and the 3D table needs it. That's
+      // SwiftShader, slow enough that a 3D test takes minutes and its timing wanders, so on CI E2E_HEADED runs Chromium in
+      // the virtual display too, drawing through Mesa as Firefox does. Chromium blocks Mesa's software driver unless told
+      // otherwise, and headed it shows scrollbars that would take width from the page.
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1280, height: 800 },
-        launchOptions: { args: ['--enable-unsafe-swiftshader'] },
+        headless: !process.env.E2E_HEADED,
+        launchOptions: {
+          args: process.env.E2E_HEADED
+            ? ['--use-angle=gl', '--ignore-gpu-blocklist', '--hide-scrollbars']
+            : ['--enable-unsafe-swiftshader'],
+        },
       },
     },
     {
