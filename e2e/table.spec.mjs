@@ -13,11 +13,24 @@ const openTable = async (page) => {
 
 const until = (page, test, arg, timeout = 15_000) => page.waitForFunction(test, arg, { timeout, polling: 100 })
 
-/** Where a card or spot comes to rest: a card called back to the hand can still be sliding after a fixed wait. */
+/**
+ * Where a card or spot comes to rest: a card called back to the hand can still be sliding after a fixed wait. Software
+ * WebGL can take longer than a poll to draw a frame, so each look is a few frames on from the last, as well as 150ms.
+ */
 const resting = async (page, what) => {
   let last = null
-  for (const end = Date.now() + 15_000; Date.now() < end; await page.waitForTimeout(150)) {
-    const at = await page.evaluate((target) => window.__game.screen(target), what)
+  for (const end = Date.now() + 15_000; Date.now() < end;) {
+    const at = await page.evaluate(
+      (target) =>
+        new Promise((done) => {
+          const due = performance.now() + 150
+          let frames = 0
+          const look = (now) =>
+            ++frames >= 3 && now >= due ? done(window.__game.screen(target)) : requestAnimationFrame(look)
+          requestAnimationFrame(look)
+        }),
+      what,
+    )
     if (at && last && Math.hypot(at.x - last.x, at.y - last.y) < 0.5) return at
     last = at
   }
@@ -51,11 +64,18 @@ test('The 3D table', async ({ browser }) => {
     const before = await hand()
     const first = await page.evaluate(() => window.__game.state().player.hand[0].uid)
     await click({ uid: first })
-    await page.waitForTimeout(200)
+    // The shake comes from the same click that would have picked the card up, so once it shows, nothing else is coming.
+    const nudged = await page
+      .getByText('Draw a card to start your turn.')
+      .and(page.locator('[class*="animate-[nudge"]'))
+      .waitFor({ timeout: 5_000 })
+      .then(
+        () => true,
+        () => false,
+      )
     check(
       'a card tried before the draw stays put, and the prompt shakes toward the deck',
-      (await page.evaluate(() => window.__game.state().summon)) === null &&
-        /animate-\[nudge/.test(await page.getByText('Draw a card to start your turn.').getAttribute('class')),
+      nudged && (await page.evaluate(() => window.__game.state().summon)) === null,
     )
     await click('deck')
     await until(page, (n) => window.__game.state().player.hand.length === n, before + 1)
@@ -63,7 +83,8 @@ test('The 3D table', async ({ browser }) => {
 
     const free = await page.evaluate(() => window.__game.state().player.hand.map((unit) => [unit.uid, unit.card]))
     const [uid] = free.find(([, id]) => card(id).cost === 0) ?? []
-    await page.waitForTimeout(500)
+    // The table plays the draw back a moment after the state has it, and only then does the hand make room.
+    await until(page, (n) => window.__game.view().hand.length === n, before + 1)
     await click({ uid })
     await until(page, (id) => window.__game.state().summon?.uid === id, uid)
     check('clicking a card in the hand picks it up', true)
@@ -76,17 +97,20 @@ test('The 3D table', async ({ browser }) => {
       )
     check('and the table says what to do next', prompted)
 
-    await page.waitForTimeout(900)
+    // Picking a card up looks down at the board, which the lane's spot follows until the camera stops.
+    await until(page, (id) => window.__game.view().summon?.uid === id, uid)
     await click({ lane: 2 })
     await until(page, (id) => window.__game.state().player.board[2]?.uid === id, uid)
     check('clicking a lane plays it there', true)
     // Look down at the board, since the hand covers the player's row from the seat.
     await page.mouse.move(5, 300)
     await page.keyboard.press('w')
-    await page.waitForTimeout(1200)
+    // The button changes as the camera sets off, and the lane's spot settles once it gets there.
+    await page.getByRole('button', { name: 'Sit back', exact: true }).waitFor()
     const name = card(free.find(([id]) => id === uid)[1]).name
     const untouched = await page.evaluate(() => JSON.stringify(window.__game.state()))
-    await page.mouse.move(...Object.values(await page.evaluate(() => window.__game.screen({ lane: 2, far: true }))))
+    const held = await resting(page, { lane: 2, far: true })
+    await page.mouse.move(held.x, held.y)
     await page.mouse.down()
     const magnified = await until(
       page,
@@ -100,14 +124,16 @@ test('The 3D table', async ({ browser }) => {
     check('holding the mouse on a card on the board magnifies it', magnified)
     await page.mouse.up()
     await page.locator('[data-magnifier]').waitFor({ state: 'detached' })
+    // Nothing to wait for if nothing was played, so give a wrong play a moment to show.
     await page.waitForTimeout(300)
     check(
       'and letting go puts it away without playing anything',
       untouched === (await page.evaluate(() => JSON.stringify(window.__game.state()))),
     )
     await page.keyboard.press('s')
-    await page.waitForTimeout(1200)
-    await page.mouse.click(...Object.values(await page.evaluate(() => window.__game.screen('log'))))
+    await page.getByRole('button', { name: 'Board', exact: true }).waitFor()
+    // The glide back also outlasts the moment after a hold when the table ignores clicks.
+    await click('log')
     const monitor = page.getByRole('region', { name: 'Monitor readout' })
     await monitor.waitFor()
     check("clicking P03's console pins its lines open", (await monitor.textContent()).includes('// P03 CONSOLE'))
@@ -115,7 +141,6 @@ test('The 3D table', async ({ browser }) => {
     await monitor.waitFor({ state: 'detached' })
     check('and a click elsewhere closes them', true)
 
-    await page.waitForTimeout(600)
     await click('bell')
     await page.getByText("P03's turn…").waitFor()
     check("ringing the bell plays out P03's turn", true)
@@ -164,8 +189,10 @@ test('The 3D table', async ({ browser }) => {
       const nothing = { x: canvas.x + canvas.width / 2, y: canvas.y + canvas.height * 0.06 }
       const offBy = async (how) => {
         await act({ type: 'select', uid: fuel.uid })
-        await until(page, (uid) => window.__game.state().summon?.uid === uid, fuel.uid)
-        await page.waitForTimeout(400)
+        // Once the camera has settled on the board, nothing lies under the spot, and the table has long since
+        // re-registered its clicks for the card being placed.
+        await until(page, (uid) => window.__game.view().summon?.uid === uid, fuel.uid)
+        await resting(page, { lane: 0 })
         await how()
         return until(page, () => window.__game.state().summon === null)
           .then(() => true)
@@ -176,8 +203,9 @@ test('The 3D table', async ({ browser }) => {
         await offBy(() => page.mouse.click(nothing.x, nothing.y, { button: 'right' })),
       )
       check('and so does a click on nothing', await offBy(() => page.mouse.click(nothing.x, nothing.y)))
-      // With nothing being played, a right-click on a card magnifies it until the next click, which plays nothing.
-      await page.waitForTimeout(600)
+      // With nothing being played, a right-click on a card magnifies it until the next click, which plays nothing. The
+      // card slides back up as the camera sits back, which outlasts the table re-registering its right-click.
+      await until(page, () => window.__game.view().summon === null)
       const at = await resting(page, { uid: fuel.uid })
       await page.mouse.click(at.x, at.y, { button: 'right' })
       const magnifier = page.locator('[data-magnifier]')
@@ -185,10 +213,12 @@ test('The 3D table', async ({ browser }) => {
         .waitFor({ timeout: 5_000 })
         .then(() => true)
         .catch(() => false)
+      // Staying up can only be shown over time.
       await page.waitForTimeout(300)
       check('a right-click on a card magnifies it, and it stays up', magnified && (await magnifier.isVisible()))
       await page.mouse.click(at.x, at.y)
       await magnifier.waitFor({ state: 'detached', timeout: 5_000 })
+      // As with the hold above, give a wrong play a moment to show.
       await page.waitForTimeout(300)
       check(
         'until the next click, which plays nothing',
@@ -217,6 +247,7 @@ test('The 3D table', async ({ browser }) => {
     // A single-key shortcut must not fire from elsewhere on the page (WCAG 2.1.4).
     await page.getByRole('link', { name: 'README', exact: true }).focus()
     await page.keyboard.press('e')
+    // Nothing happening has no event to wait for, so the bell gets a moment to ring.
     await page.waitForTimeout(500)
     check('E does nothing while focus is elsewhere on the page', !(await page.getByText("P03's turn…").isVisible()))
     await page.locator('[data-table="3d"]').focus()
