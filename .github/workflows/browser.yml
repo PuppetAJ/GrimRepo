@@ -137,14 +137,11 @@ jobs:
           done
           echo "The app did not come up"; cat app.log; exit 1
 
-      # Headless Firefox on a runner with no GPU won't create a WebGL context; in a virtual display it draws in software.
-      - if: matrix.engine == 'firefox'
-        run: xvfb-run -a pnpm exec playwright test e2e/${{ matrix.suite }}.spec.mjs --project=firefox $PART $SHARD
+      # A runner has no GPU. In a virtual display both browsers draw WebGL with Mesa's software OpenGL, where headless
+      # Firefox draws nothing and headless Chromium falls back to SwiftShader, which is many times slower.
+      - run: xvfb-run -a pnpm exec playwright test e2e/${{ matrix.suite }}.spec.mjs --project=${{ matrix.engine }} $PART $SHARD
         env:
           E2E_HEADED: '1'
-
-      - if: matrix.engine == 'chromium'
-        run: pnpm exec playwright test e2e/${{ matrix.suite }}.spec.mjs --project=chromium $PART $SHARD
 
       # The report and each failed test's trace, screenshot and context, to step through without rerunning.
       - if: failure()
