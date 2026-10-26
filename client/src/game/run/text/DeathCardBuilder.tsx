@@ -219,7 +219,7 @@ export function DeathCardBuilder({ run }: { run: RunReady }) {
             <ReadableCard
               unit={asUnit(shown)}
               blank={{ cost: !costCard, art: !statsCard, stats: !statsCard, sigils: !sigilCard }}
-              label="Read the card being built"
+              label="Read the Death Card being built"
             />
           </div>
           <p className="max-w-36 truncate text-lg text-p03">{tidy(name) || UNNAMED}</p>

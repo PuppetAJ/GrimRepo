@@ -81,7 +81,9 @@ export function Layout() {
                     ) : null}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="outline" aria-label="Account menu" className="gap-2">
+                        <Button variant="outline" className="gap-2">
+                          {/* Said before the name rather than instead of it, so the name holds the words on screen. */}
+                          <span className="sr-only">Account menu: </span>
                           <Avatar name={name} size="sm" />
                           <span>{name}</span>
                           <ChevronDown aria-hidden />

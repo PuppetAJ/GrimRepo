@@ -116,6 +116,8 @@ export function PixelCard({ unit, blank }: { unit: Shown; blank?: Blank }) {
   const dead = isDeathCard(unit.card)
   return (
     <span
+      // The a11y suite finds card faces by this, and checks the control around each one names its card.
+      data-face={def.name}
       // Print is sized from the card's own width, so a small card on a short window stays legible.
       className={`@container relative flex aspect-[5/7] w-full flex-col overflow-hidden text-[#0b1f12] [clip-path:polygon(0_0,86%_0,100%_9%,100%_100%,0_100%)] ${tones.body} bg-[repeating-linear-gradient(0deg,rgb(0_0_0/0.07)_0_1px,transparent_1px_3px)]`}
     >

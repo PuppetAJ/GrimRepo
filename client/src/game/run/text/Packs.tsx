@@ -45,13 +45,14 @@ export function SealedPack({
     <button
       type="button"
       {...data}
-      aria-label={aria}
       disabled={disabled || tearing}
       onClick={onTear}
       onPointerMove={tilt.follow}
       onPointerLeave={tilt.rest}
       className="group flex flex-col items-center gap-2 rounded-md p-2 text-p03 transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03 enabled:hover:-translate-y-1 disabled:opacity-60 motion-reduce:transition-none"
     >
+      {/* Read before the label and note rather than in place of them, so the name holds the words on screen. */}
+      <span className="sr-only">{aria}: </span>
       {/* Room below a tilting pack, so its lifted edge and shadow stay clear of the label. */}
       <span className={`relative block ${PACK_SIZE_CLASS} ${holo ? 'mb-4' : ''}`}>
         {spill ? (

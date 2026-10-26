@@ -190,7 +190,8 @@ test('Changing an account', async ({ browser }) => {
   const renamed = `${player.username}_x`.slice(0, 20)
   await page.goto(`${BASE}/account`)
   await page.getByLabel('New username').fill(renamed)
-  await page.getByRole('button', { name: 'Rename' }).click()
+  // Exact, since the account menu's name holds the username, and this player's username starts with Rename.
+  await page.getByRole('button', { name: 'Rename', exact: true }).click()
   await page.getByText(`You are now ${renamed}`).waitFor()
   // On a slow connection the header updates a moment after the message, so wait for it.
   const headerUpdated = await page
