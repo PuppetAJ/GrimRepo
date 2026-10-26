@@ -19,7 +19,7 @@ export function MergeRequest({ run }: { run: RunReady }) {
   const second = first ? copies(first).find((entry) => entry.id === secondId) : undefined
   return (
     <div data-center className="@container flex flex-col gap-4">
-      <LeaveButton label="Close the request" onLeave={() => run.act({ type: 'leave' })} />
+      <LeaveButton label="Leave the request" onLeave={() => run.act({ type: 'leave' })} />
       <ScreenBar>
         <p className="pb-1 text-lg">
           {first ? `Now its copy: pick another ${card(first.card).name}.` : 'Pick a card you hold twice.'}

@@ -124,7 +124,7 @@ export function Piles() {
           ▦
         </span>
         <span className={`text-lg ${reshuffle && reshuffleCostsMemory(state) ? 'text-[#ffb454]' : ''}`}>
-          {reshuffle ? `↻${reshuffle.cards}` : `x${view.deck}`}
+          {reshuffle ? `↻${reshuffle.cards}` : `×${view.deck}`}
         </span>
       </button>
       <button

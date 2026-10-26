@@ -46,7 +46,7 @@ export function NodeResult({ run }: { run: RunReady }) {
   const repaired = after.events.find((event) => event.type === 'repaired')
   return (
     <div data-center className="flex flex-col items-center gap-5 text-center">
-      <LeaveButton label="Back to the map" onLeave={dismiss} />
+      <LeaveButton label="Leave for the map" onLeave={dismiss} />
       {shown.length || items.length ? (
         <ul className="flex flex-wrap justify-center gap-6 pt-3">
           {shown.map(({ card, how, into }) => (
