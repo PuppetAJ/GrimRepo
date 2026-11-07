@@ -7,3 +7,11 @@ packages:
 allowBuilds:
   # The Railway CLI bundles the config file with esbuild, which fetches its binary on install.
   esbuild: true
+
+# Patched releases of packages we only get through other dependencies, until those pick them up. node-pg-migrate pins
+# glob 13 but only calls glob() itself, which glob 14 keeps, and ts-morph only calls minimatch(path, pattern).
+overrides:
+  source-map-js@<1.2.2: ^1.2.2
+  qs@<6.16.1: ^6.16.1
+  node-pg-migrate>glob: ^14.0.2
+  '@ts-morph/common>minimatch': ^11.0.1
