@@ -24,10 +24,7 @@ async function audit(page, name, path, ready = () => page.waitForLoadState('netw
   await page.goto(`${BASE}${path}`)
   await ready()
   await page.waitForTimeout(3000)
-  const { violations } = await new AxeBuilder({ page })
-    .withTags(TAGS)
-    .exclude('canvas')
-    .analyze()
+  const { violations } = await new AxeBuilder({ page }).withTags(TAGS).exclude('canvas').analyze()
   const found = []
   for (const violation of violations)
     for (const node of violation.nodes)

@@ -270,7 +270,8 @@ function resolve(state: RunState, rng: Rng, effect: Effect, events: RunEvent[]):
     events.push({ type: 'added', card: added })
   } else if (effect.type === 'removeCard') {
     if (state.deck.length > 1) remove(state, rng.pick(state.deck), events)
-  } else if (effect.type === 'lint' || effect.type === 'fuse') {} else if (effect.type === 'item') {
+  } else if (effect.type === 'lint' || effect.type === 'fuse') {
+  } else if (effect.type === 'item') {
     if (state.items.length < ITEM_SLOTS) {
       const found = rng.pick(FOUND_ITEMS)
       state.items.push(found)

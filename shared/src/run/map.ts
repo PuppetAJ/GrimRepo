@@ -39,10 +39,7 @@ function walk(rng: Rng): Map<string, Set<string>> {
     if (!links.has(key({ row: 0, col }))) links.set(key({ row: 0, col }), new Set())
     for (let row = 0; row < ROWS - 1; row++) {
       const options = [col - 1, col, col + 1].filter(
-        (to) =>
-          to >= 0 &&
-          to < MAP_COLUMNS &&
-          !(to !== col && linked({ row, col: to }, { row: row + 1, col })),
+        (to) => to >= 0 && to < MAP_COLUMNS && !(to !== col && linked({ row, col: to }, { row: row + 1, col })),
       )
       const to = rng.pick(options)
       const from = key({ row, col })
@@ -91,8 +88,7 @@ function assign(rows: MapNode[][], rng: Rng, fallback: boolean): boolean {
       else if (index === ROWS - 1) {
         clean &&= fresh(UTILITIES).length > 0
         node.kind = rng.pick(fresh(UTILITIES).length ? fresh(UTILITIES) : UTILITIES)
-      }
-      else if (fallback) node.kind = index === 2 || index === 4 ? 'battle' : 'card'
+      } else if (fallback) node.kind = index === 2 || index === 4 ? 'battle' : 'card'
       else node.kind = rng.pick(fresh(MIXED))
       for (const id of node.next) parents.set(id, [...(parents.get(id) ?? []), node.kind])
     }

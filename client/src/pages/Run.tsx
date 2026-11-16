@@ -29,15 +29,7 @@ function savedMode(): Mode {
   }
 }
 
-export function RunTable({
-  mockup = null,
-  forced,
-  table,
-}: {
-  mockup?: Mockup | null
-  forced?: Layout
-  table?: Mode
-}) {
+export function RunTable({ mockup = null, forced, table }: { mockup?: Mockup | null; forced?: Layout; table?: Mode }) {
   useKeepTableFocus()
   useLeaveFullScreen()
   const run = useRun(mockup)

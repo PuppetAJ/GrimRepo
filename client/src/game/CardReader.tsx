@@ -15,15 +15,7 @@ export function Art({ id }: { id: string }) {
   return <PixelArt src={cardArt(id)} className="h-[92%] w-[92%] text-[#0b1f12]" />
 }
 
-export function Sigil({
-  id,
-  size = 18,
-  color = INK,
-}: {
-  id: IconId
-  size?: number | string
-  color?: string
-}) {
+export function Sigil({ id, size = 18, color = INK }: { id: IconId; size?: number | string; color?: string }) {
   return (
     <span
       aria-hidden

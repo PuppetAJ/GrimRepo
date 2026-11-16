@@ -32,8 +32,7 @@ function readLocal(): Notes {
 function writeLocal(notes: Notes) {
   try {
     localStorage.setItem(LOCAL_KEY, JSON.stringify(notes))
-  } catch {
-  }
+  } catch {}
 }
 
 function load(owner: string) {

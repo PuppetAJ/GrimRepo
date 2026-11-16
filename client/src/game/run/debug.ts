@@ -24,8 +24,7 @@ export function setDebugging(next: boolean): void {
   on = next
   try {
     sessionStorage.setItem(KEY, next ? '1' : '0')
-  } catch {
-  }
+  } catch {}
   for (const listener of listeners) listener()
 }
 

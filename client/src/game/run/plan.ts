@@ -28,8 +28,7 @@ export function usePlan(seed: number, stage: number) {
       setState({ key, plan: next })
       try {
         localStorage.setItem(key, JSON.stringify(next))
-      } catch {
-      }
+      } catch {}
     },
     [key],
   )
