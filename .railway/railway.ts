@@ -22,6 +22,7 @@ export default defineRailway(() => {
       // Railway resolves this reference to the database's connection string.
       DATABASE_URL: '${{Postgres.DATABASE_URL}}',
       APP_URL: 'https://grimrepo.up.railway.app',
+      // Set with the Railway CLI, never here; listed so applying doesn't delete it.
       BETTER_AUTH_SECRET: preserve(),
     },
   })
