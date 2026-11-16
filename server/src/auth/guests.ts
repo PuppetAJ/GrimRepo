@@ -1,5 +1,5 @@
 import { pool } from '../config/db.ts'
-import { demoAccount } from './demo.ts'
+import { publicDemoAccount } from './demo.ts'
 
 const LETTERS = 'abcdefghijklmnopqrstuvwxyz0123456789'
 
@@ -9,7 +9,7 @@ export function guestName(): string {
 }
 
 export async function claimGuest(guestId: string, account: { id: string; username?: string | null }) {
-  if (account.username === demoAccount.username) return
+  if (account.username === publicDemoAccount.username) return
   const client = await pool.connect()
   try {
     await client.query('BEGIN')

@@ -17,7 +17,8 @@ test('The README', async ({ page }) => {
     (await page.getByRole('link', { name: 'Start a run' }).getAttribute('href')) === '/run',
   )
   const served = await (await page.request.get(BASE)).text()
-  if (!served.includes('/@vite/client')) {
+  const isProductionBuild = !served.includes('/@vite/client')
+  if (isProductionBuild) {
     check('a production build serves the README already rendered', served.includes('Grim Repo</h1>'))
     const other = await (await page.request.get(`${BASE}/leaderboard`)).text()
     check('and every other page the empty shell', other.includes('<div id="root"></div>'))

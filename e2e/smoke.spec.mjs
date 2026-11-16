@@ -2,6 +2,10 @@ import { BASE, check, deletePlayer, freshPage, newPlayer, resetRateLimits, test 
 
 test.beforeAll(resetRateLimits)
 
+const WORST_CASE_CARD = 'destroyEverything(everyone)'
+
+const isPrerendered = (served) => served.includes('data-home=')
+
 test('The API', async ({ page }) => {
   const health = await page.request.get(`${BASE}/health`)
   check('the health check answers', health.ok(), String(health.status()))
@@ -83,7 +87,7 @@ test('The home page', async ({ page }) => {
       ),
     )
     const served = await (await page.request.get(BASE)).text()
-    if (served.includes('data-home=')) {
+    if (isPrerendered(served)) {
       check(
         'and a build sends it that way, with the sign-in buttons, so nothing swaps on load',
         served.includes('data-home="signed-out seen"') &&
@@ -92,7 +96,8 @@ test('The home page', async ({ page }) => {
       )
       await page.addInitScript(() => {
         const find = () =>
-          (window.__terminal = document.querySelector('[aria-label="P03\'s terminal"]')) ?? requestAnimationFrame(find)
+          (window.__prerenderedTerminal = document.querySelector('[aria-label="P03\'s terminal"]')) ??
+          requestAnimationFrame(find)
         requestAnimationFrame(find)
       })
       await page.reload()
@@ -101,8 +106,8 @@ test('The home page', async ({ page }) => {
         'and reloading keeps the prerendered terminal instead of rebuilding it',
         await page.evaluate(
           () =>
-            Boolean(window.__terminal) &&
-            document.querySelector('[aria-label="P03\'s terminal"]') === window.__terminal,
+            Boolean(window.__prerenderedTerminal) &&
+            document.querySelector('[aria-label="P03\'s terminal"]') === window.__prerenderedTerminal,
         ),
       )
     }
@@ -117,7 +122,7 @@ test('The compendium', async ({ page }) => {
   await page.goto(`${BASE}/cards`)
   await page.getByRole('heading', { name: 'Compendium' }).waitFor()
   const names = page.locator('main li h2')
-  const listed = (await names.allInnerTexts()).filter((name) => name !== 'destroyEverything(everyone)')
+  const listed = (await names.allInnerTexts()).filter((name) => name !== WORST_CASE_CARD)
   check('every card a player can hold is listed', listed.length === 45, String(listed.length))
   await page.getByLabel('Sort').selectOption('attack')
   await page.getByRole('button', { name: 'Lowest first' }).click()
@@ -125,11 +130,11 @@ test('The compendium', async ({ page }) => {
     'it sorts, highest attack first',
     await page
       .waitForFunction(
-        () =>
+        (worstCaseCard) =>
           [...document.querySelectorAll('main li h2')]
             .map((name) => name.textContent)
-            .find((name) => name !== 'destroyEverything(everyone)') === 'Mainframe',
-        null,
+            .find((name) => name !== worstCaseCard) === 'Mainframe',
+        WORST_CASE_CARD,
         { timeout: 5000 },
       )
       .then(
@@ -180,7 +185,7 @@ test('Accounts and scores', async ({ page }) => {
   const me = await page.request.get(`${BASE}/api/me`)
   check('and is signed in straight away', me.ok() && (await me.json()).username === player.username)
   const served = await (await page.request.get(BASE)).text()
-  if (served.includes('data-home='))
+  if (isPrerendered(served))
     check('and a build sends them the signed-in README', served.includes('data-home="signed-in'))
 
   const cheat = await page.request.post(`${BASE}/api/runs`, { data: { seed: 1, score: 9_999_999 } })

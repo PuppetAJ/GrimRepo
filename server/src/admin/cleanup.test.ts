@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { after, beforeEach, it } from 'node:test'
 import { auth } from '../auth/auth.ts'
-import { demoAccount } from '../auth/demo.ts'
+import { publicDemoAccount } from '../auth/demo.ts'
 import { pool } from '../config/db.ts'
 import { newPlayer, startApp } from '../test/http.ts'
 import { resetDatabase } from '../test/support.ts'
@@ -14,7 +14,7 @@ after(async () => {
 })
 beforeEach(resetDatabase)
 
-async function openGame(cookie: string): Promise<number> {
+async function insertLegacyOpenGame(cookie: string): Promise<number> {
   const user = (await app.call('GET', '/api/auth/get-session', { cookie })).body.user.id as string
   const { rows } = await pool.query<{ id: number }>(
     `INSERT INTO games (user_id, seed, status, rules_version, actions) VALUES ($1, 1234, 'playing', 1, '[]') RETURNING id`,
@@ -24,16 +24,16 @@ async function openGame(cookie: string): Promise<number> {
 }
 
 it('clears the demo account’s open game and month-old abandoned games, and nothing else', async () => {
-  await auth.api.signUpEmail({ body: demoAccount })
+  await auth.api.signUpEmail({ body: publicDemoAccount })
   const demo = await app.call('POST', '/api/auth/sign-in/username', {
-    body: { username: 'demo', password: demoAccount.password },
+    body: { username: 'demo', password: publicDemoAccount.password },
   })
-  const demoGame = await openGame(demo.cookie)
+  const demoGame = await insertLegacyOpenGame(demo.cookie)
 
   const player = await app.call('POST', '/api/auth/sign-up/email', { body: newPlayer() })
-  const recent = await openGame(player.cookie)
+  const recent = await insertLegacyOpenGame(player.cookie)
   const stale = await app.call('POST', '/api/auth/sign-up/email', { body: newPlayer() })
-  const abandoned = await openGame(stale.cookie)
+  const abandoned = await insertLegacyOpenGame(stale.cookie)
   await pool.query(`UPDATE games SET started_at = now() - interval '40 days' WHERE id = $1`, [abandoned])
 
   const removed = await nightlyCleanup()
@@ -44,9 +44,9 @@ it('clears the demo account’s open game and month-old abandoned games, and not
 })
 
 it('clears the demo account’s open run and month-old abandoned runs, and nothing else', async () => {
-  await auth.api.signUpEmail({ body: demoAccount })
+  await auth.api.signUpEmail({ body: publicDemoAccount })
   const demo = await app.call('POST', '/api/auth/sign-in/username', {
-    body: { username: 'demo', password: demoAccount.password },
+    body: { username: 'demo', password: publicDemoAccount.password },
   })
   await app.call('POST', '/api/runs', { cookie: demo.cookie })
   const player = await app.call('POST', '/api/auth/sign-up/email', { body: newPlayer() })
@@ -79,7 +79,7 @@ it('sweeps expired sessions and stale rate-limit rows', async () => {
 it('removes guests who never signed up within a week and stopped playing, and their games', async () => {
   const fresh = await app.call('POST', '/api/auth/sign-in/anonymous')
   const old = await app.call('POST', '/api/auth/sign-in/anonymous', { headers: { 'x-forwarded-for': '10.0.0.2' } })
-  await openGame(old.cookie)
+  await insertLegacyOpenGame(old.cookie)
   const oldId = (await app.call('GET', '/api/auth/get-session', { cookie: old.cookie })).body.user.id
   await pool.query(`UPDATE users SET created_at = now() - interval '8 days' WHERE id = $1`, [oldId])
   await pool.query(`UPDATE sessions SET expires_at = now() - interval '1 day' WHERE user_id = $1`, [oldId])
@@ -92,7 +92,7 @@ it('removes guests who never signed up within a week and stopped playing, and th
 
 it('keeps a guest older than a week who is still playing, and their games', async () => {
   const guest = await app.call('POST', '/api/auth/sign-in/anonymous')
-  await openGame(guest.cookie)
+  await insertLegacyOpenGame(guest.cookie)
   const id = (await app.call('GET', '/api/auth/get-session', { cookie: guest.cookie })).body.user.id
   await pool.query(`UPDATE users SET created_at = now() - interval '8 days' WHERE id = $1`, [id])
   const removed = await nightlyCleanup()

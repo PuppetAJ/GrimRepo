@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { RULES_VERSION, RUN_RULES_VERSION, scoreRun } from 'shared'
 import { auth } from '../auth/auth.ts'
-import { demoAccount } from '../auth/demo.ts'
+import { publicDemoAccount } from '../auth/demo.ts'
 import { pool } from '../config/db.ts'
 import { isProduction } from '../config/env.ts'
 
@@ -26,7 +26,7 @@ const favorites: Record<string, string> = {
 }
 
 const players = [
-  demoAccount,
+  publicDemoAccount,
   ...['JohanH', 'PuppetAJ', 'kwm0304'].map((name) => ({
     name,
     username: name,
@@ -49,6 +49,7 @@ async function main(): Promise<void> {
     const { user } = await auth.api.signUpEmail({ body: player })
     const runs = histories[player.username] ?? []
     for (const [index, run] of runs.entries()) {
+      const daysAgo = (runs.length - index) * 2
       const favorite = favorites[player.username]
       await pool.query(
         `INSERT INTO runs (user_id, seed, rules_version, run_version, status, stage, battles, bosses, score,
@@ -65,7 +66,7 @@ async function main(): Promise<void> {
           run.battles,
           run.bosses,
           scoreRun({ battles: run.battles, bosses: run.bosses, overkill: 0 }, run.cleared),
-          (runs.length - index) * 2,
+          daysAgo,
           JSON.stringify(favorite ? { [favorite]: 2, Boilerplate: 3 } : {}),
         ],
       )

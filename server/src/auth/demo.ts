@@ -1,4 +1,4 @@
-export const demoAccount = {
+export const publicDemoAccount = {
   name: 'Demo Player',
   username: 'demo',
   email: 'demo@grimrepo.test',

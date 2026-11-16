@@ -41,7 +41,9 @@ export type PlayerStats = {
 export const RECENT_RUNS = 20
 export const HISTORY_PAGE = 10
 
-const FINISHED = `CASE WHEN status = 'won' THEN 'win' ELSE 'loss' END AS outcome,
+const ACTIVITY_GRID_DAYS = 182
+
+const FINISHED_RUN_COLUMNS = `CASE WHEN status = 'won' THEN 'win' ELSE 'loss' END AS outcome,
   stage, battles, bosses, score, forfeited, finished_at AS "playedAt"`
 type FinishedRow = Omit<FinishedRun, 'playedAt'> & { playedAt: Date }
 const finished = (run: FinishedRow): FinishedRun => ({ ...run, playedAt: run.playedAt.toISOString() })
@@ -50,7 +52,7 @@ export function runCardsPlayed(events: readonly RunEvent[]): Record<string, numb
   return cardsPlayed(events.flatMap((event) => (event.type === 'battle' ? event.events : [])))
 }
 
-export async function countRunCardsPlayed(): Promise<number> {
+export async function backfillRunCardCounts(): Promise<number> {
   const { rows } = await pool.query<{
     id: number
     seed: string
@@ -87,7 +89,7 @@ export async function playerRuns(username: string, page: number): Promise<RunsPa
   const pages = Math.max(1, Math.ceil(player.total / HISTORY_PAGE))
   const at = Math.min(Math.max(1, page), pages)
   const runs = await pool.query<FinishedRow>(
-    `SELECT ${FINISHED} FROM runs WHERE user_id = $1 AND status <> 'playing'
+    `SELECT ${FINISHED_RUN_COLUMNS} FROM runs WHERE user_id = $1 AND status <> 'playing'
      ORDER BY finished_at DESC, id DESC LIMIT $2 OFFSET $3`,
     [player.id, HISTORY_PAGE, (at - 1) * HISTORY_PAGE],
   )
@@ -120,7 +122,7 @@ export async function playerStats(username: string): Promise<PlayerStats | null>
 
   const [recent, days, best, rank, favorite] = await Promise.all([
     pool.query<FinishedRow>(
-      `SELECT ${FINISHED} FROM runs WHERE user_id = $1 AND status <> 'playing'
+      `SELECT ${FINISHED_RUN_COLUMNS} FROM runs WHERE user_id = $1 AND status <> 'playing'
        ORDER BY finished_at DESC, id DESC LIMIT $2`,
       [player.id, RECENT_RUNS],
     ),
@@ -128,12 +130,12 @@ export async function playerStats(username: string): Promise<PlayerStats | null>
       `SELECT to_char(finished_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS date,
               COUNT(*)::int AS runs,
               COUNT(*) FILTER (WHERE status = 'lost')::int AS losses
-       FROM runs WHERE user_id = $1 AND status <> 'playing' AND finished_at > now() - interval '182 days'
+       FROM runs WHERE user_id = $1 AND status <> 'playing' AND finished_at > now() - interval '${ACTIVITY_GRID_DAYS} days'
        GROUP BY 1 ORDER BY 1`,
       [player.id],
     ),
     pool.query<FinishedRow>(
-      `SELECT ${FINISHED} FROM runs WHERE user_id = $1 AND status <> 'playing'
+      `SELECT ${FINISHED_RUN_COLUMNS} FROM runs WHERE user_id = $1 AND status <> 'playing'
        ORDER BY score DESC, finished_at, id LIMIT 1`,
       [player.id],
     ),

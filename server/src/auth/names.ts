@@ -24,7 +24,7 @@ const CHILDISH = [
 const HARMLESS = new Set(['xx', 'xxx', 'sm', 'scat', 'escort', 'butt', 'dommes', 'domination', 'skeet', 'fingering'])
 const WHITELIST = ['shiitake', 'twinkl', 'rapping', 'coonskin', 'glovemaking']
 
-const pattern = (word: string) => (word.length >= 8 ? word : word.length >= 5 ? `|${word}` : `|${word}|`)
+const withWordEdgesForLength = (word: string) => (word.length >= 8 ? word : word.length >= 5 ? `|${word}` : `|${word}|`)
 
 // The matcher folds doubled letters, so patterns must be folded the same way.
 const fold = (text: string) => text.replace(/([^beolsg])\1+/g, '$1').replace(/([beolsg])\1{2,}/g, '$1$1')
@@ -35,7 +35,7 @@ const patterns = new Set([
     .filter((word) => !HARMLESS.has(word))
     .map(fold)
     .filter((word) => word.length > 1)
-    .map(pattern),
+    .map(withWordEdgesForLength),
   ...CHILDISH.map(fold),
 ])
 const dataset = new DataSet<{ originalWord?: string }>().addAll(englishDataset)

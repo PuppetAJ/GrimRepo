@@ -13,7 +13,7 @@ const listen = (page) => {
 
 const NAVIGATION = 30_000
 
-function steady(page) {
+function retryStalledLoads(page) {
   page.setDefaultTimeout(20_000)
   page.setDefaultNavigationTimeout(NAVIGATION)
   const goto = page.goto.bind(page)
@@ -30,7 +30,7 @@ function steady(page) {
 
 export const test = base.extend({
   page: async ({ page }, use) => {
-    steady(page)
+    retryStalledLoads(page)
     listen(page)
     await use(page)
   },
@@ -68,7 +68,7 @@ export async function resetRateLimits() {
 
 export async function newTab(context) {
   const page = await context.newPage()
-  steady(page)
+  retryStalledLoads(page)
   listen(page)
   return page
 }
@@ -77,19 +77,19 @@ export async function freshPage(browser, { width = 1280, height = 900, table } =
   const context = await browser.newContext({ viewport: { width, height } })
   if (table) await context.addInitScript((mode) => localStorage.setItem('grimrepo:table', mode), table)
   const page = await context.newPage()
-  steady(page)
+  retryStalledLoads(page)
   listen(page)
   return { context, page }
 }
 
-const STAMP_LETTERS = 'bcdfghjkmnpqrtvwz'
+const FILTER_SAFE_CONSONANTS = 'bcdfghjkmnpqrtvwz'
 
 export function stamp() {
   let left = Date.now() * 1000 + Math.floor(Math.random() * 1000)
   let text = ''
   while (left > 0) {
-    text = STAMP_LETTERS[left % STAMP_LETTERS.length] + text
-    left = Math.floor(left / STAMP_LETTERS.length)
+    text = FILTER_SAFE_CONSONANTS[left % FILTER_SAFE_CONSONANTS.length] + text
+    left = Math.floor(left / FILTER_SAFE_CONSONANTS.length)
   }
   return text
 }
@@ -110,9 +110,12 @@ export async function signUp(page, player) {
   return player
 }
 
+const waitForSignInResponse = (page) =>
+  page.waitForResponse((response) => response.url().includes('/api/auth/sign-in/') && response.ok())
+
 export async function signInAsDemo(page) {
   await page.goto(`${BASE}/login`)
-  const signedIn = page.waitForResponse((response) => response.url().includes('/api/auth/sign-in/') && response.ok())
+  const signedIn = waitForSignInResponse(page)
   await page.getByRole('button', { name: 'Play as the demo account' }).click()
   await signedIn
   await page.getByRole('button', { name: 'Account menu' }).waitFor()
@@ -134,17 +137,14 @@ export const selectorFor = (action) => {
   return `[data-action="${action.type}"]`
 }
 
-export async function clickMove(page, target, { scope, attribute, expected }) {
+export async function clickUntilMoveLands(page, target, { scope, attribute, expected }) {
   const count = async () => Number(await page.locator(scope).getAttribute(attribute))
   const landed = page.locator(`${scope}[${attribute}="${expected}"]`)
+  const toleratingVanishedTarget = async (error) => {
+    if ((await count()) !== expected) throw error
+  }
   for (let attempt = 0; attempt < 5 && (await count()) === expected - 1; attempt++) {
-    await page
-      .locator(target)
-      .first()
-      .click()
-      .catch(async (error) => {
-        if ((await count()) !== expected) throw error
-      })
+    await page.locator(target).first().click().catch(toleratingVanishedTarget)
     await landed.waitFor({ timeout: 3_000 }).catch(() => {})
   }
   await landed.waitFor()
@@ -164,7 +164,7 @@ export async function playWithBot(page, { stopAfterTurn = Infinity, beforeMove }
     await beforeMove?.(action, result.state)
     try {
       const expected = start + actions.length + 1
-      await clickMove(page, selectorFor(action), { scope: '[data-seed]', attribute: 'data-moves', expected })
+      await clickUntilMoveLands(page, selectorFor(action), { scope: '[data-seed]', attribute: 'data-moves', expected })
     } catch (error) {
       console.log(`  The bot wanted ${JSON.stringify(action)} on turn ${state.turn}, as move ${actions.length + 1};`)
       console.log(`  the page had made ${await moves()}, and the table said:`)

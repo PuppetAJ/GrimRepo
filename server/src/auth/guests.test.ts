@@ -4,7 +4,7 @@ import { pool } from '../config/db.ts'
 import { newPlayer, startApp } from '../test/http.ts'
 import { insertRun, resetDatabase } from '../test/support.ts'
 import { auth } from './auth.ts'
-import { demoAccount } from './demo.ts'
+import { publicDemoAccount } from './demo.ts'
 
 const app = await startApp()
 after(async () => {
@@ -68,15 +68,15 @@ describe('a guest', () => {
   })
 
   it('never brings their runs into the shared demo account', async () => {
-    await auth.api.signUpEmail({ body: demoAccount })
+    await auth.api.signUpEmail({ body: publicDemoAccount })
     const visitor = await guest()
     await insertRun(visitor.username, { battles: 3 })
     const demo = await app.call('POST', '/api/auth/sign-in/username', {
-      body: { username: demoAccount.username, password: demoAccount.password },
+      body: { username: publicDemoAccount.username, password: publicDemoAccount.password },
       cookie: visitor.cookie,
     })
     assert.equal(demo.status, 200)
-    const stats = await app.call('GET', `/api/players/${demoAccount.username}/stats`)
+    const stats = await app.call('GET', `/api/players/${publicDemoAccount.username}/stats`)
     assert.equal(stats.body.runs, 0)
   })
 

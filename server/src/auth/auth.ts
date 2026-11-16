@@ -3,7 +3,7 @@ import { APIError, createAuthMiddleware, getSessionFromCtx } from 'better-auth/a
 import { anonymous, username } from 'better-auth/plugins'
 import { pool } from '../config/db.ts'
 import { env } from '../config/env.ts'
-import { demoAccount } from './demo.ts'
+import { publicDemoAccount } from './demo.ts'
 import { claimGuest, guestName } from './guests.ts'
 import { isOldData, OLD_DATA_REFUSED } from 'shared'
 import { isOffensive, isReserved, NAME_REFUSED } from './names.ts'
@@ -19,6 +19,23 @@ export const DEMO_IS_READ_ONLY =
   'Everyone shares the demo account, so it cannot be renamed, deleted or given a new password. Make an account of your own to change these.'
 
 const DEMO_LOCKED = new Set(['/update-user', '/delete-user', '/change-password', '/change-email', '/set-password'])
+
+const ACCOUNT_DELETE_FRESHNESS_SECONDS = 60 * 10
+
+async function giveGuestItsNameAsUsername<User extends { name: string }>(user: User) {
+  if (!(user as { isAnonymous?: boolean }).isAnonymous) return
+  const name = user.name.toLowerCase()
+  return { data: { ...user, username: name, displayUsername: name } }
+}
+
+function forceShownNameToUsername(body: Record<string, unknown>, username: unknown): void {
+  delete body['displayUsername']
+  delete body['name']
+  if (typeof username === 'string') {
+    body['displayUsername'] = username
+    body['name'] = username
+  }
+}
 
 export const authOptions = {
   appName: 'Grim Repo',
@@ -52,11 +69,7 @@ export const authOptions = {
   databaseHooks: {
     user: {
       create: {
-        before: async (user) => {
-          if (!(user as { isAnonymous?: boolean }).isAnonymous) return
-          const name = user.name.toLowerCase()
-          return { data: { ...user, username: name, displayUsername: name } }
-        },
+        before: giveGuestItsNameAsUsername,
       },
     },
   },
@@ -66,15 +79,17 @@ export const authOptions = {
       if (DEMO_LOCKED.has(ctx.path)) {
         const session = await getSessionFromCtx(ctx)
         const user = session?.user as { username?: string; isAnonymous?: boolean } | undefined
-        if (user?.username === demoAccount.username) throw new APIError('FORBIDDEN', { message: DEMO_IS_READ_ONLY })
+        if (user?.username === publicDemoAccount.username)
+          throw new APIError('FORBIDDEN', { message: DEMO_IS_READ_ONLY })
         if (user?.isAnonymous) throw new APIError('FORBIDDEN', { message: GUEST_IS_READ_ONLY })
       }
       if (ctx.path !== '/sign-up/email' && ctx.path !== '/update-user') return
       const body = (ctx.body ?? {}) as Record<string, unknown>
       const username = body['username']
       if (typeof username === 'string') {
+        const viaHttp = Boolean(ctx.request)
         if (isOldData(username)) throw new APIError('BAD_REQUEST', { message: OLD_DATA_REFUSED })
-        if (isOffensive(username) || (ctx.request && isReserved(username))) {
+        if (isOffensive(username) || (viaHttp && isReserved(username))) {
           throw new APIError('BAD_REQUEST', { message: NAME_REFUSED })
         }
         if (ctx.path === '/update-user') {
@@ -84,12 +99,7 @@ export const authOptions = {
           }
         }
       }
-      delete body['displayUsername']
-      delete body['name']
-      if (typeof username === 'string') {
-        body['displayUsername'] = username
-        body['name'] = username
-      }
+      forceShownNameToUsername(body, username)
     }),
   },
 
@@ -105,7 +115,7 @@ export const authOptions = {
     },
     expiresIn: 60 * 60 * 24 * 7,
     updateAge: 60 * 60 * 24,
-    freshAge: 60 * 10,
+    freshAge: ACCOUNT_DELETE_FRESHNESS_SECONDS,
   },
   user: {
     modelName: 'users',

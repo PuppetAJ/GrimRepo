@@ -1,4 +1,4 @@
-const base = JSON.parse(process.env.MATRIX)
+const matrixSuites = JSON.parse(process.env.MATRIX)
 const changed = process.env.CHANGED?.split('\n').filter(Boolean)
 
 const key = (entry) => (entry.part ? `${entry.suite}:${entry.part}` : entry.suite)
@@ -18,13 +18,13 @@ const REACH = [
   ['server/src/', ['smoke', 'auth', 'leaderboard', 'run-mode', 'a11y:pages']],
 ]
 
-function reached() {
+function reachedSuitesOrAll() {
   if (!changed?.length) return null
   const keys = new Set()
   for (const file of changed) {
     const spec = /^e2e\/([\w-]+)\.spec\.mjs$/.exec(file)
     if (spec) {
-      for (const entry of base) if (entry.suite === spec[1]) keys.add(key(entry))
+      for (const entry of matrixSuites) if (entry.suite === spec[1]) keys.add(key(entry))
       continue
     }
     const folder = REACH.find(([prefix]) => file.startsWith(prefix))
@@ -36,8 +36,8 @@ function reached() {
 
 const SHARDS = { 'run-3d': 2, 'a11y:run': 2 }
 
-const keep = reached()
-const plan = base
+const keep = reachedSuitesOrAll()
+const plan = matrixSuites
   .filter((entry) => !keep || keep.has(key(entry)))
   .flatMap((entry) => {
     const shards = SHARDS[key(entry)]

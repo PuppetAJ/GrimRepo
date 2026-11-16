@@ -13,6 +13,15 @@ import { errorHandler } from './routes/errors.ts'
 
 const clientBuildDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../client/dist')
 
+const UNHASHED_ASSET_DIRS = /[/\\](models|textures|cards|p03)[/\\]/
+
+function prerenderedHomeFile(req: express.Request, clientDir: string): string {
+  const signedIn = Boolean(getSessionCookie(fromNodeHeaders(req.headers)))
+  const seen = /(?:^|;\s*)grimrepo_seen=1(?:;|$)/.test(req.headers.cookie ?? '')
+  const file = path.join(clientDir, `home-${signedIn ? 'signed-in' : 'signed-out'}-${seen ? 'seen' : 'fresh'}.html`)
+  return existsSync(file) ? file : path.join(clientDir, 'index.html')
+}
+
 export function createApp({
   production,
   firstForwarded = false,
@@ -63,12 +72,10 @@ export function createApp({
 
   if (production) {
     app.get('/', (req, res) => {
-      const signedIn = Boolean(getSessionCookie(fromNodeHeaders(req.headers)))
-      const seen = /(?:^|;\s*)grimrepo_seen=1(?:;|$)/.test(req.headers.cookie ?? '')
-      const file = path.join(clientDir, `home-${signedIn ? 'signed-in' : 'signed-out'}-${seen ? 'seen' : 'fresh'}.html`)
+      const file = prerenderedHomeFile(req, clientDir)
       res.setHeader('Cache-Control', 'private, no-cache')
       res.setHeader('Vary', 'Cookie')
-      res.sendFile(existsSync(file) ? file : path.join(clientDir, 'index.html'))
+      res.sendFile(file)
     })
     app.use(
       express.static(clientDir, {
@@ -76,15 +83,15 @@ export function createApp({
         setHeaders: (res, filePath) => {
           if (filePath.includes(`${path.sep}assets${path.sep}`)) {
             res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
-          } else if (/[/\\](models|textures|cards|p03)[/\\]/.test(filePath)) {
+          } else if (UNHASHED_ASSET_DIRS.test(filePath)) {
             res.setHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400')
           }
         },
       }),
     )
-    const shell = existsSync(path.join(clientDir, 'shell.html')) ? 'shell.html' : 'index.html'
+    const emptyShellFile = existsSync(path.join(clientDir, 'shell.html')) ? 'shell.html' : 'index.html'
     app.get(/(.*)/, (_req, res) => {
-      res.sendFile(path.join(clientDir, shell))
+      res.sendFile(path.join(clientDir, emptyShellFile))
     })
   }
 

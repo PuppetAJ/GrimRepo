@@ -5,9 +5,11 @@ const said = async (page) => (await blurb(page).locator('p').first().innerText()
 const pressOn = (page) => blurb(page).getByRole('button', { name: 'Continue' }).click()
 const ending = (page) => page.locator('section[aria-label="Tutorial complete"]')
 
+const TAP_SETTLE_MS = 500
+
 async function playText(page, { phone = false } = {}) {
   const pick = async (name) => {
-    await page.waitForTimeout(500)
+    await page.waitForTimeout(TAP_SETTLE_MS)
     await page.locator(`[data-action="select"][aria-label^="${name},"][aria-disabled="false"]`).first().click()
   }
   const lane = (type, n) => page.locator(`[data-action="${type}"][data-lane="${n}"]`).click()
@@ -97,7 +99,7 @@ test('The tutorial on the 3D table', async ({ browser }) => {
   const dev = await page.evaluate(() => Boolean(window.__game))
   if (!dev) return void (await context.close())
   const snapshot = () => page.evaluate(() => JSON.stringify(window.__game?.state()))
-  const act = async (action) => {
+  const actAndAwaitState = async (action) => {
     const before = await snapshot()
     await page.evaluate((a) => window.__game?.act(a), action)
     await page.waitForFunction((was) => JSON.stringify(window.__game?.state()) !== was, before, { timeout: 30_000 })
@@ -144,8 +146,8 @@ test('The tutorial on the 3D table', async ({ browser }) => {
     if (move === 'continue') {
       await blurb(page).getByRole('button', { name: 'Continue' }).waitFor()
       await pressOn(page)
-    } else if ('card' in move) await act({ type: 'select', uid: await hand(move.card) })
-    else await act(move)
+    } else if ('card' in move) await actAndAwaitState({ type: 'select', uid: await hand(move.card) })
+    else await actAndAwaitState(move)
   }
   await ending(page).waitFor({ timeout: 60_000 })
   check('it can be won on the 3D table', await ending(page).isVisible())

@@ -9,21 +9,27 @@ const openTable = async (page) => {
   await tableReady(page)
 }
 
+const WRONG_PLAY_GRACE_MS = 300
+const STRAY_BELL_GRACE_MS = 500
+
 const until = (page, test, arg, timeout = 15_000) => page.waitForFunction(test, arg, { timeout, polling: 100 })
 
-const resting = async (page, what) => {
+const FRAMES_PER_LOOK = 3
+const LOOK_INTERVAL_MS = 150
+
+const screenPositionAtRest = async (page, what) => {
   let last = null
   for (const end = Date.now() + 15_000; Date.now() < end;) {
     const at = await page.evaluate(
-      (target) =>
+      ({ target, framesPerLook, lookIntervalMs }) =>
         new Promise((done) => {
-          const due = performance.now() + 150
+          const due = performance.now() + lookIntervalMs
           let frames = 0
           const look = (now) =>
-            ++frames >= 3 && now >= due ? done(window.__game.screen(target)) : requestAnimationFrame(look)
+            ++frames >= framesPerLook && now >= due ? done(window.__game.screen(target)) : requestAnimationFrame(look)
           requestAnimationFrame(look)
         }),
-      what,
+      { target: what, framesPerLook: FRAMES_PER_LOOK, lookIntervalMs: LOOK_INTERVAL_MS },
     )
     if (at && last && Math.hypot(at.x - last.x, at.y - last.y) < 0.5) return at
     last = at
@@ -49,7 +55,7 @@ test('The 3D table', async ({ browser }) => {
     check('the buttons still play without the test handle', true)
   } else {
     const click = async (what) => {
-      const at = await resting(page, what)
+      const at = await screenPositionAtRest(page, what)
       await page.mouse.click(at.x, at.y)
     }
     const hand = () => page.evaluate(() => window.__game.state().player.hand.length)
@@ -96,7 +102,7 @@ test('The 3D table', async ({ browser }) => {
     await page.getByRole('button', { name: 'Sit back', exact: true }).waitFor()
     const name = card(free.find(([id]) => id === uid)[1]).name
     const untouched = await page.evaluate(() => JSON.stringify(window.__game.state()))
-    const held = await resting(page, { lane: 2, far: true })
+    const held = await screenPositionAtRest(page, { lane: 2, far: true })
     await page.mouse.move(held.x, held.y)
     await page.mouse.down()
     const magnified = await until(
@@ -111,7 +117,7 @@ test('The 3D table', async ({ browser }) => {
     check('holding the mouse on a card on the board magnifies it', magnified)
     await page.mouse.up()
     await page.locator('[data-magnifier]').waitFor({ state: 'detached' })
-    await page.waitForTimeout(300)
+    await page.waitForTimeout(WRONG_PLAY_GRACE_MS)
     check(
       'and letting go puts it away without playing anything',
       untouched === (await page.evaluate(() => JSON.stringify(window.__game.state()))),
@@ -170,7 +176,7 @@ test('The 3D table', async ({ browser }) => {
       const offBy = async (how) => {
         await act({ type: 'select', uid: fuel.uid })
         await until(page, (uid) => window.__game.view().summon?.uid === uid, fuel.uid)
-        await resting(page, { lane: 0 })
+        await screenPositionAtRest(page, { lane: 0 })
         await how()
         return until(page, () => window.__game.state().summon === null)
           .then(() => true)
@@ -182,18 +188,18 @@ test('The 3D table', async ({ browser }) => {
       )
       check('and so does a click on nothing', await offBy(() => page.mouse.click(nothing.x, nothing.y)))
       await until(page, () => window.__game.view().summon === null)
-      const at = await resting(page, { uid: fuel.uid })
+      const at = await screenPositionAtRest(page, { uid: fuel.uid })
       await page.mouse.click(at.x, at.y, { button: 'right' })
       const magnifier = page.locator('[data-magnifier]')
       const magnified = await magnifier
         .waitFor({ timeout: 5_000 })
         .then(() => true)
         .catch(() => false)
-      await page.waitForTimeout(300)
+      await page.waitForTimeout(WRONG_PLAY_GRACE_MS)
       check('a right-click on a card magnifies it, and it stays up', magnified && (await magnifier.isVisible()))
       await page.mouse.click(at.x, at.y)
       await magnifier.waitFor({ state: 'detached', timeout: 5_000 })
-      await page.waitForTimeout(300)
+      await page.waitForTimeout(WRONG_PLAY_GRACE_MS)
       check(
         'until the next click, which plays nothing',
         (await page.evaluate(() => window.__game.state().summon)) === null,
@@ -218,7 +224,7 @@ test('The 3D table', async ({ browser }) => {
     } else console.log('  (no one-cost card in this deal, so the sacrifice is skipped)')
     await page.getByRole('link', { name: 'README', exact: true }).focus()
     await page.keyboard.press('e')
-    await page.waitForTimeout(500)
+    await page.waitForTimeout(STRAY_BELL_GRACE_MS)
     check('E does nothing while focus is elsewhere on the page', !(await page.getByText("P03's turn…").isVisible()))
     await page.locator('[data-table="3d"]').focus()
     await page.keyboard.press('e')
@@ -250,10 +256,10 @@ test('The 3D table', async ({ browser }) => {
   }
 
   const menu = page.getByRole('button', { name: 'Menu', exact: true })
-  const exit = page.getByRole('link', { name: 'Exit', includeHidden: true })
+  const exitEvenUnderOpenMenu = page.getByRole('link', { name: 'Exit', includeHidden: true })
   await menu.click()
   await page.getByRole('menuitem', { name: 'Full screen' }).click()
-  await exit.waitFor({ state: 'visible' })
+  await exitEvenUnderOpenMenu.waitFor({ state: 'visible' })
   const filled = await until(
     page,
     () => {
@@ -270,7 +276,7 @@ test('The 3D table', async ({ browser }) => {
   check('with a way out, since the header is covered', true)
   await menu.click()
   await page.getByRole('menuitem', { name: 'Leave full screen' }).click()
-  await exit.waitFor({ state: 'hidden' })
+  await exitEvenUnderOpenMenu.waitFor({ state: 'hidden' })
   check('and give it back', !(await page.evaluate(() => Boolean(document.fullscreenElement))))
 
   await menu.click()

@@ -1,16 +1,18 @@
-import { demoAccount } from '../auth/demo.ts'
+import { publicDemoAccount } from '../auth/demo.ts'
 import { pool } from '../config/db.ts'
+
+const ONE_DAY_MS = 86_400_000
 
 export async function nightlyCleanup(): Promise<Record<string, number>> {
   const count = async (sql: string, params: unknown[] = []) => (await pool.query(sql, params)).rowCount ?? 0
   return {
     demoGame: await count(
       `DELETE FROM games WHERE status = 'playing' AND user_id IN (SELECT id FROM users WHERE username = $1)`,
-      [demoAccount.username],
+      [publicDemoAccount.username],
     ),
     demoRun: await count(
       `DELETE FROM runs WHERE status = 'playing' AND user_id IN (SELECT id FROM users WHERE username = $1)`,
-      [demoAccount.username],
+      [publicDemoAccount.username],
     ),
     abandonedGames: await count(
       `DELETE FROM games WHERE status = 'playing' AND started_at < now() - interval '30 days'`,
@@ -22,6 +24,6 @@ export async function nightlyCleanup(): Promise<Record<string, number>> {
     ),
     expiredSessions: await count('DELETE FROM sessions WHERE expires_at < now()'),
     expiredVerifications: await count('DELETE FROM verifications WHERE expires_at < now()'),
-    staleRateLimits: await count('DELETE FROM rate_limits WHERE last_request < $1', [Date.now() - 86_400_000]),
+    staleRateLimits: await count('DELETE FROM rate_limits WHERE last_request < $1', [Date.now() - ONE_DAY_MS]),
   }
 }

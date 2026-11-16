@@ -12,7 +12,7 @@ import {
   type RunAction,
   type RunState,
 } from 'shared'
-import { demoAccount } from '../auth/demo.ts'
+import { publicDemoAccount } from '../auth/demo.ts'
 import { isOffensive, NAME_REFUSED } from '../auth/names.ts'
 import { pool } from '../config/db.ts'
 import { GameError } from './errors.ts'
@@ -54,12 +54,12 @@ const COLUMNS = 'id, seed, actions, rules_version, run_version, death_card, riva
 const rivalOf = (row: Pick<Row, 'rival_card' | 'rival_by'>) =>
   row.rival_card && row.rival_by ? { card: row.rival_card, by: row.rival_by } : null
 const dealtOf = (row: Row) => ({ death: row.death_card, rival: rivalOf(row) })
-const current = (row: Row) => row.rules_version === RULES_VERSION && row.run_version === RUN_RULES_VERSION
+const onTodaysRules = (row: Row) => row.rules_version === RULES_VERSION && row.run_version === RUN_RULES_VERSION
 
 export async function startRun(userId: string, rulesChanged = false): Promise<OpenRun> {
   const open = await pool.query<Row>(`SELECT ${COLUMNS} FROM runs WHERE user_id = $1 AND status = 'playing'`, [userId])
   const existing = open.rows[0]
-  if (existing && !current(existing)) {
+  if (existing && !onTodaysRules(existing)) {
     await pool.query(`DELETE FROM runs WHERE id = $1 AND status = 'playing'`, [existing.id])
     return startRun(userId, true)
   }
@@ -82,9 +82,17 @@ export async function startRun(userId: string, rulesChanged = false): Promise<Op
      ON CONFLICT (user_id) WHERE status = 'playing' DO NOTHING RETURNING id, death_card`,
     [userId, seed, RULES_VERSION, RUN_RULES_VERSION, rival?.card ?? null, rival?.by ?? null],
   )
-  const row = created.rows[0]
-  if (!row) return startRun(userId, rulesChanged)
-  return { id: row.id, seed, actions: [], resumed: false, rulesChanged, death: row.death_card, rival }
+  const insertedUnlessRaced = created.rows[0]
+  if (!insertedUnlessRaced) return startRun(userId, rulesChanged)
+  return {
+    id: insertedUnlessRaced.id,
+    seed,
+    actions: [],
+    resumed: false,
+    rulesChanged,
+    death: insertedUnlessRaced.death_card,
+    rival,
+  }
 }
 
 const RIVAL_SAMPLE = 25
@@ -94,7 +102,7 @@ async function pickRival(userId: string): Promise<{ card: string; by: string } |
     `SELECT death_card AS card, display_username AS by FROM users
      WHERE death_card IS NOT NULL AND id <> $1 AND NOT is_anonymous AND username <> $2
      ORDER BY random() LIMIT $3`,
-    [userId, demoAccount.username, RIVAL_SAMPLE],
+    [userId, publicDemoAccount.username, RIVAL_SAMPLE],
   )
   return rows.find((row) => rivalAllowed(row.card)) ?? null
 }
@@ -132,7 +140,7 @@ export async function recordRunMoves(
   moves: RunAction[],
 ): Promise<RunMovesResult> {
   return withOpenRun(userId, runId, async (client, run) => {
-    if (!current(run)) throw new GameError(409, { error: 'The rules changed', rulesChanged: true })
+    if (!onTodaysRules(run)) throw new GameError(409, { error: 'The rules changed', rulesChanged: true })
     if (from !== run.actions.length) throw new GameError(409, { error: 'Out of step', expected: run.actions.length })
     const all = [...run.actions, ...moves]
     if (all.length > MAX_ACTIONS) throw new GameError(400, { error: 'Too many moves' })
@@ -213,7 +221,7 @@ export async function buildRunDeathCard(userId: string, runId: number, choice: D
               u.username <> $3 AS keeps, u.is_anonymous AS guest
        FROM runs r JOIN users u ON u.id = r.user_id
        WHERE r.id = $1 AND r.user_id = $2 FOR UPDATE OF r`,
-      [runId, userId, demoAccount.username],
+      [runId, userId, publicDemoAccount.username],
     )
     const run = found.rows[0]
     if (!run || run.status !== 'lost') throw new GameError(404, { error: 'No such lost run' })

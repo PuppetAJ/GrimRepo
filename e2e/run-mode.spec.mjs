@@ -2,7 +2,7 @@ import { applyRun, createRun, legalActions, nextRunAction, scoreRun } from '../s
 import {
   BASE,
   check,
-  clickMove,
+  clickUntilMoveLands,
   deletePlayer,
   freshPage,
   newPlayer,
@@ -50,28 +50,28 @@ async function playRun(page, mirror, { pick = nextRunAction, done }) {
     try {
       if (action.type === 'buff' && state.visit.buffs > 0) {
         await page.locator('[data-action="warm-again"]').click()
-        await clickMove(page, '[data-action="risk"]', expected)
+        await clickUntilMoveLands(page, '[data-action="risk"]', expected)
       } else if (action.type === 'buff') {
         await page.locator('[data-slot-for="campfire"]').click()
-        await clickMove(page, targetFor(action), expected)
+        await clickUntilMoveLands(page, targetFor(action), expected)
       } else if (action.type === 'transfer') {
         await page.locator('[data-slot-for="give"]').click()
         await page.locator(`[data-action="give"][data-card="${action.from}"]`).click()
         await page.locator(`[data-action="stone-sigil"][data-sigil="${action.sigil}"]`).click()
         await page.locator('[data-slot-for="take-sigil"]').click()
         await page.locator(`[data-action="take-sigil"][data-card="${action.to}"]`).click()
-        await clickMove(page, '[data-action="transfer"]', expected)
+        await clickUntilMoveLands(page, '[data-action="transfer"]', expected)
       } else if (action.type === 'play' && action.action.type === 'use') {
         const { slot, row, lane } = action.action
         const item = `[data-action="use"][data-slot="${slot}"]`
-        if (row === undefined) await clickMove(page, item, expected)
+        if (row === undefined) await clickUntilMoveLands(page, item, expected)
         else {
           await page.locator(item).click()
-          await clickMove(page, `[data-action="aim"][data-row="${row}"][data-lane="${lane}"]`, expected)
+          await clickUntilMoveLands(page, `[data-action="aim"][data-row="${row}"][data-lane="${lane}"]`, expected)
         }
       } else if (action.type === 'pickItem' && action.drop !== undefined) {
         await page.locator(`[data-action="drop-item"][data-slot="${action.drop}"]`).click()
-        await clickMove(page, targetFor(action), expected)
+        await clickUntilMoveLands(page, targetFor(action), expected)
       } else if (action.type === 'fuse') {
         const kept = state.deck.find((entry) => entry.id === action.card)
         const other = action.with ?? state.deck.find((entry) => entry.id !== kept.id && entry.card === kept.card).id
@@ -79,21 +79,21 @@ async function playRun(page, mirror, { pick = nextRunAction, done }) {
         await page.locator(`[data-action="fuse-card"][data-card="${action.card}"]`).click()
         await page.locator('[data-slot-for="fuse-copy"]').click()
         await page.locator(`[data-action="fuse-copy"][data-card="${other}"]`).click()
-        await clickMove(page, '[data-action="fuse"]', expected)
+        await clickUntilMoveLands(page, '[data-action="fuse"]', expected)
       } else if (action.type === 'uninstall') {
         await page.locator('[data-slot-for="uninstall"]').click()
         await page.locator(`[data-action="uninstall-card"][data-card="${action.card}"]`).click()
-        await clickMove(page, '[data-action="uninstall"]', expected)
+        await clickUntilMoveLands(page, '[data-action="uninstall"]', expected)
       } else if (action.type === 'take' && ['pack', 'card', 'reward'].includes(state.visit.kind)) {
         const sealed = page.locator('[data-action="open-pack"]:not(:disabled)')
         if (await sealed.count()) await sealed.first().click()
-        await clickMove(page, targetFor(action), expected)
+        await clickUntilMoveLands(page, targetFor(action), expected)
       } else if (action.type === 'strip') {
         await page.locator('[data-slot-for="lint"]').click()
         await page.locator(`[data-action="lint-card"][data-card="${action.card}"]`).click()
         await page.locator(`[data-action="lint-sigil"][data-sigil="${action.sigil}"]`).click()
-        await clickMove(page, '[data-action="strip"]', expected)
-      } else await clickMove(page, targetFor(action), expected)
+        await clickUntilMoveLands(page, '[data-action="strip"]', expected)
+      } else await clickUntilMoveLands(page, targetFor(action), expected)
       const ended = state.visit && !result.state.visit && action.type !== 'leave'
       if (ended && ['event', 'campfire', 'stones', 'lint', 'fuse', 'item'].includes(state.visit.kind))
         await page.locator('[data-action="continue"]').click()
@@ -405,6 +405,9 @@ test('The sigil stones, from a mockup', async ({ browser }) => {
   await context.close()
 })
 
+const HOURGLASS_SLOT = 2
+const PLIERS_SLOT = 1
+
 test('Items, from a mockup', async ({ browser }) => {
   const { context, page } = await freshPage(browser, { width: 1440, height: 900, table: 'text' })
   await page.goto(`${BASE}/mockups/battle-items`, MOCKUP)
@@ -413,15 +416,15 @@ test('Items, from a mockup', async ({ browser }) => {
   check('a battle shows the items the run carries', (await used.count()) === 3)
   const moves = async () => Number(await page.locator(ROOT).getAttribute('data-run-moves'))
   const start = await moves()
-  await page.locator('[data-action="use"][data-slot="2"]').click()
+  await page.locator(`[data-action="use"][data-slot="${HOURGLASS_SLOT}"]`).click()
   await page.locator(`${ROOT}[data-run-moves="${start + 1}"]`).waitFor()
   check('an item without a target is used at once', (await used.count()) === 2)
-  await page.locator('[data-action="use"][data-slot="1"]').click()
+  await page.locator(`[data-action="use"][data-slot="${PLIERS_SLOT}"]`).click()
   const aims = page.locator('[data-action="aim"]')
   check('one that needs a target offers the cards it can reach', (await aims.count()) > 0)
   await page.keyboard.press('Escape')
   check('and Escape puts it back', (await aims.count()) === 0)
-  await page.locator('[data-action="use"][data-slot="1"]').click()
+  await page.locator(`[data-action="use"][data-slot="${PLIERS_SLOT}"]`).click()
   await aims.first().click()
   await page.locator(`${ROOT}[data-run-moves="${start + 2}"]`).waitFor()
   check('aimed at a card, it is used there', (await used.count()) === 1)
@@ -450,6 +453,31 @@ test('An event, from a mockup', async ({ browser }) => {
   await context.close()
 })
 
+const FRAME_TOP_MARGIN_PX = 120
+const FRAME_BOTTOM_MARGIN_PX = 60
+
+async function waitForScrollToSettle(locator) {
+  const scrolled = () => locator.evaluate((element) => element.scrollTop)
+  let last = -1
+  for (let now = await scrolled(); now !== last; now = await scrolled()) {
+    last = now
+    await locator.page().waitForTimeout(300)
+  }
+}
+
+async function nodeInsideFrame(nodes, scroller) {
+  for (let index = 0; index < (await nodes.count()); index++) {
+    const box = await nodes.nth(index).boundingBox()
+    if (
+      box &&
+      box.y > scroller.y + FRAME_TOP_MARGIN_PX &&
+      box.y + box.height < scroller.y + scroller.height - FRAME_BOTTOM_MARGIN_PX
+    )
+      return nodes.nth(index)
+  }
+  return null
+}
+
 test('Planning a route, from a mockup', async ({ browser }) => {
   const { context, page } = await freshPage(browser, { width: 1440, height: 900, table: 'text' })
   await page.goto(`${BASE}/mockups/map`, MOCKUP)
@@ -465,20 +493,9 @@ test('Planning a route, from a mockup', async ({ browser }) => {
     'and then every node can be marked, not only the ones in reach',
     (await page.locator('[data-run-view] ol button[aria-pressed]').count()) > 3,
   )
-  const scrolled = () => page.locator('[data-scroller]').evaluate((element) => element.scrollTop)
-  let last = -1
-  for (let now = await scrolled(); now !== last; now = await scrolled()) {
-    last = now
-    await page.waitForTimeout(300)
-  }
+  await waitForScrollToSettle(page.locator('[data-scroller]'))
   const scroller = await page.locator('[data-scroller]').boundingBox()
-  const nodes = page.locator('[data-run-view] ol button[aria-pressed]')
-  let target = null
-  for (let index = 0; index < (await nodes.count()) && !target; index++) {
-    const box = await nodes.nth(index).boundingBox()
-    if (box && box.y > scroller.y + 120 && box.y + box.height < scroller.y + scroller.height - 60)
-      target = nodes.nth(index)
-  }
+  const target = await nodeInsideFrame(page.locator('[data-run-view] ol button[aria-pressed]'), scroller)
   const box = await target.boundingBox()
   const [x, y] = [box.x + box.width / 2, box.y + box.height / 2]
   await page.mouse.move(x - 60, y + 20)

@@ -3,7 +3,7 @@ import { after, beforeEach, describe, it } from 'node:test'
 import { pool } from '../config/db.ts'
 import { insertRun, resetDatabase } from '../test/support.ts'
 import { newPlayer, startApp } from '../test/http.ts'
-import { flaggedAccounts, recentAccounts, removeAccount, renameAccount } from './moderation.ts'
+import { flaggedAccounts, recentAccounts, removeAccount, renameAndLockAccount } from './moderation.ts'
 
 const app = await startApp()
 after(async () => {
@@ -22,7 +22,7 @@ describe('moderation', () => {
   it('renames an account to a neutral name, locks it, and keeps its runs', async () => {
     const player = await signUp('Rude')
     await insertRun(player.username, { battles: 3 })
-    const { from, to } = await renameAccount(player.username)
+    const { from, to } = await renameAndLockAccount(player.username)
     assert.equal(from, player.username)
     assert.match(to, /^player_\d+$/)
     const stats = await app.call('GET', `/api/players/${to}/stats`)
@@ -36,9 +36,9 @@ describe('moderation', () => {
   it('can rename to a chosen name, but not a taken or offensive one', async () => {
     const player = await signUp()
     const other = await signUp()
-    assert.equal((await renameAccount(player.username, 'Chosen_Name')).to, 'Chosen_Name')
-    await assert.rejects(() => renameAccount('chosen_name', other.username), /taken/)
-    await assert.rejects(() => renameAccount('chosen_name', 'f_u_c_k'.replaceAll('_', '')), /name filter/)
+    assert.equal((await renameAndLockAccount(player.username, 'Chosen_Name')).to, 'Chosen_Name')
+    await assert.rejects(() => renameAndLockAccount('chosen_name', other.username), /taken/)
+    await assert.rejects(() => renameAndLockAccount('chosen_name', 'f_u_c_k'.replaceAll('_', '')), /name filter/)
   })
 
   it('removes an account and its runs', async () => {
@@ -50,7 +50,7 @@ describe('moderation', () => {
   })
 
   it('leaves the demo account to the seed', async () => {
-    await assert.rejects(() => renameAccount('demo'), /seed/)
+    await assert.rejects(() => renameAndLockAccount('demo'), /seed/)
     await assert.rejects(() => removeAccount('DEMO'), /seed/)
   })
 

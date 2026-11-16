@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { after, before, beforeEach, describe, it } from 'node:test'
 import { pool } from '../config/db.ts'
 import { newPlayer, startApp } from '../test/http.ts'
-import { renameAccount } from '../admin/moderation.ts'
+import { renameAndLockAccount } from '../admin/moderation.ts'
 import { insertRun, resetDatabase } from '../test/support.ts'
 import { auth } from './auth.ts'
 
@@ -287,7 +287,7 @@ describe('names', () => {
   it('stops a player changing a name a moderator set', async () => {
     const player = newPlayer('Needs_Fixing')
     const { cookie } = await signUp(player)
-    const { to } = await renameAccount(player.username)
+    const { to } = await renameAndLockAccount(player.username)
     const reply = await app.call('POST', '/api/auth/update-user', { cookie, body: { username: 'back_again' } })
     assert.equal(reply.status, 403)
     assert.match(reply.body.message, /moderator/)

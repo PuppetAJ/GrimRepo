@@ -2,23 +2,29 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { isOffensive, isReserved } from './names.ts'
 
-const rot13 = (text: string) =>
+const decodeSwearSample = (text: string) =>
   text.replace(/[a-z]/g, (c) => String.fromCharCode(((c.charCodeAt(0) - 97 + 13) % 26) + 97))
 
 describe('the name filter', () => {
   it('catches profanity however it is dressed up', () => {
-    const word = rot13('shpx')
-    for (const name of [word, word.toUpperCase(), `x${word}x`, word.split('').join('_'), `${rot13('fuvg')}_42`]) {
+    const word = decodeSwearSample('shpx')
+    for (const name of [
+      word,
+      word.toUpperCase(),
+      `x${word}x`,
+      word.split('').join('_'),
+      `${decodeSwearSample('fuvg')}_42`,
+    ]) {
       assert.ok(isOffensive(name), `${name.length} characters got through`)
     }
   })
 
   it('catches playground words, glued on, capitalised or numbered', () => {
-    const balls = rot13('onyyf')
-    const piles = rot13('urzbeeubvq')
-    const peepee = rot13('crrcrr')
-    const caca = rot13('pnpn')
-    const poop = rot13('cbbc')
+    const balls = decodeSwearSample('onyyf')
+    const piles = decodeSwearSample('urzbeeubvq')
+    const peepee = decodeSwearSample('crrcrr')
+    const caca = decodeSwearSample('pnpn')
+    const poop = decodeSwearSample('cbbc')
     const cap = (word: string) => word[0]?.toUpperCase() + word.slice(1)
     for (const name of [
       balls,

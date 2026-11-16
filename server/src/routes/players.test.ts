@@ -12,7 +12,7 @@ import {
   type RunState,
 } from 'shared'
 import { pool } from '../config/db.ts'
-import { countRunCardsPlayed, HISTORY_PAGE, RECENT_RUNS, runCardsPlayed } from '../db/players.ts'
+import { backfillRunCardCounts, HISTORY_PAGE, RECENT_RUNS, runCardsPlayed } from '../db/players.ts'
 import { BOARD_PAGE } from '../db/runs.ts'
 import { newPlayer, startApp } from '../test/http.ts'
 import { insertPlayer, insertRun, resetDatabase } from '../test/support.ts'
@@ -267,13 +267,13 @@ describe('a player’s stats', () => {
       )
     await finish(RUN_RULES_VERSION)
     await finish(RUN_RULES_VERSION - 1)
-    assert.equal(await countRunCardsPlayed(), 2)
+    assert.equal(await backfillRunCardCounts(), 2)
     const { rows } = await pool.query<{ cards: Record<string, number> }>('SELECT cards FROM runs ORDER BY id')
     assert.deepEqual(
       rows.map((row) => row.cards),
       [runCardsPlayed(replayed.events), {}],
       'an older run may not replay as it was played, so it counts nothing',
     )
-    assert.equal(await countRunCardsPlayed(), 0, 'and not again')
+    assert.equal(await backfillRunCardCounts(), 0, 'and not again')
   })
 })

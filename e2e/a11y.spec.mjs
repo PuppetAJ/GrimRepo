@@ -3,8 +3,10 @@ import { BASE, check, resetRateLimits, signInAsDemo, tableReady, test } from './
 
 test.beforeAll(resetRateLimits)
 
+const startWithReadmeTakenOver = (context) => context.addCookies([{ name: 'grimrepo_seen', value: '1', url: BASE }])
+
 test.beforeEach(async ({ context }) => {
-  await context.addCookies([{ name: 'grimrepo_seen', value: '1', url: BASE }])
+  await startWithReadmeTakenOver(context)
 })
 
 const PAGES = [
@@ -20,15 +22,17 @@ const PAGES = [
 
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice']
 
+const ANIMATIONS_SETTLE_MS = 3000
+
 async function audit(page, name, path, ready = () => page.waitForLoadState('networkidle')) {
   await page.goto(`${BASE}${path}`)
   await ready()
-  await page.waitForTimeout(3000)
+  await page.waitForTimeout(ANIMATIONS_SETTLE_MS)
   const { violations } = await new AxeBuilder({ page }).withTags(TAGS).exclude('canvas').analyze()
   const found = []
   for (const violation of violations)
     for (const node of violation.nodes)
-      if (!(violation.id === 'label-content-name-mismatch' && (await holdsCardFace(page, node.target[0]))))
+      if (!(await isWaivedCardFaceMismatch(page, violation, node)))
         found.push(`${violation.id}: ${node.target.join(' ')}`)
   check(`${name} has no violations`, found.length === 0, found.slice(0, 6).join('\n      '))
   const unnamed = await page.evaluate(() =>
@@ -43,6 +47,9 @@ async function audit(page, name, path, ready = () => page.waitForLoadState('netw
 
 const holdsCardFace = (page, selector) =>
   page.evaluate((target) => Boolean(document.querySelector(target)?.querySelector('[data-face]')), selector)
+
+const isWaivedCardFaceMismatch = async (page, violation, node) =>
+  violation.id === 'label-content-name-mismatch' && (await holdsCardFace(page, node.target[0]))
 
 const screen = (page, name) => () => page.locator(`[data-run-view="${name}"]`).waitFor({ timeout: 30_000 })
 
