@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { existsSync } from 'node:fs'
 import { describe, it } from 'node:test'
 import { cardsIn, ENCOUNTERS, TUTORIAL_ENCOUNTER } from './encounters.ts'
 import { apply, legalActions } from './engine/game.ts'
@@ -140,5 +141,14 @@ describe('the tutorial', () => {
     for (let seed = 0; seed < 50; seed++)
       for (const node of generateStage(0, new Rng(seed)).rows.flat())
         assert.notEqual(node.encounter, TUTORIAL_ENCOUNTER.id)
+  })
+})
+
+describe("P03's faces in the tutorial", () => {
+  it('each has its screen image in the client', () => {
+    for (const { id, face } of TUTORIAL) {
+      const image = new URL(`../../client/public/p03/screen/${face}.png`, import.meta.url)
+      assert.ok(existsSync(image), `step ${id} shows ${face}, which has no ${face}.png`)
+    }
   })
 })

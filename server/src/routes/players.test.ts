@@ -70,6 +70,27 @@ describe('the leaderboard', () => {
     )
   })
 
+  it('ranks each player on their stats page where the board ranks them', async () => {
+    const ace = await signedIn('ace')
+    const tiedOne = await signedIn('tied')
+    const tiedTwo = await signedIn('tied')
+    const mixed = await signedIn('mixed')
+    const playing = await signedIn('playing')
+    await insertRun(ace.username, cleared())
+    await insertRun(tiedOne.username, { battles: 4, bosses: 1, stage: 1 })
+    await insertRun(tiedTwo.username, { battles: 4, bosses: 1, stage: 1 })
+    await insertRun(mixed.username, { battles: 1 })
+    await insertRun(mixed.username, { battles: 2, forfeited: true })
+    await insertRun(playing.username, { battles: 3 })
+    await app.call('POST', '/api/runs', { cookie: playing.cookie })
+    const { body } = await app.call('GET', '/api/leaderboard')
+    assert.equal(body.players.length, 5)
+    for (const row of body.players as { username: string; rank: number }[]) {
+      const stats = await app.call('GET', `/api/players/${row.username}/stats`)
+      assert.equal(stats.body.rank, row.rank, `${row.username} ranks the same on the board and their stats`)
+    }
+  })
+
   it('pages twenty at a time, ranking across every page', async () => {
     for (let n = 0; n < 23; n++) {
       await insertPlayer(`many_${n}`)

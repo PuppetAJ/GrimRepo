@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { createHash } from 'node:crypto'
 import { describe, it } from 'node:test'
 import { card, EVENT_ONLY, PLAYER_DECK } from '../cards.ts'
 import { deckCard } from '../engine/units.ts'
@@ -21,13 +22,35 @@ import {
   STARTER_DECKS,
   UNINSTALL_PRICE,
 } from './run.ts'
-import { INTEGRITY, type NodeKind, type RunAction, type RunCard, type RunState, type Visit } from './types.ts'
+import {
+  INTEGRITY,
+  RUN_RULES_VERSION,
+  type NodeKind,
+  type RunAction,
+  type RunCard,
+  type RunState,
+  type Visit,
+} from './types.ts'
 
 const step = (state: RunState, action: RunAction) => {
   const result = applyRun(state, action)
   if (!result.ok) throw new Error(`${JSON.stringify(action)}: ${result.reason}`)
   return result.state
 }
+
+const randomRunAction = (rng: Rng, state: RunState): RunAction => {
+  const legal = legalRunActions(state)
+  assert.ok(legal.length > 0, 'a run still going always has a legal action')
+  const bell = legal.find((action) => action.type === 'play' && action.action.type === 'ringBell')
+  return bell && rng.float() < 0.3 ? bell : rng.pick(legal)
+}
+
+const canonical = (value: unknown) =>
+  JSON.stringify(value, (_, v) =>
+    v && typeof v === 'object' && !Array.isArray(v)
+      ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => (a < b ? -1 : 1)))
+      : v,
+  )
 
 const refused = (state: RunState, action: RunAction) => {
   const result = applyRun(state, action)
@@ -690,6 +713,31 @@ describe('a recorded run', () => {
   })
 })
 
+describe('the run rules version', () => {
+  it('changes whenever a recorded run would replay differently', () => {
+    const replays = createHash('sha256')
+    for (let seed = 1; seed <= 30; seed++) {
+      const rng = new Rng(seed * 7919)
+      const actions: RunAction[] = []
+      let state = createRun({ seed })
+      while (state.status === 'playing') {
+        const action = randomRunAction(rng, state)
+        actions.push(action)
+        state = step(state, action)
+      }
+      replays.update(canonical(replayRun(seed, actions)))
+    }
+    for (let seed = 1; seed <= 10; seed++) {
+      replays.update(canonical(replayRun(seed, playRun(createRun({ seed }), step).actions)))
+    }
+    assert.deepEqual(
+      { RUN_RULES_VERSION, replays: replays.digest('hex').slice(0, 16) },
+      { RUN_RULES_VERSION: 24, replays: 'd6a2f3bd111629e4' },
+      'a run rules change bumps RUN_RULES_VERSION and records the new replays hash beside it',
+    )
+  })
+})
+
 describe('two hundred random runs', () => {
   it('all end, take only legal actions, and never lose track of a card', () => {
     for (let seed = 1; seed <= 200; seed++) {
@@ -697,10 +745,7 @@ describe('two hundred random runs', () => {
       let state = createRun({ seed })
       let moves = 0
       while (state.status === 'playing') {
-        const legal = legalRunActions(state)
-        assert.ok(legal.length > 0, `seed ${seed}: stuck`)
-        const bell = legal.find((action) => action.type === 'play' && action.action.type === 'ringBell')
-        state = step(state, bell && rng.float() < 0.3 ? bell : rng.pick(legal))
+        state = step(state, randomRunAction(rng, state))
         moves += 1
         assert.ok(moves < 100_000, `seed ${seed} never ended`)
         const ids = state.deck.map((entry) => entry.id)

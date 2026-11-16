@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict'
+import { createHash } from 'node:crypto'
 import { describe, it } from 'node:test'
+import { FOUND_ITEMS } from '../items.ts'
 import { Rng } from '../rng.ts'
 import { playOut } from './bot.ts'
 import { apply, createGame, legalActions, replay, summary } from './game.ts'
-import { HAND_LIMIT, LANES, TIP, TURN_LIMIT, type Action, type GameState } from './types.ts'
+import { HAND_LIMIT, LANES, RULES_VERSION, TIP, TURN_LIMIT, type Action, type GameState } from './types.ts'
 import { units } from './units.ts'
 
 const step = (state: GameState, action: Action) => {
@@ -11,6 +13,18 @@ const step = (state: GameState, action: Action) => {
   if (!result.ok) throw new Error(`${JSON.stringify(action)}: ${result.reason}`)
   return result.state
 }
+
+const randomAction = (rng: Rng, state: GameState): Action => {
+  const legal = legalActions(state)
+  return rng.float() < 0.3 && legal.some((a) => a.type === 'ringBell') ? { type: 'ringBell' } : rng.pick(legal)
+}
+
+const canonical = (value: unknown) =>
+  JSON.stringify(value, (_, v) =>
+    v && typeof v === 'object' && !Array.isArray(v)
+      ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => (a < b ? -1 : 1)))
+      : v,
+  )
 
 describe('a recorded game', () => {
   it('replays to exactly the same end from its seed and actions', () => {
@@ -31,7 +45,6 @@ describe('a recorded game', () => {
   it('does not replay under a different seed', () => {
     const original = playOut(createGame({ seed: 2026 }), step)
     const other = replay(2027, original.actions)
-    // Another seed deals other cards, so the same moves either break the rules or end somewhere else.
     assert.ok(!other.ok || JSON.stringify(other.state) !== JSON.stringify(original.state))
   })
 
@@ -50,6 +63,30 @@ describe('a recorded game', () => {
   })
 })
 
+describe('the rules version', () => {
+  it('changes whenever a recorded game would replay differently', () => {
+    const replays = createHash('sha256')
+    for (const options of [{}, { items: [...FOUND_ITEMS], outOfMemory: true }]) {
+      for (let seed = 1; seed <= 50; seed++) {
+        const rng = new Rng(seed * 7919)
+        const actions: Action[] = []
+        let state = createGame({ seed, ...options })
+        while (state.status === 'playing') {
+          const action = randomAction(rng, state)
+          actions.push(action)
+          state = step(state, action)
+        }
+        replays.update(canonical(replay(seed, actions, options)))
+      }
+    }
+    assert.deepEqual(
+      { RULES_VERSION, replays: replays.digest('hex').slice(0, 16) },
+      { RULES_VERSION: 19, replays: '2f094ce899f4276a' },
+      'a rules change bumps RULES_VERSION and records the new replays hash beside it',
+    )
+  })
+})
+
 describe('a thousand random games', () => {
   it('all end, and never break an invariant on the way', () => {
     for (let seed = 1; seed <= 1000; seed++) {
@@ -57,13 +94,7 @@ describe('a thousand random games', () => {
       let state = createGame({ seed })
       let moves = 0
       while (state.status === 'playing') {
-        const legal = legalActions(state)
-        // Ring the bell often so random play can't wander forever.
-        const action =
-          rng.float() < 0.3 && legal.some((a) => a.type === 'ringBell')
-            ? ({ type: 'ringBell' } as Action)
-            : rng.pick(legal)
-        state = step(state, action)
+        state = step(state, randomAction(rng, state))
         moves += 1
         assert.ok(moves < 50_000, `seed ${seed} never ended`)
 
@@ -95,7 +126,6 @@ describe('a thousand random games', () => {
 })
 
 describe('the balance', () => {
-  // Measured at about 28% for the greedy bot and 34% for the lanes bot.
   const rate = (strategy: 'greedy' | 'lanes') => {
     let wins = 0
     for (let seed = 1; seed <= 500; seed++) {
