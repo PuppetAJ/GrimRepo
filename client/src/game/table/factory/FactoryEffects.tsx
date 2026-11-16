@@ -15,16 +15,20 @@ import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { MOOD } from '../mood.ts'
 
-const SELECTED_LIGHT = new THREE.AmbientLight('#000000', 0)
+const NO_LIGHT = new THREE.AmbientLight('#000000', 0)
+const RETINA_DPR = 1.5
+const NO_CARD_BLOOM = 1
+const SMALL_BLOOM = 2
+const NO_EFFECTS = 3
 
 export function FactoryEffects({ quality = 0 }: { quality?: number }) {
-  const sharp = useThree((state) => state.viewport.dpr) >= 1.5
+  const retina = useThree((state) => state.viewport.dpr) >= RETINA_DPR
   const bloom = useRef<BloomEffect>(null)
   // Set on the live effect, since a changed prop would rebuild the whole chain mid-game.
   useEffect(() => {
-    if (bloom.current) bloom.current.resolution.scale = quality >= 2 ? 0.25 : 0.5
+    if (bloom.current) bloom.current.resolution.scale = quality >= SMALL_BLOOM ? 0.25 : 0.5
   }, [quality])
-  if (quality >= 3) return null
+  if (quality >= NO_EFFECTS) return null
   return (
     <EffectComposer multisampling={0}>
       <Bloom
@@ -38,19 +42,19 @@ export function FactoryEffects({ quality = 0 }: { quality?: number }) {
       <Scanline density={1.4} opacity={MOOD.scanline} />
       <Noise opacity={MOOD.noise} />
       <Vignette offset={0.28} darkness={MOOD.vignette} />
-      {MOOD.cardBloom > 0 && quality < 1 ? (
+      {MOOD.cardBloom > 0 && quality < NO_CARD_BLOOM ? (
         <SelectiveBloom
-          lights={[SELECTED_LIGHT]}
+          lights={[NO_LIGHT]}
           mipmapBlur
           luminanceThreshold={0.25}
-          resolutionScale={sharp ? 0.25 : 0.5}
+          resolutionScale={retina ? 0.25 : 0.5}
           levels={4}
           intensity={MOOD.cardBloom}
           radius={0.55}
         />
       ) : null}
       <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
-      {sharp ? null : <SMAA />}
+      {retina ? null : <SMAA />}
     </EffectComposer>
   )
 }

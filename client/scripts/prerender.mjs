@@ -16,12 +16,12 @@ await writeFile(new URL('shell.html', dist), shell)
 for (const variant of HOME_VARIANTS) {
   const name = variantName(variant)
   const page = await renderHome(variant)
-  const state = `assets/home-state-${createHash('sha256').update(page.state).digest('hex').slice(0, 8)}.js`
-  await writeFile(new URL(state, dist), page.state)
+  const hydrationStateScript = `assets/home-state-${createHash('sha256').update(page.state).digest('hex').slice(0, 8)}.js`
+  await writeFile(new URL(hydrationStateScript, dist), page.state)
   const filled = shell
     .replace(html, `<html lang="en" class="dark" data-home="${name}">`)
     .replace(root, `<div id="root">${page.html}</div>`)
-    .replace(entry, `<script defer src="/${state}"></script>\n    ${entry}`)
+    .replace(entry, `<script defer src="/${hydrationStateScript}"></script>\n    ${entry}`)
   await writeFile(new URL(`home-${name.replace(' ', '-')}.html`, dist), filled)
   if (!variant.signedIn && !variant.seen) await writeFile(new URL('index.html', dist), filled)
 }

@@ -27,6 +27,8 @@ const TYPE_MS = 28
 const KEEP = 200
 let nextId = 0
 
+const blinkRestartKey = (text: string, caret: number) => `${text}:${caret}`
+
 export default function Terminal({ lines, user }: { lines: readonly string[]; user: string | undefined }) {
   const key = lines.join('\n')
   const { pathname } = useLocation()
@@ -39,7 +41,7 @@ export default function Terminal({ lines, user }: { lines: readonly string[]; us
   const mirror = useRef<HTMLParagraphElement>(null)
   const history = useRef<string[]>([])
   const recall = useRef(0)
-  const listed = useRef<string | null>(null)
+  const listedMatchesFor = useRef<string | null>(null)
   const commands = useRef<Commands | null>(null)
   const scroller = useRef<HTMLDivElement>(null)
   const input = useRef<HTMLInputElement>(null)
@@ -100,7 +102,7 @@ export default function Terminal({ lines, user }: { lines: readonly string[]; us
   }
 
   function type(next: string) {
-    listed.current = null
+    listedMatchesFor.current = null
     setText(next)
     setCaret(next.length)
   }
@@ -141,9 +143,9 @@ export default function Terminal({ lines, user }: { lines: readonly string[]; us
       if (found.text !== text) {
         event.preventDefault()
         type(found.text)
-      } else if (found.options.length > 1 && listed.current !== text) {
+      } else if (found.options.length > 1 && listedMatchesFor.current !== text) {
         event.preventDefault()
-        listed.current = text
+        listedMatchesFor.current = text
         add(
           { id: nextId++, kind: 'input', who, path: pathOf(pathname), text },
           {
@@ -198,7 +200,7 @@ export default function Terminal({ lines, user }: { lines: readonly string[]; us
                 {text || ' '}
                 {focused ? (
                   <span
-                    key={`${text}:${caret}`}
+                    key={blinkRestartKey(text, caret)}
                     className="absolute top-[0.21em] h-[0.64em] w-[0.55ch] animate-[blink_1.06s_steps(1)_infinite] bg-p03 motion-reduce:animate-none"
                     style={{ left: `${caret}ch` }}
                   />
@@ -210,7 +212,7 @@ export default function Terminal({ lines, user }: { lines: readonly string[]; us
               ref={input}
               value={text}
               onChange={(event) => {
-                listed.current = null
+                listedMatchesFor.current = null
                 setText(event.target.value)
                 follow(event.target)
               }}

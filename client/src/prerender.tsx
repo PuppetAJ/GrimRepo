@@ -3,13 +3,13 @@ import { attachRouterServerSsrUtils, RouterServer } from '@tanstack/react-router
 import { StrictMode } from 'react'
 import { prerender } from 'react-dom/static'
 import { Toaster } from '@/components/ui/sonner.tsx'
-import { renderingHome, type HomeVariant } from './lib/homeVariant.ts'
+import { setPrerenderVariant, type HomeVariant } from './lib/homeVariant.ts'
 import { makeRouter } from './router.tsx'
 
 export { HOME_VARIANTS, variantName } from './lib/homeVariant.ts'
 
 export async function renderHome(variant: HomeVariant): Promise<{ html: string; state: string }> {
-  renderingHome(variant)
+  setPrerenderVariant(variant)
   const router = makeRouter(createMemoryHistory({ initialEntries: ['/'] }), 'http://localhost')
   attachRouterServerSsrUtils({ router, manifest: undefined })
   const ssr = router.serverSsr!
@@ -31,6 +31,6 @@ export async function renderHome(variant: HomeVariant): Promise<{ html: string; 
   const state = [...tags.before, tags.boundary].map((tag) => tag.children ?? '').join(';\n')
   ssr.setRenderFinished()
   ssr.cleanup()
-  renderingHome(null)
+  setPrerenderVariant(null)
   return { html, state }
 }

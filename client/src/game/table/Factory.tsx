@@ -1,6 +1,6 @@
 import { Sparkles, useGLTF, useTexture } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
-import { memo, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, Suspense, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import * as THREE from 'three'
 import type { View } from '../view.ts'
 import { Battery } from './factory/Battery.tsx'
@@ -98,12 +98,16 @@ export function Factory({
 const LOG_AT: Vec3 = [CENTER_X - 4.3, 9.5, -14.2]
 const STATUS_AT: Vec3 = [CENTER_X + 4.3, 9.5, -14.2]
 
-const Fixtures = memo(function Fixtures() {
-  const dust = useRef<THREE.Points>(null)
+function usePinnedPointSize(points: RefObject<THREE.Points | null>) {
   useFrame(() => {
-    const material = dust.current?.material as { pixelRatio?: number } | undefined
+    const material = points.current?.material as { pixelRatio?: number } | undefined
     if (material) material.pixelRatio = 1
   })
+}
+
+const Fixtures = memo(function Fixtures() {
+  const dust = useRef<THREE.Points>(null)
+  usePinnedPointSize(dust)
   return (
     <>
       <Room />

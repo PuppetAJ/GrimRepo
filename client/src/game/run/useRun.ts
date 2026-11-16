@@ -68,9 +68,18 @@ type Table = {
 }
 
 const LOG_LINES = 2_000
+const MAX_RETRY_MS = 30_000
+const RETRY_BASE_MS = 1_000
 const p03 = (lines: string[]) => lines.map((line) => `P03> ${line}`)
 
 let generations = 0
+
+const asIfFromServer = (reply: () => void) => void Promise.resolve().then(reply)
+
+const isOutOfStep = (failure: unknown): failure is ApiError => failure instanceof ApiError && failure.status === 409
+
+const savesNow = (action: RunAction) =>
+  action.type !== 'play' || action.action.type === 'draw' || action.action.type === 'ringBell'
 
 function logAfter(log: string[], before: RunState, after: RunState, events: RunEvent[]): string[] {
   const entered = events.find((event) => event.type === 'entered')
@@ -145,7 +154,7 @@ export function useRun(mockup: Mockup | null = null): Run {
 
   useEffect(() => {
     if (mockup)
-      return void Promise.resolve().then(() => {
+      return asIfFromServer(() => {
         generations += 1
         setTable({
           id: -1,
@@ -203,7 +212,7 @@ export function useRun(mockup: Mockup | null = null): Run {
           retry.current.wait = 0
           if (reply.status !== 'playing') setOver(reply)
         } catch (failure) {
-          if (failure instanceof ApiError && failure.status === 409) {
+          if (isOutOfStep(failure)) {
             toast.warning(
               failure.body['rulesChanged']
                 ? "The rules changed since this run began, so it can't continue. Starting a new one."
@@ -215,7 +224,7 @@ export function useRun(mockup: Mockup | null = null): Run {
               toast.error(
                 `Could not save: ${failure instanceof Error ? failure.message : String(failure)}. Trying again.`,
               )
-            retry.current.wait = Math.min(30_000, (retry.current.wait || 1_000) * 2)
+            retry.current.wait = Math.min(MAX_RETRY_MS, (retry.current.wait || RETRY_BASE_MS) * 2)
             retry.current.timer = setTimeout(() => void again.current(), retry.current.wait)
           }
           break
@@ -253,8 +262,7 @@ export function useRun(mockup: Mockup | null = null): Run {
             : null
       if (debugging()) console.debug('[run]', table.moves + 1, action, outcome.events)
       setTable({ ...table, moves: table.moves + 1, history: [...table.history, action], ...story, aftermath })
-      const quiet = action.type === 'play' && action.action.type !== 'draw' && action.action.type !== 'ringBell'
-      if (!quiet || outcome.state.status !== 'playing') void save()
+      if (savesNow(action) || outcome.state.status !== 'playing') void save()
     },
     [table, save],
   )

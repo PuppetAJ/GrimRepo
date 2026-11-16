@@ -22,7 +22,8 @@ export function runView(state: RunState, aftermath: Aftermath | null, reviewing:
   const visit = state.visit
   const battle = visit?.kind === 'battle'
   const decided = battle && visit.game.status !== 'playing'
-  if (state.status !== 'playing' && (reviewing || !battle || !decided)) return 'summary'
+  const showsFinalBoard = decided && !reviewing
+  if (state.status !== 'playing' && !showsFinalBoard) return 'summary'
   if (battle) return 'battle'
   const after = state.status === 'playing' ? aftermath : null
   if (after) return after.kind === 'event' ? 'event' : after.view

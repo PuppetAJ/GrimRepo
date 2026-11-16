@@ -4,7 +4,7 @@ import { use, useEffect, useMemo, useRef } from 'react'
 import { card, type Unit } from 'shared'
 import * as THREE from 'three'
 import { Disk, type DiskHandle } from './Disk.tsx'
-import { backTexture, faceContent, faceLights, faceTexture, holdFaces, loadCardAssets } from './faces.ts'
+import { backTexture, faceContent, faceEmissiveMap, faceTexture, holdFaces, loadCardAssets } from './faces.ts'
 import { FactoryEffects } from './Factory.tsx'
 import { kindOf } from './kind.ts'
 
@@ -47,7 +47,7 @@ function Card({ unit, open, turn }: { unit: Unit; open: boolean; turn: boolean }
     [],
   )
   const words = faceContent(unit, assets)
-  const glow = faceLights(unit, assets)
+  const glow = faceEmissiveMap(unit, assets)
   useEffect(() => holdFaces(words, glow), [words, glow])
   materials.front.map = faceTexture(unit, assets)
   materials.content.map = words
@@ -66,7 +66,7 @@ function Card({ unit, open, turn }: { unit: Unit; open: boolean; turn: boolean }
     <group ref={group}>
       <Disk
         ref={disk}
-        open={open ? 1 : 0}
+        openness={open ? 1 : 0}
         kind={kindOf(unit)}
         front={materials.front}
         content={materials.content}

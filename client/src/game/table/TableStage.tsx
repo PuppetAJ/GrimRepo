@@ -29,6 +29,8 @@ import { CursorSync, Exposure, Loaded } from './table3d/stage.tsx'
 
 const SHARPNESS: Record<number, number> = { 3: 1.5, 4: 1.5, 5: 1.25, 6: 1 }
 const LOWEST = 6
+const TOUCH_MAX_DPR = 1.5
+const SETTLE_MS = 3000
 
 type Attributes = Record<string, string | number>
 
@@ -44,13 +46,13 @@ type BenchHandlers = { onRing?: () => void; onPick?: (slot: number) => void }
 type Stage = {
   Scene: Tunnel['In']
   quality: number
-  ready: boolean
-  warmed: boolean
+  firstSceneLoaded: boolean
+  bootFadeStarted: boolean
   size: { width: number; height: number }
-  warm: () => void
+  markShadersCompiled: () => void
   label: (attributes: Attributes) => void
   onMissed: (handler: () => void) => void
-  onContext: (handler: () => boolean) => void
+  onRightClick: (claim: () => boolean) => void
   room: (room: RoomState & RoomHandlers) => void
   bench: (bench: BenchState & BenchHandlers) => void
 }
@@ -89,21 +91,24 @@ export function TableStage({ children }: { children: ReactNode }) {
     const add = setTimeout(() => setFiles((list) => (list.at(-1) === name ? list : [...list.slice(-4), name])), 0)
     return () => clearTimeout(add)
   }, [item])
-  const [warmed, setWarmed] = useState(false)
-  const [settled, setSettled] = useState(false)
+  const [bootFadeStarted, setBootFadeStarted] = useState(false)
+  const [monitoring, setMonitoring] = useState(false)
   useEffect(() => {
-    if (!warmed) return
-    const wait = setTimeout(() => setSettled(true), 3000)
+    if (!bootFadeStarted) return
+    const wait = setTimeout(() => setMonitoring(true), SETTLE_MS)
     return () => clearTimeout(wait)
-  }, [warmed])
-  const [ready, setReady] = useState(false)
-  const sharpest = Math.min(window.matchMedia('(pointer: coarse)').matches ? 1.5 : 2, window.devicePixelRatio || 1)
+  }, [bootFadeStarted])
+  const [firstSceneLoaded, setFirstSceneLoaded] = useState(false)
+  const sharpest = Math.min(
+    window.matchMedia('(pointer: coarse)').matches ? TOUCH_MAX_DPR : 2,
+    window.devicePixelRatio || 1,
+  )
   const [quality, setQuality] = useState(0)
   const [stats] = useState(statsWanted)
   const dpr = Math.min(sharpest, SHARPNESS[quality] ?? Infinity)
   const [attributes, setAttributes] = useState<Attributes>({})
   const missed = useRef(() => {})
-  const context = useRef<() => boolean>(() => false)
+  const claimRightClick = useRef<() => boolean>(() => false)
   const [room, setRoom] = useState<RoomState | null>(null)
   const handlers = useRef<RoomHandlers>({})
   const onHold = useCallback(
@@ -138,16 +143,16 @@ export function TableStage({ children }: { children: ReactNode }) {
   const stage: Stage = {
     Scene: tunnel.In,
     quality,
-    ready,
-    warmed,
+    firstSceneLoaded,
+    bootFadeStarted,
     size,
-    warm: () => setWarmed(true),
+    markShadersCompiled: () => setBootFadeStarted(true),
     label: (next) => setAttributes((now) => (same(now, next) ? now : next)),
     onMissed: (handler) => {
       missed.current = handler
     },
-    onContext: (handler) => {
-      context.current = handler
+    onRightClick: (claim) => {
+      claimRightClick.current = claim
     },
     room: ({ onHold, onPin, ...next }) => {
       handlers.current = { onHold, onPin }
@@ -169,7 +174,7 @@ export function TableStage({ children }: { children: ReactNode }) {
         // A long press is the table's magnifier, so iOS mustn't select text, show its loupe or offer a menu.
         onContextMenu={(event) => event.preventDefault()}
         onContextMenuCapture={(event) => {
-          if (!context.current()) return
+          if (!claimRightClick.current()) return
           event.preventDefault()
           event.stopPropagation()
         }}
@@ -191,7 +196,7 @@ export function TableStage({ children }: { children: ReactNode }) {
           <Exposure />
           <CursorSync />
           {stats ? <StatsProbe /> : null}
-          {settled ? (
+          {monitoring ? (
             // No flip-flop limit: drei counts each check at full quality as a flip, so a steady 60 fps fell back to lowest.
             <PerformanceMonitor
               factor={1}
@@ -216,13 +221,13 @@ export function TableStage({ children }: { children: ReactNode }) {
               {/* Its own boundary, so a scene still loading never hides the room for a few frames as it swaps in. */}
               <Suspense fallback={null}>
                 <tunnel.Out />
-                <Loaded onLoad={setReady} />
+                <Loaded onLoad={setFirstSceneLoaded} />
               </Suspense>
             </Suspense>
           </Selection>
         </Canvas>
         {stats ? <StatsPanel quality={quality} /> : null}
-        <Boot stage={warmed ? 'done' : active ? 'assets' : 'warming'} progress={progress} files={files} />
+        <Boot stage={bootFadeStarted ? 'done' : active ? 'assets' : 'warming'} progress={progress} files={files} />
         <Suspense fallback={null}>{children}</Suspense>
       </div>
     </StageContext>

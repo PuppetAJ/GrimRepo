@@ -15,10 +15,10 @@ import { FrameDamage } from './FrameDamage.tsx'
 
 type TerminalProps = { lines: readonly string[]; user: string | undefined }
 
-let loadedTerminal: ComponentType<TerminalProps> | null = null
+let terminalOnceLoaded: ComponentType<TerminalProps> | null = null
 const loadTerminal = () =>
   import('./Terminal.tsx').then((module) => {
-    loadedTerminal = module.default
+    terminalOnceLoaded = module.default
     return module
   })
 const LazyTerminal = lazy<ComponentType<TerminalProps>>(() => loadTerminal().catch(() => ({ default: () => null })))
@@ -69,7 +69,7 @@ const SPILLS: Omit<ComponentProps<typeof Corruption>, 'dense'>[] = [
 ]
 
 export function Infected({ lines, user }: { lines: readonly string[] | null; user: string | undefined }) {
-  const Terminal = loadedTerminal ?? LazyTerminal
+  const Terminal = terminalOnceLoaded ?? LazyTerminal
   const hydrated = useSyncExternalStore(unchanging, taken, notYet)
   const [chosen, setPhase] = useState<Phase | null>(null)
   const phase = chosen ?? (hydrated ? firstPhase() : prerenderedPhase())

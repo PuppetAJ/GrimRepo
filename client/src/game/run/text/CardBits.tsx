@@ -82,7 +82,7 @@ export function useCardSearch() {
   return { query, setQuery, matches }
 }
 
-export const SEARCH_FROM = 9
+export const MIN_CARDS_FOR_SEARCH = 9
 
 export function NothingHere({ children }: { children: ReactNode }) {
   return (

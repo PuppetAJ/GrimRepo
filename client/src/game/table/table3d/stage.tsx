@@ -7,8 +7,8 @@ import { STILL } from '../factory/constants.ts'
 import { BOARD_CENTER, CAMERA, FOV, type CameraView } from '../layout.ts'
 import { MOOD } from '../mood.ts'
 
-export const fitFov = (fov: number, fit: number | undefined, aspect: number) =>
-  fit ? Math.max(fov, THREE.MathUtils.radToDeg(2 * Math.atan(fit / aspect))) : fov
+export const fitFov = (fov: number, halfWidthTan: number | undefined, aspect: number) =>
+  halfWidthTan ? Math.max(fov, THREE.MathUtils.radToDeg(2 * Math.atan(halfWidthTan / aspect))) : fov
 
 const seat = new THREE.Vector3()
 const aim = new THREE.Vector3()
@@ -21,13 +21,13 @@ export function CameraRig({
   from,
   glide = 0.55,
   arrive = 1.15,
-  fit,
+  halfWidthTan,
 }: {
   view: CameraView
   from?: CameraView
   glide?: number
   arrive?: number
-  fit?: number
+  halfWidthTan?: number
 }) {
   const target = useRef(new THREE.Vector3(...CAMERA[from ?? view].target))
   const gliding = useRef<Glide | null>(null)
@@ -35,7 +35,7 @@ export function CameraRig({
   useFrame(({ camera, pointer, clock }, delta) => {
     const lens = camera as THREE.PerspectiveCamera
     const goal = CAMERA[view]
-    const fov = fitFov(goal.fov ?? FOV, fit, lens.aspect)
+    const fov = fitFov(goal.fov ?? FOV, halfWidthTan, lens.aspect)
     if (shown.current === null && !from) {
       camera.position.set(...goal.position)
       target.current.set(...goal.target)

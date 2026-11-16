@@ -18,10 +18,11 @@ export function Sprite({ id, size, color }: { id: IconId; size: number; color: s
     }
   }, [url])
   const still = prefersReducedMotion()
+  const flickers = frames < 2 && !still
   return (
     <span
       aria-hidden
-      className={`pixel-art inline-block origin-bottom ${frames < 2 && !still ? 'animate-[flame_0.45s_step-end_infinite]' : ''}`}
+      className={`pixel-art inline-block origin-bottom ${flickers ? 'animate-[flame_0.45s_step-end_infinite]' : ''}`}
       style={{
         width: size,
         height: size,

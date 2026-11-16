@@ -15,8 +15,12 @@ const MOODS = ['neutral', 'happy', 'impatient', 'choking', 'dying', 'whiteflag']
 type Face = (typeof MOODS)[number]
 
 const FACE_GLOW = 1.6
-const FACE_OUT = 0.12
-const FACE_IN = 0.2
+const FACE_OUT_SECONDS = 0.12
+const FACE_IN_SECONDS = 0.2
+
+function compileWithEmissiveMap(material: THREE.MeshStandardMaterial, map: THREE.Texture): void {
+  material.emissiveMap = map
+}
 
 let faces: Promise<Record<Face, THREE.Texture>> | null = null
 
@@ -61,7 +65,7 @@ function P03({ mood }: { mood: Mood }) {
     material.color.set('#000000')
     material.alphaTest = 0
     material.emissive.set(LIT)
-    material.emissiveMap = textures.neutral
+    compileWithEmissiveMap(material, textures.neutral)
     material.emissiveIntensity = FACE_GLOW
     material.needsUpdate = true
     screen.current = material
@@ -78,13 +82,16 @@ function P03({ mood }: { mood: Mood }) {
       } else if (change.face !== face && change.at < 0) change.at = now
       if (change.at >= 0) {
         const since = now - change.at
-        if (since >= FACE_OUT && change.face !== face) {
+        if (since >= FACE_OUT_SECONDS && change.face !== face) {
           material.emissiveMap = textures[face]
           change.face = face
         }
-        const level = since < FACE_OUT ? 1 - since / FACE_OUT : Math.min(1, (since - FACE_OUT) / FACE_IN)
+        const level =
+          since < FACE_OUT_SECONDS
+            ? 1 - since / FACE_OUT_SECONDS
+            : Math.min(1, (since - FACE_OUT_SECONDS) / FACE_IN_SECONDS)
         material.emissiveIntensity = FACE_GLOW * level * (Math.random() < 0.3 ? 0.4 : 1)
-        if (since >= FACE_OUT + FACE_IN) {
+        if (since >= FACE_OUT_SECONDS + FACE_IN_SECONDS) {
           material.emissiveIntensity = FACE_GLOW
           change.at = -1
         }

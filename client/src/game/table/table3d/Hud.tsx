@@ -56,7 +56,7 @@ export function Hud({
   onText,
   fullScreen,
   ring,
-  hint,
+  hints,
   lifted,
   pinned,
   onUnpin,
@@ -87,19 +87,19 @@ export function Hud({
   onText: () => void
   fullScreen: ReturnType<typeof useFullScreen>
   ring: () => void
-  hint: number
+  hints: number
 }) {
   const { state, act } = game
   const finished = hasEnded(game)
   const legal = busy || finished ? [] : legalFor(game)
-  const blurb = useSettled(game.tutorial?.blurb ?? game.run?.note ?? null, busy)
+  const blurb = useSettled(game.tutorial?.blurb ?? game.run?.firstTimeNote ?? null, busy)
   const stage = useStage()
   const [loaded, setLoaded] = useState(false)
   useEffect(() => {
-    if (!stage.warmed) return
+    if (!stage.bootFadeStarted) return
     const shown = setTimeout(() => setLoaded(true), 450)
     return () => clearTimeout(shown)
-  }, [stage.warmed])
+  }, [stage.bootFadeStarted])
   const place3d = 'top-14 h-26 w-[min(36rem,calc(100%-1rem))]'
   const mustDraw = !state.drawn && has(legal, { type: 'draw' })
   const summoning = view.summon ? view.hand.find((unit) => unit.uid === view.summon?.uid) : undefined
@@ -123,7 +123,7 @@ export function Hud({
           <span className="flex items-center gap-3 text-lg text-p03-dim sm:text-xl">
             <span>
               Turn {view.turn}
-              {phaseText(state, view.phase) ? ` · ${phaseText(state, view.phase)}` : null}
+              {phaseText(state, view.phaseIndex) ? ` · ${phaseText(state, view.phaseIndex)}` : null}
             </span>
             {view.integrity ? (
               <IntegrityBar left={view.integrity.left} max={view.integrity.max} compact className="gap-1" />
@@ -141,8 +141,8 @@ export function Hud({
                   item={item}
                   slot={slot}
                   usable={usable}
-                  held={aiming === slot}
-                  size={40}
+                  pickedUp={aiming === slot}
+                  sizePx={40}
                   className="bg-p03-ground/80"
                   onUse={() =>
                     def.target === 'none' ? game.act({ type: 'use', slot }) : onAim?.(aiming === slot ? null : slot)
@@ -264,8 +264,8 @@ export function Hud({
               ))}
             </ol>
             <p
-              key={hint}
-              className={`text-lg leading-tight text-p03 sm:text-xl ${HALO} ${hint ? 'animate-[nudge_0.6s_ease-out]' : ''}`}
+              key={hints}
+              className={`text-lg leading-tight text-p03 sm:text-xl ${HALO} ${hints ? 'animate-[nudge_0.6s_ease-out]' : ''}`}
             >
               {busy
                 ? "P03's turn…"

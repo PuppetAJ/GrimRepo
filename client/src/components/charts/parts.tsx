@@ -65,6 +65,8 @@ export function useTip() {
   return ref
 }
 
+const isFilledSlot = (run: Run | undefined): run is Run => Boolean(run?.playedAt)
+
 export function Tip({
   count,
   active,
@@ -77,7 +79,7 @@ export function Tip({
 }) {
   const point = payload?.[0]
   const run = point?.payload as Run | undefined
-  if (!active || !run?.playedAt) return null
+  if (!active || !isFilledSlot(run)) return null
   const index = Number(activeIndex)
   return (
     <div className="w-max rounded-md border bg-popover px-3 py-2 text-sm whitespace-nowrap shadow-lg">

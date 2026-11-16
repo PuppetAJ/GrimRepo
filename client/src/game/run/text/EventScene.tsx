@@ -14,8 +14,8 @@ export function EventScene({ run }: { run: RunReady }) {
   const after = run.aftermath?.kind === 'event' ? run.aftermath : null
   const found = after ? scene(after.event) : visit?.kind === 'event' ? scene(visit.event) : null
   const { act, dismiss } = run
-  const [turned, setTurned] = useState<number | null>(null)
-  const waiting = Boolean(after?.events.some((event) => event.type === 'trialled')) && turned !== run.moves
+  const [reviewTurnedAt, setReviewTurnedAt] = useState<number | null>(null)
+  const waiting = Boolean(after?.events.some((event) => event.type === 'trialled')) && reviewTurnedAt !== run.moves
   useEffect(() => {
     if (!found) return
     const onKey = (event: KeyboardEvent) => {
@@ -37,7 +37,7 @@ export function EventScene({ run }: { run: RunReady }) {
   if (!found) return null
   const said = after ? found.options[after.option]?.says : undefined
   const trial = after?.events.find((event) => event.type === 'trialled')
-  const reviews = found.options.every((option) => option.effects.some((effect) => effect.type === 'trial'))
+  const isCodeReview = found.options.every((option) => option.effects.some((effect) => effect.type === 'trial'))
   return (
     <article className="flex max-w-3xl flex-col gap-4">
       <Box className="flex flex-col gap-3">
@@ -62,8 +62,8 @@ export function EventScene({ run }: { run: RunReady }) {
       {after ? (
         <m.div {...fadeIn()} className="flex flex-col gap-3">
           <p className="text-p03-dim">&gt; {found.options[after.option]?.label}</p>
-          {trial ? <ReviewedCards trial={trial} onTurned={() => setTurned(run.moves)} /> : null}
-          {!trial || turned === run.moves ? (
+          {trial ? <ReviewedCards trial={trial} onTurned={() => setReviewTurnedAt(run.moves)} /> : null}
+          {!trial || reviewTurnedAt === run.moves ? (
             <m.div {...fadeIn(0.3)} className="flex flex-col gap-3">
               <div role="status" className="flex flex-col gap-1 text-xl text-p03">
                 {said ? (
@@ -96,7 +96,7 @@ export function EventScene({ run }: { run: RunReady }) {
       ) : (
         <>
           <p className="text-p03">P03&gt; Well? What do you do?</p>
-          {reviews ? (
+          {isCodeReview ? (
             <ol className="flex flex-wrap gap-4">
               {found.options.map((option, index) => (
                 <li key={option.label} className="w-36 shrink-0 sm:w-44">

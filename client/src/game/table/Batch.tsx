@@ -7,7 +7,7 @@ import { KINDS, type Kind } from './kind.ts'
 
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
 
-const MOST = 32
+const MAX_BATCHED_PER_KIND = 32
 const HIDDEN = new THREE.Matrix4().makeScale(0, 0, 0)
 const SHADE = new THREE.Color()
 
@@ -22,11 +22,18 @@ export type Batch = {
 const BatchContext = createContext<Batch | null>(null)
 export const useBatch = () => useContext(BatchContext)
 
-const SAMPLE_DEATH = deathCardId({ name: 'sample', cost: 0, attack: 0, health: 1, art: 'HelloWorld', sigils: [] })
-const sample = (kind: Kind): Unit => {
+const REPRESENTATIVE_DEATH = deathCardId({
+  name: 'sample',
+  cost: 0,
+  attack: 0,
+  health: 1,
+  art: 'HelloWorld',
+  sigils: [],
+})
+const representativeUnit = (kind: Kind): Unit => {
   const id =
     kind === 'death'
-      ? SAMPLE_DEATH
+      ? REPRESENTATIVE_DEATH
       : (Object.keys(CARDS).find((key) => (CARDS[key]?.tier === 'S') === (kind === 'rare')) as string)
   return { uid: 0, card: id, attack: 0, health: 1, maxHealth: 1, sigils: [] }
 }
@@ -41,7 +48,11 @@ export function CardBatch({ assets, children }: { assets: Assets; children: Reac
   }
   const faces = useMemo(() => {
     const face = (kind: Kind) =>
-      new THREE.MeshStandardMaterial({ map: faceTexture(sample(kind), assets), roughness: 0.85, alphaTest: 0.5 })
+      new THREE.MeshStandardMaterial({
+        map: faceTexture(representativeUnit(kind), assets),
+        roughness: 0.85,
+        alphaTest: 0.5,
+      })
     const back = new THREE.MeshStandardMaterial({ map: backTexture(), roughness: 0.85, alphaTest: 0.5 })
     return { common: face('common'), rare: face('rare'), death: face('death'), back }
   }, [assets])
@@ -55,12 +66,12 @@ export function CardBatch({ assets, children }: { assets: Assets; children: Reac
     for (const pieces of Object.values(meshes.current))
       for (const mesh of Object.values(pieces)) {
         if (!mesh) continue
-        for (let i = 0; i < MOST; i++) mesh.setMatrixAt(i, HIDDEN)
+        for (let i = 0; i < MAX_BATCHED_PER_KIND; i++) mesh.setMatrixAt(i, HIDDEN)
         mesh.instanceMatrix.needsUpdate = true
         mesh.count = 0
       }
     for (const pieces of Object.values(meshes.current)) {
-      for (let i = 0; i < MOST; i++) pieces.front?.setColorAt(i, SHADE.setScalar(1))
+      for (let i = 0; i < MAX_BATCHED_PER_KIND; i++) pieces.front?.setColorAt(i, SHADE.setScalar(1))
       if (pieces.front?.instanceColor) pieces.front.instanceColor.needsUpdate = true
     }
   }, [])
@@ -69,7 +80,8 @@ export function CardBatch({ assets, children }: { assets: Assets; children: Reac
       take: (kind) => {
         let slot = 0
         while (used.current[kind].has(slot)) slot++
-        if (slot >= MOST) throw new Error(`The table batches at most ${MOST} ${kind} cards at once`)
+        if (slot >= MAX_BATCHED_PER_KIND)
+          throw new Error(`The table batches at most ${MAX_BATCHED_PER_KIND} ${kind} cards at once`)
         used.current[kind].add(slot)
         fit(kind)
         return slot
@@ -117,7 +129,7 @@ export function CardBatch({ assets, children }: { assets: Assets; children: Reac
             ref={(mesh) => {
               meshes.current[kind][name] = mesh
             }}
-            args={[geometry, material, MOST]}
+            args={[geometry, material, MAX_BATCHED_PER_KIND]}
             frustumCulled={false}
           />
         ))

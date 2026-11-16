@@ -11,8 +11,8 @@ import { Magnifier, PromptLine, ReaderPanel } from './Reading.tsx'
 import { TutorialBlurb, useSettled } from '../tutorial/TutorialBlurb.tsx'
 
 export function MidLayout() {
-  const { frameProps, fullScreen, seat, setArea, setHandSection, view, game, busy } = useTable()
-  const blurb = useSettled(game.tutorial?.blurb ?? game.run?.note ?? null, busy)
+  const { frameProps, fullScreen, seat, setArea, setHandSection, playedView, game, busy } = useTable()
+  const blurb = useSettled(game.tutorial?.blurb ?? game.run?.firstTimeNote ?? null, busy)
   return (
     <div
       {...frameProps}
@@ -26,9 +26,14 @@ export function MidLayout() {
             <TurnLabel />
             <SaveStatus className="text-sm text-p03-dim" />
           </p>
-          <ScaleBar scale={view.scale} fluid className="gap-1 text-base" />
-          {view.integrity ? (
-            <IntegrityBar left={view.integrity.left} max={view.integrity.max} fluid className="gap-1 text-base" />
+          <ScaleBar scale={playedView.scale} fluid className="gap-1 text-base" />
+          {playedView.integrity ? (
+            <IntegrityBar
+              left={playedView.integrity.left}
+              max={playedView.integrity.max}
+              fluid
+              className="gap-1 text-base"
+            />
           ) : null}
         </div>
         <ExecuteButton />

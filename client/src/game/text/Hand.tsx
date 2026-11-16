@@ -7,7 +7,8 @@ import { PixelCard } from '../CardReader.tsx'
 import { useTable } from './context.ts'
 
 export function Hand() {
-  const { view, state, legal, busy, act, layout, compact, phone, sideways, tapToRead, inspectProps, isNew } = useTable()
+  const { playedView, state, legal, busy, act, layout, compact, phone, sideways, tapToRead, inspectProps, isNew } =
+    useTable()
   const { showRefusal, shakeRef, setReading } = useTable()
   const cardWidth =
     layout === 'mid'
@@ -21,7 +22,7 @@ export function Hand() {
     <div
       className={`flex min-w-0 flex-1 gap-2 rounded-md border-2 border-[#1f3a26] bg-[#050d07]/70 px-1 ${phone || sideways ? 'pb-1' : 'pb-3.5'} ${sideways ? 'min-h-0 flex-wrap content-start justify-center overflow-y-auto pt-4' : `justify-[safe_center] items-center overflow-x-auto ${phone ? 'pt-4' : 'pt-3.5'}`} ${compact ? '' : 'h-full'}`}
     >
-      {view.hand.map((unit) => {
+      {playedView.hand.map((unit) => {
         const selected = unit.uid === state.summon?.uid
         const allowed = has(legal, { type: 'select', uid: unit.uid } as Partial<Action>)
         return (
@@ -64,7 +65,7 @@ export function Hand() {
           </m.div>
         )
       })}
-      {view.hand.length ? null : (
+      {playedView.hand.length ? null : (
         <span aria-hidden className={`invisible shrink-0 p-1 ${cardWidth}`}>
           <span className="block aspect-[5/7]" />
         </span>
@@ -74,9 +75,9 @@ export function Hand() {
 }
 
 export function Piles() {
-  const { view, state, legal, mustDraw, handFull, act, compact, phone, sideways, shakeRef } = useTable()
+  const { playedView, state, legal, mustDraw, handFull, act, compact, phone, sideways, shakeRef } = useTable()
   const deckDraws = has(legal, { type: 'draw', from: 'deck' } as Partial<Action>)
-  const reshuffle = view.deck ? null : reshuffleNote(state)
+  const reshuffle = playedView.deck ? null : reshuffleNote(state)
   const size = sideways
     ? 'w-10'
     : phone
@@ -101,11 +102,11 @@ export function Piles() {
         onClick={() => act({ type: 'draw', from: 'deck' })}
         aria-label={
           extra
-            ? `Draw an extra card from the deck, since P03 leads, ${view.deck} left`
+            ? `Draw an extra card from the deck, since P03 leads, ${playedView.deck} left`
             : reshuffle
               ? `Draw from the deck. ${reshuffle.text}`
-              : view.deck
-                ? `Draw from the deck, ${view.deck} left`
+              : playedView.deck
+                ? `Draw from the deck, ${playedView.deck} left`
                 : 'The deck is empty, with nothing to shuffle back'
         }
         className={`flex flex-col items-center gap-1 text-p03 disabled:brightness-50 disabled:saturate-50 ${size}`}
@@ -116,7 +117,7 @@ export function Piles() {
           ▦
         </span>
         <span className={`text-lg ${reshuffle && reshuffleCostsMemory(state) ? 'text-[#ffb454]' : ''}`}>
-          {reshuffle ? `↻${reshuffle.cards}` : `×${view.deck}`}
+          {reshuffle ? `↻${reshuffle.cards}` : `×${playedView.deck}`}
         </span>
       </button>
       <button

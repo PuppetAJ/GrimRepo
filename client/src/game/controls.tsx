@@ -138,15 +138,15 @@ export const legalFor = (game: Ready): Action[] => game.tutorial?.legal(game.sta
 
 export function Forfeit({
   forfeit,
-  run = false,
+  abandonsRun = false,
   disabled = false,
   className = '',
   title,
-  children = run ? 'Abandon run' : 'Forfeit',
+  children = abandonsRun ? 'Abandon run' : 'Forfeit',
 }: {
   title?: string
   forfeit: () => Promise<void>
-  run?: boolean
+  abandonsRun?: boolean
   disabled?: boolean
   className?: string
   children?: ReactNode
@@ -158,18 +158,24 @@ export function Forfeit({
           {children}
         </Button>
       </AlertDialogTrigger>
-      <ForfeitConfirm forfeit={forfeit} run={run} />
+      <ForfeitConfirm forfeit={forfeit} abandonsRun={abandonsRun} />
     </AlertDialog>
   )
 }
 
-export function ForfeitConfirm({ forfeit, run = false }: { forfeit: () => Promise<void>; run?: boolean }) {
+export function ForfeitConfirm({
+  forfeit,
+  abandonsRun = false,
+}: {
+  forfeit: () => Promise<void>
+  abandonsRun?: boolean
+}) {
   return (
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>{run ? 'Abandon this run?' : 'Forfeit this game?'}</AlertDialogTitle>
+        <AlertDialogTitle>{abandonsRun ? 'Abandon this run?' : 'Forfeit this game?'}</AlertDialogTitle>
         <AlertDialogDescription>
-          {run
+          {abandonsRun
             ? 'It ends here, scored on how far you got, and the next run starts from the beginning.'
             : 'It counts as a loss on the turn you have reached, and you get a fresh deal.'}
         </AlertDialogDescription>
@@ -177,7 +183,7 @@ export function ForfeitConfirm({ forfeit, run = false }: { forfeit: () => Promis
       <AlertDialogFooter>
         <AlertDialogCancel>Keep playing</AlertDialogCancel>
         <AlertDialogAction variant="destructive" onClick={() => void forfeit()}>
-          {run ? 'Abandon' : 'Forfeit'}
+          {abandonsRun ? 'Abandon' : 'Forfeit'}
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>

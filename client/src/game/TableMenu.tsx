@@ -160,7 +160,7 @@ export function TableMenu({
       </DropdownMenu>
       {quit ? (
         <AlertDialog open={quitting} onOpenChange={setQuitting}>
-          <ForfeitConfirm forfeit={quit} run={Boolean(run)} />
+          <ForfeitConfirm forfeit={quit} abandonsRun={Boolean(run)} />
         </AlertDialog>
       ) : null}
     </>

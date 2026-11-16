@@ -27,12 +27,12 @@ import { dropIn } from '../moves.ts'
 import { Inspector, Magnifier } from './Reading.tsx'
 
 function Status() {
-  const { menu, setMenu, sideways, view } = useTable()
+  const { menu, setMenu, sideways, playedView } = useTable()
   return (
     <div className="flex items-center gap-2 text-lg">
       <TurnLabel />
-      {view.integrity && !sideways ? (
-        <IntegrityBar left={view.integrity.left} max={view.integrity.max} compact className="gap-1" />
+      {playedView.integrity && !sideways ? (
+        <IntegrityBar left={playedView.integrity.left} max={playedView.integrity.max} compact className="gap-1" />
       ) : null}
       <span className="ml-auto" />
       <button
@@ -105,7 +105,7 @@ function Menu() {
         ) : (
           <Forfeit
             forfeit={game.forfeit}
-            run={Boolean(game.run)}
+            abandonsRun={Boolean(game.run)}
             disabled={game.state.status !== 'playing'}
             className={`${MENU_BUTTON} h-auto`}
           >
@@ -129,10 +129,21 @@ function Menu() {
 }
 
 export function PhoneLayout() {
-  const { frameProps, phoneFrame, covering, sideways, scrolling, seat, setArea, setHandSection, view, game, busy } =
-    useTable()
+  const {
+    frameProps,
+    phoneFrame,
+    covering,
+    sideways,
+    scrolling,
+    seat,
+    setArea,
+    setHandSection,
+    playedView,
+    game,
+    busy,
+  } = useTable()
   const over = hasEnded(game)
-  const blurb = useSettled(game.tutorial?.blurb ?? game.run?.note ?? null, busy)
+  const blurb = useSettled(game.tutorial?.blurb ?? game.run?.firstTimeNote ?? null, busy)
   const flowing = scrolling && !covering
   const pieces = `z-10 gap-2 pt-[max(0.5rem,env(safe-area-inset-top))] pr-[max(0.5rem,env(safe-area-inset-right))] pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(0.5rem,env(safe-area-inset-left))] ${flowing ? 'relative min-h-svh' : 'absolute inset-0'}`
   const board = (
@@ -162,9 +173,14 @@ export function PhoneLayout() {
               <Status />
             </div>
             <Panel className="flex shrink-0 flex-col gap-1 p-2">
-              <Balance scale={view.scale} />
-              {view.integrity ? (
-                <IntegrityBar left={view.integrity.left} max={view.integrity.max} fluid className="gap-1 text-base" />
+              <Balance scale={playedView.scale} />
+              {playedView.integrity ? (
+                <IntegrityBar
+                  left={playedView.integrity.left}
+                  max={playedView.integrity.max}
+                  fluid
+                  className="gap-1 text-base"
+                />
               ) : null}
             </Panel>
             <section ref={setHandSection} aria-label="Your hand" className="flex min-h-0 flex-1 flex-col">
@@ -187,10 +203,10 @@ export function PhoneLayout() {
         <div className={`${pieces} flex flex-col ${flowing ? '' : scrolling ? 'overflow-y-auto' : 'overflow-hidden'}`}>
           <div className="relative z-10 flex shrink-0 flex-col gap-1 rounded-md border-2 border-p03-edge bg-[#07130b] py-1 pr-1 pl-2">
             <Status />
-            <ScaleBar scale={view.scale} fluid className="gap-1 pr-1 text-base" />
+            <ScaleBar scale={playedView.scale} fluid className="gap-1 pr-1 text-base" />
           </div>
           <div className="relative z-10 shrink-0">
-            <LogBox className="h-[3.25rem] tall:h-[4.75rem]" log="sr-only tall:not-sr-only" />
+            <LogBox className="h-[3.25rem] tall:h-[4.75rem]" logClassName="sr-only tall:not-sr-only" />
           </div>
           {board}
           <section ref={setHandSection} aria-label="Your hand" className="relative z-10 flex shrink-0">

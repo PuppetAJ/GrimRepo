@@ -2,14 +2,16 @@ import { useEffect, useRef, useState, type MouseEvent, type PointerEvent } from 
 import type { Slot, Unit } from 'shared'
 
 const HOLD_MS = 280
-const HELD_MS = 400
+const TRAILING_CLICK_MS = 400
 
 type Magnified = { unit: Unit; x: number; y: number; sticky?: boolean }
+
+const survivesRelease = (magnified: Magnified | null) => (magnified?.sticky ? magnified : null)
 
 export function useHoldToMagnify(pointAt: (x: number, y: number) => Unit | null) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const held = useRef(false)
-  const dismissed = useRef(false)
+  const swallowDismissClick = useRef(false)
   const [magnified, setMagnified] = useState<Magnified | null>(null)
   const latest = useRef(pointAt)
   useEffect(() => {
@@ -21,9 +23,9 @@ export function useHoldToMagnify(pointAt: (x: number, y: number) => Unit | null)
   useEffect(() => {
     if (!sticky) return
     const end = () => {
-      dismissed.current = true
+      swallowDismissClick.current = true
       setMagnified(null)
-      setTimeout(() => (dismissed.current = false), HELD_MS)
+      setTimeout(() => (swallowDismissClick.current = false), TRAILING_CLICK_MS)
     }
     const key = (event: KeyboardEvent) => event.key === 'Escape' && end()
     window.addEventListener('pointerdown', end, true)
@@ -49,7 +51,7 @@ export function useHoldToMagnify(pointAt: (x: number, y: number) => Unit | null)
     const pointerMove = (event: globalThis.PointerEvent) => event.pointerType === 'mouse' && move(event)
     const end = () => {
       setMagnified(null)
-      setTimeout(() => (held.current = false), HELD_MS)
+      setTimeout(() => (held.current = false), TRAILING_CLICK_MS)
     }
     document.addEventListener('touchmove', touchMove, { passive: false })
     document.addEventListener('touchend', end)
@@ -71,7 +73,7 @@ export function useHoldToMagnify(pointAt: (x: number, y: number) => Unit | null)
   }
   const endHold = () => {
     cancel()
-    setMagnified((last) => (last?.sticky ? last : null))
+    setMagnified(survivesRelease)
   }
 
   const holdProps = (unit: Slot, onHold: () => void) => ({
@@ -92,15 +94,17 @@ export function useHoldToMagnify(pointAt: (x: number, y: number) => Unit | null)
     },
   })
 
+  const swallowClickAfterHold = (event: MouseEvent) => {
+    if (!held.current && !swallowDismissClick.current) return
+    held.current = false
+    swallowDismissClick.current = false
+    event.stopPropagation()
+    event.preventDefault()
+  }
+
   const frameProps = {
     onContextMenu: (event: MouseEvent) => (timer.current || held.current) && event.preventDefault(),
-    onClickCapture: (event: MouseEvent) => {
-      if (!held.current && !dismissed.current) return
-      held.current = false
-      dismissed.current = false
-      event.stopPropagation()
-      event.preventDefault()
-    },
+    onClickCapture: swallowClickAfterHold,
   }
 
   const magnify = (unit: Unit, x: number, y: number) => setMagnified({ unit, x, y, sticky: true })

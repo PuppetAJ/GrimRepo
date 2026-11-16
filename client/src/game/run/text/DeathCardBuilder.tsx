@@ -26,7 +26,7 @@ import { Sentences } from '../../text/Sentences.tsx'
 
 const UNNAMED = 'Death Card'
 
-const DECIDED = new Map<string, { built?: BuiltDeathCard; skipped?: boolean }>()
+const DEATH_CARDS_THIS_PAGE = new Map<string, { built?: BuiltDeathCard; skipped?: boolean }>()
 
 export function DeathCardBuilder({ run }: { run: RunReady }) {
   const [cost, setCost] = useState<number | null>(null)
@@ -36,19 +36,19 @@ export function DeathCardBuilder({ run }: { run: RunReady }) {
   const [touched, setTouched] = useState(false)
   const [sending, setSending] = useState(false)
   const decision = `${run.id}:${run.state.seed}`
-  const [built, setBuilt] = useState<BuiltDeathCard | null>(() => DECIDED.get(decision)?.built ?? null)
+  const [built, setBuilt] = useState<BuiltDeathCard | null>(() => DEATH_CARDS_THIS_PAGE.get(decision)?.built ?? null)
   const cardAt = useRef<HTMLDivElement>(null)
   const [from, setFrom] = useState<DOMRect | null>(null)
   const finish = (done: BuiltDeathCard) => {
     setFrom(cardAt.current?.getBoundingClientRect() ?? null)
     setBuilt(done)
-    DECIDED.set(decision, { built: done })
+    DEATH_CARDS_THIS_PAGE.set(decision, { built: done })
   }
   const [error, setError] = useState<string | null>(null)
-  const [skipped, setSkipped] = useState(() => DECIDED.get(decision)?.skipped ?? false)
+  const [skipped, setSkipped] = useState(() => DEATH_CARDS_THIS_PAGE.get(decision)?.skipped ?? false)
   const leaveOut = () => {
     setSkipped(true)
-    DECIDED.set(decision, { skipped: true })
+    DEATH_CARDS_THIS_PAGE.set(decision, { skipped: true })
   }
 
   const state = run.state
@@ -112,7 +112,7 @@ export function DeathCardBuilder({ run }: { run: RunReady }) {
           onPick={(unit) => setCost(unit.uid)}
           picked={cost}
           data={(unit) => ({ 'data-action': 'death-cost', 'data-card': unit.uid })}
-          size="w-20 sm:w-24"
+          itemClassName="w-20 sm:w-24"
         />
       ),
     },
@@ -124,7 +124,7 @@ export function DeathCardBuilder({ run }: { run: RunReady }) {
           onPick={(unit) => setStats(unit.uid)}
           picked={stats}
           data={(unit) => ({ 'data-action': 'death-stats', 'data-card': unit.uid })}
-          size="w-20 sm:w-24"
+          itemClassName="w-20 sm:w-24"
         />
       ),
     },
@@ -136,7 +136,7 @@ export function DeathCardBuilder({ run }: { run: RunReady }) {
           onPick={(unit) => setSigils(unit.uid)}
           picked={sigils}
           data={(unit) => ({ 'data-action': 'death-sigils', 'data-card': unit.uid })}
-          size="w-20 sm:w-24"
+          itemClassName="w-20 sm:w-24"
         />
       ),
     },

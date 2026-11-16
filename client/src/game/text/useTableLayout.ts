@@ -5,6 +5,9 @@ import { useFit, useFlatReader, useLaneSize } from './sizing.ts'
 
 export type Layout = 'wide' | 'mid' | 'phone'
 
+const MID_READER_PX = 13 * 16 + 12
+const SIDEWAYS_COLUMN_PX = 21 * 16 + 32
+
 export function useTableLayout(layout: Layout) {
   const compact = layout !== 'wide'
   const phone = layout === 'phone'
@@ -33,7 +36,7 @@ export function useTableLayout(layout: Layout) {
   }, [phone, covering, sideways])
 
   const [handSection, setHandSection] = useState<HTMLElement | null>(null)
-  const aside = layout === 'mid' ? 13 * 16 + 12 : sideways ? 21 * 16 + 32 : phone ? 16 : 0
+  const aside = layout === 'mid' ? MID_READER_PX : sideways ? SIDEWAYS_COLUMN_PX : phone ? 16 : 0
   const smallestLane = layout === 'mid' ? 76 : 40
   const { setArea, lane: laneSize } = useLaneSize(
     compact,

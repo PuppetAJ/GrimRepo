@@ -22,13 +22,13 @@ export function RunText({ run, layout, seat, on3d }: { run: RunReady; layout: La
   const canLook = view in BACK_TO
   const lookingAtMap = canLook && lookingFrom === here
   const look = (on: boolean) => setLookingFrom(on ? here : null)
-  const toggle = useRef(() => {})
+  const toggleMapLook = useRef(() => {})
   useEffect(() => {
-    toggle.current = () => canLook && look(!lookingAtMap)
+    toggleMapLook.current = () => canLook && look(!lookingAtMap)
   })
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key.toLowerCase() === 'm' && !event.repeat && forTable(event)) toggle.current()
+      if (event.key.toLowerCase() === 'm' && !event.repeat && forTable(event)) toggleMapLook.current()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -57,8 +57,8 @@ export function RunText({ run, layout, seat, on3d }: { run: RunReady; layout: La
             layout={layout}
             title={lookingAtMap ? mapTitle(run.state) : title}
             caption={lookingAtMap ? undefined : caption}
-            stack={shown === 'map'}
-            deck={shown !== 'summary' && shown !== 'start'}
+            stackHeader={shown === 'map'}
+            showDeck={shown !== 'summary' && shown !== 'start'}
             onSwitch={{ label: 'Play on the 3D table', go: on3d }}
             note={note ? <RunNote note={note} compact={layout === 'phone'} /> : null}
           >

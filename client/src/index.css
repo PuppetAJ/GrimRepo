@@ -226,8 +226,11 @@
 }
 
 [data-rise] {
-  animation: rise 0.55s cubic-bezier(0.22, 1.2, 0.36, 1) backwards;
-  animation-delay: calc(min(var(--rise, 0), 9) * 60ms);
+  --rise-step: 60ms;
+  --rise-max-steps: 9;
+  --ease-overshoot: cubic-bezier(0.22, 1.2, 0.36, 1);
+  animation: rise 0.55s var(--ease-overshoot) backwards;
+  animation-delay: calc(min(var(--rise, 0), var(--rise-max-steps)) * var(--rise-step));
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -27,7 +27,7 @@ const lead = (scale: number) =>
 
 const lane = (index: number) => `lane ${index + 1}`
 
-const pick = (lines: string[], key: number) => lines[Math.abs(key) % lines.length] as string
+const pickByKey = (lines: string[], key: number) => lines[Math.abs(key) % lines.length] as string
 const BIG_HIT = 5
 const TAUNTS = [
   'Now THAT is synergy.',
@@ -63,16 +63,18 @@ export function narrate(before: GameState, events: GameEvent[]): string[] {
   const firstSacrifice = events.findIndex((event) => event.type === 'sacrificed')
   return events.flatMap((event, index): string[] => {
     switch (event.type) {
-      case 'drew':
+      case 'drew': {
+        const repeatedBoilerplate = before.player.hand.filter((unit) => unit.card === 'Boilerplate').length % 2 === 1
         return [
           event.from === 'boilerplate'
-            ? before.player.hand.filter((unit) => unit.card === 'Boilerplate').length % 2 === 1
+            ? repeatedBoilerplate
               ? 'Boilerplate again. Bold strategy, choosing nothing.'
               : `You took a Boilerplate from the side pile. Filler.`
             : event.catchUp
               ? `You're behind, so you take an extra card: ${card(event.unit.card).name}. Charity.`
               : `You drew ${card(event.unit.card).name}.`,
         ]
+      }
       case 'reshuffled':
         return [`Your deck ran dry. ${event.cards} cards shuffled back in. Same weak cards, new order.`]
       case 'sacrificed':
@@ -85,7 +87,7 @@ export function narrate(before: GameState, events: GameEvent[]): string[] {
       case 'placed': {
         const played = card(event.unit.card)
         const weak = event.unit.attack === 0 && event.unit.card !== 'Boilerplate'
-        const aside = weak ? " That's your play? Cute." : played.cost >= 2 ? ` ${pick(PLAYS, event.unit.uid)}` : ''
+        const aside = weak ? " That's your play? Cute." : played.cost >= 2 ? ` ${pickByKey(PLAYS, event.unit.uid)}` : ''
         return [`You played ${played.name} in ${lane(event.lane)}.${aside}`]
       }
       case 'phaseChanged':
@@ -98,8 +100,8 @@ export function narrate(before: GameState, events: GameEvent[]): string[] {
       case 'hit': {
         const big = event.amount >= BIG_HIT
         return event.side === 'opponent'
-          ? [`You hit me for ${event.amount}. ${lead(event.scale)}${big ? ` ${pick(EXCUSES, event.scale)}` : ''}`]
-          : [`I hit you for ${event.amount}. ${lead(event.scale)}${big ? ` ${pick(TAUNTS, event.scale)}` : ''}`]
+          ? [`You hit me for ${event.amount}. ${lead(event.scale)}${big ? ` ${pickByKey(EXCUSES, event.scale)}` : ''}`]
+          : [`I hit you for ${event.amount}. ${lead(event.scale)}${big ? ` ${pickByKey(TAUNTS, event.scale)}` : ''}`]
       }
       case 'indebted':
         return [
@@ -111,7 +113,7 @@ export function narrate(before: GameState, events: GameEvent[]): string[] {
             ? before.placed?.includes(event.uid)
               ? `Your ${name(event.uid)} died the turn you played it. Total misplay.`
               : `Your ${name(event.uid)} died. Obviously.`
-            : `My ${name(event.uid)} died. ${pick(LOSSES, event.uid)}`.trimEnd(),
+            : `My ${name(event.uid)} died. ${pickByKey(LOSSES, event.uid)}`.trimEnd(),
         ]
       case 'overkill':
         return [`${event.amount} damage spilled into ${lane(event.lane)}'s queue.`]
@@ -178,7 +180,7 @@ export function narrate(before: GameState, events: GameEvent[]): string[] {
             : `My ${card(event.unit.card).name} hot-reloaded behind ${lane(event.lane)}.`,
         ]
       case 'turnStarted':
-        return [`Turn ${event.turn}. Draw.${event.turn % 5 === 0 ? ` ${pick(PATIENCE, event.turn / 5)}` : ''}`]
+        return [`Turn ${event.turn}. Draw.${event.turn % 5 === 0 ? ` ${pickByKey(PATIENCE, event.turn / 5)}` : ''}`]
       case 'gameOver':
         return [
           event.outcome === 'win'

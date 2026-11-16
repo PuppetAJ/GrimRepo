@@ -9,7 +9,7 @@ type Corner = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left'
 
 const BREAKS = { long: breakLong, medium: breakMedium, short: breakShort }
 
-const DAMAGE: Record<string, { breaks: [Edge, number, keyof typeof BREAKS][]; corner: Corner }> = {
+const DAMAGE: Record<string, { breaks: [edge: Edge, percent: number, size: keyof typeof BREAKS][]; corner: Corner }> = {
   terminal: {
     breaks: [
       ['top', 38, 'long'],
@@ -46,16 +46,28 @@ const EDGES: Record<Edge, (at: number) => CSSProperties> = {
   right: (at) => ({ left: '100%', top: `${at}%`, transform: 'rotate(90deg)' }),
 }
 
+const TORN_SIZE = { width: 29, height: 32 }
+const TORN_ORIGIN = { x: 22, y: 12 }
+
 function Torn({ corner }: { corner: Corner }) {
   const style = {
-    top: corner.startsWith('top') ? -12 : undefined,
-    bottom: corner.startsWith('bottom') ? -20 : undefined,
-    left: corner.endsWith('left') ? -22 : undefined,
-    right: corner.endsWith('right') ? -7 : undefined,
-    transformOrigin: '22px 12px',
+    top: corner.startsWith('top') ? -TORN_ORIGIN.y : undefined,
+    bottom: corner.startsWith('bottom') ? TORN_ORIGIN.y - TORN_SIZE.height : undefined,
+    left: corner.endsWith('left') ? -TORN_ORIGIN.x : undefined,
+    right: corner.endsWith('right') ? TORN_ORIGIN.x - TORN_SIZE.width : undefined,
+    transformOrigin: `${TORN_ORIGIN.x}px ${TORN_ORIGIN.y}px`,
     transform: `scale(${corner.endsWith('left') ? -1 : 1}, ${corner.startsWith('bottom') ? -1 : 1})`,
   }
-  return <img src={tornCorner} alt="" width={29} height={32} className="absolute max-w-none" style={style} />
+  return (
+    <img
+      src={tornCorner}
+      alt=""
+      width={TORN_SIZE.width}
+      height={TORN_SIZE.height}
+      className="absolute max-w-none"
+      style={style}
+    />
+  )
 }
 
 export function FrameDamage({ frame }: { frame: keyof typeof DAMAGE }) {

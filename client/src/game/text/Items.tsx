@@ -19,18 +19,18 @@ export function Items({
       {items.map((item, slot) => {
         const usable = !busy && legal.some((action) => action.type === 'use' && action.slot === slot)
         const def = ITEMS[item]
-        const held = aiming === slot
+        const pickedUp = aiming === slot
         return (
           <ItemButton
             key={`${item}-${slot}`}
             item={item}
             slot={slot}
             usable={usable}
-            held={held}
-            size={48}
+            pickedUp={pickedUp}
+            sizePx={48}
             onUse={() => {
               if (def.target === 'none') act({ type: 'use', slot })
-              else setAiming(held ? null : slot)
+              else setAiming(pickedUp ? null : slot)
               onPick?.()
             }}
           />

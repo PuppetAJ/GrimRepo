@@ -32,12 +32,12 @@ export function NodeResult({ run }: { run: RunReady }) {
     event.type === 'removed'
       ? [{ card: event.card, how: after.view === 'campfire' ? 'burned' : 'sacrificed' }]
       : event.type === 'fused'
-        ? [{ card: event.card, how: 'merged', into: event.into }]
+        ? [{ card: event.card, how: 'merged', mergedFrom: event.into }]
         : event.type === 'changed' || event.type === 'stripped'
           ? [{ card: event.card, how: 'changed' }]
           : [],
   )
-  const shown = parts.filter((part, index) => parts.findIndex((other) => other.card.id === part.card.id) === index)
+  const shown = uniqueByCard(parts)
   const items = after.events.flatMap((event) => (event.type === 'gotItem' ? [event.item] : []))
   const repaired = after.events.find((event) => event.type === 'repaired')
   return (
@@ -45,7 +45,7 @@ export function NodeResult({ run }: { run: RunReady }) {
       <LeaveButton label="Leave for the map" onLeave={dismiss} />
       {shown.length || items.length ? (
         <ul className="flex flex-wrap justify-center gap-6 pt-3">
-          {shown.map(({ card, how, into }) => (
+          {shown.map(({ card, how, mergedFrom }) => (
             <m.li
               key={card.id}
               {...(how === 'sacrificed' ? sacrificed(still) : {})}
@@ -62,13 +62,13 @@ export function NodeResult({ run }: { run: RunReady }) {
                     </m.div>
                   </div>
                 </>
-              ) : how === 'merged' && into ? (
+              ) : how === 'merged' && mergedFrom ? (
                 <>
                   <m.div {...mergeIn('left', still)} className="absolute inset-0">
-                    <PixelCard unit={asUnit(into)} />
+                    <PixelCard unit={asUnit(mergedFrom)} />
                   </m.div>
                   <m.div {...mergeIn('right', still)} className="absolute inset-0">
-                    <PixelCard unit={asUnit(before(card, into))} />
+                    <PixelCard unit={asUnit(beforeMerge(card, mergedFrom))} />
                   </m.div>
                   <m.div {...mergeOut}>
                     <ReadableCard unit={asUnit(card)} />
@@ -76,7 +76,7 @@ export function NodeResult({ run }: { run: RunReady }) {
                 </>
               ) : how === 'changed' ? (
                 <m.div {...warmPop}>
-                  <ReadableCard unit={asUnit(last(after.events, card))} />
+                  <ReadableCard unit={asUnit(asLastChanged(after.events, card))} />
                 </m.div>
               ) : (
                 <PixelCard unit={asUnit(card)} />
@@ -120,15 +120,18 @@ export function NodeResult({ run }: { run: RunReady }) {
   )
 }
 
-type Part = { card: RunCard; how: 'burned' | 'sacrificed' | 'merged' | 'changed'; into?: RunCard }
+type Part = { card: RunCard; how: 'burned' | 'sacrificed' | 'merged' | 'changed'; mergedFrom?: RunCard }
 
-const before = (card: RunCard, into: RunCard): RunCard => ({
+const uniqueByCard = (parts: Part[]) =>
+  parts.filter((part, index) => parts.findIndex((other) => other.card.id === part.card.id) === index)
+
+const beforeMerge = (card: RunCard, mergedFrom: RunCard): RunCard => ({
   ...card,
-  attack: card.attack - into.attack,
-  health: card.health - into.health,
+  attack: card.attack - mergedFrom.attack,
+  health: card.health - mergedFrom.health,
 })
 
-function last(events: RunEvent[], card: RunCard): RunCard {
+function asLastChanged(events: RunEvent[], card: RunCard): RunCard {
   let latest = card
   for (const event of events)
     if ((event.type === 'changed' || event.type === 'stripped' || event.type === 'fused') && event.card.id === card.id)

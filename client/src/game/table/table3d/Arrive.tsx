@@ -3,7 +3,8 @@ import { useRef, type ReactNode } from 'react'
 import type * as THREE from 'three'
 import { STILL } from '../factory/constants.ts'
 
-export const SETTLE = 0.32
+export const SETTLE_SECONDS = 0.32
+const LIFT_HEIGHT = 0.45
 
 export function Arrive({ delay, leave = false, children }: { delay?: number; leave?: boolean; children: ReactNode }) {
   const group = useRef<THREE.Group>(null)
@@ -16,10 +17,11 @@ export function Arrive({ delay, leave = false, children }: { delay?: number; lea
     if (born.current < 0) born.current = now
     if (leave && gone.current < 0) gone.current = now
     if (!leave) gone.current = -1
-    const down = STILL || delay === undefined ? 1 : Math.min(1, Math.max(0, (now - born.current - delay) / SETTLE))
-    const up = gone.current < 0 ? 0 : STILL ? 1 : Math.min(1, (now - gone.current) / SETTLE)
+    const down =
+      STILL || delay === undefined ? 1 : Math.min(1, Math.max(0, (now - born.current - delay) / SETTLE_SECONDS))
+    const up = gone.current < 0 ? 0 : STILL ? 1 : Math.min(1, (now - gone.current) / SETTLE_SECONDS)
     piece.visible = down > 0 && up < 1
-    piece.position.y = ((1 - down) ** 3 + up ** 3) * 0.45
+    piece.position.y = ((1 - down) ** 3 + up ** 3) * LIFT_HEIGHT
   })
   return (
     <group ref={group} visible={STILL || delay === undefined}>

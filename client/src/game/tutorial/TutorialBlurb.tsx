@@ -33,6 +33,8 @@ export function tutorialPrompt(blurb: Blurb | null): string | null {
   return blurb.move ? moveText(blurb.move) : 'Read what P03 says, then click it to go on.'
 }
 
+const PHONE_TOOLS_MENU_SELECTOR = 'button[aria-label="Menu"]'
+
 export function targetSelector(move: Move): string {
   switch (move.type) {
     case 'draw':
@@ -45,7 +47,7 @@ export function targetSelector(move: Move): string {
     case 'ringBell':
       return '[data-action="ringBell"]'
     case 'use':
-      return `[data-action="use"][aria-label^="${ITEMS[move.item].name}:"], [data-action="aim"][data-row="${move.row}"][data-lane="${move.lane}"], button[aria-label="Menu"]`
+      return `[data-action="use"][aria-label^="${ITEMS[move.item].name}:"], [data-action="aim"][data-row="${move.row}"][data-lane="${move.lane}"], ${PHONE_TOOLS_MENU_SELECTOR}`
   }
 }
 
@@ -74,7 +76,7 @@ export function outlinesFor(move: Move): Outline[] {
     case 'use':
       return [
         { selector: `[data-table] [data-action="use"][aria-label^="${ITEMS[move.item].name}:"]` },
-        { selector: `${text} button[aria-label="Menu"]` },
+        { selector: `${text} ${PHONE_TOOLS_MENU_SELECTOR}` },
       ]
     case 'mark':
     case 'place':
@@ -135,7 +137,7 @@ const takesKeys = (target: EventTarget | null) =>
   target instanceof Element && target.closest('button, a, input, select, textarea, [role="button"]') !== null
 
 const GAP = 8
-const TAB_CLEAR = 16
+const NAME_TAB_HEIGHT = 16
 type Box = { left: number; right: number; top: number; bottom: number }
 const overlap = (a: Box, b: Box) =>
   Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) *
@@ -216,7 +218,7 @@ export function TutorialBlurb({
     const targets = selector ? [...root.querySelectorAll(selector)].map((found) => found.getBoundingClientRect()) : []
     const covered = (bottom: boolean) => targets.reduce((sum, target) => sum + overlap(at(bottom), target), 0)
     const bottom = covered(false) > 0 && covered(true) < covered(false)
-    const top = board && !fixed ? Math.max(TAB_CLEAR, Math.round(board.top - frame.top - 2)) : null
+    const top = board && !fixed ? Math.max(NAME_TAB_HEIGHT, Math.round(board.top - frame.top - 2)) : null
     setPlace((now) =>
       now.center === center && now.bottom === bottom && now.top === top ? now : { center, top, bottom },
     )

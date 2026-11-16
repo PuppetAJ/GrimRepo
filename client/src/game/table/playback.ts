@@ -12,20 +12,20 @@ export type Popup = {
   at: number
 }
 export type Leaving = { unit: Unit; row: Row; lane: number; at: number; how: 'died' | 'sacrificed' }
-export type Lunge = { at: number; toward: 1 | -1; across: number }
+export type Lunge = { at: number; toward: 1 | -1; lanesAside: number }
 export type Slide = { at: number; from: number; to: number }
 
 export type Playback = {
   view: View
   lunges: Map<number, Lunge>
   slides: Map<number, Slide>
-  advances: Map<number, number>
+  advancedAt: Map<number, number>
   popups: Popup[]
   leaving: Leaving[]
   spawns: Map<number, Vec3>
 }
 
-const PACE: Record<GameEvent['type'], number> = {
+const PACE_MS: Record<GameEvent['type'], number> = {
   drew: 285,
   reshuffled: 225,
   selected: 0,
@@ -63,12 +63,12 @@ const PACE: Record<GameEvent['type'], number> = {
   gameOver: 0,
 }
 
-export const pace = (event: GameEvent): number => PACE[event.type]
+export const pace = (event: GameEvent): number => PACE_MS[event.type]
 
 export const holdsTheTable = (events: GameEvent[]): boolean =>
   events.some((event) => event.type === 'attacked' || event.type === 'turnStarted' || event.type === 'gameOver')
 
-const FACE: Record<'player' | 'opponent', Vec3> = {
+const FACE_POPUP_AT: Record<'player' | 'opponent', Vec3> = {
   player: [CENTER_X, TABLE_Y + 0.35, -8.0],
   opponent: [CENTER_X, TABLE_Y + 0.9, -12.3],
 }
@@ -83,7 +83,7 @@ export function start(state: GameState): Playback {
     view: project(state),
     lunges: new Map(),
     slides: new Map(),
-    advances: new Map(),
+    advancedAt: new Map(),
     popups: [],
     leaving: [],
     spawns: new Map(),
@@ -105,7 +105,7 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
     view: step(view, event),
     lunges: new Map([...playback.lunges].filter(([, lunge]) => now - lunge.at < 1000)),
     slides: new Map([...playback.slides].filter(([, slide]) => now - slide.at < 1000)),
-    advances: new Map([...playback.advances].filter(([, at]) => now - at < 1000)),
+    advancedAt: new Map([...playback.advancedAt].filter(([, at]) => now - at < 1000)),
     popups: playback.popups.filter((popup) => now - popup.at < POPUP_MS),
     leaving: playback.leaving.filter((card) => now - card.at < LEAVE_MS),
     spawns: playback.spawns,
@@ -122,18 +122,18 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
   switch (event.type) {
     case 'drew':
       next.spawns = new Map(next.spawns).set(event.unit.uid, event.from === 'deck' ? DECK : PILE)
-      if (event.catchUp) popup('catch-up draw', 'note', FACE.player, { face: 'player' })
+      if (event.catchUp) popup('catch-up draw', 'note', FACE_POPUP_AT.player, { face: 'player' })
       break
     case 'queued':
       next.spawns = new Map(next.spawns).set(event.unit.uid, P03_HAND)
       if (event.desperate) popup('desperate', 'note', slot('back', event.lane, 0.5), { row: 'back', lane: event.lane })
       break
     case 'integrity': {
-      popup(`integrity ${event.change}`, 'damage', FACE.player, { face: 'player' })
+      popup(`integrity ${event.change}`, 'damage', FACE_POPUP_AT.player, { face: 'player' })
       break
     }
     case 'advanced':
-      next.advances = new Map(next.advances).set(event.uid, now)
+      next.advancedAt = new Map(next.advancedAt).set(event.uid, now)
       break
     case 'moved':
       next.slides = new Map(next.slides).set(event.uid, { at: now, from: event.from, to: event.to })
@@ -148,10 +148,10 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
       next.spawns = new Map(next.spawns).set(event.unit.uid, PILE)
       break
     case 'skipped':
-      popup('skipped', 'note', FACE.opponent, { face: 'opponent' })
+      popup('skipped', 'note', FACE_POPUP_AT.opponent, { face: 'opponent' })
       break
     case 'used':
-      popup(ITEMS[event.item].name, 'note', FACE.player, { face: 'player' })
+      popup(ITEMS[event.item].name, 'note', FACE_POPUP_AT.player, { face: 'player' })
       break
     case 'leftBehind':
       next.spawns = new Map(next.spawns).set(event.unit.uid, event.side === 'player' ? PILE : P03_HAND)
@@ -167,7 +167,7 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
         next.lunges = new Map(next.lunges).set(unit.uid, {
           at: now,
           toward: event.side === 'player' ? -1 : 1,
-          across: Math.sign(event.aimed - event.lane),
+          lanesAside: Math.sign(event.aimed - event.lane),
         })
       break
     }
@@ -215,10 +215,10 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
       popup(`overkill ${event.amount}`, 'note', slot('back', event.lane, 0.5), { row: 'back', lane: event.lane })
       break
     case 'hit':
-      popup(`-${event.amount}`, 'damage', FACE[event.side], { face: event.side })
+      popup(`-${event.amount}`, 'damage', FACE_POPUP_AT[event.side], { face: event.side })
       break
     case 'indebted':
-      popup(`debt -${event.amount}`, 'damage', FACE.player, { face: 'player' })
+      popup(`debt -${event.amount}`, 'damage', FACE_POPUP_AT.player, { face: 'player' })
       break
     case 'killed':
     case 'retired':

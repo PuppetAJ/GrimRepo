@@ -23,7 +23,7 @@ function restView(state: RunState): View {
     front: empty,
     back: empty,
     summon: null,
-    phase: 0,
+    phaseIndex: 0,
     integrity: { left: state.integrity, max: INTEGRITY },
     desperate: false,
   }
@@ -64,7 +64,7 @@ export function windowHeight(width: number, height: number): number {
 }
 
 type M = number[]
-const adj = (m: M): M => [
+const adjugate3 = (m: M): M => [
   m[4]! * m[8]! - m[5]! * m[7]!,
   m[2]! * m[7]! - m[1]! * m[8]!,
   m[1]! * m[5]! - m[2]! * m[4]!,
@@ -75,24 +75,24 @@ const adj = (m: M): M => [
   m[1]! * m[6]! - m[0]! * m[7]!,
   m[0]! * m[4]! - m[1]! * m[3]!,
 ]
-const mul = (a: M, b: M): M =>
+const multiply3 = (a: M, b: M): M =>
   [...Array(9).keys()].map((index) => {
     const row = Math.floor(index / 3)
     const col = index % 3
     return a[row * 3]! * b[col]! + a[row * 3 + 1]! * b[3 + col]! + a[row * 3 + 2]! * b[6 + col]!
   })
-function basis(p: number[]): M {
+function unitSquareTo(p: number[]): M {
   const m = [p[0]!, p[2]!, p[4]!, p[1]!, p[3]!, p[5]!, 1, 1, 1]
-  const a = adj(m)
+  const a = adjugate3(m)
   const v = [
     a[0]! * p[6]! + a[1]! * p[7]! + a[2]!,
     a[3]! * p[6]! + a[4]! * p[7]! + a[5]!,
     a[6]! * p[6]! + a[7]! * p[7]! + a[8]!,
   ]
-  return mul(m, [v[0]!, 0, 0, 0, v[1]!, 0, 0, 0, v[2]!])
+  return multiply3(m, [v[0]!, 0, 0, 0, v[1]!, 0, 0, 0, v[2]!])
 }
 export function warp(width: number, height: number, to: number[]): string {
-  const t = mul(basis(to), adj(basis([0, 0, width, 0, width, height, 0, height])))
+  const t = multiply3(unitSquareTo(to), adjugate3(unitSquareTo([0, 0, width, 0, width, height, 0, height])))
   const n = t.map((value) => value / t[8]!)
   return `matrix3d(${n[0]},${n[3]},0,${n[6]},${n[1]},${n[4]},0,${n[7]},0,0,1,0,${n[2]},${n[5]},0,1)`
 }
@@ -119,15 +119,21 @@ const DROP = 0.25
 const SHRINK = 0.42
 const OFF = 0.52
 const CLOSED = OFF + LIFT
+const MIN_OPEN = 0.01
 useGLTF.preload(MODEL, false, false)
+
+const cloneWithOwnMaterials = (scene: THREE.Object3D) => {
+  const model = scene.clone()
+  model.traverse((part) => {
+    if (part instanceof THREE.Mesh) part.material = (part.material as THREE.Material).clone()
+  })
+  return model
+}
 
 function useProjector() {
   const { scene } = useGLTF(MODEL, false, false)
   return useMemo(() => {
-    const model = scene.clone()
-    model.traverse((part) => {
-      if (part instanceof THREE.Mesh) part.material = (part.material as THREE.Material).clone()
-    })
+    const model = cloneWithOwnMaterials(scene)
     const box = new THREE.Box3().setFromObject(model)
     const scale = PROJECTOR_WIDTH / (box.max.x - box.min.x)
     const center = box.getCenter(new THREE.Vector3())
@@ -153,14 +159,14 @@ function opened(full: THREE.Vector3[], across: number, up: number, into: THREE.V
 
 function Projector({
   corners,
-  ready,
+  startsAt,
   closing,
   onClosed,
   onPin,
   onOpen,
 }: {
   corners: THREE.Vector3[]
-  ready: RefObject<number>
+  startsAt: RefObject<number>
   closing: boolean
   onClosed: () => void
   onPin: (points: number[] | null) => void
@@ -198,8 +204,8 @@ function Projector({
   useFrame(({ clock }) => {
     const t = clock.elapsedTime
     const state = timing.current
-    if (state.born < 0 && Number.isFinite(ready.current))
-      state.born = t + Math.max(0, (ready.current - performance.now()) / 1000)
+    if (state.born < 0 && Number.isFinite(startsAt.current))
+      state.born = t + Math.max(0, (startsAt.current - performance.now()) / 1000)
     const since = STILL ? Infinity : state.born < 0 ? -1 : t - state.born
     if (closing && state.shut < 0) state.shut = t
     const shut = state.shut < 0 ? -1 : STILL ? Infinity : t - state.shut
@@ -246,7 +252,7 @@ function Projector({
       state.open = open
       onOpen?.(open)
     }
-    opened(corners, Math.max(0.01, across), Math.max(0.01, up), now.current)
+    opened(corners, Math.max(MIN_OPEN, across), Math.max(MIN_OPEN, up), now.current)
     const window = now.current
 
     if (beam.current && material.current) {
@@ -325,24 +331,26 @@ export function BetweenBattles({
   const outcome = state.status === 'won' ? 'win' : state.status === 'lost' ? 'loss' : undefined
   useLayoutEffect(() => stage.room({ view, log: lines, outcome }))
   useLayoutEffect(() => stage.bench({ items: state.items, usable: [], aiming: null, active: false, rung: 0 }))
-  const ready = useRef(Infinity)
+  const projectorStartsAt = useRef(Infinity)
   useEffect(() => {
-    ready.current = stage.warmed ? performance.now() + (from && !STILL ? AFTER_GLIDE : BOOT_FADE) * 1000 : Infinity
-  }, [from, stage.warmed])
+    projectorStartsAt.current = stage.bootFadeStarted
+      ? performance.now() + (from && !STILL ? AFTER_GLIDE : BOOT_FADE) * 1000
+      : Infinity
+  }, [from, stage.bootFadeStarted])
   return (
     <stage.Scene>
-      <CameraRig view="map" from={from} fit={FIT} />
+      <CameraRig view="map" from={from} halfWidthTan={FIT} />
       {projecting ? (
         <Projector
           corners={corners}
-          ready={ready}
+          startsAt={projectorStartsAt}
           closing={closing}
           onClosed={onClosed}
           onPin={onPin}
           onOpen={onOpen}
         />
       ) : null}
-      <WarmUp onWarm={stage.warm} />
+      <WarmUp onWarm={stage.markShadersCompiled} />
     </stage.Scene>
   )
 }

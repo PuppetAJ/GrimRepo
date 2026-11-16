@@ -7,7 +7,7 @@ import type { PlayerStats } from '../lib/api.ts'
 import { ending } from './charts/chart.ts'
 import { ago, number } from '../lib/format.ts'
 
-const CARD_OVER_TEXT = 1.12
+const MAX_CARD_TO_TEXT_RATIO = 1.12
 
 function useHeight(): [(element: HTMLElement | null) => void, number] {
   const [element, setElement] = useState<HTMLElement | null>(null)
@@ -74,7 +74,7 @@ function DeathCardPin({ id }: { id: string | null }) {
     <PinBox>
       <div
         className="w-[clamp(3.5rem,20cqi,6rem)] shrink-0 font-terminal"
-        style={height ? { maxWidth: (height * CARD_OVER_TEXT * 5) / 7 } : undefined}
+        style={height ? { maxWidth: (height * MAX_CARD_TO_TEXT_RATIO * 5) / 7 } : undefined}
       >
         <PixelCard unit={asUnit(id)} />
       </div>

@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import type { Stroke } from '../plan.ts'
 
 export const INK = 'rgb(255 179 71 / 0.9)'
-const STEP = 3
+const MIN_STROKE_STEP_PX = 3
 
 export function PenLayer({
   active,
@@ -66,7 +66,7 @@ export function PenLayer({
         const [x, y] = at(event)
         const dx = (x - (stroke.at(-2) as number)) * width
         const dy = (y - (stroke.at(-1) as number)) * height
-        if (dx * dx + dy * dy < STEP * STEP) return
+        if (dx * dx + dy * dy < MIN_STROKE_STEP_PX * MIN_STROKE_STEP_PX) return
         stroke.push(x, y)
         paint()
       }}

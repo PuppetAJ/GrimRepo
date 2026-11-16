@@ -20,7 +20,7 @@ import { InventoryDialog } from '../text/InventoryDialog.tsx'
 
 const FADE_MS = 160
 
-const READABLE = 320
+const MIN_READABLE_WINDOW_PX = 320
 
 function Between({
   run,
@@ -51,7 +51,7 @@ function Between({
   useEffect(() => preloadItems(run.state.items), [run.state.items])
   const pin = useRef<HTMLDivElement>(null)
   const [open, setOpen] = useState(false)
-  const readable = windowHeight(stage.size.width, stage.size.height) >= READABLE
+  const readable = windowHeight(stage.size.width, stage.size.height) >= MIN_READABLE_WINDOW_PX
   const projects = (screen: RunView) => screen !== 'battle' && readable
   const [shown, setShown] = useState(view)
   const live = { run, title: view === 'map' ? mapTitle(run.state) : screen.title, caption: screen.caption }
@@ -90,7 +90,7 @@ function Between({
           if (points) element.style.transform = warp(element.offsetWidth, element.offsetHeight, points)
         }}
       />
-      {stage.ready ? (
+      {stage.firstSceneLoaded ? (
         <Screen
           key={body}
           run={screenRun}
@@ -98,10 +98,10 @@ function Between({
           layout={layout}
           title={title}
           caption={fading ? seen.caption : screen.caption}
-          stack={body === 'map'}
-          deck={body !== 'summary' && body !== 'start'}
+          stackHeader={body === 'map'}
+          showDeck={body !== 'summary' && body !== 'start'}
           mode={projecting ? 'hologram' : 'floating'}
-          waiting={projecting && !open}
+          holdForProjector={projecting && !open}
           pinTo={pin}
           onSwitch={{ label: 'Text table', go: onText }}
           note={note && !fading ? <RunNote note={note} compact={layout === 'phone'} /> : null}
@@ -187,21 +187,22 @@ export default function Run3D({
   const canLook = view in BACK_TO
   const looking = canLook && lookingFrom === here
   const setLook = (on: boolean) => setLookingFrom(on ? here : null)
-  const toggle = useRef(() => {})
+  const toggleMapLook = useRef(() => {})
   useEffect(() => {
-    toggle.current = () => canLook && (view !== 'battle' || looking) && setLook(!looking)
+    toggleMapLook.current = () => canLook && (view !== 'battle' || looking) && setLook(!looking)
   })
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key.toLowerCase() === 'm' && !event.repeat && forTable(event)) toggle.current()
+      if (event.key.toLowerCase() === 'm' && !event.repeat && forTable(event)) toggleMapLook.current()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
   const wanted: Scene = view === 'battle' && !looking ? 'battle' : 'between'
   const roomView: RunView = looking ? 'map' : view
-  const [kept, setKept] = useState(battle && { game: battle, key })
-  if (battle && (kept?.game.state !== battle.state || kept.key !== key)) setKept({ game: battle, key })
+  const [lastBattle, setLastBattle] = useState(battle && { game: battle, key })
+  if (battle && (lastBattle?.game.state !== battle.state || lastBattle.key !== key))
+    setLastBattle({ game: battle, key })
   const [shown, setShown] = useState({ scene: wanted, view: roomView, after: false, leaving: false, count: 0 })
   if (shown.scene !== wanted && !shown.leaving) setShown({ ...shown, leaving: true })
   else if (!shown.leaving && shown.view !== roomView) setShown({ ...shown, view: roomView })
@@ -225,10 +226,10 @@ export default function Run3D({
     >
       <TableStage>
         {shown.scene === 'battle' ? (
-          kept ? (
+          lastBattle ? (
             <Battle3D
-              key={`${kept.key}:${shown.count}`}
-              game={battle ?? kept.game}
+              key={`${lastBattle.key}:${shown.count}`}
+              game={battle ?? lastBattle.game}
               run={run}
               seat={seat}
               onText={onText}

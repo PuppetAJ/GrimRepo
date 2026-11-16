@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 
-function unpacked(geometry: THREE.BufferGeometry, names: string[]): THREE.BufferGeometry {
+function dequantized(geometry: THREE.BufferGeometry, names: string[]): THREE.BufferGeometry {
   const copy = new THREE.BufferGeometry()
   for (const name of names) {
     const from = geometry.getAttribute(name)
@@ -32,7 +32,7 @@ export function mergeStill(root: THREE.Object3D, keep: RegExp): number {
       meshes.every((mesh) => mesh.geometry.getAttribute(name)),
     )
     const parts = meshes.map((mesh) =>
-      unpacked(mesh.geometry, names).applyMatrix4(new THREE.Matrix4().multiplyMatrices(inverse, mesh.matrixWorld)),
+      dequantized(mesh.geometry, names).applyMatrix4(new THREE.Matrix4().multiplyMatrices(inverse, mesh.matrixWorld)),
     )
     const geometry = mergeGeometries(parts, false)
     if (!geometry) continue

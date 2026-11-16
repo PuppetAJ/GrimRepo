@@ -28,35 +28,35 @@ const DiskAnatomy = lazyRouteComponent(() => import('./pages/DiskAnatomy.tsx'), 
 const SignIn = lazyRouteComponent(() => import('./pages/SignIn.tsx'), 'SignIn')
 const SignUp = lazyRouteComponent(() => import('./pages/SignUp.tsx'), 'SignUp')
 
-const optional = <T extends z.core.SomeType>(schema: T) => z.catch(z.optional(schema), undefined)
+const optionalOrDropped = <T extends z.core.SomeType>(schema: T) => z.catch(z.optional(schema), undefined)
 
-const page = z.object({ page: optional(z.coerce.number().check(z.int(), z.minimum(2))) })
+const page = z.object({ page: optionalOrDropped(z.coerce.number().check(z.int(), z.minimum(2))) })
 
 const leaderboardSearch = page
 
 const cardsSearch = z.object({
-  q: optional(z.coerce.string()),
-  view: optional(z.enum(['3d'])),
-  sort: optional(z.string()),
-  order: optional(z.enum(['desc'])),
-  cost: optional(z.coerce.string()),
-  card: optional(z.string()),
+  q: optionalOrDropped(z.coerce.string()),
+  view: optionalOrDropped(z.enum(['3d'])),
+  sort: optionalOrDropped(z.string()),
+  order: optionalOrDropped(z.enum(['desc'])),
+  cost: optionalOrDropped(z.coerce.string()),
+  card: optionalOrDropped(z.string()),
 })
 
 const boardSearch = z.object({
-  text: optional(z.string()),
-  layout: optional(z.enum(['wide', 'mid', 'phone'])),
+  text: optionalOrDropped(z.string()),
+  layout: optionalOrDropped(z.enum(['wide', 'mid', 'phone'])),
 })
 
-const runSearch = z.object({ layout: optional(z.enum(['wide', 'mid', 'phone'])) })
+const runSearch = z.object({ layout: optionalOrDropped(z.enum(['wide', 'mid', 'phone'])) })
 const tutorialSearch = z.object({
-  text: optional(z.string()),
-  layout: optional(z.enum(['wide', 'mid', 'phone'])),
-  step: optional(z.string()),
+  text: optionalOrDropped(z.string()),
+  layout: optionalOrDropped(z.enum(['wide', 'mid', 'phone'])),
+  step: optionalOrDropped(z.string()),
 })
 const mockupSearch = z.object({
-  layout: optional(z.enum(['wide', 'mid', 'phone'])),
-  table: optional(z.enum(['3d', 'text'])),
+  layout: optionalOrDropped(z.enum(['wide', 'mid', 'phone'])),
+  table: optionalOrDropped(z.enum(['3d', 'text'])),
 })
 
 export type CardsSearch = z.infer<typeof cardsSearch>

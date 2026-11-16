@@ -1,14 +1,14 @@
 import { useState, type CSSProperties } from 'react'
 
-let landed = false
+let firstPageShown = false
 
 export function markLanded(): void {
-  landed = true
+  firstPageShown = true
 }
 
 type RiseProps = { 'data-rise'?: true; style?: CSSProperties }
 
 export function useRise(): (order: number) => RiseProps {
-  const [arriving] = useState(() => landed)
+  const [arriving] = useState(() => firstPageShown)
   return (order) => (arriving ? { 'data-rise': true, style: { '--rise': order } as CSSProperties } : {})
 }

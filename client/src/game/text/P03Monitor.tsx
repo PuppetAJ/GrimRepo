@@ -5,9 +5,11 @@ import { useSettled } from '../tutorial/TutorialBlurb.tsx'
 import { useTable } from './context.ts'
 import { Items } from './Items.tsx'
 
+const CENTER_P03_HEAD = 'translate-x-[2.9%] -translate-y-[4.3%]'
+
 export function MonitorAndTools() {
-  const { view, game, busy } = useTable()
-  const felt = useP03Face(view, busy ? undefined : outcomeOf(game))
+  const { playedView, game, busy } = useTable()
+  const felt = useP03Face(playedView, busy ? undefined : outcomeOf(game))
   const scripted = useSettled(game.tutorial?.face, busy)
   const face = scripted ?? felt
   return (
@@ -16,7 +18,7 @@ export function MonitorAndTools() {
         aria-hidden
         className="grid aspect-square h-full shrink-0 place-items-center rounded-md border-2 border-[#1f3a26] bg-[#050d07] p-1.5"
       >
-        <P03Face face={face} className="w-full translate-x-[2.9%] -translate-y-[4.3%]" />
+        <P03Face face={face} className={`w-full ${CENTER_P03_HEAD}`} />
       </div>
       <Items className="h-full items-center" keepSlots />
     </div>

@@ -43,7 +43,7 @@ export function useTextTable({
   const { state, act } = game
   const ended = hasEnded(game)
   const { playback, busy } = usePlayback(game)
-  const view = playback.view
+  const playedView = playback.view
   const legal = busy || ended ? [] : legalFor(game)
   const summoning = state.summon ? state.player.hand.find((unit) => unit.uid === state.summon?.uid) : undefined
   const mustDraw = !state.drawn && has(legal, { type: 'draw' })
@@ -53,11 +53,11 @@ export function useTextTable({
     !place
       ? null
       : 'uid' in place
-        ? (view.hand.find((unit) => unit.uid === place.uid) ?? placed(place.uid))
-        : shown(view, place.row, place.lane)
+        ? (playedView.hand.find((unit) => unit.uid === place.uid) ?? placed(place.uid))
+        : shown(playedView, place.row, place.lane)
   function placed(uid: number) {
-    const lane = view.board.findIndex((unit) => unit?.uid === uid)
-    return lane < 0 ? null : shown(view, 'board', lane)
+    const lane = playedView.board.findIndex((unit) => unit?.uid === uid)
+    return lane < 0 ? null : shown(playedView, 'board', lane)
   }
   const inspected = summoning ?? unitAt(looking) ?? null
 
@@ -111,9 +111,9 @@ export function useTextTable({
       ),
   )
   const isNew = (uid: number) => !present.has(uid)
-  const [refusal, setRefused] = useState({ what: '', count: 0, reason: '', piles: false })
+  const [refusal, setRefused] = useState({ what: '', count: 0, reason: '', drawOwed: false })
   const showRefusal = (what: string, reason: string) =>
-    setRefused((last) => ({ what, count: last.count + 1, reason, piles: mustDraw }))
+    setRefused((last) => ({ what, count: last.count + 1, reason, drawOwed: mustDraw }))
   const shakeable = useRef(new Map<string, HTMLElement>())
   const shakeRef = (what: string) => (element: HTMLElement | null) => {
     if (element) shakeable.current.set(what, element)
@@ -122,7 +122,7 @@ export function useTextTable({
   useEffect(() => {
     if (!refusal.count) return
     const { keyframes, options } = shake(prefersReducedMotion())
-    const shakes = [refusal.what, ...(refusal.piles ? ['piles'] : [])].flatMap((what) => {
+    const shakes = [refusal.what, ...(refusal.drawOwed ? ['piles'] : [])].flatMap((what) => {
       const element = shakeable.current.get(what)
       return element ? [animate(element, keyframes, options)] : []
     })
@@ -183,7 +183,7 @@ export function useTextTable({
     act,
     playback,
     busy,
-    view,
+    playedView,
     legal,
     mustDraw,
     handFull,

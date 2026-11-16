@@ -65,8 +65,8 @@ export function CardSlot({
                   setOpen(false)
                 }}
                 data={data}
-                size="w-20 sm:w-24"
-                filtered
+                itemClassName="w-20 sm:w-24"
+                searchable
               />
             </div>
           </SearchContext>

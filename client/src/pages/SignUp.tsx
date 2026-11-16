@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button.tsx'
 import { Input } from '@/components/ui/input.tsx'
 import { Label } from '@/components/ui/label.tsx'
 import { PasswordInput } from '../components/PasswordInput.tsx'
-import { authClient, authError, settled } from '../lib/auth.ts'
+import { authClient, authError, networkFailureAsError } from '../lib/auth.ts'
 import { P03Line } from '../components/p03/P03Line.tsx'
 import { useRise } from '../lib/rise.ts'
 
@@ -39,7 +39,9 @@ export function SignUp() {
     }
     setBusy(true)
     setErrors({})
-    const { error } = await settled(authClient.signUp.email({ ...parsed.data, name: parsed.data.username }))
+    const { error } = await networkFailureAsError(
+      authClient.signUp.email({ ...parsed.data, name: parsed.data.username }),
+    )
     setBusy(false)
     if (error)
       return setErrors({

@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu.tsx'
-import { authClient, settled } from '../lib/auth.ts'
+import { authClient, networkFailureAsError } from '../lib/auth.ts'
 import { markLanded } from '../lib/rise.ts'
 import { homeVariant } from '../lib/homeVariant.ts'
 import { Avatar } from './Avatar.tsx'
@@ -27,11 +27,16 @@ const tabs = [
 ] as const
 
 const PAGE = 'mx-auto w-full max-w-[100rem]'
+const TABLE_PATHS = ['/run', '/tutorial', '/mockups/']
+
+function forgetServerSessionGuess() {
+  delete document.documentElement.dataset['home']
+}
 
 export function Layout() {
   const session = authClient.useSession()
   const { pathname } = useLocation()
-  const playing = ['/run', '/tutorial', '/mockups/'].some((path) => pathname.startsWith(path))
+  const drawsOwnTable = TABLE_PATHS.some((path) => pathname.startsWith(path))
   useEffect(() => markLanded(), [])
   const holding = session.isPending && homeVariant()?.signedIn !== false
   const [heldAtFirst] = useState(holding)
@@ -39,11 +44,11 @@ export function Layout() {
   const user = session.data?.user as { displayUsername?: string; username?: string; isAnonymous?: boolean } | undefined
   const name = user?.displayUsername ?? user?.username
   useEffect(() => {
-    if (!session.isPending) delete document.documentElement.dataset['home']
+    if (!session.isPending) forgetServerSessionGuess()
   }, [session.isPending])
 
   async function signOut() {
-    const { error } = await settled(authClient.signOut())
+    const { error } = await networkFailureAsError(authClient.signOut())
     if (error) return void toast.error(`Could not sign out: ${error.message}`)
     toast.success('Signed out')
     navigate({ to: '/' })
@@ -151,7 +156,7 @@ export function Layout() {
       </nav>
 
       <main className="flex-1 px-(--gutter) py-8">
-        <div className={playing ? '' : PAGE}>
+        <div className={drawsOwnTable ? '' : PAGE}>
           <LoadFailed key={pathname} fallback={<ReloadPage />}>
             <Suspense fallback={<Loading label="Loading" />}>
               <Outlet />

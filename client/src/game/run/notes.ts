@@ -5,6 +5,7 @@ import { authClient, DEMO } from '../../lib/auth.ts'
 import type { RunView } from './runView.ts'
 
 const LOCAL_KEY = 'grimrepo:run-notes'
+const BROWSER_OWNER = 'local'
 
 type Store = {
   owner: string | null
@@ -38,7 +39,7 @@ function writeLocal(notes: Notes) {
 function load(owner: string) {
   if (store.owner === owner) return
   set({ owner, notes: null, held: new Map() })
-  if (owner === 'local') return set({ notes: readLocal() })
+  if (owner === BROWSER_OWNER) return set({ notes: readLocal() })
   api
     .notes()
     .then((notes) => store.owner === owner && set({ notes }))
@@ -54,7 +55,7 @@ function change(owner: string, update: NotesChange) {
   if (store.owner !== owner || !store.notes) return
   const notes = applied(store.notes, update)
   set({ notes })
-  if (owner === 'local') return writeLocal(notes)
+  if (owner === BROWSER_OWNER) return writeLocal(notes)
   api
     .changeNotes(update)
     .then((saved) => store.owner === owner && set({ notes: saved }))
@@ -68,7 +69,7 @@ function subscribe(listener: () => void) {
 
 export function useRunNotes() {
   const user = authClient.useSession().data?.user as { id: string; username?: string } | undefined
-  const owner = !user || user.username === DEMO.username ? 'local' : user.id
+  const owner = !user || user.username === DEMO.username ? BROWSER_OWNER : user.id
   useEffect(() => load(owner), [owner])
   const current = useSyncExternalStore(subscribe, () => store)
   const update = useCallback((next: NotesChange) => change(owner, next), [owner])

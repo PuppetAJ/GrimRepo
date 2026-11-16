@@ -11,10 +11,10 @@ import { STILL } from './factory/constants.ts'
 import { kindOf } from './kind.ts'
 import { MOOD } from './mood.ts'
 import { Disk, facePlanes, type DiskHandle } from './Disk.tsx'
-import { backTexture, faceContent, faceLights, faceTexture, holdFaces, type loadCardAssets } from './faces.ts'
+import { backTexture, faceContent, faceEmissiveMap, faceTexture, holdFaces, type loadCardAssets } from './faces.ts'
 import { DECK, handPlace, LANE_GAP, slot, type Row, type Vec3 } from './layout.ts'
 import { LEAVE_MS, LUNGE_MS, SLIDE_MS, type Lunge, type Slide } from './playback.ts'
-import { holding, startHold } from './reading.ts'
+import { isHoldRelease, startHold } from './reading.ts'
 
 export { Popup } from './Popup.tsx'
 
@@ -43,7 +43,7 @@ export function Card({
   look = 'plain',
   assets,
   summoning,
-  shake = 0,
+  shakes = 0,
   onClick,
   onHover,
   onHold,
@@ -53,7 +53,7 @@ export function Card({
 }: {
   unit: Unit
   summoning?: boolean
-  shake?: number
+  shakes?: number
   place: Place
   spawn?: Vec3
   lunge?: Lunge
@@ -108,7 +108,7 @@ export function Card({
     [front, rear, content],
   )
   const words = faceContent(unit, assets)
-  const glow = faceLights(unit, assets)
+  const glow = faceEmissiveMap(unit, assets)
   useEffect(() => holdFaces(words, glow), [words, glow])
   front.map = face
   rear.map = back
@@ -131,8 +131,8 @@ export function Card({
   }, [batched, batch, kind])
   const shook = useRef(-Infinity)
   useEffect(() => {
-    if (shake) shook.current = performance.now()
-  }, [shake])
+    if (shakes) shook.current = performance.now()
+  }, [shakes])
 
   useFrame(({ camera }, delta) => {
     const card = mesh.current
@@ -165,7 +165,7 @@ export function Card({
     if (!STILL && lunge && now - lunge.at < LUNGE_MS) {
       const swing = Math.sin((Math.PI * (now - lunge.at)) / LUNGE_MS)
       position.z += lunge.toward * 0.4 * swing
-      position.x += lunge.across * LANE_GAP * 0.45 * swing
+      position.x += lunge.lanesAside * LANE_GAP * 0.45 * swing
     }
     const sliding = !STILL && slide !== undefined && now - slide.at < SLIDE_MS
     if (sliding) position.y += Math.sin((Math.PI * (now - slide.at)) / SLIDE_MS) * 0.3
@@ -231,7 +231,7 @@ export function Card({
   const handlers = {
     onClick: (event: ThreeEvent<MouseEvent>) => {
       event.stopPropagation()
-      if (holding()) return
+      if (isHoldRelease()) return
       onClick?.(event, touched.current)
     },
     onPointerDown: (event: ThreeEvent<PointerEvent>) => {
@@ -266,7 +266,7 @@ export function Card({
           <mesh geometry={facePlanes().content} material={content} />
         </Select>
       ) : (
-        <Disk ref={disk} open={fromDeck ? 0 : 1} kind={kind} front={front} content={content} back={rear} />
+        <Disk ref={disk} openness={fromDeck ? 0 : 1} kind={kind} front={front} content={content} back={rear} />
       )}
       {tutorialMark ? <CardMark /> : null}
     </group>

@@ -76,7 +76,7 @@ export function Controls() {
         ) : (
           <Forfeit
             forfeit={game.forfeit}
-            run={Boolean(game.run)}
+            abandonsRun={Boolean(game.run)}
             disabled={game.state.status !== 'playing'}
             className={`${SIDE_BUTTON} h-auto flex-1 justify-center`}
           />

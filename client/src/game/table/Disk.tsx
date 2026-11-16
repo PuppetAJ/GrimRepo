@@ -33,7 +33,7 @@ export const sheetGeometries = () =>
     back: [sheetGeometry(0, MT, 'top', true), sheetGeometry(MT, MB, 'top', true), sheetGeometry(MB, 1, 'bottom', true)],
   })
 
-export type DiskHandle = { setOpen: (open: number) => void }
+export type DiskHandle = { setOpen: (openness: number) => void }
 
 let planes: Record<'front' | 'content' | 'back', THREE.BufferGeometry> | null = null
 
@@ -44,8 +44,8 @@ export const facePlanes = () =>
     back: new THREE.PlaneGeometry(w, h).rotateY(Math.PI).translate(0, 0, BACK_Z),
   })
 
-export function poseAt(open: number) {
-  const height = h * (DISK.compact + (1 - DISK.compact) * open)
+export function poseAt(openness: number) {
+  const height = h * (DISK.closedHeightScale + (1 - DISK.closedHeightScale) * openness)
   const spare = height - h * (1 - MB + MT)
   const guides = height / 2 - HOUSING.bottom * h
   const feet = -height / 2 + (1 - MB + 0.035) * h
@@ -62,11 +62,11 @@ export function poseAt(open: number) {
 type Baked = Record<'plastic' | 'dark' | 'metal', THREE.BufferGeometry>
 const baked = new Map<number, Baked>()
 
-export function bakedDisk(open: 0 | 1): Baked {
-  let found = baked.get(open)
+export function bakedDisk(openness: 0 | 1): Baked {
+  let found = baked.get(openness)
   if (found) return found
   const { top, middle, bottom, rail } = diskGeometry()
-  const at = poseAt(open)
+  const at = poseAt(openness)
   const placed = (geometry: THREE.BufferGeometry | null, y: number, scaleY = 1) =>
     geometry ? [geometry.clone().applyMatrix4(new THREE.Matrix4().makeScale(1, scaleY, 1).setPosition(0, y, 0))] : []
   const material = (name: keyof Baked) => {
@@ -82,21 +82,21 @@ export function bakedDisk(open: 0 | 1): Baked {
     return merged
   }
   found = { plastic: material('plastic'), dark: material('dark'), metal: material('metal') }
-  baked.set(open, found)
+  baked.set(openness, found)
   return found
 }
 
 export const Disk = forwardRef<
   DiskHandle,
   {
-    open?: number
+    openness?: number
     kind?: Kind
     front?: THREE.Material | null
     content?: THREE.Material | null
     back?: THREE.Material | null
   }
 >(function Disk(
-  { open = 1, kind = 'common', front: frontMaterial = null, content = null, back: backMaterial = null },
+  { openness = 1, kind = 'common', front: frontMaterial = null, content = null, back: backMaterial = null },
   ref,
 ) {
   const geometry = diskGeometry()
@@ -119,7 +119,7 @@ export const Disk = forwardRef<
     [],
   )
   useImperativeHandle(ref, () => ({ setOpen }), [setOpen])
-  useLayoutEffect(() => setOpen(open), [open, setOpen])
+  useLayoutEffect(() => setOpen(openness), [openness, setOpen])
   const section = (node: RefObject<THREE.Group | null>, part: (typeof geometry)['top'], index: 0 | 1 | 2) => (
     <group ref={node}>
       {part.plastic ? <mesh geometry={part.plastic} material={materials.plastic} /> : null}

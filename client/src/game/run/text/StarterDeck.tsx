@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog.tsx'
-import { card, deathSkipBonus, PACK_ODDS, PACK_SIZE, PACKS, STARTER_DECKS, type Rarity } from 'shared'
+import { card, deathSkipBonus, PACK_ODDS, PACK_SIZE, PACKS, STARTER_DECKS, type Rarity, type RunCard } from 'shared'
 import { Sentences } from '../../text/Sentences.tsx'
 import { asUnit } from '../nodes.ts'
 import type { RunReady } from '../useRun.ts'
@@ -135,13 +135,15 @@ function PackDialog({ id, open, onClose }: { id: string; open: boolean; onClose:
   )
 }
 
+const takenFromPacks = (deck: RunCard[], opened: number) => deck.slice(deck.length - (opened - 1))
+
 export function PackOpening({ run }: { run: RunReady }) {
   const visit = run.state.visit
   const [torn, setTorn] = useState<{ pack: number; place: number; open: boolean } | null>(null)
   if (visit?.kind !== 'pack') return null
   const deck = STARTER_DECKS[visit.deck]
   const current = torn?.pack === visit.opened ? torn : null
-  const taken = run.state.deck.slice(run.state.deck.length - (visit.opened - 1))
+  const taken = takenFromPacks(run.state.deck, visit.opened)
   return (
     <div data-center className="flex flex-col items-center gap-6 text-center">
       <ScreenBar>

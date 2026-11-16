@@ -4,14 +4,14 @@ export type Async<T> = { status: 'loading' } | { status: 'error'; error: Error }
 
 export function useAsync<T>(load: () => Promise<T>, key: unknown): Async<T> {
   const [settled, setSettled] = useState<{ key: unknown; result: Async<T> } | null>(null)
-  const latest = useRef(load)
+  const latestLoad = useRef(load)
   useEffect(() => {
-    latest.current = load
+    latestLoad.current = load
   })
 
   useEffect(() => {
     let current = true
-    latest.current().then(
+    latestLoad.current().then(
       (data) => current && setSettled({ key, result: { status: 'ready', data } }),
       (error: unknown) =>
         current &&

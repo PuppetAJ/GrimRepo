@@ -4,7 +4,7 @@ import { Sigil } from '../../CardReader.tsx'
 import { asUnit } from '../nodes.ts'
 
 const LIGHT = '#b8f5c4'
-import { CardReader, CardSearch, SEARCH_FROM, SigilIcons, TypeIcon, useCardSearch } from './CardBits.tsx'
+import { CardReader, CardSearch, MIN_CARDS_FOR_SEARCH, SigilIcons, TypeIcon, useCardSearch } from './CardBits.tsx'
 
 export function DeckTable({ deck, caption }: { deck: RunCard[]; caption: string }) {
   const [reading, setReading] = useState<Unit | null>(null)
@@ -12,7 +12,7 @@ export function DeckTable({ deck, caption }: { deck: RunCard[]; caption: string 
   const rows = [...deck].sort((a, b) => card(a.card).name.localeCompare(card(b.card).name)).filter(matches)
   return (
     <div className="flex min-w-0 flex-col gap-2">
-      {deck.length >= SEARCH_FROM ? (
+      {deck.length >= MIN_CARDS_FOR_SEARCH ? (
         <CardSearch query={query} onChange={setQuery} label={`Search ${caption.toLowerCase()}`} />
       ) : null}
       <table className="w-full table-fixed text-left text-lg leading-tight">

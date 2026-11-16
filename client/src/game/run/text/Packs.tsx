@@ -194,7 +194,7 @@ export function PackReveal({
         units={units}
         onPick={onPick}
         data={(unit) => ({ 'data-action': 'take', 'data-index': unit.uid - 1 })}
-        size="w-32 sm:w-44"
+        itemClassName="w-32 sm:w-44"
         itemMove={(index) => flipIn(0.15 + index * 0.2)}
         badge={badge}
       />

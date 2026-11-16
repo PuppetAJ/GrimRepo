@@ -30,7 +30,7 @@ function Legend() {
 export function Activity({ stats }: { stats: PlayerStats }) {
   const cells = grid(stats.days)
   const played = cells.reduce((sum, cell) => sum + cell.runs, 0)
-  const bad = cells.filter((cell) => cell.bad).length
+  const losingDays = cells.filter((cell) => cell.losingDay).length
   return (
     <section aria-labelledby="contributions" className="@container flex flex-col gap-3">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4">
@@ -57,7 +57,7 @@ export function Activity({ stats }: { stats: PlayerStats }) {
           >
             <div
               role="img"
-              aria-label={`${played} runs over the last 26 weeks, ${bad} days with more losses than wins`}
+              aria-label={`${played} runs over the last 26 weeks, ${losingDays} days with more losses than wins`}
               className="grid shrink-0 grow grid-flow-col grid-rows-7 gap-[3px] sm:gap-1"
               style={{ gridAutoColumns: 'minmax(12px, 1fr)' }}
             >
@@ -65,7 +65,7 @@ export function Activity({ stats }: { stats: PlayerStats }) {
                 <span
                   key={cell.key}
                   title={`${cell.key}: ${cell.runs} ${cell.runs === 1 ? 'run' : 'runs'}`}
-                  className={`aspect-square w-full rounded-[20%] ${cell.bad ? 'bg-death' : levels[level(cell.runs)]}`}
+                  className={`aspect-square w-full rounded-[20%] ${cell.losingDay ? 'bg-death' : levels[level(cell.runs)]}`}
                 />
               ))}
             </div>

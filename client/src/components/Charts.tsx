@@ -75,11 +75,11 @@ export function ScoreChart({ runs }: { runs: Run[] }) {
   )
 }
 
-const BATTLE_SLOTS = 4
+const MIN_BATTLE_SLOTS = 4
 
 export function BattlesChart({ runs }: { runs: Run[] }) {
   const top = Math.max(1, ...runs.map((run) => run.battles))
-  const slots: Partial<Run>[] = [...runs, ...Array.from({ length: BATTLE_SLOTS - runs.length }, () => ({}))]
+  const slots: Partial<Run>[] = [...runs, ...Array.from({ length: MIN_BATTLE_SLOTS - runs.length }, () => ({}))]
   const tipBox = useTip()
   return (
     <Frame title={`Battles won per last ${runs.length} ${runs.length === 1 ? 'run' : 'runs'}`} note="oldest first">

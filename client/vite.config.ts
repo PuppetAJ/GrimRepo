@@ -75,7 +75,7 @@ const artEditor: Plugin = {
   },
 }
 
-const BUDGET = { entry: 175, three: 400, charts: 120, other: 40 }
+const GZIPPED_KB_BUDGET = { entry: 175, three: 400, charts: 120, other: 40 }
 
 const budget: Plugin = {
   name: 'bundle-budget',
@@ -85,7 +85,13 @@ const budget: Plugin = {
       if (chunk.type !== 'chunk') return []
       const three = chunk.moduleIds.some((id) => id.includes('/node_modules/three/'))
       const charts = chunk.moduleIds.some((id) => id.includes('/node_modules/recharts/'))
-      const limit = chunk.isEntry ? BUDGET.entry : three ? BUDGET.three : charts ? BUDGET.charts : BUDGET.other
+      const limit = chunk.isEntry
+        ? GZIPPED_KB_BUDGET.entry
+        : three
+          ? GZIPPED_KB_BUDGET.three
+          : charts
+            ? GZIPPED_KB_BUDGET.charts
+            : GZIPPED_KB_BUDGET.other
       const size = gzipSync(chunk.code).length / 1024
       return size > limit ? [`${chunk.fileName}: ${size.toFixed(1)} KB gzipped, over its ${limit} KB budget`] : []
     })
@@ -99,8 +105,6 @@ export default defineConfig({
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
-
-  assetsInclude: ['**/*.glb', '**/*.gltf'],
 
   server: {
     port,

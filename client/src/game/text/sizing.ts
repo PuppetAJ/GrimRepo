@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
-import { CARD_RATIO } from '../CardReader.tsx'
+import { CARD_HEIGHT_TO_WIDTH } from '../CardReader.tsx'
 
-const FLAT_READER = 416
+const FLAT_READER_MIN_WIDTH = 416
+const PANEL_INSET = 28
 
 export function useFlatReader(): [(element: HTMLDivElement | null) => void, boolean] {
   const [box, setBox] = useState<HTMLDivElement | null>(null)
   const [flat, setFlat] = useState(false)
   useEffect(() => {
     if (!box) return
-    const observer = new ResizeObserver(([entry]) => entry && setFlat(entry.contentRect.width >= FLAT_READER))
+    const observer = new ResizeObserver(([entry]) => entry && setFlat(entry.contentRect.width >= FLAT_READER_MIN_WIDTH))
     observer.observe(box)
     return () => observer.disconnect()
   }, [box])
@@ -28,18 +29,18 @@ export function useLaneSize(
   useEffect(() => {
     if (!area) return
     const fit = () => {
-      const width = ((fill ? window.innerWidth : area.clientWidth) - aside - 28 - 3 * (compact ? 4 : 8)) / 4
+      const width = ((fill ? window.innerWidth : area.clientWidth) - aside - PANEL_INSET - 3 * (compact ? 4 : 8)) / 4
       const table = hand?.closest<HTMLElement>('[data-table]')
       const fixed = table ? getComputedStyle(table).position === 'fixed' : false
       const scrolled = (fixed ? 0 : window.scrollY) + (table?.scrollTop ?? 0)
       const room = hand ? window.innerHeight - 12 - (hand.getBoundingClientRect().bottom + scrolled) : 0
       const height =
         compact && !fill
-          ? current.current + room / (3 * CARD_RATIO)
+          ? current.current + room / (3 * CARD_HEIGHT_TO_WIDTH)
           : fill === 'width'
             ? Infinity
-            : (area.clientHeight - 28 - 3 * 8 - 2) / 3 / CARD_RATIO
-      const tallest = (window.innerHeight - 24 - 28 - 3 * 4 - 2) / 3 / CARD_RATIO
+            : (area.clientHeight - PANEL_INSET - 3 * 8 - 2) / 3 / CARD_HEIGHT_TO_WIDTH
+      const tallest = (window.innerHeight - 24 - PANEL_INSET - 3 * 4 - 2) / 3 / CARD_HEIGHT_TO_WIDTH
       current.current = Math.floor(Math.min(width, Math.max(floor, Math.min(height, tallest))))
       setSize(current.current)
     }
@@ -53,7 +54,7 @@ export function useLaneSize(
       window.removeEventListener('resize', fit)
     }
   }, [area, compact, hand, aside, floor, fill])
-  return { setArea, lane: { width: size, height: size * CARD_RATIO } }
+  return { setArea, lane: { width: size, height: size * CARD_HEIGHT_TO_WIDTH } }
 }
 
 export function useStuckToBottom(content: unknown) {
@@ -77,6 +78,7 @@ export function useStuckToBottom(content: unknown) {
 
 const MOST_WIDE = 1600
 const MOST_TALL = 0.62
+const MIN_TABLE_HEIGHT = 600
 
 export function useFit(full: boolean) {
   const frame = useRef<HTMLDivElement>(null)
@@ -98,7 +100,7 @@ export function useFit(full: boolean) {
         width = Math.min(MOST_WIDE, inner)
         room = window.innerHeight - (element.getBoundingClientRect().top + window.scrollY) - margin
       }
-      const height = Math.max(600, Math.min(room, width * MOST_TALL))
+      const height = Math.max(MIN_TABLE_HEIGHT, Math.min(room, width * MOST_TALL))
       setSize(
         full
           ? { width, height, left: (window.innerWidth - width) / 2, top: (window.innerHeight - height) / 2 }

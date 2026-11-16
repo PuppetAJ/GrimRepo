@@ -2,7 +2,7 @@ import { useFrame, type ThreeEvent } from '@react-three/fiber'
 import { easing } from 'maath'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import * as THREE from 'three'
-import { faceContent, faceLights, faceTexture, holdFaces, type loadCardAssets } from './faces.ts'
+import { faceContent, faceEmissiveMap, faceTexture, holdFaces, type loadCardAssets } from './faces.ts'
 import { BACK_RELIEF, bakedDisk, Disk, diskMaterials } from './Disk.tsx'
 import { claimCursor, releaseCursor } from './cursor.ts'
 import { STILL } from './factory/constants.ts'
@@ -12,13 +12,15 @@ import { TINT } from './palette.ts'
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
 type Click = (event: ThreeEvent<MouseEvent>) => void
 
+const HOVER_LIFT = 0.05
+
 export function Nudge({
   active,
   onClick,
   size,
   label,
-  lift = 0.05,
-  hint = 0,
+  lift = HOVER_LIFT,
+  hints = 0,
   still = false,
   cursor,
   blocked,
@@ -30,7 +32,7 @@ export function Nudge({
   size: Vec3
   label: string
   lift?: number
-  hint?: number
+  hints?: number
   still?: boolean
   cursor?: 'draw' | 'boilerplate' | 'press'
   blocked?: 'full'
@@ -49,9 +51,9 @@ export function Nudge({
   }, [hovered, active, cursor, blocked])
   useEffect(() => () => releaseCursor(self.current), [])
   useEffect(() => {
-    if (!hint) return
+    if (!hints) return
     since.current = pointed.current = performance.now()
-  }, [hint])
+  }, [hints])
   useFrame((_, delta) => {
     const moving = group.current
     if (!moving) return
@@ -94,8 +96,9 @@ const layer = new THREE.Matrix4()
 const turn = new THREE.Quaternion()
 const tilt = new THREE.Euler()
 const ONE = new THREE.Vector3(1, 1, 1)
+const HOVER_PAD = 0.08
 
-const stackHeight = (layers: number) => Math.min(MOST, Math.max(1, layers)) * pitch + 0.08
+const stackHeight = (layers: number) => Math.min(MOST, Math.max(1, layers)) * pitch + HOVER_PAD
 
 function place(i: number, faceUp: boolean, into: THREE.Matrix4): THREE.Matrix4 {
   turn.setFromEuler(tilt.set(faceUp ? -Math.PI / 2 : Math.PI / 2, 0, ((i * 5) % 7) * 0.006 - 0.018))
@@ -158,7 +161,7 @@ function Stack({
       ))}
       {shown && faces ? (
         <group matrix={shown} matrixAutoUpdate={false}>
-          <Disk open={1} front={faces[0]} content={faces[1]} back={null} />
+          <Disk openness={1} front={faces[0]} content={faces[1]} back={null} />
         </group>
       ) : null}
     </>
@@ -171,31 +174,31 @@ export function Deck({
   reshuffle = 0,
   onClick,
   active,
-  hint,
+  hints,
   full,
-  extra = false,
+  catchUpDraw = false,
 }: {
   count: number
   total: number
   reshuffle?: number
   onClick: Click
   active: boolean
-  hint?: number
+  hints?: number
   full?: boolean
-  extra?: boolean
+  catchUpDraw?: boolean
 }) {
   const layers = count === 0 ? 0 : Math.max(1, Math.round((count / total) * 12))
   const [hovered, setHovered] = useState(false)
   return (
     <group position={DECK}>
-      {extra ? <ExtraDraw /> : null}
+      {catchUpDraw ? <ExtraDraw /> : null}
       {!layers && reshuffle ? <EmptyDeck cards={reshuffle} active={active} hovered={hovered} /> : null}
       <Nudge
         active={active}
         onClick={onClick}
-        size={[CARD.width, stackHeight(layers), CARD.height * DISK.compact]}
+        size={[CARD.width, stackHeight(layers), CARD.height * DISK.closedHeightScale]}
         label="deck"
-        hint={hint}
+        hints={hints}
         cursor="draw"
         blocked={full ? 'full' : undefined}
         onHover={setHovered}
@@ -206,10 +209,10 @@ export function Deck({
   )
 }
 
-const GOLD = new THREE.Color('#ffd24a').multiplyScalar(2.2)
+const GOLD_HDR = new THREE.Color('#ffd24a').multiplyScalar(2.2)
 
 function ExtraDraw() {
-  const depth = CARD.height * DISK.compact
+  const depth = CARD.height * DISK.closedHeightScale
   const material = useMemo(() => {
     const element = document.createElement('canvas')
     element.width = 320
@@ -222,7 +225,13 @@ function ExtraDraw() {
     context.strokeRect(10, 10, element.width - 20, element.height - 20)
     const map = new THREE.CanvasTexture(element)
     map.colorSpace = THREE.SRGBColorSpace
-    return new THREE.MeshBasicMaterial({ map, color: GOLD, transparent: true, depthWrite: false, toneMapped: false })
+    return new THREE.MeshBasicMaterial({
+      map,
+      color: GOLD_HDR,
+      transparent: true,
+      depthWrite: false,
+      toneMapped: false,
+    })
   }, [depth])
   useEffect(
     () => () => {
@@ -241,11 +250,12 @@ function ExtraDraw() {
   )
 }
 
-const DIM_OUTLINE = new THREE.Color(...TINT.glowHdr).multiplyScalar(0.65)
+const DIM_GLOW_SCALE = 0.65
+const DIM_OUTLINE = new THREE.Color(...TINT.glowHdr).multiplyScalar(DIM_GLOW_SCALE)
 const LIT_OUTLINE = new THREE.Color(...TINT.glowHdr)
 
 function EmptyDeck({ cards, active, hovered }: { cards: number; active: boolean; hovered: boolean }) {
-  const depth = CARD.height * DISK.compact
+  const depth = CARD.height * DISK.closedHeightScale
   const material = useMemo(() => {
     const element = document.createElement('canvas')
     element.width = 300
@@ -278,7 +288,7 @@ function EmptyDeck({ cards, active, hovered }: { cards: number; active: boolean;
     context.fillText(`${cards} ${cards === 1 ? 'card' : 'cards'}`, middle.x, height * 0.84)
     const map = new THREE.CanvasTexture(element)
     map.colorSpace = THREE.SRGBColorSpace
-    const color = new THREE.Color(...TINT.glowHdr).multiplyScalar(0.65)
+    const color = new THREE.Color(...TINT.glowHdr).multiplyScalar(DIM_GLOW_SCALE)
     return new THREE.MeshBasicMaterial({ map, color, transparent: true, depthWrite: false, toneMapped: false })
   }, [cards, depth])
   useEffect(
@@ -306,18 +316,18 @@ export function Pile({
   assets,
   onClick,
   active,
-  hint,
+  hints,
   full,
 }: {
   assets: Assets
   onClick: Click
   active: boolean
-  hint?: number
+  hints?: number
   full?: boolean
 }) {
   const top = useMemo(() => faceTexture(BOILERPLATE_UNIT, assets), [assets])
   const lights = useMemo(
-    () => ({ content: faceContent(BOILERPLATE_UNIT, assets), lights: faceLights(BOILERPLATE_UNIT, assets) }),
+    () => ({ content: faceContent(BOILERPLATE_UNIT, assets), lights: faceEmissiveMap(BOILERPLATE_UNIT, assets) }),
     [assets],
   )
   useEffect(() => holdFaces(lights.content, lights.lights), [lights])
@@ -328,7 +338,7 @@ export function Pile({
         onClick={onClick}
         size={[CARD.width, stackHeight(6), CARD.height]}
         label="pile"
-        hint={hint}
+        hints={hints}
         cursor="boilerplate"
         blocked={full ? 'full' : undefined}
       >

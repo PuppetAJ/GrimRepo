@@ -10,10 +10,10 @@ const GROUND = '#0a0e0a'
 const DECAY = ['#3f8f55', '#1b3a24']
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#$%&*+=/<>?{}[]'
 const BLOCKS = '█▓▒'
-const GROWTH = 2.4
-const SETTLE = 0.6
-const FAST_GROWTH = 1
-const FAST_SETTLE = 0.3
+const GROWTH_S = 2.4
+const SETTLE_S = 0.6
+const FAST_GROWTH_S = 1
+const FAST_SETTLE_S = 0.3
 const FRAME_MS = 100
 const SHIMMER_MS = 160
 const SHIMMER_SHARE = 0.04
@@ -77,8 +77,8 @@ export function Corruption({
     element.height = rows * CELL_H * ratio
     context.scale(ratio, ratio)
     context.textBaseline = 'top'
-    const growth = fast ? FAST_GROWTH : GROWTH
-    const settle = fast ? FAST_SETTLE : SETTLE
+    const growth = fast ? FAST_GROWTH_S : GROWTH_S
+    const settle = fast ? FAST_SETTLE_S : SETTLE_S
     const pattern = cells(cols, rows, corner, seed, dense ? 1.1 : 2.2, growth)
     const end = growth + settle
 

@@ -43,17 +43,17 @@ export function Lanes({
   legal,
   act,
   play,
-  aimed: hovered,
-  onAim: setHovered,
-  onIdle,
+  hovered,
+  onHover: setHovered,
+  onEmptyTap,
 }: {
   view: View
   legal: Action[]
   act: (action: Action) => void
   play: string
-  aimed: number | null
-  onAim: (lane: number | null) => void
-  onIdle?: () => void
+  hovered: number | null
+  onHover: (lane: number | null) => void
+  onEmptyTap?: () => void
 }) {
   const target = hovered === null ? null : laneAction(legal, hovered)
   const self = useRef({})
@@ -81,7 +81,7 @@ export function Lanes({
             onClick={(event) => {
               event.stopPropagation()
               if (action) act(action)
-              else onIdle?.()
+              else onEmptyTap?.()
             }}
             onPointerOver={() => setHovered(lane)}
             onPointerOut={() => setHovered(null)}

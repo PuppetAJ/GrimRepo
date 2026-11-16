@@ -10,12 +10,12 @@ import { forTable, useEscapeCancel } from '../shortcuts.ts'
 import { loadCardAssets } from './faces.ts'
 import type { CameraView } from './layout.ts'
 import { logLines, statusLines } from './Factory.tsx'
-import { released, type Screen, type Target } from './reading.ts'
+import { suppressNextClick, type Screen, type Target } from './reading.ts'
 import { TableStage, useStage } from './TableStage.tsx'
 import { usePlayback } from './usePlayback.ts'
 import { HeldReader } from './table3d/HeldReader.tsx'
 import { Hud } from './table3d/Hud.tsx'
-import { LOG_READ, type Reader, type Readout, unitOf } from './table3d/reader.ts'
+import { READOUT_MAX_LINES, type Reader, type Readout, unitOf } from './table3d/reader.ts'
 import { Scene } from './table3d/Scene.tsx'
 import { ScreenReadout } from './table3d/ScreenReadout.tsx'
 
@@ -39,6 +39,14 @@ export default function Table3D(props: Props) {
   )
 }
 
+function magnifierTop(y: number, height: number): number {
+  const want = y > window.innerHeight / 2 ? y - 30 - height : y + 40
+  return Math.max(8, Math.min(want, window.innerHeight - height - 8))
+}
+
+const magnifierLeft = (x: number): number =>
+  Math.min(Math.max(8, x - 176), window.innerWidth - Math.min(352, window.innerWidth - 16) - 8)
+
 export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, onMap, onInventory, run }: Props) {
   const assets = use(loadCardAssets())
   const stage = useStage()
@@ -53,7 +61,7 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
   }, [aiming])
   const camera: CameraView = playback.view.summon && chosen === 'table' ? 'board' : chosen
   const [rung, setRung] = useState(0)
-  const [hint, setHint] = useState(0)
+  const [hints, setHints] = useState(0)
   const [hinted, setHinted] = useState<number | null>(null)
   const fullScreen = useFullScreen()
   const ringKey = useRef(() => {})
@@ -87,37 +95,35 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
   const cancel = () => act({ type: 'cancel' })
   useEscapeCancel(cancellable, cancel)
 
-  const [peek, setPeek] = useState<number | null>(null)
+  const [peekedUid, setPeekedUid] = useState<number | null>(null)
   const [pinned, setPinned] = useState<Screen | null>(null)
   const [magnified, setMagnified] = useState<{ target: Target; x: number; y: number; sticky?: boolean } | null>(null)
   const magnifier = useRef<HTMLDivElement>(null)
   useLayoutEffect(() => {
     const box = magnifier.current
     if (!box || !magnified) return
-    const height = box.offsetHeight
-    const want = magnified.y > window.innerHeight / 2 ? magnified.y - 30 - height : magnified.y + 40
-    box.style.top = `${Math.max(8, Math.min(want, window.innerHeight - height - 8))}px`
+    box.style.top = `${magnifierTop(magnified.y, box.offsetHeight)}px`
   })
   const reader: Reader = {
-    peek,
+    peekedUid,
     hold: (target, x, y, sticky) => setMagnified({ target, x, y, sticky }),
     lift: (unit) => {
-      setPeek(unit?.uid ?? null)
+      setPeekedUid(unit?.uid ?? null)
       setPinned(null)
     },
     pin: (screen) => {
       setPinned((last) => (last === screen ? null : screen))
-      setPeek(null)
+      setPeekedUid(null)
     },
   }
   const readout = (target: Target | null): Readout | null => {
     if (!target) return null
     if ('screen' in target)
-      return { lines: target.screen === 'log' ? logLines(game.log, LOG_READ) : statusLines(playback.view) }
+      return { lines: target.screen === 'log' ? logLines(game.log, READOUT_MAX_LINES) : statusLines(playback.view) }
     const unit = unitOf(playback.view, target.card)
     return unit ? { unit } : null
   }
-  const lifted = peek === null ? null : unitOf(playback.view, peek)
+  const lifted = peekedUid === null ? null : unitOf(playback.view, peekedUid)
   const pin = readout(pinned && { screen: pinned })
   const magnifiedRead = readout(magnified?.target ?? null)
 
@@ -132,17 +138,17 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
   useEffect(() =>
     stage.onMissed(() => {
       if (cancellable) cancel()
-      else if (peek !== null || pinned !== null) reader.lift(null)
+      else if (peekedUid !== null || pinned !== null) reader.lift(null)
       else if (chosen !== 'table' && aiming === null) setCamera('table')
     }),
   )
   useEffect(() => {
-    stage.onContext(() => {
+    stage.onRightClick(() => {
       if (!cancellable) return false
       cancel()
       return true
     })
-    return () => stage.onContext(() => false)
+    return () => stage.onRightClick(() => false)
   })
   const face = useSettled(game.tutorial?.face, busy)
   useLayoutEffect(() =>
@@ -165,7 +171,7 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
           onMove={(target, x, y) => setMagnified((last) => (last ? { target: target ?? last.target, x, y } : last))}
           onEnd={() => {
             setMagnified(null)
-            released()
+            suppressNextClick()
           }}
         />
         <Scene
@@ -181,21 +187,21 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
             cancellable ? cancel : camera === 'table' && !playback.view.summon ? () => setCamera('board') : undefined
           }
           from={from}
-          hint={hint}
+          hints={hints}
           hinted={hinted}
           reader={reader}
-          onWarm={stage.warm}
+          onWarm={stage.markShadersCompiled}
           leaving={leaving}
           onLeft={onLeft}
           aiming={busy ? null : aiming}
           onAim={setAiming}
           onHint={(uid) => {
             setHinted(uid)
-            setHint((n) => n + 1)
+            setHints((n) => n + 1)
           }}
         />
       </stage.Scene>
-      {stage.ready && !leaving ? (
+      {stage.firstSceneLoaded && !leaving ? (
         <Hud
           run={run}
           onMap={onMap}
@@ -210,7 +216,7 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
           onText={onText}
           fullScreen={fullScreen}
           ring={() => act({ type: 'ringBell' })}
-          hint={hint}
+          hints={hints}
           lifted={lifted}
           pinned={pin && 'lines' in pin ? pin.lines : null}
           onUnpin={() => setPinned(null)}
@@ -227,10 +233,7 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
           ref={magnifier}
           className="pointer-events-none fixed z-[60] flex max-h-[calc(100dvh-1rem)] w-[min(22rem,calc(100vw-1rem))] flex-col shadow-[0_0_18px_rgb(0_0_0/0.85)]"
           style={{
-            left: Math.min(
-              Math.max(8, magnified.x - 176),
-              window.innerWidth - Math.min(352, window.innerWidth - 16) - 8,
-            ),
+            left: magnifierLeft(magnified.x),
           }}
         >
           {'unit' in magnifiedRead ? (

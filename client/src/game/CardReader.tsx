@@ -25,7 +25,7 @@ export function Sigil({ id, size = 18, color = INK }: { id: IconId; size?: numbe
   )
 }
 
-export const CARD_RATIO = 7 / 5
+export const CARD_HEIGHT_TO_WIDTH = 7 / 5
 
 function CostPips({
   cost,

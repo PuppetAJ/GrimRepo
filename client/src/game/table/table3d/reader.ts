@@ -3,12 +3,12 @@ import { shown, type Shown } from '../../shown.ts'
 import type { View } from '../../view.ts'
 import type { Screen, Target } from '../reading.ts'
 
-export const LOG_READ = 200
+export const READOUT_MAX_LINES = 200
 
 export const COARSE = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
 
 export type Reader = {
-  peek: number | null
+  peekedUid: number | null
   hold: (target: Target, x: number, y: number, sticky?: boolean) => void
   lift: (unit: Unit | null) => void
   pin: (screen: Screen) => void

@@ -7,7 +7,10 @@ import { BELL } from '../layout.ts'
 import { Nudge } from '../Piles.tsx'
 import { LIT } from './constants.ts'
 
-const CAP_Y = 0.33 - 0.53
+const COLLAR_RIM_Y = 0.22
+const CAP_RISE = 0.11
+const CAP_HEIGHT = 0.53
+const CAP_Y = COLLAR_RIM_Y + CAP_RISE - CAP_HEIGHT
 const LOCKED = '#ff4a3d'
 
 export function EndTurnButton({

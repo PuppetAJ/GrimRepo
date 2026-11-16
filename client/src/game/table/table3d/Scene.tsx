@@ -1,6 +1,6 @@
 import { TableMark } from './TutorialMark.tsx'
 import { useEffect, useLayoutEffect, useState } from 'react'
-import { ITEMS, PLAYER_DECK, reshuffleSize, type Action } from 'shared'
+import { ITEMS, PLAYER_DECK, reshuffleSize, type Action, type GameState, type Move } from 'shared'
 import { has, hasEnded, laneAction, legalFor, skippedDraw } from '../../controls.tsx'
 import type { Ready } from '../../ready.ts'
 import type { View } from '../../view.ts'
@@ -23,16 +23,33 @@ import { useStage } from '../TableStage.tsx'
 
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
 
-const SET = { board: 0.2, lanes: 0.65, deck: 0.5, pile: 0.6, cards: 0.9, deal: 0.13 }
+const SET_SECONDS = { board: 0.2, lanes: 0.65, deck: 0.5, pile: 0.6, cards: 0.9, deal: 0.13 }
 const MOST_DEALT = 8
-const PACK_AWAY = 0.6
+const PACK_AWAY_SECONDS = 0.6
+
+function askedUnitUid(asked: Move | null, aiming: number | null, state: GameState): number | undefined {
+  return asked?.type === 'select'
+    ? state.player.hand.find((unit) => unit.card === asked.card)?.uid
+    : asked?.type === 'mark'
+      ? state.player.board[asked.lane]?.uid
+      : asked?.type === 'use' && aiming === null
+        ? (asked.row === 'board'
+            ? state.player.board
+            : asked.row === 'front'
+              ? state.opponent.front
+              : state.opponent.back)[asked.lane]?.uid
+        : undefined
+}
 
 function useDeal(setting: boolean): number {
   const [dealt, setDealt] = useState(setting ? 0 : Infinity)
   useEffect(() => {
     if (!setting) return
     const timers = [...Array(MOST_DEALT + 1).keys()].map((index) =>
-      setTimeout(() => setDealt(index < MOST_DEALT ? index + 1 : Infinity), (SET.cards + index * SET.deal) * 1000),
+      setTimeout(
+        () => setDealt(index < MOST_DEALT ? index + 1 : Infinity),
+        (SET_SECONDS.cards + index * SET_SECONDS.deal) * 1000,
+      ),
     )
     return () => timers.forEach(clearTimeout)
   }, [setting])
@@ -49,7 +66,7 @@ export function Scene({
   rung,
   camera,
   from,
-  hint,
+  hints,
   hinted,
   onHint,
   onFocusBoard,
@@ -74,7 +91,7 @@ export function Scene({
   rung: number
   camera: CameraView
   from?: CameraView
-  hint: number
+  hints: number
   hinted: number | null
   onHint: (uid: number) => void
   onFocusBoard?: () => void
@@ -86,18 +103,7 @@ export function Scene({
   const owesDraw = !state.drawn && can({ type: 'draw' })
   const count = view.hand.length
   const asked = busy ? null : (game.tutorial?.blurb?.move ?? null)
-  const askedUid =
-    asked?.type === 'select'
-      ? state.player.hand.find((unit) => unit.card === asked.card)?.uid
-      : asked?.type === 'mark'
-        ? state.player.board[asked.lane]?.uid
-        : asked?.type === 'use' && aiming === null
-          ? (asked.row === 'board'
-              ? state.player.board
-              : asked.row === 'front'
-                ? state.opponent.front
-                : state.opponent.back)[asked.lane]?.uid
-          : undefined
+  const askedUid = askedUnitUid(asked, aiming, state)
   const reshuffleNow = view.deck ? 0 : reshuffleSize(state)
   const [reshuffle, setReshuffle] = useState(reshuffleNow)
   if (!busy && reshuffle !== reshuffleNow) setReshuffle(reshuffleNow)
@@ -140,7 +146,7 @@ export function Scene({
   useEffect(() => {
     if (!leaving) return
     const mark = setTimeout(() => setLeftAt(performance.now()), 0)
-    const done = setTimeout(() => onLeft?.(), STILL ? 0 : PACK_AWAY * 1000)
+    const done = setTimeout(() => onLeft?.(), STILL ? 0 : PACK_AWAY_SECONDS * 1000)
     return () => {
       clearTimeout(mark)
       clearTimeout(done)
@@ -151,47 +157,49 @@ export function Scene({
       <>
         <CameraRig view={camera} from={from} />
         <WarmUp onWarm={onWarm} />
-        <TechBoard appear={at(SET.board)} leave={leaving} onClick={onFocusBoard} />
-        <Arrive delay={at(SET.lanes)} leave={leaving}>
+        <TechBoard appearAfter={at(SET_SECONDS.board)} leave={leaving} onClick={onFocusBoard} />
+        <Arrive delay={at(SET_SECONDS.lanes)} leave={leaving}>
           <Lanes
             view={view}
             legal={legal}
             act={act}
             play={TINT.play}
-            aimed={aimed}
-            onAim={setAimed}
-            onIdle={onFocusBoard}
+            hovered={aimed}
+            onHover={setAimed}
+            onEmptyTap={onFocusBoard}
           />
         </Arrive>
         {asked?.type === 'draw' ? (
           <TableMark
             at={asked.from === 'deck' ? DECK : PILE}
             width={CARD.width * 1.25}
-            depth={CARD.height * DISK.compact * 1.25}
+            depth={CARD.height * DISK.closedHeightScale * 1.25}
           />
         ) : asked?.type === 'place' ? (
           <TableMark at={slot('board', asked.lane)} width={CARD.width * 1.24} depth={CARD.height * 1.16} />
         ) : asked?.type === 'ringBell' ? (
           <TableMark at={BELL} width={1.6} depth={1.6} />
         ) : null}
-        <Arrive delay={at(SET.deck)} leave={leaving}>
+        <Arrive delay={at(SET_SECONDS.deck)} leave={leaving}>
           <Deck
             count={view.deck}
             total={PLAYER_DECK.length}
             reshuffle={view.deck ? 0 : reshuffle}
             active={can({ type: 'draw', from: 'deck' } as Partial<Action>)}
             onClick={() => act({ type: 'draw', from: 'deck' })}
-            hint={hint}
+            hints={hints}
             full={handFull}
-            extra={state.drawn && Boolean(state.catchUp) && can({ type: 'draw', from: 'deck' } as Partial<Action>)}
+            catchUpDraw={
+              state.drawn && Boolean(state.catchUp) && can({ type: 'draw', from: 'deck' } as Partial<Action>)
+            }
           />
         </Arrive>
-        <Arrive delay={at(SET.pile)} leave={leaving}>
+        <Arrive delay={at(SET_SECONDS.pile)} leave={leaving}>
           <Pile
             assets={assets}
             active={can({ type: 'draw', from: 'boilerplate' } as Partial<Action>)}
             onClick={() => act({ type: 'draw', from: 'boilerplate' })}
-            hint={hint}
+            hints={hints}
             full={handFull}
           />
         </Arrive>
@@ -209,8 +217,8 @@ export function Scene({
               look={handLook(unit.uid)}
               summoning={Boolean(view.summon) || leaving}
               assets={assets}
-              shake={hinted === unit.uid ? hint : 0}
-              raised={reader.peek === unit.uid}
+              shakes={hinted === unit.uid ? hints : 0}
+              raised={reader.peekedUid === unit.uid}
               tutorialMark={askedUid === unit.uid}
               onHold={(x, y, sticky) => reader.hold({ card: unit.uid }, x, y, sticky)}
               onClick={

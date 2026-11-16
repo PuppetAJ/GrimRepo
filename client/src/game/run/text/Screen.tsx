@@ -28,6 +28,9 @@ export const FADE = '[mask-image:linear-gradient(to_bottom,black_calc(100%-2.5re
 
 export { useScreenMode } from './slots.ts'
 
+const DIP_MS = { min: 40, spread: 80 }
+const GLOW_MS = { min: 1200, spread: 4000 }
+
 function Hologram({ fading, children }: { fading: boolean; children: ReactNode }) {
   const light = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -38,7 +41,10 @@ function Hologram({ fading, children }: { fading: boolean; children: ReactNode }
       if (!element) return
       const dip = Math.random() < 0.15
       element.style.opacity = String(dip ? 0.82 + Math.random() * 0.08 : 0.96 + Math.random() * 0.04)
-      timer = setTimeout(flicker, dip ? 40 + Math.random() * 80 : 1200 + Math.random() * 4000)
+      timer = setTimeout(
+        flicker,
+        dip ? DIP_MS.min + Math.random() * DIP_MS.spread : GLOW_MS.min + Math.random() * GLOW_MS.spread,
+      )
     }
     flicker()
     return () => clearTimeout(timer)
@@ -168,25 +174,25 @@ export function Screen({
   layout,
   title,
   caption,
-  stack = false,
-  deck = true,
+  stackHeader = false,
+  showDeck = true,
   mode = 'terminal',
   onSwitch,
   pinTo,
   fading = false,
-  waiting = false,
+  holdForProjector = false,
   note,
   children,
 }: {
   note?: ReactNode
   fading?: boolean
-  waiting?: boolean
+  holdForProjector?: boolean
   run: RunReady
   layout: Layout
   title: string
   caption?: string
-  stack?: boolean
-  deck?: boolean
+  stackHeader?: boolean
+  showDeck?: boolean
   mode?: Mode
   onSwitch?: Switch
   pinTo?: React.RefObject<HTMLDivElement | null>
@@ -195,8 +201,8 @@ export function Screen({
   const { state } = run
   const terminal = mode === 'terminal'
   const phone = layout === 'phone'
-  const stacked = phone && stack
-  const roomy = layout === 'wide' && mode !== 'hologram'
+  const stacked = phone && stackHeader
+  const deckFits = layout === 'wide' && mode !== 'hologram'
   const [docked, setDocked] = useState(dockedAtFirst)
   const dock = (open: boolean) => {
     setDocked(open)
@@ -204,7 +210,7 @@ export function Screen({
       localStorage.setItem(DOCK_KEY, open ? 'open' : 'closed')
     } catch {}
   }
-  const showDock = deck && roomy && docked
+  const showDock = showDeck && deckFits && docked
   const still = useReducedMotion()
   const [drawer, setDrawer] = useState(false)
   const widen = useWideTable()
@@ -229,7 +235,7 @@ export function Screen({
     <TableMenu
       run={run}
       fullScreen={fullScreen}
-      onDeck={deck && !roomy ? () => setDrawer(true) : undefined}
+      onDeck={showDeck && !deckFits ? () => setDrawer(true) : undefined}
       onSwitch={onSwitch}
       button={menuButton}
       widen={terminal ? undefined : widen}
@@ -239,7 +245,7 @@ export function Screen({
   const buttonRow = (
     <div className={`flex shrink-0 items-center gap-2 ${stacked ? 'justify-center' : 'ml-auto'}`}>
       <div ref={setActions} className="flex shrink-0 items-center gap-2 empty:hidden" />
-      {deck && roomy ? (
+      {showDeck && deckFits ? (
         <InventoryButton
           count={state.deck.length}
           tools={state.items.length}
@@ -253,7 +259,7 @@ export function Screen({
   )
   const drawerHost = <div ref={setHost} className="pointer-events-none absolute inset-0 z-40 *:pointer-events-auto" />
   const deckDrawer =
-    deck && !roomy ? (
+    showDeck && !deckFits ? (
       centered ? (
         <InventoryDialog run={run} open={drawer} onOpenChange={setDrawer} />
       ) : (
@@ -285,9 +291,9 @@ export function Screen({
                 </header>
                 <div ref={setBar} className="shrink-0 empty:hidden" />
                 <div className="relative flex min-h-0 flex-1 flex-col">
-                  {waiting ? null : note}
+                  {holdForProjector ? null : note}
                   <div data-scroller className="flex min-h-0 flex-1 flex-col overflow-y-auto px-1">
-                    <div className="has-[[data-center]]:my-auto">{waiting ? null : children}</div>
+                    <div className="has-[[data-center]]:my-auto">{holdForProjector ? null : children}</div>
                   </div>
                 </div>
               </Hologram>

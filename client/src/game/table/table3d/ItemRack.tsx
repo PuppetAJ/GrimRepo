@@ -23,7 +23,7 @@ export const preloadItems = (items: ItemId[]) => {
 export const RACK = { position: [CENTER_X + 7.7, 8.5, -14.4] as const, turn: -0.3 }
 export const PEGS = [-0.7, 0, 0.7]
 export const PEG_Y = 0.95
-const SIZE = 0.95
+const HANG_LENGTH = 0.95
 const GONE_S = 0.6
 
 function Model({ item }: { item: ItemId }) {
@@ -36,7 +36,7 @@ function Model({ item }: { item: ItemId }) {
     if (size.x >= size.y && size.x >= size.z) copy.rotation.z = Math.PI / 2
     else if (size.z >= size.y) copy.rotation.x = Math.PI / 2
     const fitted = new THREE.Box3().setFromObject(holder)
-    const scale = SIZE / Math.max(...fitted.getSize(new THREE.Vector3()).toArray())
+    const scale = HANG_LENGTH / Math.max(...fitted.getSize(new THREE.Vector3()).toArray())
     holder.scale.setScalar(scale)
     const hung = new THREE.Box3().setFromObject(holder)
     const center = hung.getCenter(new THREE.Vector3())
@@ -67,6 +67,11 @@ function Leaving({ item, slot }: { item: ItemId; slot: number }) {
   )
 }
 
+function usedItem(before: ItemId[], after: ItemId[]): { item: ItemId; slot: number } | undefined {
+  const slot = before.findIndex((item, index) => after[index] !== item)
+  return after.length < before.length && slot >= 0 ? { item: before[slot] as ItemId, slot } : undefined
+}
+
 export function ItemRack({
   items,
   usable = () => false,
@@ -81,24 +86,23 @@ export function ItemRack({
   const [seen, setSeen] = useState(items)
   const [leaving, setLeaving] = useState<{ item: ItemId; slot: number; key: number }[]>([])
   if (seen !== items) {
-    const slot = seen.findIndex((item, index) => items[index] !== item)
-    const used = items.length < seen.length && slot >= 0 ? { item: seen[slot] as ItemId, slot } : undefined
+    const used = usedItem(seen, items)
     setSeen(items)
     if (used) setLeaving((now) => [...now, { ...used, key: performance.now() }])
   }
   return (
     <group position={[...RACK.position]} rotation={[0, RACK.turn, 0]}>
       {items.map((item, slot) => (
-        <group key={`${item}-${slot}`} position={[PEGS[slot] ?? 0, PEG_Y - SIZE, aiming === slot ? 0.55 : 0.28]}>
+        <group key={`${item}-${slot}`} position={[PEGS[slot] ?? 0, PEG_Y - HANG_LENGTH, aiming === slot ? 0.55 : 0.28]}>
           <Nudge
             active={Boolean(onPick) && usable(slot)}
             onClick={() => onPick?.(slot)}
-            size={[0.6, SIZE, 0.4]}
+            size={[0.6, HANG_LENGTH, 0.4]}
             label={`item-${slot}`}
             cursor="press"
           >
             <Suspense fallback={null}>
-              <group position={[0, SIZE, 0]}>
+              <group position={[0, HANG_LENGTH, 0]}>
                 <Model item={item} />
               </group>
             </Suspense>

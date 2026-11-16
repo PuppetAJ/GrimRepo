@@ -8,7 +8,7 @@ export const DEMO = { username: 'demo', password: 'demo-password' }
 export const authError = (error: { message?: string } | null | undefined, fallback: string): string =>
   error?.message || fallback
 
-export const settled = <T>(request: Promise<T>) =>
+export const networkFailureAsError = <T>(request: Promise<T>) =>
   request.catch((failure: unknown) => ({
     data: null,
     error: {

@@ -13,8 +13,8 @@ import { Magnifier, PromptLine, ReaderPanel } from './Reading.tsx'
 import { TutorialBlurb, useSettled } from '../tutorial/TutorialBlurb.tsx'
 
 export function WideLayout() {
-  const { frameProps, frame, size, fullScreen, seat, setArea, view, game, busy } = useTable()
-  const blurb = useSettled(game.tutorial?.blurb ?? game.run?.note ?? null, busy)
+  const { frameProps, frame, size, fullScreen, seat, setArea, playedView, game, busy } = useTable()
+  const blurb = useSettled(game.tutorial?.blurb ?? game.run?.firstTimeNote ?? null, busy)
   return (
     <>
       {fullScreen.on ? <div aria-hidden className="fixed inset-0 z-40 bg-[#030604]" /> : null}
@@ -35,9 +35,9 @@ export function WideLayout() {
             <SaveStatus className="text-base text-p03-dim" />
           </Panel>
           <Panel className="flex min-h-0 flex-1 flex-col gap-2">
-            <Balance scale={view.scale} fit />
-            {view.integrity ? (
-              <IntegrityBar left={view.integrity.left} max={view.integrity.max} fluid className="text-xl" />
+            <Balance scale={playedView.scale} fit />
+            {playedView.integrity ? (
+              <IntegrityBar left={playedView.integrity.left} max={playedView.integrity.max} fluid className="text-xl" />
             ) : null}
           </Panel>
           <ExecuteButton />

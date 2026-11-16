@@ -3,14 +3,14 @@ import { CanvasTexture, SRGBColorSpace, type Texture } from 'three'
 import { loadArt } from '../art.ts'
 import { loadDisk } from './diskGeometry.ts'
 import { loadPlastic } from './diskMaterials.ts'
-import { drawBack, drawFace, H, W, type Layer } from './faceDrawing.ts'
+import { drawBack, drawFace, FACE_H, FACE_W, type Layer } from './faceDrawing.ts'
 import { kindOf } from './kind.ts'
 
-type Assets = { font: 'VT323' }
+type AssetsLoaded = { font: 'VT323' }
 
-let assets: Promise<Assets> | null = null
+let assets: Promise<AssetsLoaded> | null = null
 
-export function loadCardAssets(): Promise<Assets> {
+export function loadCardAssets(): Promise<AssetsLoaded> {
   assets ??= Promise.all([document.fonts.load('48px VT323'), loadArt(), loadPlastic(), loadDisk()]).then(() => ({
     font: 'VT323' as const,
   }))
@@ -19,8 +19,8 @@ export function loadCardAssets(): Promise<Assets> {
 
 function canvas(): [HTMLCanvasElement, CanvasRenderingContext2D] {
   const element = document.createElement('canvas')
-  element.width = W
-  element.height = H
+  element.width = FACE_W
+  element.height = FACE_H
   const context = element.getContext('2d') as CanvasRenderingContext2D
   context.imageSmoothingEnabled = false
   return [element, context]
@@ -72,7 +72,7 @@ function evict(): void {
   }
 }
 
-function drawn(unit: Shown, loaded: Assets, layer: Layer): Texture {
+function drawn(unit: Shown, loaded: AssetsLoaded, layer: Layer): Texture {
   const key =
     layer === 'base'
       ? `base:${kindOf(unit)}`
@@ -89,11 +89,11 @@ function drawn(unit: Shown, loaded: Assets, layer: Layer): Texture {
   return found
 }
 
-export const faceTexture = (unit: Shown, loaded: Assets): Texture => drawn(unit, loaded, 'base')
+export const faceTexture = (unit: Shown, loaded: AssetsLoaded): Texture => drawn(unit, loaded, 'base')
 
-export const faceContent = (unit: Shown, loaded: Assets): Texture => drawn(unit, loaded, 'content')
+export const faceContent = (unit: Shown, loaded: AssetsLoaded): Texture => drawn(unit, loaded, 'content')
 
-export const faceLights = (unit: Shown, loaded: Assets): Texture => drawn(unit, loaded, 'lights')
+export const faceEmissiveMap = (unit: Shown, loaded: AssetsLoaded): Texture => drawn(unit, loaded, 'lights')
 
 export function backTexture(): Texture {
   let found = faces.get('back')

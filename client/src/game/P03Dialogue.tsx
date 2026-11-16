@@ -7,6 +7,7 @@ import chipArt from './art/ram/chip.svg'
 import pinArt from './art/ram/pin.svg'
 
 const SCREEN = { left: '11%', top: '24.8%', width: '72.8%', height: '60%' }
+const FLIP_STORED_FACE = '-scale-y-100'
 
 export function P03Face({ face, className = '' }: { face: Face; className?: string }) {
   const lit = { maskSize: '100% 100%', maskRepeat: 'no-repeat' } as const
@@ -14,7 +15,7 @@ export function P03Face({ face, className = '' }: { face: Face; className?: stri
     <span aria-hidden className={`relative block aspect-136/105 shrink-0 ${className}`}>
       <span className="absolute inset-0 bg-p03" style={{ ...lit, maskImage: `url(${p03Art('frame')})` }} />
       <span
-        className="absolute -scale-y-100 bg-p03"
+        className={`absolute ${FLIP_STORED_FACE} bg-p03`}
         style={{ ...SCREEN, ...lit, maskImage: `url(/p03/screen/${face}.png)`, maskMode: 'luminance' }}
       />
     </span>
@@ -71,16 +72,16 @@ export function P03Dialogue({
   )
 }
 
-const SLICES = [2, 10, 10, 10] as const
+const SLICES = { top: 2, right: 10, bottom: 10, left: 10 } as const
 
 const tiled = (url: string) => ({ maskImage: `url("${url}")`, maskRepeat: 'space', maskPosition: 'center' }) as const
 
 function Ledge({ children, className }: { children: ReactNode; className: string }) {
-  const [top, right, bottom, left] = SLICES
+  const { top, right, bottom, left } = SLICES
   const half = {
     borderStyle: 'solid',
     borderWidth: `${top}px ${right}px ${bottom}px ${left}px`,
-    borderImage: `url("${bodyArt}") ${SLICES.join(' ')} fill / ${top}px ${right}px ${bottom}px ${left}px stretch`,
+    borderImage: `url("${bodyArt}") ${top} ${right} ${bottom} ${left} fill / ${top}px ${right}px ${bottom}px ${left}px stretch`,
   } as const
   return (
     <div className={cn('relative px-6 pt-4 pb-4', className)}>
@@ -112,7 +113,7 @@ function Ledge({ children, className }: { children: ReactNode; className: string
   )
 }
 
-export type Choice = { label: string; onChoose: () => void; action?: string }
+export type Choice = { label: string; onChoose: () => void; dataAction?: string }
 
 export function Choices({ choices }: { choices: Choice[] }) {
   const [picked, setPicked] = useState(0)
@@ -158,7 +159,7 @@ export function Choices({ choices }: { choices: Choice[] }) {
             buttons.current[index] = button
           }}
           type="button"
-          data-action={choice.action}
+          data-action={choice.dataAction}
           onClick={choice.onChoose}
           onPointerEnter={() => setPicked(index)}
           onFocus={() => setPicked(index)}

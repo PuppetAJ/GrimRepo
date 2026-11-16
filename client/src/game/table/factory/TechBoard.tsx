@@ -8,14 +8,14 @@ import { LIT, STILL } from './constants.ts'
 
 export const BOARD = '/textures/board.webp'
 
-const UNROLL = 0.45
+const UNROLL_SECONDS = 0.45
 
 export function TechBoard({
-  appear,
+  appearAfter,
   leave = false,
   onClick,
 }: {
-  appear?: number
+  appearAfter?: number
   leave?: boolean
   onClick?: () => void
 }) {
@@ -38,12 +38,15 @@ export function TechBoard({
   const gone = useRef(-1)
   useFrame(({ clock }) => {
     const mesh = board.current
-    if (!mesh || (appear === undefined && !leave)) return
+    if (!mesh || (appearAfter === undefined && !leave)) return
     const now = clock.elapsedTime
     if (born.current < 0) born.current = now
     if (leave && gone.current < 0) gone.current = now
-    const t = STILL || appear === undefined ? 1 : Math.min(1, Math.max(0, (now - born.current - appear) / UNROLL))
-    const back = gone.current < 0 ? 0 : STILL ? 1 : Math.min(1, (now - gone.current) / UNROLL)
+    const t =
+      STILL || appearAfter === undefined
+        ? 1
+        : Math.min(1, Math.max(0, (now - born.current - appearAfter) / UNROLL_SECONDS))
+    const back = gone.current < 0 ? 0 : STILL ? 1 : Math.min(1, (now - gone.current) / UNROLL_SECONDS)
     const shown = (1 - (1 - t) ** 3) * (1 - back ** 3)
     mesh.visible = shown > 0
     mesh.scale.y = Math.max(shown, 0.0001)
@@ -55,7 +58,7 @@ export function TechBoard({
       edge.current.position.z = far + depth * shown
     }
   })
-  const rolling = (appear !== undefined || leave) && !STILL
+  const rolling = (appearAfter !== undefined || leave) && !STILL
   return (
     <>
       <mesh
@@ -68,7 +71,7 @@ export function TechBoard({
               }
             : undefined
         }
-        visible={appear === undefined || STILL}
+        visible={appearAfter === undefined || STILL}
         position={[left + width / 2, TABLE_Y + 0.004, far + depth / 2]}
         rotation={[-Math.PI / 2, 0, 0]}
       >

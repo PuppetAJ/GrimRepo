@@ -45,6 +45,8 @@ const LONG_NEWS = [
   'Documentation burned. I did warn you.',
 ]
 const WORST_SCENE = 'worst-case'
+const FIXED_EVENT_SCENE = 'stack-overflow'
+const SIGIL_GIVER = 'FourOhFour'
 
 function worstDeck(size = 40): RunCard[] {
   withWorstCard()
@@ -471,7 +473,7 @@ export const MOCKUPS: Record<string, Entry> = {
       const found = reached((s) => s.visit?.kind === 'stones')
       if (!found) return null
       const { state } = found
-      const giver: RunCard = { id: state.nextCard, added: null, ...deckCard('FourOhFour') }
+      const giver: RunCard = { id: state.nextCard, added: null, ...deckCard(SIGIL_GIVER) }
       return { ...found, state: { ...state, nextCard: state.nextCard + 1, deck: [...state.deck, giver] } }
     },
   },
@@ -493,7 +495,7 @@ export const MOCKUPS: Record<string, Entry> = {
     make: () => {
       const found = reached((s) => s.visit?.kind === 'event')
       if (!found || found.state.visit?.kind !== 'event') return null
-      return { ...found, state: { ...found.state, visit: { ...found.state.visit, event: 'stack-overflow' } } }
+      return { ...found, state: { ...found.state, visit: { ...found.state.visit, event: FIXED_EVENT_SCENE } } }
     },
   },
   'review-trial': {

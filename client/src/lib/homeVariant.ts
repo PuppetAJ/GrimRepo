@@ -10,14 +10,14 @@ export const HOME_VARIANTS: HomeVariant[] = [
 export const variantName = ({ signedIn, seen }: HomeVariant) =>
   `${signedIn ? 'signed-in' : 'signed-out'} ${seen ? 'seen' : 'fresh'}`
 
-let rendering: HomeVariant | null = null
+let prerenderVariant: HomeVariant | null = null
 
-export function renderingHome(variant: HomeVariant | null) {
-  rendering = variant
+export function setPrerenderVariant(variant: HomeVariant | null) {
+  prerenderVariant = variant
 }
 
 export function homeVariant(): HomeVariant | null {
-  if (rendering) return rendering
+  if (prerenderVariant) return prerenderVariant
   const value = typeof document === 'undefined' ? undefined : document.documentElement.dataset['home']
   if (!value) return null
   const words = value.split(' ')

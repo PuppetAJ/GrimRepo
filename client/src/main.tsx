@@ -22,7 +22,9 @@ const hydrate = () =>
     </StrictMode>,
   )
 
-if (container.hasChildNodes()) void (homeVariant()?.seen ? preloadTerminal().then(hydrate) : hydrate())
+const prerenderedWithTerminal = homeVariant()?.seen
+
+if (container.hasChildNodes()) void (prerenderedWithTerminal ? preloadTerminal().then(hydrate) : hydrate())
 else
   createRoot(container).render(
     <StrictMode>

@@ -3,7 +3,7 @@ import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from '
 import * as THREE from 'three'
 import type { Vec3 } from '../layout.ts'
 import { TINT } from '../palette.ts'
-import { holding, startHold, type Screen } from '../reading.ts'
+import { isHoldRelease, startHold, type Screen } from '../reading.ts'
 import { LIT, SCREEN_HDR, STILL } from './constants.ts'
 
 const SCREEN = { width: 2.66, height: 1.66, px: 512 }
@@ -121,7 +121,7 @@ export const Monitor = memo(function Monitor({
       }}
       onClick={(event) => {
         event.stopPropagation()
-        if (!holding()) onPin?.(screen)
+        if (!isHoldRelease()) onPin?.(screen)
       }}
     >
       <mesh>

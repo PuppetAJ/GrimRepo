@@ -29,7 +29,7 @@ function Occupant({
 }) {
   const lunge = unit ? playback.lunges.get(unit.uid) : undefined
   const slide = unit ? playback.slides.get(unit.uid) : undefined
-  const stepped = unit && row === 'front' ? playback.advances.get(unit.uid) : undefined
+  const stepped = unit && row === 'front' ? playback.advancedAt.get(unit.uid) : undefined
   const striking = lunge
   const leaving = playback.leaving.filter((gone) => gone.row === row && gone.lane === lane)
   const popups = playback.popups.filter(
@@ -84,7 +84,7 @@ function Occupant({
           >
             <m.span
               key={striking ? striking.at : 'still'}
-              {...(striking ? strike(row, LUNGE_MS / 1000, still, striking.across) : {})}
+              {...(striking ? strike(row, LUNGE_MS / 1000, still, striking.lanesAside) : {})}
               className="block size-full"
             >
               <PixelCard unit={unit} />
@@ -132,7 +132,7 @@ const CELL =
 
 export function Board() {
   const {
-    view,
+    playedView,
     playback,
     state,
     legal,
@@ -198,7 +198,7 @@ export function Board() {
         />
       ))}
       <div role="group" className={`flex justify-center ${compact ? 'gap-1' : 'gap-2'}`} aria-label="P03's queue">
-        {view.back.map((unit, i) => (
+        {playedView.back.map((unit, i) => (
           <div
             key={i}
             {...inspectProps({ row: 'back', lane: i }, unit)}
@@ -222,8 +222,8 @@ export function Board() {
         ))}
       </div>
       <div role="group" className={`flex justify-center ${compact ? 'gap-1' : 'gap-2'}`} aria-label="P03's row">
-        {view.front
-          .map((_, i) => shown(view, 'front', i))
+        {playedView.front
+          .map((_, i) => shown(playedView, 'front', i))
           .map((unit, i) => (
             <div
               key={i}
@@ -242,8 +242,8 @@ export function Board() {
       </div>
       <div className="border-t-2 border-death/50" />
       <div role="group" className={`flex justify-center ${compact ? 'gap-1' : 'gap-2'}`} aria-label="Your row">
-        {view.board
-          .map((_, i) => shown(view, 'board', i))
+        {playedView.board
+          .map((_, i) => shown(playedView, 'board', i))
           .map((unit, i) => {
             const action = laneAction(legal, i)
             const marked = state.summon?.marked.includes(i) ?? false

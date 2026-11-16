@@ -22,6 +22,7 @@ const SIGIL_IDS = (Object.keys(SIGILS) as SigilId[]).sort((a, b) => byName(SIGIL
 
 const REDACTED_PID = 7
 const OLD_DATA_FILE = /^\.?old_data$/i
+const FLIP_STORED_FACE = '-scale-y-100'
 
 const PROCESSES: [number, string][] = [
   [1, 'p03.core'],
@@ -200,7 +201,7 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
           <img
             src="/p03/happy.png"
             alt="P03's face, smug"
-            className="h-20 -scale-y-100 [filter:sepia(1)_hue-rotate(70deg)_saturate(3)] [image-rendering:pixelated]"
+            className={`h-20 ${FLIP_STORED_FACE} [filter:sepia(1)_hue-rotate(70deg)_saturate(3)] [image-rendering:pixelated]`}
           />
           <p>
             P03. Scrybe of Technology. I run this factory, this repository, and your game. Leshy could never pull that

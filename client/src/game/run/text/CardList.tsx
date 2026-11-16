@@ -16,21 +16,21 @@ type Props = {
   picked?: number | null
   chosen?: number[]
   itemMove?: (index: number) => Move
-  detail?: boolean
-  size?: string
-  filtered?: boolean
+  spellSigils?: boolean
+  itemClassName?: string
+  searchable?: boolean
   flash?: { uid: number; key: number; text: string }
   badge?: (unit: Unit) => ReactNode
 }
 
 function Caption({
   unit,
-  detail,
+  spellSigils,
   onRead,
   badge,
 }: {
   unit: Unit
-  detail: boolean
+  spellSigils: boolean
   onRead: () => void
   badge?: ReactNode
 }) {
@@ -51,7 +51,7 @@ function Caption({
           <ZoomIn aria-hidden className="size-4" />
         </button>
       </span>
-      {detail ? (
+      {spellSigils ? (
         unit.sigils.map((sigil) => (
           <span key={sigil} className="font-sans text-sm text-foreground">
             <strong>{SIGILS[sigil].name}.</strong> {SIGILS[sigil].text}
@@ -75,16 +75,16 @@ export function CardList({
   picked = null,
   chosen: several,
   itemMove,
-  detail = false,
-  size = 'w-28',
-  filtered = false,
+  spellSigils = false,
+  itemClassName = 'w-28',
+  searchable = false,
   flash,
   badge,
 }: Props) {
   const [reading, setReading] = useState<Unit | null>(null)
   const hold = useHoldToRead(setReading)
   const { matches } = useCardSearch()
-  const shown = filtered ? units.filter(matches) : units
+  const shown = searchable ? units.filter(matches) : units
   return (
     <div className="flex flex-col gap-3">
       <ul className="flex flex-wrap justify-center gap-4 pt-3">
@@ -101,7 +101,7 @@ export function CardList({
             <PixelCard unit={unit} />
           )
           return (
-            <m.li key={unit.uid} {...itemMove?.(index)} className={`flex shrink-0 flex-col gap-2 ${size}`}>
+            <m.li key={unit.uid} {...itemMove?.(index)} className={`flex shrink-0 flex-col gap-2 ${itemClassName}`}>
               {onPick ? (
                 <button
                   type="button"
@@ -127,7 +127,7 @@ export function CardList({
                   {face}
                 </button>
               )}
-              <Caption unit={unit} detail={detail} onRead={() => setReading(unit)} badge={badge?.(unit)} />
+              <Caption unit={unit} spellSigils={spellSigils} onRead={() => setReading(unit)} badge={badge?.(unit)} />
             </m.li>
           )
         })}

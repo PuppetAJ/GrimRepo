@@ -51,9 +51,12 @@ const WORDS: Partial<Record<Mark, string>> = {
 }
 
 const ROW_HEIGHT = 'var(--map-row, clamp(3.75rem, 9dvh, 5rem))'
-const NODE = 44
+const NODE_TAP_PX = 44
+const MIN_NODE_PX = 28
+const MIN_NODE_GAP_PX = 22
 const HOLD_MS = 350
-const SURVEYED = new Set<string>()
+const SURVEY_DELAY_MS = 350
+const STAGES_SURVEYED_THIS_PAGE = new Set<string>()
 
 const describeNext = (map: StageMap, node: MapNode) =>
   node.next.length
@@ -112,14 +115,16 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
   const { state, path } = run
   const [peek, setPeek] = useState<string | null>(null)
   const [held, setHeld] = useState<string | null>(null)
-  const hold = useRef<{ timer?: ReturnType<typeof setTimeout>; fired: boolean; clicked?: boolean }>({ fired: false })
+  const hold = useRef<{ timer?: ReturnType<typeof setTimeout>; fired: boolean; rightClicked?: boolean }>({
+    fired: false,
+  })
   useEffect(() => () => clearTimeout(hold.current.timer), [])
   const holdProps = (id: string) => ({
     onPointerDown: (event: ReactPointerEvent) => {
       if (event.button !== 0) return
       clearTimeout(hold.current.timer)
       hold.current.fired = false
-      hold.current.clicked = false
+      hold.current.rightClicked = false
       hold.current.timer = setTimeout(() => {
         hold.current.fired = true
         setHeld(id)
@@ -127,11 +132,11 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
     },
     onPointerUp: () => {
       clearTimeout(hold.current.timer)
-      if (!hold.current.clicked) setHeld(null)
+      if (!hold.current.rightClicked) setHeld(null)
     },
     onPointerLeave: () => {
       clearTimeout(hold.current.timer)
-      hold.current.clicked = false
+      hold.current.rightClicked = false
       setHeld(null)
     },
     onPointerCancel: () => {
@@ -141,7 +146,7 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
     onContextMenu: (event: ReactMouseEvent) => {
       event.preventDefault()
       clearTimeout(hold.current.timer)
-      hold.current.clicked = true
+      hold.current.rightClicked = true
       setHeld(id)
     },
   })
@@ -169,23 +174,23 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
     const offset = node.getBoundingClientRect().top - scroller.getBoundingClientRect().top
     const target = scroller.scrollTop + offset - scroller.clientHeight / 2
     const key = `${state.seed}:${state.stage}`
-    if (SURVEYED.has(key) || prefersReducedMotion()) {
+    if (STAGES_SURVEYED_THIS_PAGE.has(key) || prefersReducedMotion()) {
       scroller.scrollTop = target
       return
     }
     const top = scroller.scrollTop + offset
     scroller.scrollTop = 0
-    const distance = Math.min(top - NODE * 1.5, scroller.scrollHeight - scroller.clientHeight)
+    const distance = Math.min(top - NODE_TAP_PX * 1.5, scroller.scrollHeight - scroller.clientHeight)
     if (distance <= 0) return
     let glide: AnimationPlaybackControls | undefined
     const delay = setTimeout(() => {
-      SURVEYED.add(key)
+      STAGES_SURVEYED_THIS_PAGE.add(key)
       glide = animate(0, distance, {
         duration: Math.min(1.6, Math.max(0.7, distance * 0.0014)),
         ease: [0.65, 0, 0.35, 1],
         onUpdate: (top) => (scroller.scrollTop = top),
       })
-    }, 350)
+    }, SURVEY_DELAY_MS)
     const stop = () => {
       clearTimeout(delay)
       glide?.stop()
@@ -201,19 +206,20 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
     }
   }, [state.seed, state.stage])
 
-  const gap = 22
   const cell = { x: size.width / MAP_COLUMNS, y: size.height / mapRows(state.map) }
-  const nodeSize = Math.round(Math.max(28, Math.min(NODE, cell.y - gap, cell.x - gap)))
-  const room = (span: number) => (span ? Math.max(0, (span - nodeSize - gap) / 2 / span) : 0)
+  const nodeSize = Math.round(
+    Math.max(MIN_NODE_PX, Math.min(NODE_TAP_PX, cell.y - MIN_NODE_GAP_PX, cell.x - MIN_NODE_GAP_PX)),
+  )
+  const room = (span: number) => (span ? Math.max(0, (span - nodeSize - MIN_NODE_GAP_PX) / 2 / span) : 0)
   const placed = spots(state.map, state.seed, { x: room(cell.x), y: room(cell.y) })
   const open = reachable(state)
   const row = state.at === null ? -1 : (findNode(state.map, state.at)?.row ?? -1)
-  const ahead = new Set<string>()
+  const stillReachable = new Set<string>()
   const walk = [...open]
   while (walk.length) {
     const id = walk.pop() as string
-    if (ahead.has(id)) continue
-    ahead.add(id)
+    if (stillReachable.has(id)) continue
+    stillReachable.add(id)
     walk.push(...(findNode(state.map, id)?.next ?? []))
   }
   const markOf = (node: MapNode): Mark =>
@@ -225,7 +231,7 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
           ? 'next'
           : node.row <= row
             ? 'behind'
-            : ahead.has(node.id)
+            : stillReachable.has(node.id)
               ? 'ahead'
               : 'cut'
   const linkOf = (from: MapNode, to: string): Link => {

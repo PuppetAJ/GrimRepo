@@ -11,16 +11,16 @@ export function ItemButton({
   item,
   slot,
   usable,
-  held,
-  size,
+  pickedUp,
+  sizePx,
   onUse,
   className = '',
 }: {
   item: ItemId
   slot: number
   usable: boolean
-  held: boolean
-  size: number
+  pickedUp: boolean
+  sizePx: number
   onUse: () => void
   className?: string
 }) {
@@ -28,12 +28,12 @@ export function ItemButton({
   const [reading, setReading] = useState<{ left: number; bottom: number } | null>(null)
   const button = useRef<HTMLButtonElement>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  const read = useRef(false)
-  const clicked = useRef(false)
+  const heldToRead = useRef(false)
+  const pinnedByRightClick = useRef(false)
   useEffect(() => () => clearTimeout(timer.current), [])
   const stop = () => {
     clearTimeout(timer.current)
-    clicked.current = false
+    pinnedByRightClick.current = false
     setReading(null)
   }
   const show = () => {
@@ -50,34 +50,34 @@ export function ItemButton({
         data-action="use"
         data-slot={slot}
         aria-disabled={!usable}
-        aria-pressed={def.target === 'none' ? undefined : held}
+        aria-pressed={def.target === 'none' ? undefined : pickedUp}
         aria-label={`${def.name}: ${def.text}`}
         onPointerDown={(event) => {
           if (event.button !== 0) return
-          read.current = false
+          heldToRead.current = false
           clearTimeout(timer.current)
           timer.current = setTimeout(() => {
-            read.current = true
+            heldToRead.current = true
             show()
           }, HOLD_MS)
         }}
-        onPointerUp={() => !clicked.current && stop()}
+        onPointerUp={() => !pinnedByRightClick.current && stop()}
         onPointerLeave={stop}
         onPointerCancel={stop}
         onContextMenu={(event) => {
           event.preventDefault()
           clearTimeout(timer.current)
-          clicked.current = true
+          pinnedByRightClick.current = true
           show()
         }}
         onClick={() => {
-          if (read.current) return void (read.current = false)
+          if (heldToRead.current) return void (heldToRead.current = false)
           if (usable) onUse()
         }}
-        style={{ width: size, height: size }}
-        className={`grid touch-none place-items-center rounded-md border-2 bg-[#07130b] text-p03 select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03 aria-disabled:opacity-40 aria-[disabled=false]:hover:bg-[#13261a] ${held ? 'border-p03 outline-2 outline-p03 outline-dashed' : 'border-p03-edge'} ${className}`}
+        style={{ width: sizePx, height: sizePx }}
+        className={`grid touch-none place-items-center rounded-md border-2 bg-[#07130b] text-p03 select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03 aria-disabled:opacity-40 aria-[disabled=false]:hover:bg-[#13261a] ${pickedUp ? 'border-p03 outline-2 outline-p03 outline-dashed' : 'border-p03-edge'} ${className}`}
       >
-        <Sigil id={item} size={Math.round(size * 0.58)} color="currentColor" />
+        <Sigil id={item} size={Math.round(sizePx * 0.58)} color="currentColor" />
       </button>
       {reading
         ? createPortal(

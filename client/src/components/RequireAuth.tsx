@@ -1,6 +1,6 @@
 import { useEffect, useEffectEvent, useState, type ReactNode } from 'react'
 import { Navigate } from '@tanstack/react-router'
-import { authClient, settled } from '../lib/auth.ts'
+import { authClient, networkFailureAsError } from '../lib/auth.ts'
 import { Failure, Loading } from './States.tsx'
 
 export function RequireAuth({ children, guest = false }: { children: ReactNode; guest?: boolean }) {
@@ -12,7 +12,7 @@ export function RequireAuth({ children, guest = false }: { children: ReactNode; 
   useEffect(() => {
     if (!guest || !signedOut) return
     let current = true
-    void settled(authClient.signIn.anonymous()).then(({ error }) => {
+    void networkFailureAsError(authClient.signIn.anonymous()).then(({ error }) => {
       if (!current) return
       if (error)
         setRefused(error.status === 429 ? 'Too many guests from here at once. Wait a minute.' : (error.message ?? ''))

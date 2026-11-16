@@ -6,7 +6,7 @@ import { card, CARDS, DEBUG_CARD, OUT_OF_MEMORY, type Unit } from 'shared'
 import * as THREE from 'three'
 import { cardArt, iconArt } from '../game/art.ts'
 import { BACK_Z, diskGeometry, diskMaterials, FACE_Z, poseAt, sheetGeometries } from '../game/table/Disk.tsx'
-import { backTexture, faceContent, faceLights, faceTexture, loadCardAssets } from '../game/table/faces.ts'
+import { backTexture, faceContent, faceEmissiveMap, faceTexture, loadCardAssets } from '../game/table/faces.ts'
 import { kindOf } from '../game/table/kind.ts'
 import { NotFound } from './NotFound.tsx'
 
@@ -75,7 +75,7 @@ function AnatomyDisk({ view }: { view: View }) {
         alphaTest: 0.5,
       }),
       lights: new THREE.MeshBasicMaterial({
-        map: faceLights(unit, assets),
+        map: faceEmissiveMap(unit, assets),
         transparent: true,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
@@ -227,7 +227,7 @@ function Stickers({ unit }: { unit: Unit }) {
           <Sheet texture={faceContent(unit, assets)} title="Content">
             Art, name, cost, type, sigils, attack and health; clear everywhere else.
           </Sheet>
-          <Sheet texture={faceLights(unit, assets)} title="Lights">
+          <Sheet texture={faceEmissiveMap(unit, assets)} title="Lights">
             The content on black. Bright parts glow.
           </Sheet>
           <Sheet texture={backTexture()} title="Back">

@@ -17,7 +17,7 @@ export type Game =
       act: (action: Action) => void
       forfeit: () => Promise<void>
       subscribe: (listener: Listener) => () => void
-      run?: { ending: ReactNode | null; note?: Blurb | null }
+      run?: { ending: ReactNode | null; firstTimeNote?: Blurb | null }
       tutorial?: Tutorial
     }
 

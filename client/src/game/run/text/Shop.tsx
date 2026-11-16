@@ -15,7 +15,7 @@ import { LeaveButton, ScreenBar } from './Screen.tsx'
 
 export function Shop({ run }: { run: RunReady }) {
   const [removing, setRemoving] = useState<number | null>(null)
-  const [gone, setGone] = useState<Unit | null>(null)
+  const [justUninstalled, setJustUninstalled] = useState<Unit | null>(null)
   const visit = run.state.visit
   if (visit?.kind !== 'shop') return null
   const bytes = run.state.bytes
@@ -102,14 +102,14 @@ export function Shop({ run }: { run: RunReady }) {
         </p>
         {visit.uninstalled ? (
           <>
-            <UsedSlot gone={gone} />
+            <UsedSlot justUninstalled={justUninstalled} />
             <button
               type="button"
               data-action="uninstall"
               disabled
               className={`${SIDE_BUTTON} self-center border-p03 px-4 text-lg disabled:opacity-40`}
             >
-              {gone ? `${card(gone.card).name} uninstalled` : 'Uninstalled'}
+              {justUninstalled ? `${card(justUninstalled.card).name} uninstalled` : 'Uninstalled'}
             </button>
           </>
         ) : (
@@ -129,7 +129,7 @@ export function Shop({ run }: { run: RunReady }) {
               disabled={!(target && canUninstall)}
               onClick={() => {
                 if (!target) return
-                setGone(asUnit(target))
+                setJustUninstalled(asUnit(target))
                 run.act({ type: 'uninstall', card: target.id })
                 setRemoving(null)
               }}
@@ -146,7 +146,7 @@ export function Shop({ run }: { run: RunReady }) {
   )
 }
 
-function UsedSlot({ gone }: { gone: Unit | null }) {
+function UsedSlot({ justUninstalled }: { justUninstalled: Unit | null }) {
   const face = 'absolute inset-0 grid place-items-center rounded-md border-2 border-dashed border-p03-edge text-p03-dim'
   return (
     <div
@@ -155,17 +155,17 @@ function UsedSlot({ gone }: { gone: Unit | null }) {
       data-uninstalled
       className="relative aspect-[5/7] w-24 self-center sm:w-28"
     >
-      {gone ? (
+      {justUninstalled ? (
         <m.span {...turnAway(0.45)} className={face}>
           <Plus aria-hidden className="size-10" />
         </m.span>
       ) : null}
-      <m.span {...(gone ? turnUp(0.45) : {})} className={face}>
+      <m.span {...(justUninstalled ? turnUp(0.45) : {})} className={face}>
         <Ban aria-hidden className="size-10" />
       </m.span>
-      {gone ? (
+      {justUninstalled ? (
         <m.div {...shrinkAway} className="absolute inset-0 z-10">
-          <PixelCard unit={gone} />
+          <PixelCard unit={justUninstalled} />
         </m.div>
       ) : null}
     </div>

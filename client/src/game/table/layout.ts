@@ -1,22 +1,23 @@
 import { LANES, TIP } from 'shared'
 
 export type Vec3 = [number, number, number]
+type FaceRect = readonly [x0: number, y0: number, x1: number, y1: number]
 
 export const CARD = { width: 0.75, height: 1.26, depth: 0.012 }
 export const TABLE_Y = 7.0
 
-export const DISK = { depth: 0.024, relief: 0.011, clip: 0.11, compact: 0.68 }
+export const DISK = { depth: 0.024, relief: 0.011, clipFraction: 0.11, closedHeightScale: 0.68 }
 export const CORNER_HOLES = [
   [0.09, 0.02, 0.15, 0.06],
   [0.85, 0.02, 0.91, 0.06],
-] as const
+] as const satisfies readonly FaceRect[]
 export const SECTIONS = { middleTop: 0.215, middleBottom: 0.855 } as const
 export const RECESS = {
   label: [0.06, 0.105, 0.94, 0.2],
   screen: [0.05, 0.215, 0.95, 0.855],
   attack: [0.05, 0.885, 0.36, 0.975],
   health: [0.64, 0.885, 0.95, 0.975],
-} as const satisfies Record<string, readonly [number, number, number, number]>
+} as const satisfies Record<string, FaceRect>
 export const SCREEN_DIVIDER = 0.65
 export const SIGIL_BAND = [0.67, 0.84] as const
 export const CENTER_X = -1.975
@@ -39,32 +40,45 @@ export function slot(row: Row, lane: number, lift = 0): Vec3 {
 
 export const lanes = [...Array(LANES).keys()]
 
-const HAND = { distance: 1.5, scale: 0.46, y: -0.417, radius: 3, raise: 0.14, hover: 0.09, stowed: -0.5, away: -0.9 }
-export const HAND_SCALE = HAND.scale
+const HAND_IN_CAMERA = {
+  distance: 1.5,
+  scale: 0.46,
+  y: -0.417,
+  radius: 3,
+  raise: 0.14,
+  hover: 0.09,
+  stowed: -0.5,
+  away: -0.9,
+}
+export const HAND_SCALE = HAND_IN_CAMERA.scale
 
 export function handPlace(
   index: number,
   count: number,
   { selected = false, hovered = false, summoning = false, lowered = false } = {},
 ): { position: Vec3; roll: number; scale: number } {
-  const scale = HAND.scale * (count > 5 ? 1 - (count - 5) * 0.05 : 1)
-  const step = (CARD.width * scale * 1.04) / (HAND.radius - (CARD.height * scale) / 2)
+  const scale = HAND_IN_CAMERA.scale * (count > 5 ? 1 - (count - 5) * 0.05 : 1)
+  const step = (CARD.width * scale * 1.04) / (HAND_IN_CAMERA.radius - (CARD.height * scale) / 2)
   const angle = (summoning && selected ? 0 : index - (count - 1) / 2) * step
   const raise = lowered
-    ? HAND.away
+    ? HAND_IN_CAMERA.away
     : summoning
       ? selected
         ? 0.04
-        : HAND.stowed
+        : HAND_IN_CAMERA.stowed
       : selected
-        ? HAND.raise
+        ? HAND_IN_CAMERA.raise
         : hovered
-          ? HAND.hover
+          ? HAND_IN_CAMERA.hover
           : 0
-  const reach = HAND.radius + raise
+  const reach = HAND_IN_CAMERA.radius + raise
   const near = angle * 0.08 + (hovered || selected ? 0.04 : 0)
   return {
-    position: [Math.sin(angle) * reach, HAND.y - HAND.radius + Math.cos(angle) * reach, -HAND.distance + near],
+    position: [
+      Math.sin(angle) * reach,
+      HAND_IN_CAMERA.y - HAND_IN_CAMERA.radius + Math.cos(angle) * reach,
+      -HAND_IN_CAMERA.distance + near,
+    ],
     roll: -angle,
     scale,
   }

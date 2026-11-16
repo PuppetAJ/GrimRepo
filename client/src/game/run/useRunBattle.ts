@@ -29,6 +29,6 @@ export function useRunBattle(run: RunReady, ending: ReactNode | null, note: Blur
     act,
     forfeit: run.abandon,
     subscribe,
-    run: { ending, note: visit.game.status === 'playing' ? note : null },
+    run: { ending, firstTimeNote: visit.game.status === 'playing' ? note : null },
   }
 }

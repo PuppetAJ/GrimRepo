@@ -20,7 +20,7 @@ export function grid(days: PlayerStats['days']) {
     const key = date.toISOString().slice(0, 10)
     const day = byDate.get(key)
     const runs = day?.runs ?? 0
-    return { key, runs, bad: runs > 0 && (day?.losses ?? 0) > runs / 2 }
+    return { key, runs, losingDay: runs > 0 && (day?.losses ?? 0) > runs / 2 }
   })
 }
 
