@@ -8,7 +8,6 @@ import { CardSlot } from './CardSlot.tsx'
 import { Arrow, FLOW, Step, Waiting } from './Flow.tsx'
 import { LeaveButton, ScreenBar } from './Screen.tsx'
 
-/** The merge request: pick a card held twice and then its copy, and the two become one with both their stats. */
 export function MergeRequest({ run }: { run: RunReady }) {
   const [firstId, setFirst] = useState<number | null>(null)
   const [secondId, setSecond] = useState<number | null>(null)
@@ -25,7 +24,6 @@ export function MergeRequest({ run }: { run: RunReady }) {
           {first ? `Now its copy: pick another ${card(first.card).name}.` : 'Pick a card you hold twice.'}
         </p>
       </ScreenBar>
-      {/* Left to right: the card, its copy, and the one card they make. */}
       <div className={FLOW}>
         <Step title="A card you hold twice">
           <CardSlot
@@ -67,7 +65,6 @@ export function MergeRequest({ run }: { run: RunReady }) {
           )}
         </Step>
       </div>
-      {/* Below the three, grayed out until both copies are picked. */}
       <button
         type="button"
         data-action="fuse"
@@ -83,7 +80,6 @@ export function MergeRequest({ run }: { run: RunReady }) {
   )
 }
 
-/** The card the engine makes of the two: stats added, sigils joined up to the most a card holds. */
 const merged = (kept: RunCard, other: RunCard): RunCard => ({
   ...kept,
   attack: kept.attack + other.attack,

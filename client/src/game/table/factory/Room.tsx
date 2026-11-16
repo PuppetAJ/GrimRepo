@@ -5,7 +5,6 @@ import { MOOD } from '../mood.ts'
 import { TINT } from '../palette.ts'
 import { GRIMY_TABLE, metal, surfaces } from './surfaces.ts'
 
-// Each bar is [x, z, width, depth], around the 10.4 by 7.4 console top centered at z -9.9.
 const TRIM: [number, number, number, number][] = [
   [CENTER_X, -6.26, 10.52, 0.12],
   [CENTER_X, -13.54, 10.52, 0.12],

@@ -17,7 +17,6 @@ import { FaultyScreen } from '../components/p03/FaultyScreen.ts'
 
 export function Leaderboard() {
   const rise = useRise()
-  // First place's row, which its screen and corruption are laid over.
   const firstRow = useRef<HTMLTableRowElement>(null)
   const page = useSearch({ from: '/leaderboard', select: (search) => search.page ?? 1 })
   const navigate = useNavigate({ from: '/leaderboard' })
@@ -33,7 +32,6 @@ export function Leaderboard() {
         <h1 className="font-display text-6xl leading-none">Contributors</h1>
         <p className="font-mono text-sm text-muted-foreground">git shortlog --runs --since="last reset"</p>
       </div>
-      {/* Reserves height so the page doesn't jump when the rows arrive. As one piece, so first place's layers stay on its row. */}
       <div {...rise(1)} className="min-h-[65dvh]">
         {board.status === 'loading' ? (
           <div role="status" aria-label="Loading the leaderboard">
@@ -66,7 +64,6 @@ export function Leaderboard() {
           </p>
         ) : null}
         {board.status === 'ready' && board.data.players.length > 0 ? (
-          // Not clipped, so first place's corruption can spill past the board's edges.
           <div data-board className="relative isolate rounded-lg border bg-card">
             <table className="w-full border-collapse text-left">
               <caption className="sr-only">Players by their best run</caption>
@@ -106,7 +103,6 @@ export function Leaderboard() {
                 )}
               </tbody>
             </table>
-            {/* After the table, so its first row is in place to be measured; the layers' z-index does the stacking. */}
             {board.data.page === 1 ? <FirstPlaceLayers key={board.data.players[0]?.username} row={firstRow} /> : null}
             {board.data.pages > 1 ? (
               <nav
@@ -211,7 +207,6 @@ function FirstPlaceLayers({ row }: { row: RefObject<HTMLTableRowElement | null> 
 
 function FirstPlace({ row, mine, rowRef }: { row: LeaderboardRow; mine: boolean; rowRef: Ref<HTMLTableRowElement> }) {
   return (
-    // Its screen and corruption are drawn by FirstPlaceLayers: Safari doesn't position anything against a table row.
     <tr
       ref={rowRef}
       className="p03-screen relative border-y border-p03-edge bg-transparent [background-image:none] font-terminal"
@@ -229,7 +224,6 @@ function FirstPlace({ row, mine, rowRef }: { row: LeaderboardRow; mine: boolean;
             {initials(row.username)}
           </span>
           <div className="flex flex-col max-sm:min-w-0">
-            {/* One line: past a phone the name and tag set the column's width, so the tag never drops beneath. */}
             <div className="flex items-center gap-x-2.5">
               <Link
                 to="/players/$username"

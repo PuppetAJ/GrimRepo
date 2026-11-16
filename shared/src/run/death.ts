@@ -4,26 +4,22 @@ import { Rng } from '../rng.ts'
 import { DEATH_SKIP_BONUS } from '../scoring.ts'
 import type { RunCard, RunState } from './types.ts'
 
-/** One card from each of a lost run's three hands, whose cost, whose stats and art, and whose sigils, and a name. */
 export type DeathChoice = { cost: number; stats: number; sigils: number; name: string }
 
-/** The highest a stat can be written into the card's id. */
 export const DEATH_STAT_MOST = 999
 const MOST = DEATH_STAT_MOST
 
-/** Cards that can be parts: any but a death card, so a cost can't be shaved a little more each run. */
 export const deathParts = (deck: RunCard[]): RunCard[] => deck.filter((entry) => !isDeathCard(entry.card))
 
-/** The cost card sets the cost, at most one lower than the stats card's own, and never free if that one wasn't. */
 export const deathCost = (costCard: RunCard, statsCard: RunCard): number => {
   const statsCost = card(statsCard.card).cost
-  return Math.max(card(costCard.card).cost, statsCost - 1, Math.min(statsCost, 1))
+  const floorBelowStats = statsCost - 1
+  const notFreeUnlessStatsFree = Math.min(statsCost, 1)
+  return Math.max(card(costCard.card).cost, floorBelowStats, notFreeUnlessStatsFree)
 }
 
-/** What P03 says to anyone who tries the name; it is reserved for something that does not exist. */
 export const OLD_DATA_REFUSED = 'That name is reserved. For nothing. Pick another.'
 
-/** Any spelling of OLD_DATA, with 0 for o and 1 for l. */
 export const isOldData = (name: string): boolean =>
   name
     .toLowerCase()
@@ -31,7 +27,6 @@ export const isOldData = (name: string): boolean =>
     .replaceAll('1', 'l')
     .replace(/[^a-z]/g, '') === 'olddata'
 
-/** Spaces trimmed and runs of them folded into one. */
 export const tidyDeathName = (name: string): string => name.trim().replace(/\s+/g, ' ')
 
 export function deathNameProblem(name: string): string | null {
@@ -50,18 +45,12 @@ const STATS_SALT = 0x2b7e_1516
 const SIGIL_SALT = 0x5f35_76a1
 const FAR_SALT = 0x0ad3_93c7
 
-/** A stream of its own off the run's, so the cards dealt are the same wherever the run is replayed. */
 const stream = (state: RunState, salt: number) => new Rng((state.rng ^ salt) >>> 0)
 
-/** The first hand a lost run deals: three cards, one to give the death card its cost. */
 export function deathCostHand(state: RunState): RunCard[] {
   return stream(state, COST_SALT).shuffle(deathParts(state.deck)).slice(0, HAND_SIZE)
 }
 
-/**
- * The second hand, once the cost is picked: three cards within one cost of it, one to give its stats and art. A deck
- * with fewer than three that near fills the hand with the next nearest; deathCost keeps a far one from coming cheap.
- */
 export function deathStatsHand(state: RunState, cost: number): RunCard[] {
   const costCard = deathCostHand(state).find((entry) => entry.id === cost)
   if (!costCard) return []
@@ -75,7 +64,6 @@ export function deathStatsHand(state: RunState, cost: number): RunCard[] {
   return [...near, ...far].slice(0, HAND_SIZE)
 }
 
-/** The third hand, once the stats are picked: three cards from the deck, one to give every sigil it has. */
 export function deathSigilHand(state: RunState, cost: number, stats: number): RunCard[] {
   if (!deathStatsHand(state, cost).some((entry) => entry.id === stats)) return []
   return stream(state, SIGIL_SALT ^ Math.imul(cost, 31) ^ stats)
@@ -99,30 +87,25 @@ export function buildDeathCard(
     attack: Math.min(statsCard.attack, MOST),
     health: Math.min(statsCard.health, MOST),
     art: statsCard.card,
-    // Every sigil the third card carries, as Inscryption's Act I has it.
     sigils: [...new Set(sigilCard.sigils)].slice(0, MAX_SIGILS),
   })
   return parseDeathCard(id) ? { ok: true, id } : { ok: false, reason: 'That card cannot be built' }
 }
 
-/** How dangerous a card is to face: its attack, health and sigils, whatever it costs, since P03 never pays. */
 export function deathThreat(id: string): number {
   const def = parseDeathCard(id)
   if (!def) return 0
   return def.attack * 2 + def.health + def.sigils.length * 2
 }
 
-/** A card this harmless earns nothing for leaving out; one this dangerous (a 7/7) earns the full bonus. */
-const HARMLESS = 6
-const DANGEROUS = 20
+const NO_BONUS_THREAT = 6
+const FULL_BONUS_THREAT = 20
 
-/** What leaving the death card out multiplies a run's score by: the more dangerous the card the last boss brings back, the more. */
 export function deathSkipBonus(id: string): number {
-  const share = Math.min(1, Math.max(0, (deathThreat(id) - HARMLESS) / (DANGEROUS - HARMLESS)))
+  const share = Math.min(1, Math.max(0, (deathThreat(id) - NO_BONUS_THREAT) / (FULL_BONUS_THREAT - NO_BONUS_THREAT)))
   return Math.round((1 + (DEATH_SKIP_BONUS - 1) * share) * 100) / 100
 }
 
-/** The most dangerous another player's death card can be and still be dealt into someone else's run. */
 export const RIVAL_THREAT_CAP = 16
 
 export const rivalAllowed = (id: string): boolean => parseDeathCard(id) !== null && deathThreat(id) <= RIVAL_THREAT_CAP

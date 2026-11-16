@@ -5,10 +5,8 @@ import type { RunReady } from '../useRun.ts'
 import { choiceRarity, PackReveal, RarityBadge, SealedPack } from './Packs.tsx'
 import { ScreenBar } from './Screen.tsx'
 
-/** A card choice or a boss's reward: a pack, plain or holographic, torn open on three cards to take one. */
 export function Offer({ run }: { run: RunReady }) {
   const visit = run.state.visit
-  // Torn per offer, so the next card choice comes sealed.
   const [torn, setTorn] = useState<{ key: string; open: boolean } | null>(null)
   if (visit?.kind !== 'card' && visit?.kind !== 'reward') return null
   const reward = visit.kind === 'reward'

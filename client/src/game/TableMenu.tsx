@@ -30,7 +30,6 @@ import { DebugItem } from './run/RunDebug.tsx'
 import type { RunReady } from './run/useRun.ts'
 import type { useWideTable } from './wideTable.ts'
 
-/** The menu's way to the other table. */
 export type Switch = { label: string; go: () => void }
 
 export function saveWords(run: RunReady): string {
@@ -38,7 +37,6 @@ export function saveWords(run: RunReady): string {
   return run.saving ? 'saving…' : run.unsaved ? `${run.unsaved} unsaved` : 'saved'
 }
 
-/** Everything a table needn't show all the time: where the run stands, P03's last word, the deck, and the way out. */
 export function TableMenu({
   run,
   forfeit,
@@ -49,18 +47,13 @@ export function TableMenu({
   widen,
   className,
 }: {
-  /** Left out off a run, where the menu has no run to show, abandon or leave. */
   run?: RunReady
-  /** Off a run, forfeits the battle; left out once it can't be. */
   forfeit?: () => Promise<void>
   fullScreen: ReturnType<typeof useFullScreen>
-  /** Over the 3D table, its width: the site's, or the window's. */
   widen?: ReturnType<typeof useWideTable>
-  /** Set where the deck isn't beside the screen, so the menu opens it. */
   onDeck?: () => void
   onSwitch?: Switch
   button?: React.RefObject<HTMLButtonElement | null>
-  /** The menu button's look. */
   className: string
 }) {
   const [quitting, setQuitting] = useState(false)
@@ -72,7 +65,6 @@ export function TableMenu({
   const quit = run ? (run.state.status === 'playing' ? run.abandon : undefined) : forfeit
   return (
     <>
-      {/* Screen readers hear P03 as it speaks; everyone else finds the line in the menu. */}
       {run ? (
         <p role="status" className="sr-only">
           {latest ? `P03: ${latest}` : null}
@@ -168,7 +160,7 @@ export function TableMenu({
       </DropdownMenu>
       {quit ? (
         <AlertDialog open={quitting} onOpenChange={setQuitting}>
-          <ForfeitConfirm forfeit={quit} run={Boolean(run)} />
+          <ForfeitConfirm forfeit={quit} abandonsRun={Boolean(run)} />
         </AlertDialog>
       ) : null}
     </>

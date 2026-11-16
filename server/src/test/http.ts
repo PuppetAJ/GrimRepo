@@ -3,7 +3,6 @@ import { createApp } from '../app.ts'
 
 export type Reply = { status: number; body: any; cookie: string }
 
-/** The returned client keeps cookies as a browser would. */
 export async function startApp() {
   const server = createApp({ production: false }).listen(0)
   await new Promise((resolve) => server.once('listening', resolve))

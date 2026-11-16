@@ -14,7 +14,6 @@ import { useRise } from '../lib/rise.ts'
 import { Activity } from './player/Activity.tsx'
 import { History } from './player/History.tsx'
 
-// The charts bring Recharts, so they load lazily into a box their size.
 const ScoreChart = lazy(() => import('../components/Charts.tsx').then((charts) => ({ default: charts.ScoreChart })))
 const StreakChart = lazy(() => import('../components/Charts.tsx').then((charts) => ({ default: charts.StreakChart })))
 const BattlesChart = lazy(() => import('../components/Charts.tsx').then((charts) => ({ default: charts.BattlesChart })))
@@ -73,7 +72,7 @@ export function Player() {
             <div className="@container w-full min-w-0 flex-1">
               <h1 className="truncate text-3xl font-semibold">{player.username}</h1>
               <p className="whitespace-nowrap text-muted-foreground">
-                Joined {/* Short month where the long one would wrap. */}
+                Joined{' '}
                 <span className="@max-[12rem]:hidden">
                   {new Date(player.joinedAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                 </span>
@@ -85,7 +84,6 @@ export function Player() {
               </p>
             </div>
           </div>
-          {/* Values cap at 14ch beside the name so the badges never outgrow the room kept for them. */}
           <div className="hidden border-t pt-4 profile:hidden @[21rem]:block @[43rem]:border-t-0 @[43rem]:pt-0">
             <dl className="grid grid-cols-2 gap-2 font-mono text-xs @[38rem]:grid-cols-3 @[43rem]:w-fit @[43rem]:grid-cols-2">
               {facts.map((fact) => (

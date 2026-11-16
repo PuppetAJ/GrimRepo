@@ -3,7 +3,6 @@ export type CursorKind = 'arrow' | 'point' | 'draw' | 'boilerplate' | 'press' | 
 export const cursorCss = (kind: CursorKind) =>
   `url(/cursors/${kind}.svg) 2 2, ${kind === 'arrow' ? 'default' : 'pointer'}`
 
-// The last claimant wins; a release only resets the cursor if nobody claimed it since.
 let owner: object | null = null
 let current: CursorKind = 'arrow'
 const listeners = new Set<(kind: CursorKind) => void>()

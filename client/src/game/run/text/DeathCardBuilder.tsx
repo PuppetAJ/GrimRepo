@@ -24,16 +24,10 @@ import { Box } from './Box.tsx'
 import { CardList, ReadableCard } from './CardList.tsx'
 import { Sentences } from '../../text/Sentences.tsx'
 
-/** What the card is called before the player names it. */
 const UNNAMED = 'Death Card'
 
-/** Each run's death card, built or skipped, for the page's life; a reload starts a new run anyway. */
-const DECIDED = new Map<string, { built?: BuiltDeathCard; skipped?: boolean }>()
+const DEATH_CARDS_THIS_PAGE = new Map<string, { built?: BuiltDeathCard; skipped?: boolean }>()
 
-/**
- * After a lost run, a card built a step at a time beside the card taking shape: its cost from one hand, its stats and
- * art from cards near that cost, its sigils from a third card, then its name.
- */
 export function DeathCardBuilder({ run }: { run: RunReady }) {
   const [cost, setCost] = useState<number | null>(null)
   const [stats, setStats] = useState<number | null>(null)
@@ -41,22 +35,20 @@ export function DeathCardBuilder({ run }: { run: RunReady }) {
   const [name, setName] = useState('')
   const [touched, setTouched] = useState(false)
   const [sending, setSending] = useState(false)
-  // What became of this run's death card, kept past a remount, as when the table is switched or the phone turned.
   const decision = `${run.id}:${run.state.seed}`
-  const [built, setBuilt] = useState<BuiltDeathCard | null>(() => DECIDED.get(decision)?.built ?? null)
-  // Where the card being built sat, so the finished one can glide from there to the middle.
+  const [built, setBuilt] = useState<BuiltDeathCard | null>(() => DEATH_CARDS_THIS_PAGE.get(decision)?.built ?? null)
   const cardAt = useRef<HTMLDivElement>(null)
   const [from, setFrom] = useState<DOMRect | null>(null)
   const finish = (done: BuiltDeathCard) => {
     setFrom(cardAt.current?.getBoundingClientRect() ?? null)
     setBuilt(done)
-    DECIDED.set(decision, { built: done })
+    DEATH_CARDS_THIS_PAGE.set(decision, { built: done })
   }
   const [error, setError] = useState<string | null>(null)
-  const [skipped, setSkipped] = useState(() => DECIDED.get(decision)?.skipped ?? false)
+  const [skipped, setSkipped] = useState(() => DEATH_CARDS_THIS_PAGE.get(decision)?.skipped ?? false)
   const leaveOut = () => {
     setSkipped(true)
-    DECIDED.set(decision, { skipped: true })
+    DEATH_CARDS_THIS_PAGE.set(decision, { skipped: true })
   }
 
   const state = run.state
@@ -69,19 +61,16 @@ export function DeathCardBuilder({ run }: { run: RunReady }) {
   const problem = deathNameProblem(name)
   const choice = (named: string) => ({ cost: cost ?? -1, stats: stats ?? -1, sigils: sigils ?? -1, name: named })
   const preview = sigilCard ? buildDeathCard(state, choice(problem ? UNNAMED : name)) : null
-  // Until every part is picked, a stand-in shows what is known so far.
   const shown = preview?.ok
     ? preview.id
     : deathCardId({
         name: UNNAMED,
         cost: costCard && statsCard ? deathCost(costCard, statsCard) : costCard ? card(costCard.card).cost : 0,
-        // Capped as the built card is, or a huge buffed card couldn't be shown.
         attack: Math.min(statsCard?.attack ?? 0, DEATH_STAT_MOST),
         health: Math.min(statsCard?.health ?? 0, DEATH_STAT_MOST),
         art: statsCard?.card ?? 'Boilerplate',
         sigils: [],
       })
-  // The server's record must be saved before it can build from it; a mockup builds here and keeps nothing.
   const mockup = run.id === -1
   const ready = mockup || run.over !== null
 
@@ -108,7 +97,6 @@ export function DeathCardBuilder({ run }: { run: RunReady }) {
     }
   }
 
-  // One page at a time: each pick turns to the next, and Back undoes the last.
   const page = !costCard ? 0 : !statsCard ? 1 : !sigilCard ? 2 : 3
   const back = () => {
     if (page === 3) setSigils(null)
@@ -124,7 +112,7 @@ export function DeathCardBuilder({ run }: { run: RunReady }) {
           onPick={(unit) => setCost(unit.uid)}
           picked={cost}
           data={(unit) => ({ 'data-action': 'death-cost', 'data-card': unit.uid })}
-          size="w-20 sm:w-24"
+          itemClassName="w-20 sm:w-24"
         />
       ),
     },
@@ -136,7 +124,7 @@ export function DeathCardBuilder({ run }: { run: RunReady }) {
           onPick={(unit) => setStats(unit.uid)}
           picked={stats}
           data={(unit) => ({ 'data-action': 'death-stats', 'data-card': unit.uid })}
-          size="w-20 sm:w-24"
+          itemClassName="w-20 sm:w-24"
         />
       ),
     },
@@ -148,7 +136,7 @@ export function DeathCardBuilder({ run }: { run: RunReady }) {
           onPick={(unit) => setSigils(unit.uid)}
           picked={sigils}
           data={(unit) => ({ 'data-action': 'death-sigils', 'data-card': unit.uid })}
-          size="w-20 sm:w-24"
+          itemClassName="w-20 sm:w-24"
         />
       ),
     },
@@ -213,7 +201,6 @@ export function DeathCardBuilder({ run }: { run: RunReady }) {
         <div className="hidden shrink-0 sm:block">{skip}</div>
       </div>
       <div className="grid gap-4 @2xl:grid-cols-[9rem_minmax(0,1fr)]">
-        {/* The card taking shape, filled in as each part is chosen. */}
         <div className="flex flex-col items-center gap-2 self-start">
           <div ref={cardAt} className="w-36">
             <ReadableCard
@@ -239,8 +226,6 @@ export function DeathCardBuilder({ run }: { run: RunReady }) {
               </button>
             ) : null}
           </div>
-          {/* Keyed on the page, so each one slides in as the last is locked in. */}
-          {/* Slides in as a step is locked in; the first page just appears with the screen's fade. */}
           <m.div key={page} {...(page > 0 ? pageIn : {})}>
             {current.body}
           </m.div>
@@ -251,7 +236,6 @@ export function DeathCardBuilder({ run }: { run: RunReady }) {
           {error}
         </p>
       ) : null}
-      {/* At the bottom only when narrow; wider, it sits at the top right. */}
       <div className="flex justify-end sm:hidden">{skip}</div>
     </section>
   )
@@ -259,18 +243,15 @@ export function DeathCardBuilder({ run }: { run: RunReady }) {
 
 const tidy = (name: string) => name.trim().replace(/\s+/g, ' ')
 
-/** How long the card takes to "upload" before its check mark shows. */
 const UPLOAD_MS = 1200
 
 function Built({ built, mockup, from }: { built: BuiltDeathCard; mockup: boolean; from: DOMRect | null }) {
-  // A short upload, then a check mark, so it's clear the card is made; skipped with reduced motion.
   const [uploaded, setUploaded] = useState(prefersReducedMotion)
   useEffect(() => {
     if (uploaded) return
     const done = setTimeout(() => setUploaded(true), UPLOAD_MS)
     return () => clearTimeout(done)
   }, [uploaded])
-  // The card glides from where it was built to the middle, taking its new size on the way.
   const cardAt = useRef<HTMLDivElement>(null)
   useLayoutEffect(() => {
     const element = cardAt.current
@@ -282,7 +263,6 @@ function Built({ built, mockup, from }: { built: BuiltDeathCard; mockup: boolean
       { x: [from.left - to.left, 0], y: [from.top - to.top, 0], scale: [from.width / to.width, 1] },
       { duration: 0.5, ease: 'easeOut' },
     )
-    // Stopped and put back on the way out, so a second run of this effect measures the card at rest, not mid-glide.
     return () => {
       glide.stop()
       element.style.transform = ''
@@ -330,7 +310,6 @@ function Built({ built, mockup, from }: { built: BuiltDeathCard; mockup: boolean
           )}
         </p>
       ) : (
-        // Below the card, filling over the upload's length, then giving way to the check mark.
         <div className="flex w-48 flex-col items-center gap-2">
           <span className="block h-3 w-full overflow-hidden rounded-full border-2 border-p03-edge">
             <m.span {...fill(1.1)} className="block h-full w-full origin-left bg-p03" />

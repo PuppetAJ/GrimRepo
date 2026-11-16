@@ -15,7 +15,6 @@ import { DebugItem } from '../RunDebug.tsx'
 import type { RunReady } from '../useRun.ts'
 import { saveWords } from '../../TableMenu.tsx'
 
-/** A run's menu at the text table's battles: where the run stands, P03's last word, the deck and tools, and the map. */
 export function BattleMenu({ run, onInventory, onMap }: { run: RunReady; onInventory: () => void; onMap: () => void }) {
   const { state } = run
   const latest = run.news.join(' ')

@@ -14,7 +14,6 @@ import { Home } from './pages/Home.tsx'
 import { Leaderboard } from './pages/Leaderboard.tsx'
 import { NotFound } from './pages/NotFound.tsx'
 
-// Home and the leaderboard ship in the first load; every other page loads on demand.
 const Account = lazyRouteComponent(() => import('./pages/Account.tsx'), 'Account')
 const Cards = lazyRouteComponent(() => import('./pages/Cards.tsx'), 'Cards')
 const MyStats = lazyRouteComponent(() => import('./pages/MyStats.tsx'), 'MyStats')
@@ -29,37 +28,35 @@ const DiskAnatomy = lazyRouteComponent(() => import('./pages/DiskAnatomy.tsx'), 
 const SignIn = lazyRouteComponent(() => import('./pages/SignIn.tsx'), 'SignIn')
 const SignUp = lazyRouteComponent(() => import('./pages/SignUp.tsx'), 'SignUp')
 
-// A bad value falls back rather than failing the page, since anyone can type an address.
-const optional = <T extends z.core.SomeType>(schema: T) => z.catch(z.optional(schema), undefined)
+const optionalOrDropped = <T extends z.core.SomeType>(schema: T) => z.catch(z.optional(schema), undefined)
 
-const page = z.object({ page: optional(z.coerce.number().check(z.int(), z.minimum(2))) })
+const page = z.object({ page: optionalOrDropped(z.coerce.number().check(z.int(), z.minimum(2))) })
 
-// Once there were quick battle and run boards; an old ?board= link now just finds the one.
 const leaderboardSearch = page
 
 const cardsSearch = z.object({
-  q: optional(z.coerce.string()),
-  view: optional(z.enum(['3d'])),
-  sort: optional(z.string()),
-  order: optional(z.enum(['desc'])),
-  cost: optional(z.coerce.string()),
-  card: optional(z.string()),
+  q: optionalOrDropped(z.coerce.string()),
+  view: optionalOrDropped(z.enum(['3d'])),
+  sort: optionalOrDropped(z.string()),
+  order: optionalOrDropped(z.enum(['desc'])),
+  cost: optionalOrDropped(z.coerce.string()),
+  card: optionalOrDropped(z.string()),
 })
 
 const boardSearch = z.object({
-  text: optional(z.string()),
-  layout: optional(z.enum(['wide', 'mid', 'phone'])),
+  text: optionalOrDropped(z.string()),
+  layout: optionalOrDropped(z.enum(['wide', 'mid', 'phone'])),
 })
 
-const runSearch = z.object({ layout: optional(z.enum(['wide', 'mid', 'phone'])) })
+const runSearch = z.object({ layout: optionalOrDropped(z.enum(['wide', 'mid', 'phone'])) })
 const tutorialSearch = z.object({
-  text: optional(z.string()),
-  layout: optional(z.enum(['wide', 'mid', 'phone'])),
-  step: optional(z.string()),
+  text: optionalOrDropped(z.string()),
+  layout: optionalOrDropped(z.enum(['wide', 'mid', 'phone'])),
+  step: optionalOrDropped(z.string()),
 })
 const mockupSearch = z.object({
-  layout: optional(z.enum(['wide', 'mid', 'phone'])),
-  table: optional(z.enum(['3d', 'text'])),
+  layout: optionalOrDropped(z.enum(['wide', 'mid', 'phone'])),
+  table: optionalOrDropped(z.enum(['3d', 'text'])),
 })
 
 export type CardsSearch = z.infer<typeof cardsSearch>
@@ -103,7 +100,6 @@ const account = createRoute({
     </RequireAuth>
   ),
 })
-// Quick battles are gone; their old address leads to a run.
 const game = createRoute({
   getParentRoute: parent,
   path: '/game',
@@ -123,7 +119,6 @@ const run = createRoute({
   ),
 })
 
-// No sign-in: the tutorial is never saved.
 const tutorial = createRoute({
   getParentRoute: parent,
   path: '/tutorial',
@@ -131,7 +126,6 @@ const tutorial = createRoute({
   component: Tutorial,
 })
 
-// Development and test builds only; production shows the not-found page.
 const mockups = createRoute({ getParentRoute: parent, path: '/mockups', component: MockupIndex })
 const board = createRoute({
   getParentRoute: parent,
@@ -146,9 +140,7 @@ const mockup = createRoute({
   component: MockupRun,
 })
 
-// Development only; elsewhere the page is the not-found page.
 const art = createRoute({ getParentRoute: parent, path: '/art', component: ArtEditor })
-// Development only, like the art editor.
 const anatomy = createRoute({ getParentRoute: parent, path: '/anatomy', component: DiskAnatomy })
 
 const tree = root.addChildren([
@@ -170,7 +162,6 @@ const tree = root.addChildren([
   mockup,
 ])
 
-/** Plain `?key=value` addresses, as before, rather than the router's JSON values; a bare key is a flag. */
 function parseSearch(search: string): Record<string, string> {
   return Object.fromEntries(new URLSearchParams(search))
 }
@@ -184,7 +175,6 @@ function stringifySearch(search: Record<string, unknown>): string {
   return parts.length ? `?${parts.join('&')}` : ''
 }
 
-/** The prerender passes a memory history and an origin, since it has no window. */
 export function makeRouter(history?: RouterHistory, origin?: string) {
   return createRouter({
     routeTree: tree,

@@ -1,12 +1,12 @@
 import { randomInt } from 'node:crypto'
-import { demoAccount } from '../auth/demo.ts'
+import { publicDemoAccount } from '../auth/demo.ts'
 import { isOffensive } from '../auth/names.ts'
 import { pool } from '../config/db.ts'
 
 export class ModerationError extends Error {}
 
 async function find(username: string): Promise<{ id: string; name: string }> {
-  if (username.toLowerCase() === demoAccount.username)
+  if (username.toLowerCase() === publicDemoAccount.username)
     throw new ModerationError('The demo account is managed by the seed, not by hand.')
   const { rows } = await pool.query<{ id: string; name: string }>(
     'SELECT id, display_username AS name FROM users WHERE username = lower($1)',
@@ -16,8 +16,7 @@ async function find(username: string): Promise<{ id: string; name: string }> {
   return rows[0]
 }
 
-/** Locks the new name so the player can't change it back. */
-export async function renameAccount(username: string, to?: string): Promise<{ from: string; to: string }> {
+export async function renameAndLockAccount(username: string, to?: string): Promise<{ from: string; to: string }> {
   const account = await find(username)
   if (to && isOffensive(to)) throw new ModerationError(`${to} would not pass the name filter either.`)
   for (let attempt = 0; attempt < 20; attempt++) {
@@ -36,7 +35,6 @@ export async function renameAccount(username: string, to?: string): Promise<{ fr
   throw new ModerationError('Could not find a free neutral name; try again.')
 }
 
-/** Sessions and games go with it through the foreign keys. */
 export async function removeAccount(username: string): Promise<{ removed: string }> {
   const account = await find(username)
   await pool.query('DELETE FROM users WHERE id = $1', [account.id])
@@ -52,7 +50,6 @@ export async function recentAccounts(days = 7): Promise<{ name: string; joined: 
   return rows.map((row) => ({ ...row, joined: row.joined.toISOString() }))
 }
 
-/** Names the filter would refuse today, such as ones made before a word was added. */
 export async function flaggedAccounts(): Promise<string[]> {
   const { rows } = await pool.query<{ name: string }>(
     'SELECT display_username AS name FROM users WHERE NOT name_locked ORDER BY created_at',

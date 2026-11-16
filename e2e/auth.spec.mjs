@@ -55,7 +55,6 @@ test('Signing up', async ({ browser }) => {
   await page.getByRole('heading', { name: 'Create an account' }).waitFor()
   check('and the header reaches the sign-up form in one click', page.url() === `${BASE}/signup`, page.url())
 
-  // Signing in
   await page.goto(`${BASE}/login`)
   await page.getByLabel('Username or email').fill(player.username.toUpperCase())
   await page.getByLabel('Password', { exact: true }).fill('not-the-password')
@@ -118,12 +117,10 @@ test('Playing as a guest', async ({ browser }) => {
   await context.close()
 })
 
-/** Plays the signed-in account's run up to its first battle, as the bot would, saving the moves. */
 async function toFirstBattle(page) {
   const { applyRun, createRun, nextRunAction } = await import('../shared/src/index.ts')
   const opened = await (await page.request.post(`${BASE}/api/runs`, { headers: { origin: BASE } })).json()
   let state = createRun({ seed: opened.seed, death: opened.death, rival: opened.rival })
-  // An open run comes back with the moves it already has, which are replayed first.
   for (const action of opened.actions) {
     const result = applyRun(state, action)
     if (!result.ok) throw new Error(result.reason)
@@ -151,7 +148,6 @@ test('The demo account and redirects', async ({ browser }) => {
   check('signing in always lands on the home page', page.url() === `${BASE}/`, page.url())
   check('as the demo account', (await page.getByRole('button', { name: 'Account menu' }).innerText()).includes('demo'))
 
-  // The note is on the table, so the demo's run is played through the API up to its first battle.
   await toFirstBattle(page)
   await page.goto(`${BASE}/run`)
   await page.getByRole('note').waitFor()
@@ -190,10 +186,8 @@ test('Changing an account', async ({ browser }) => {
   const renamed = `${player.username}_x`.slice(0, 20)
   await page.goto(`${BASE}/account`)
   await page.getByLabel('New username').fill(renamed)
-  // Exact, since the account menu's name holds the username, and this player's username starts with Rename.
   await page.getByRole('button', { name: 'Rename', exact: true }).click()
   await page.getByText(`You are now ${renamed}`).waitFor()
-  // On a slow connection the header updates a moment after the message, so wait for it.
   const headerUpdated = await page
     .getByRole('button', { name: 'Account menu' })
     .filter({ hasText: renamed })

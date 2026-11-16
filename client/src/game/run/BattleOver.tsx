@@ -2,7 +2,8 @@ import { Choices, P03Dialogue } from '../P03Dialogue.tsx'
 import { findNode, STAGES, TIP } from 'shared'
 import type { RunReady } from './useRun.ts'
 
-/** The panel over the board when a run's battle ends; both tables show it. */
+const keepTogether = (...words: (string | number)[]) => words.join('\u00a0')
+
 export function BattleOver({ run, onSummary }: { run: RunReady; onSummary: () => void }) {
   const { state } = run
   const visit = state.visit
@@ -21,25 +22,24 @@ export function BattleOver({ run, onSummary }: { run: RunReady; onSummary: () =>
             state.status === 'playing'
               ? {
                   label: boss ? 'Claim the reward' : 'Back to the map',
-                  action: 'leave',
+                  dataAction: 'leave',
                   onChoose: () => run.act({ type: 'leave' }),
                 }
-              : { label: 'See how the run went', action: 'summary', onChoose: onSummary },
+              : { label: 'See how the run went', dataAction: 'summary', onChoose: onSummary },
           ]}
         />
       }
     >
-      {/* The sentences run on together, so the second shares the first's line where it fits; a turn never parts from its number. */}
       <p>
         {!won
           ? visit.game.integrity?.left === 0
-            ? `Out of integrity on turn\u00a0${visit.game.turn}. The run ends here.`
-            : `You lose on turn\u00a0${visit.game.turn}. The run ends here.`
+            ? `Out of integrity on ${keepTogether('turn', visit.game.turn)}. The run ends here.`
+            : `You lose on ${keepTogether('turn', visit.game.turn)}. The run ends here.`
           : state.status === 'won'
             ? `${STAGES[state.stage]} is down. You cleared the run.`
             : boss
               ? `The boss is down. ${STAGES[state.stage]} is cleared.`
-              : `You win in ${visit.game.turn}\u00a0turns.`}
+              : `You win in ${keepTogether(visit.game.turn, 'turns')}.`}
       </p>
       {won && overkill ? (
         <p className="text-p03-dim">{overkill} overkill, which counts toward the run's score.</p>

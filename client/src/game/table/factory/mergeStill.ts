@@ -1,8 +1,7 @@
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 
-// Loaded models store quantized attributes, which can't be transformed and merged.
-function unpacked(geometry: THREE.BufferGeometry, names: string[]): THREE.BufferGeometry {
+function dequantized(geometry: THREE.BufferGeometry, names: string[]): THREE.BufferGeometry {
   const copy = new THREE.BufferGeometry()
   for (const name of names) {
     const from = geometry.getAttribute(name)
@@ -15,7 +14,6 @@ function unpacked(geometry: THREE.BufferGeometry, names: string[]): THREE.Buffer
   return copy.toNonIndexed()
 }
 
-/** Runs once per root; parts matching `keep` stay separate. Returns how many meshes were merged. */
 export function mergeStill(root: THREE.Object3D, keep: RegExp): number {
   if (root.userData['merged']) return 0
   root.userData['merged'] = true
@@ -34,7 +32,7 @@ export function mergeStill(root: THREE.Object3D, keep: RegExp): number {
       meshes.every((mesh) => mesh.geometry.getAttribute(name)),
     )
     const parts = meshes.map((mesh) =>
-      unpacked(mesh.geometry, names).applyMatrix4(new THREE.Matrix4().multiplyMatrices(inverse, mesh.matrixWorld)),
+      dequantized(mesh.geometry, names).applyMatrix4(new THREE.Matrix4().multiplyMatrices(inverse, mesh.matrixWorld)),
     )
     const geometry = mergeGeometries(parts, false)
     if (!geometry) continue

@@ -9,7 +9,6 @@ import { CardSlot } from './CardSlot.tsx'
 import { Arrow, FLOW, SigilChoice, SigilName, Step, Waiting } from './Flow.tsx'
 import { LeaveButton, ScreenBar } from './Screen.tsx'
 
-/** The linter: pick a card, then the one sigil of its to delete, and see the card it leaves. */
 export function Linter({ run }: { run: RunReady }) {
   const [picked, setPicked] = useState<number | null>(null)
   const [sigil, setSigil] = useState<SigilId | null>(null)
@@ -34,7 +33,6 @@ export function Linter({ run }: { run: RunReady }) {
         </p>
       </ScreenBar>
       {any ? (
-        // Left to right: the card, the sigil it loses, and the card as it'll be.
         <div className={FLOW}>
           <Step title="The card">
             <CardSlot
@@ -83,7 +81,6 @@ export function Linter({ run }: { run: RunReady }) {
       ) : (
         <NothingHere>No card has a sigil to delete.</NothingHere>
       )}
-      {/* Below the three, grayed out until each is picked. */}
       {any ? (
         <button
           type="button"

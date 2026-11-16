@@ -1,8 +1,6 @@
 import type { DeathChoice, Outcome, RunAction, RunNote } from 'shared'
 
-/** Players by their best run; `wins` counts the runs they cleared. */
 export type LeaderboardRow = { rank: number; username: string; bestScore: number; runs: number; wins: number }
-/** `top` is first place's score, for scaling the bars. */
 export type BoardPage = { players: LeaderboardRow[]; page: number; pages: number; total: number; top: number }
 
 export type PlayerStats = {
@@ -16,17 +14,12 @@ export type PlayerStats = {
   averageBattles: number | null
   days: { date: string; runs: number; losses: number }[]
   recent: FinishedRun[]
-  // The first run that reached their best score.
   best: FinishedRun | null
-  // Null for a guest or before a finished run.
   rank: number | null
-  // Id of the card played most across their runs, excluding Boilerplate.
   favoriteCard: string | null
-  // Built from a lost run's deck; never kept for a guest or the demo account.
   deathCard: string | null
 }
 
-/** A finished run; a win cleared it, and `stage` is the index of the stage it ended on. */
 export type FinishedRun = {
   outcome: Outcome
   stage: number
@@ -44,16 +37,11 @@ export type OpenRun = {
   actions: RunAction[]
   resumed: boolean
   rulesChanged: boolean
-  /** The player's death card as it was when the run began. */
   death: string | null
-  /** Another player's death card for the Staging boss, and its maker. */
   rival: { card: string; by: string } | null
 }
-/** `saved` is false for the demo account, which sees its card but doesn't keep it; a guest's is kept until they sign up. */
 export type BuiltDeathCard = { card: string; saved: boolean; guest?: boolean }
-/** P03's run notes the player has seen, and whether they want them at all. */
 export type Notes = { seen: RunNote[]; off: boolean }
-/** `reset` clears the notes seen, before `seen` adds to them. */
 export type NotesChange = { seen?: RunNote[]; off?: boolean; reset?: boolean }
 export type RunOver = { status: 'won' | 'lost'; score: number; stage: number; bosses: number; forfeited: boolean }
 export type RunSaved = { status: 'playing'; saved: number } | RunOver

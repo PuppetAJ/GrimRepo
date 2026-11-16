@@ -1,27 +1,23 @@
 import { LANES, TIP } from 'shared'
 
 export type Vec3 = [number, number, number]
+type FaceRect = readonly [x0: number, y0: number, x1: number, y1: number]
 
 export const CARD = { width: 0.75, height: 1.26, depth: 0.012 }
 export const TABLE_Y = 7.0
 
-/** depth and relief in world units, clip as a fraction of the width, compact as a closed disk's height scale. */
-export const DISK = { depth: 0.024, relief: 0.011, clip: 0.11, compact: 0.68 }
-/** They go right through the disk, so face drawings must leave them clear. */
+export const DISK = { depth: 0.024, relief: 0.011, clipFraction: 0.11, closedHeightScale: 0.68 }
 export const CORNER_HOLES = [
   [0.09, 0.02, 0.15, 0.06],
   [0.85, 0.02, 0.91, 0.06],
-] as const
-/** Only the middle section compresses when the disk closes. */
+] as const satisfies readonly FaceRect[]
 export const SECTIONS = { middleTop: 0.215, middleBottom: 0.855 } as const
-// [x0, y0, x1, y1] as fractions of the face from its top-left corner.
 export const RECESS = {
   label: [0.06, 0.105, 0.94, 0.2],
   screen: [0.05, 0.215, 0.95, 0.855],
   attack: [0.05, 0.885, 0.36, 0.975],
   health: [0.64, 0.885, 0.95, 0.975],
-} as const satisfies Record<string, readonly [number, number, number, number]>
-// Fractions of the face's height.
+} as const satisfies Record<string, FaceRect>
 export const SCREEN_DIVIDER = 0.65
 export const SIGIL_BAND = [0.67, 0.84] as const
 export const CENTER_X = -1.975
@@ -32,12 +28,10 @@ export const BOARD_CENTER: Vec3 = [CENTER_X, TABLE_Y, ROW_Z.front]
 export const DECK: Vec3 = [0.65, TABLE_Y, -8.25]
 export const PILE: Vec3 = [1.6, TABLE_Y, -8.25]
 export const BELL: Vec3 = [-4.9, TABLE_Y, -8.85]
-/** Where P03's new cards spawn. */
 export const P03_HAND: Vec3 = [CENTER_X, TABLE_Y + 1.2, -13]
 
 export type Row = keyof typeof ROW_Z
 
-/** Height of the board's frames above the table; cards lie just above it. */
 export const BOARD_DEPTH = 0.018
 
 export function slot(row: Row, lane: number, lift = 0): Vec3 {
@@ -46,37 +40,45 @@ export function slot(row: Row, lane: number, lift = 0): Vec3 {
 
 export const lanes = [...Array(LANES).keys()]
 
-// Camera space: x right, y up, z toward the viewer.
-const HAND = { distance: 1.5, scale: 0.46, y: -0.417, radius: 3, raise: 0.14, hover: 0.09, stowed: -0.5, away: -0.9 }
-export const HAND_SCALE = HAND.scale
+const HAND_IN_CAMERA = {
+  distance: 1.5,
+  scale: 0.46,
+  y: -0.417,
+  radius: 3,
+  raise: 0.14,
+  hover: 0.09,
+  stowed: -0.5,
+  away: -0.9,
+}
+export const HAND_SCALE = HAND_IN_CAMERA.scale
 
 export function handPlace(
   index: number,
   count: number,
   { selected = false, hovered = false, summoning = false, lowered = false } = {},
 ): { position: Vec3; roll: number; scale: number } {
-  // Past five cards the hand shrinks so it stays clear of the board and the screen's edge.
-  const scale = HAND.scale * (count > 5 ? 1 - (count - 5) * 0.05 : 1)
-  // Neighbors' bottom corners just meet on the arc, so no card covers another's numbers.
-  const step = (CARD.width * scale * 1.04) / (HAND.radius - (CARD.height * scale) / 2)
+  const scale = HAND_IN_CAMERA.scale * (count > 5 ? 1 - (count - 5) * 0.05 : 1)
+  const step = (CARD.width * scale * 1.04) / (HAND_IN_CAMERA.radius - (CARD.height * scale) / 2)
   const angle = (summoning && selected ? 0 : index - (count - 1) / 2) * step
-  // Mid-summon the chosen card rises only a little, to stay clear of the lanes.
-  // Looking down at the board, the whole hand is put away below the view, as Inscryption does; looking up brings it back.
   const raise = lowered
-    ? HAND.away
+    ? HAND_IN_CAMERA.away
     : summoning
       ? selected
         ? 0.04
-        : HAND.stowed
+        : HAND_IN_CAMERA.stowed
       : selected
-        ? HAND.raise
+        ? HAND_IN_CAMERA.raise
         : hovered
-          ? HAND.hover
+          ? HAND_IN_CAMERA.hover
           : 0
-  const reach = HAND.radius + raise
+  const reach = HAND_IN_CAMERA.radius + raise
   const near = angle * 0.08 + (hovered || selected ? 0.04 : 0)
   return {
-    position: [Math.sin(angle) * reach, HAND.y - HAND.radius + Math.cos(angle) * reach, -HAND.distance + near],
+    position: [
+      Math.sin(angle) * reach,
+      HAND_IN_CAMERA.y - HAND_IN_CAMERA.radius + Math.cos(angle) * reach,
+      -HAND_IN_CAMERA.distance + near,
+    ],
     roll: -angle,
     scale,
   }
@@ -84,21 +86,16 @@ export function handPlace(
 
 export type CameraView = 'table' | 'board' | 'queue' | 'map'
 
-/** The camera's vertical field of view, in degrees, unless a view sets its own. */
 export const FOV = 60
 
 export const CAMERA: Record<CameraView, { position: Vec3; target: Vec3; fov?: number }> = {
-  // Solved so the player's row clears the hand and P03's screen stays in frame at 16:9 and a 60° fov.
   table: { position: [CENTER_X, 8.7, -4.4], target: [CENTER_X, 7.4, -10.6] },
-  // Close and nearly straight down on the two rows that fight; the queue view pulls back to show P03's queue too.
   board: { position: [CENTER_X, TABLE_Y + 3.1, -8.55], target: [CENTER_X, TABLE_Y, -9.5] },
   queue: { position: [CENTER_X, 11.0, -7.6], target: [CENTER_X, TABLE_Y, -9.75] },
-  // Between a run's battles: back from the seat and nearly level, with a narrow lens so the projector isn't stretched.
   map: { position: [CENTER_X, 10.4, -0.5], target: [CENTER_X, 9.1, -9], fov: 42 },
 }
 
 export const BATTERY_CELLS = 6
 
-/** Fractional cells filled, full when the scale tips; positive for the player's lead. */
 export const leadCells = (scale: number): number =>
   Math.sign(scale) * Math.min(BATTERY_CELLS, (Math.abs(scale) / TIP) * BATTERY_CELLS) || 0

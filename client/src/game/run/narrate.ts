@@ -2,7 +2,6 @@ import { card, ITEMS, SIGILS, STAGES, type RunEvent, type RunState } from 'share
 
 const named = (id: string) => card(id).name
 
-/** P03's lines for what an action off the board did to the deck and the run. */
 export function narrateRun(before: RunState, events: RunEvent[]): string[] {
   const where = before.visit?.kind
   return events.flatMap((event): string[] => {

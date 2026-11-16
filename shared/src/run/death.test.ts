@@ -38,7 +38,6 @@ const entry = (id: number, cardId: string, changes: Partial<RunCard> = {}): RunC
 const DEATH = deathCardId({ name: 'Old Faithful', cost: 1, attack: 4, health: 4, art: 'Cookie', sigils: ['retry'] })
 const RIVAL = deathCardId({ name: 'Stranger', cost: 1, attack: 3, health: 3, art: 'Watchdog', sigils: [] })
 
-/** A run with a death card, its first node made a card choice and visited. */
 function firstCardChoice(state: RunState): RunState {
   const node = state.map.rows[0]?.[0]
   assert.ok(node)
@@ -85,7 +84,6 @@ describe('building a death card', () => {
   ]
   const lost = (rng = 7, cards = deck): RunState => ({ ...createRun({ seed: 3 }), rng, deck: cards })
   const has = (hand: RunCard[], id: number) => hand.some((part) => part.id === id)
-  /** A lost run that deals this cost card, this stats card for it, and this sigil card, found by trying its random state. */
   function dealing(cost: number, stats: number, sigils?: number, cards = deck): RunState {
     for (let rng = 1; rng < 50_000; rng++) {
       const state = lost(rng, cards)
@@ -128,7 +126,6 @@ describe('building a death card', () => {
   })
 
   it('fills the stats hand with the nearest costs when fewer than three are that near', () => {
-    // One costly card among cheap ones: picked for its cost, it has only one card within one cost of it, itself.
     const lopsided = [entry(1, 'Mainframe'), entry(2, 'HelloWorld'), entry(3, 'HelloWorld'), entry(4, 'CronJob')]
     for (let rng = 1; rng < 50; rng++) {
       const state = lost(rng, lopsided)
@@ -173,11 +170,9 @@ describe('building a death card', () => {
   })
 
   it('costs at most one less than the stats card, and something if that card did', () => {
-    // A free card's cost can't put a 3-cost card's stats into play for nothing.
     assert.equal(deathCost(entry(0, 'HelloWorld'), entry(0, 'Mainframe')), 2)
     assert.equal(deathCost(entry(0, 'Mainframe'), entry(0, 'HelloWorld')), 3)
     assert.equal(deathCost(entry(0, 'HelloWorld'), entry(0, 'CronJob')), 0)
-    // Free cards with 1-cost stats doubled the bot's score, so a card that cost something stays at 1 or more.
     assert.equal(deathCost(entry(0, 'HelloWorld'), entry(0, 'Firewall')), 1)
   })
 
@@ -239,7 +234,6 @@ describe('a run with a death card', () => {
     const index = at.visit.offer.indexOf(DEATH)
     const took = step(at, { type: 'take', index })
     assert.ok(took.deck.some((part) => part.card === DEATH))
-    // Never again that run.
     const again = firstCardChoice({ ...structuredClone(took), at: null })
     assert.ok(again.visit?.kind === 'card' && !again.visit.offer.includes(DEATH))
   })
@@ -276,7 +270,6 @@ describe('a death card in battle', () => {
 describe('a boss bringing a death card', () => {
   const STRONG = deathCardId({ name: 'Too Big', cost: 2, attack: 15, health: 17, art: 'Mainframe', sigils: ['retry'] })
 
-  /** The boss's game, moved into its last phase with its queue cleared, as a phase change leaves it. */
   function lastPhase(id: string, haunt: { card: string; by: string | null }) {
     const game = createGame({ seed: 2, encounter: id, haunt })
     game.opponent.back.fill(null)
@@ -295,7 +288,6 @@ describe('a boss bringing a death card', () => {
     assert.equal(queued.length, plan.length + 1)
     const haunt = queued.find((event) => event.unit.card === DEATH)
     assert.deepEqual(haunt?.haunt, { by: null })
-    // Nothing from the plan is left out to make room.
     for (const planned of plan) assert.ok(queued.some((event) => 'card' in planned && event.unit.card === planned.card))
     const again: GameEvent[] = []
     queuePlan(game, new Rng(2), again)

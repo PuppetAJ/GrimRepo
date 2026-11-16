@@ -6,9 +6,11 @@ import type { Ready } from '../../ready.ts'
 import type { View } from '../../view.ts'
 import { BELL, CARD, DECK, PILE, slot } from '../layout.ts'
 
+const LANE_CARD_FAR_EDGE = 0.35
+const HAND_CARD_TOP = 0.36
+
 declare global {
   interface Window {
-    /** Development only; the browser suite drives the table through it. */
     __game?: {
       state: () => GameState
       view: () => View
@@ -54,13 +56,11 @@ export function TestHandle({ game, view, busy, skip }: { game: Ready; view: View
         }
         if ('lane' in what) {
           const at = new THREE.Vector3(...slot('board', what.lane))
-          // The far edge, toward P03, is the part of a lane's card the hand never covers.
-          if (what.far) at.z -= CARD.height * 0.35
+          if (what.far) at.z -= CARD.height * LANE_CARD_FAR_EDGE
           return onScreen(at)
         }
-        // Near the top edge, the part of a hand card that is always on screen.
         const object = scene.getObjectByName(`card-${what.uid}`)
-        return object ? onScreen(object.localToWorld(new THREE.Vector3(0, CARD.height * 0.36, 0))) : null
+        return object ? onScreen(object.localToWorld(new THREE.Vector3(0, CARD.height * HAND_CARD_TOP, 0))) : null
       },
       // Pausing autoReset counts one whole frame, post-processing passes included.
       stats: () =>

@@ -26,13 +26,11 @@ export function GemModule() {
       }),
     [scene],
   )
-  // Tipped back a little, since the eye sits just above it.
   return <primitive object={scene} position={[2.25, TABLE_Y, -12.4]} rotation={[-0.17, -0.48, 0, 'YXZ']} scale={0.9} />
 }
 
 export function Lamp() {
   const light = useRef<THREE.PointLight>(null)
-  // The weathered fluorescent light by Mark Peters (CC BY); its emissive map marks the tubes, which glow in the palette's light.
   const { scene: fixture } = useGLTF('/models/light.glb', false, false)
   const tube = useMemo(() => {
     const mesh = fixture.getObjectByProperty('type', 'Mesh') as THREE.Mesh
@@ -40,7 +38,6 @@ export function Lamp() {
   }, [fixture])
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime()
-    // Steady, with a brief dip every few seconds.
     const flicker = 1 - 0.35 * Math.max(0, Math.sin(t * 9.7) * Math.sin(t * 0.37) - 0.85) * 6
     if (light.current) light.current.intensity = MOOD.lamp * flicker
     tube.emissive.set(lamp(TINT.lamp, MOOD.lampTint)).multiplyScalar(GLOW.g * 0.6 * flicker)
@@ -103,7 +100,6 @@ export function Props() {
   const steel = { color: '#20262c', metalness: 0.85, roughness: 0.45 }
   return (
     <>
-      {/* The tool rack: empty pegs, which a run's items hang from. */}
       <group position={[...RACK.position]} rotation={[0, RACK.turn, 0]}>
         <mesh>
           <boxGeometry args={[2.2, 2.6, 0.12]} />

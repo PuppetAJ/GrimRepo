@@ -5,7 +5,6 @@ import { useTutorial } from '../game/tutorial/useTutorial.tsx'
 import { PlayTable } from '../game/PlayTable.tsx'
 
 export function Tutorial() {
-  // ?step opens a later step, counted from 1, outside production.
   const search = useSearch({ from: '/tutorial' })
   const step = FIXTURES_ON ? Math.max(0, (Number(search.step) || 1) - 1) : 0
   return (

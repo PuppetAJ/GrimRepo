@@ -11,8 +11,8 @@ import { Magnifier, PromptLine, ReaderPanel } from './Reading.tsx'
 import { TutorialBlurb, useSettled } from '../tutorial/TutorialBlurb.tsx'
 
 export function MidLayout() {
-  const { frameProps, fullScreen, seat, setArea, setHandSection, view, game, busy } = useTable()
-  const blurb = useSettled(game.tutorial?.blurb ?? game.run?.note ?? null, busy)
+  const { frameProps, fullScreen, seat, setArea, setHandSection, playedView, game, busy } = useTable()
+  const blurb = useSettled(game.tutorial?.blurb ?? game.run?.firstTimeNote ?? null, busy)
   return (
     <div
       {...frameProps}
@@ -26,9 +26,14 @@ export function MidLayout() {
             <TurnLabel />
             <SaveStatus className="text-sm text-p03-dim" />
           </p>
-          <ScaleBar scale={view.scale} fluid className="gap-1 text-base" />
-          {view.integrity ? (
-            <IntegrityBar left={view.integrity.left} max={view.integrity.max} fluid className="gap-1 text-base" />
+          <ScaleBar scale={playedView.scale} fluid className="gap-1 text-base" />
+          {playedView.integrity ? (
+            <IntegrityBar
+              left={playedView.integrity.left}
+              max={playedView.integrity.max}
+              fluid
+              className="gap-1 text-base"
+            />
           ) : null}
         </div>
         <ExecuteButton />
@@ -37,17 +42,14 @@ export function MidLayout() {
         <section aria-label="The table" className="flex flex-none flex-col items-center gap-2">
           <Board />
         </section>
-        {/* Absolutely filled so this column never makes the row taller than the board. */}
         <div className="relative max-w-[32rem] min-w-52 flex-1">
           <div className="absolute inset-0 flex flex-col gap-3 overflow-hidden">
-            {/* Above the board, the note would shrink it. */}
             {seat ? <SeatNote seat={seat} /> : null}
             <ReaderPanel />
             <ConsolePanel />
           </div>
         </div>
       </div>
-      {/* One grid, so the prompt and Cancel line up with the hand and piles below them. */}
       <section
         ref={setHandSection}
         aria-label="Your hand"

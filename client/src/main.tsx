@@ -13,7 +13,6 @@ if (!container) throw new Error('index.html is missing its #root element')
 
 const router = makeRouter()
 
-// Only the home page is prerendered; it hydrates from the router state prerender.tsx saved, and must match its tree.
 const hydrate = () =>
   hydrateRoot(
     container,
@@ -23,8 +22,9 @@ const hydrate = () =>
     </StrictMode>,
   )
 
-// A page prerendered with P03's terminal loads it first, so hydration adopts the terminal instead of rebuilding it.
-if (container.hasChildNodes()) void (homeVariant()?.seen ? preloadTerminal().then(hydrate) : hydrate())
+const prerenderedWithTerminal = homeVariant()?.seen
+
+if (container.hasChildNodes()) void (prerenderedWithTerminal ? preloadTerminal().then(hydrate) : hydrate())
 else
   createRoot(container).render(
     <StrictMode>

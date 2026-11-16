@@ -16,7 +16,6 @@ export function Frame({ title, note, children }: { title: string; note?: string;
   )
 }
 
-/** The chart's data as a table for screen readers. */
 export function AsTable({ runs, caption }: { runs: Run[]; caption: string }) {
   return (
     // Hidden by a wrapper: Firefox still draws a hidden table's caption.
@@ -66,6 +65,8 @@ export function useTip() {
   return ref
 }
 
+const isFilledSlot = (run: Run | undefined): run is Run => Boolean(run?.playedAt)
+
 export function Tip({
   count,
   active,
@@ -74,13 +75,11 @@ export function Tip({
   detail = (run) => `${number(run.score)} points`,
 }: Pick<TooltipContentProps<ValueType, NameType>, 'active' | 'payload' | 'activeIndex'> & {
   count: number
-  /** The tip's last line, the run's score unless a chart says otherwise. */
   detail?: (run: Run) => string
 }) {
   const point = payload?.[0]
   const run = point?.payload as Run | undefined
-  // The battles chart's empty slots have no run to tell of.
-  if (!active || !run?.playedAt) return null
+  if (!active || !isFilledSlot(run)) return null
   const index = Number(activeIndex)
   return (
     <div className="w-max rounded-md border bg-popover px-3 py-2 text-sm whitespace-nowrap shadow-lg">

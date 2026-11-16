@@ -10,36 +10,27 @@ import { CardReader, SigilIcons, useCardSearch } from './CardBits.tsx'
 
 type Props = {
   units: Unit[]
-  /** Without it the cards are only shown, not chosen. */
   onPick?: (unit: Unit) => void
-  /** Data attributes for each card's button, for tests to find them. */
   data?: (unit: Unit) => Record<string, string | number>
   can?: (unit: Unit) => boolean
   picked?: number | null
-  /** Several cards chosen at once, as a merge request's pair is. */
   chosen?: number[]
-  /** A class for each card's place, such as an entrance. */
-  /** How each card comes in, by its place in the row. */
   itemMove?: (index: number) => Move
-  /** Each card's sigils spelled out beneath it, for a choice where they matter. */
-  detail?: boolean
-  size?: string
-  /** Narrowed by the screen's search, the one in the deck beside it or above the cards. */
-  filtered?: boolean
-  /** A card that just changed: it pops, with `text` rising over it; a new `key` plays it again. */
+  spellSigils?: boolean
+  itemClassName?: string
+  searchable?: boolean
   flash?: { uid: number; key: number; text: string }
-  /** Something beside each card's sigils, such as its rarity. */
   badge?: (unit: Unit) => ReactNode
 }
 
 function Caption({
   unit,
-  detail,
+  spellSigils,
   onRead,
   badge,
 }: {
   unit: Unit
-  detail: boolean
+  spellSigils: boolean
   onRead: () => void
   badge?: ReactNode
 }) {
@@ -47,7 +38,6 @@ function Caption({
   return (
     <span className="flex min-w-0 flex-col gap-1 text-left leading-tight">
       <span className="flex min-w-0 items-center gap-1">
-        {/* One line, cut short; the magnifier opens the whole card. */}
         <span title={name} className="min-w-0 flex-1 truncate text-lg text-p03">
           {name}
         </span>
@@ -61,14 +51,13 @@ function Caption({
           <ZoomIn aria-hidden className="size-4" />
         </button>
       </span>
-      {detail ? (
+      {spellSigils ? (
         unit.sigils.map((sigil) => (
           <span key={sigil} className="font-sans text-sm text-foreground">
             <strong>{SIGILS[sigil].name}.</strong> {SIGILS[sigil].text}
           </span>
         ))
       ) : (
-        // A badge, such as the card's rarity, sits to the right of its sigils, which number three at most.
         <span className="flex items-center justify-between gap-2">
           <SigilIcons sigils={unit.sigils} size={14} />
           {badge}
@@ -78,7 +67,6 @@ function Caption({
   )
 }
 
-/** A row of cards that wraps, each with its name; buttons when they can be chosen. */
 export function CardList({
   units,
   onPick,
@@ -87,19 +75,18 @@ export function CardList({
   picked = null,
   chosen: several,
   itemMove,
-  detail = false,
-  size = 'w-28',
-  filtered = false,
+  spellSigils = false,
+  itemClassName = 'w-28',
+  searchable = false,
   flash,
   badge,
 }: Props) {
   const [reading, setReading] = useState<Unit | null>(null)
   const hold = useHoldToRead(setReading)
   const { matches } = useCardSearch()
-  const shown = filtered ? units.filter(matches) : units
+  const shown = searchable ? units.filter(matches) : units
   return (
     <div className="flex flex-col gap-3">
-      {/* Room above, so a chosen card's lift and outline aren't cut off by the top of the scroll. */}
       <ul className="flex flex-wrap justify-center gap-4 pt-3">
         {shown.map((unit, index) => {
           const allowed = can(unit)
@@ -108,14 +95,13 @@ export function CardList({
           const face = flashed ? (
             <m.span key={flashed.key} {...warmPop} className="relative block">
               <PixelCard unit={unit} />
-              {/* The rise animation centers the text on this point itself. */}
               <Rising text={flashed.text} tone="note" className="top-1/3 left-1/2 text-2xl" />
             </m.span>
           ) : (
             <PixelCard unit={unit} />
           )
           return (
-            <m.li key={unit.uid} {...itemMove?.(index)} className={`flex shrink-0 flex-col gap-2 ${size}`}>
+            <m.li key={unit.uid} {...itemMove?.(index)} className={`flex shrink-0 flex-col gap-2 ${itemClassName}`}>
               {onPick ? (
                 <button
                   type="button"
@@ -130,7 +116,6 @@ export function CardList({
                   {face}
                 </button>
               ) : (
-                // Only shown, not chosen: a click or a hold opens it to read.
                 <button
                   type="button"
                   data-read
@@ -142,7 +127,7 @@ export function CardList({
                   {face}
                 </button>
               )}
-              <Caption unit={unit} detail={detail} onRead={() => setReading(unit)} badge={badge?.(unit)} />
+              <Caption unit={unit} spellSigils={spellSigils} onRead={() => setReading(unit)} badge={badge?.(unit)} />
             </m.li>
           )
         })}
@@ -153,10 +138,8 @@ export function CardList({
   )
 }
 
-/** How long a press must last to read the card instead of choosing it, in milliseconds, as an item's button has it. */
 const HOLD_MS = 350
 
-/** Holding or right-clicking a card opens it to read; letting go after a hold isn't a click. */
 export function useHoldToRead(open: (unit: Unit) => void) {
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const held = useRef(false)
@@ -182,7 +165,6 @@ export function useHoldToRead(open: (unit: Unit) => void) {
         open(unit)
       },
     }),
-    /** Whether the press just ended was a hold, which then isn't counted again. */
     read: () => {
       const was = held.current
       held.current = false
@@ -191,7 +173,6 @@ export function useHoldToRead(open: (unit: Unit) => void) {
   }
 }
 
-/** A card shown, not chosen, that still opens to read when held or clicked, as every card on these screens can. */
 export function ReadableCard({
   unit,
   blank,

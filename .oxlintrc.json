@@ -9,7 +9,6 @@
     "react/react-in-jsx-scope": "off",
     "import/no-cycle": "error"
   },
-  // Imports run one way: client and server may use shared; shared uses neither, and neither uses the other.
   "overrides": [
     {
       "files": ["shared/**"],
@@ -45,7 +44,6 @@
       }
     },
     {
-      // The 3D table changes three.js objects every frame on purpose, as Chunkd's editor does; state would re-render sixty times a second.
       "files": ["client/src/game/table/**"],
       "rules": { "react/immutability": "off" }
     },

@@ -5,7 +5,6 @@ import { PlayTable } from '../game/PlayTable.tsx'
 import { useLocalGame } from '../game/useLocalGame.ts'
 import { NotFound } from './NotFound.tsx'
 
-/** A fixed board, such as the worst case, to check a table holds it; development and test builds only. */
 export function Board() {
   const { name } = useParams({ from: '/mockups/board/$name' })
   const found = fixture(name)

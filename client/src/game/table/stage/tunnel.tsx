@@ -1,6 +1,5 @@
 import { useLayoutEffect, useSyncExternalStore, type ReactNode } from 'react'
 
-/** Carries 3D content from wherever it's made into the one canvas that draws it, so the canvas never remounts. */
 export function createTunnel() {
   let current: ReactNode = null
   const listeners = new Set<() => void>()

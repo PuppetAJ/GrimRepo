@@ -7,8 +7,7 @@ import type { PlayerStats } from '../lib/api.ts'
 import { ending } from './charts/chart.ts'
 import { ago, number } from '../lib/format.ts'
 
-// The most the card's height may exceed the text beside it, as a ratio.
-const CARD_OVER_TEXT = 1.12
+const MAX_CARD_TO_TEXT_RATIO = 1.12
 
 function useHeight(): [(element: HTMLElement | null) => void, number] {
   const [element, setElement] = useState<HTMLElement | null>(null)
@@ -75,7 +74,7 @@ function DeathCardPin({ id }: { id: string | null }) {
     <PinBox>
       <div
         className="w-[clamp(3.5rem,20cqi,6rem)] shrink-0 font-terminal"
-        style={height ? { maxWidth: (height * CARD_OVER_TEXT * 5) / 7 } : undefined}
+        style={height ? { maxWidth: (height * MAX_CARD_TO_TEXT_RATIO * 5) / 7 } : undefined}
       >
         <PixelCard unit={asUnit(id)} />
       </div>
@@ -100,7 +99,6 @@ export function Pinned({ player, className = '' }: { player: PlayerStats; classN
       <h2 id="pinned" className="font-semibold">
         Pinned
       </h2>
-      {/* 3:2 because the best run's few lines need less room than the card. */}
       <div className="grid gap-4 @[30rem]:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <DeathCardPin id={player.deathCard} />
         <PinBox>

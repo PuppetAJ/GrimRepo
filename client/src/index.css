@@ -1,4 +1,3 @@
-/* Tailwind v4 is configured here; there is no tailwind.config.js. */
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
@@ -11,9 +10,7 @@
 @import '@fontsource/vt323/400.css';
 
 @custom-variant dark (&:is(.dark *));
-/* Landscape phones, where the 3D table fills the screen. */
 @custom-variant short (@media (max-height: 32rem));
-/* Tall enough for the landscape table's larger pieces around the board. */
 @custom-variant tall (@media (min-height: 44rem));
 
 @theme inline {
@@ -44,7 +41,6 @@
   --color-foreground: var(--foreground);
   --color-background: var(--background);
 
-  /* Not shadcn tokens; nothing but P03 may use the p03 greens. */
   --color-chrome: var(--chrome);
   --color-death: var(--death);
   --color-p03: var(--p03);
@@ -73,7 +69,6 @@
   --accent: #221f27;
   --secondary: #1d1a22;
   --border: #2c2831;
-  /* 3:1 against the page, so a field's edge shows. */
   --input: #665c71;
 
   --foreground: #ece6f0;
@@ -93,7 +88,6 @@
   --p03: #7dff9a;
   --p03-dim: #74b884;
   --p03-ground: #0a0e0a;
-  /* Edges of P03's panels and buttons, and of the table's lanes: 3:1 against the table, as controls need. */
   --p03-edge: #2f6c3d;
   --p03-lane: #386945;
 
@@ -123,14 +117,12 @@
 }
 
 @layer utilities {
-  /* A mask, so the art takes the element's background color and stays sharp at any size. */
   .pixel-art {
     mask-size: contain;
     mask-repeat: no-repeat;
     mask-position: center;
     image-rendering: pixelated;
   }
-  /* Several layers so the glow falls off like light instead of an even haze. */
   .p03-glow {
     box-shadow:
       0 0 1px rgb(125 255 154 / 0.3),
@@ -150,7 +142,6 @@
       0 0 4px rgb(125 255 154 / 0.22),
       0 0 12px rgb(125 255 154 / 0.1);
   }
-  /* Not for body copy. */
   .p03-screen {
     background-color: var(--p03-ground);
     background-image: repeating-linear-gradient(0deg, rgb(0 0 0 / 0.3) 0 1px, transparent 1px 3px);
@@ -162,7 +153,6 @@
   }
 }
 
-/* An animated icon's strip of frames, stepped through one frame at a time. */
 @keyframes sprite-strip {
   from {
     mask-position: 0% 0;
@@ -172,7 +162,6 @@
   }
 }
 
-/* A fire that stays lit, snapping between three poses like a sprite's frames. */
 @keyframes flame {
   0% {
     transform: none;
@@ -219,8 +208,6 @@
   }
 }
 
-/* What arrives after the page, such as the top maintainers, fades in; opacity only, as a transform would move anything
-   fixed inside it while it ran. */
 @keyframes appear {
   from {
     opacity: 0;
@@ -231,8 +218,6 @@
   animation: appear 0.2s ease-out;
 }
 
-/* Each page after the first rises into place a part at a time, 60ms apart and no more than nine steps in, eased with a
-   slight overshoot after Wicken's springs. Held hidden through its delay. */
 @keyframes rise {
   from {
     opacity: 0;
@@ -241,8 +226,11 @@
 }
 
 [data-rise] {
-  animation: rise 0.55s cubic-bezier(0.22, 1.2, 0.36, 1) backwards;
-  animation-delay: calc(min(var(--rise, 0), 9) * 60ms);
+  --rise-step: 60ms;
+  --rise-max-steps: 9;
+  --ease-overshoot: cubic-bezier(0.22, 1.2, 0.36, 1);
+  animation: rise 0.55s var(--ease-overshoot) backwards;
+  animation-delay: calc(min(var(--rise, 0), var(--rise-max-steps)) * var(--rise-step));
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -262,7 +250,6 @@
     url(/cursors/point.svg) 2 2,
     pointer;
 }
-/* Same cursors the 3D table uses for these actions. */
 [data-table] [data-action='draw-deck']:not(:disabled) {
   cursor:
     url(/cursors/draw.svg) 2 2,
@@ -278,7 +265,6 @@
     url(/cursors/press.svg) 2 2,
     pointer;
 }
-/* A card that opens to read, not to choose. */
 [data-table] button[data-read] {
   cursor:
     url(/cursors/read.svg) 2 2,
@@ -294,7 +280,6 @@
   background-image: repeating-linear-gradient(0deg, rgb(0 0 0 / 0.07) 0 1px, transparent 1px 3px);
 }
 .crt-glass {
-  /* Noise over the vignette hides gradient banding. */
   background:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='128'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='128' height='128' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E"),
     radial-gradient(ellipse at center, transparent 55%, rgb(0 0 0 / 0.55) 100%),
@@ -346,16 +331,11 @@
     not-allowed;
 }
 
-/* The run's map in the projector's window: a pane of green light, mostly solid, with the room faintly behind it. */
 .hologram-window {
-  /* Rows fill the window, so the whole stage fits without scrolling. */
-  /* The window less its border, padding, header, legend, the map's own padding and the gap before its spoken summary. */
   --map-row: calc((540px - 10.5rem) / 8);
   z-index: 5;
-  /* Dark until the 3D scene pins it, as the projector opens it. */
   visibility: hidden;
 }
-/* The pane itself; the 3D scene warps the window to its part-open corners, so the pane and map open together. */
 .hologram {
   height: 100%;
   overflow: hidden;
@@ -377,14 +357,12 @@
   filter: drop-shadow(0 0 6px rgb(125 255 154 / 0.45));
 }
 
-/* The boss's rare pack: a holographic sheen sweeping across it, in CSS since it loops for as long as the pack is shown. */
 /* The blend sits on the masked layer itself, since a mask isolates what's inside it from the pack beneath. */
 .holo-sheen {
   overflow: hidden;
   mix-blend-mode: screen;
 }
 
-/* A tilted band; tilting leans its ends a pack's width aside, so it travels from well off the left to well off the right. */
 .holo-sheen::before {
   content: '';
   position: absolute;
@@ -404,7 +382,6 @@
   animation: holo-sweep 5s linear infinite;
 }
 
-/* A pass across, then a rest off the pack before the next. */
 @keyframes holo-sweep {
   0% {
     transform: translateX(-200%) rotate(20deg);
@@ -422,7 +399,6 @@
   }
 }
 
-/* The boss pack's foil under the pointer; its colors and glare move with Motion, and it shows only while hovered. */
 .holo-foil {
   mix-blend-mode: screen;
   opacity: 0;

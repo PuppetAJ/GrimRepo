@@ -18,7 +18,6 @@ export function loadPlastic(): Promise<void> {
   return loading
 }
 
-// Slightly emissive, since the hand sits far from the factory's lamps.
 const plastics = (body: string, bodyGlow: string) => {
   if (!worn) throw new Error('The plastic is used before loadPlastic() has finished')
   const wear = { ...worn, normalScale: new THREE.Vector2(0.7, 0.7) }
@@ -40,7 +39,6 @@ const plastics = (body: string, bodyGlow: string) => {
 }
 type Plastics = ReturnType<typeof plastics>
 const sets: Partial<Record<Kind, Plastics>> = {}
-/** Built on first use, which must come after loadPlastic() resolves. */
 export const diskMaterials = (kind: Kind = 'common'): Plastics =>
   (sets[kind] ??=
     kind === 'rare'

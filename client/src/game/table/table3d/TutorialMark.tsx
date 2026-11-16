@@ -39,7 +39,6 @@ export function TableMark({ at, width, depth }: { at: Vec3; width: number; depth
   )
 }
 
-/** In the card's own space, so it follows the card. */
 export function CardMark() {
   return (
     <group position={[0, 0, CARD.depth]}>

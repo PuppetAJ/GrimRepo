@@ -1,6 +1,5 @@
 import type { ErrorRequestHandler } from 'express'
 
-/** Hides error details in production. */
 export function errorHandler({ production }: { production: boolean }): ErrorRequestHandler {
   return (error: unknown, _req, res, next) => {
     if (res.headersSent) return next(error)

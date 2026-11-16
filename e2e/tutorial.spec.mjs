@@ -5,11 +5,11 @@ const said = async (page) => (await blurb(page).locator('p').first().innerText()
 const pressOn = (page) => blurb(page).getByRole('button', { name: 'Continue' }).click()
 const ending = (page) => page.locator('section[aria-label="Tutorial complete"]')
 
-/** Plays the tutorial through the text table's own controls; any click the dialogue covered would fail. */
+const TAP_SETTLE_MS = 500
+
 async function playText(page, { phone = false } = {}) {
-  // A phone tap mid-animation opens the reader instead, so each pick waits for the table to settle.
   const pick = async (name) => {
-    await page.waitForTimeout(500)
+    await page.waitForTimeout(TAP_SETTLE_MS)
     await page.locator(`[data-action="select"][aria-label^="${name},"][aria-disabled="false"]`).first().click()
   }
   const lane = (type, n) => page.locator(`[data-action="${type}"][data-lane="${n}"]`).click()
@@ -20,7 +20,6 @@ async function playText(page, { phone = false } = {}) {
   await pressOn(page)
   await page.locator('[data-action="draw-deck"]').click()
   await pressOn(page)
-  // On a phone a card that can't be played still opens the reader, so it isn't marked disabled there.
   if (!phone)
     check(
       'a card the step does not ask for cannot be picked',
@@ -99,10 +98,8 @@ test('The tutorial on the 3D table', async ({ browser }) => {
 
   const dev = await page.evaluate(() => Boolean(window.__game))
   if (!dev) return void (await context.close())
-  // The handle sees each move a render later, so the next move waits for this one to land; on a slow runner it
-  // could otherwise reach the game as it was, and be refused.
   const snapshot = () => page.evaluate(() => JSON.stringify(window.__game?.state()))
-  const act = async (action) => {
+  const actAndAwaitState = async (action) => {
     const before = await snapshot()
     await page.evaluate((a) => window.__game?.act(a), action)
     await page.waitForFunction((was) => JSON.stringify(window.__game?.state()) !== was, before, { timeout: 30_000 })
@@ -110,14 +107,12 @@ test('The tutorial on the 3D table', async ({ browser }) => {
   const settled = () => page.waitForFunction(() => !window.__game?.busy(), null, { timeout: 30_000 })
   const hand = (name) => page.evaluate((n) => window.__game?.state().player.hand.find((u) => u.card === n)?.uid, name)
 
-  // Refused, so nothing changes to wait for.
   await page.evaluate(() => window.__game?.act({ type: 'draw', from: 'boilerplate' }))
   await page.waitForTimeout(500)
   check(
     'a move the step does not ask for is refused',
     (await page.evaluate(() => window.__game?.state().drawn)) === false,
   )
-  // The tutorial's moves, from the draw on; P03's turns play out between the bells.
   const moves = [
     { type: 'draw', from: 'deck' },
     'continue',
@@ -151,8 +146,8 @@ test('The tutorial on the 3D table', async ({ browser }) => {
     if (move === 'continue') {
       await blurb(page).getByRole('button', { name: 'Continue' }).waitFor()
       await pressOn(page)
-    } else if ('card' in move) await act({ type: 'select', uid: await hand(move.card) })
-    else await act(move)
+    } else if ('card' in move) await actAndAwaitState({ type: 'select', uid: await hand(move.card) })
+    else await actAndAwaitState(move)
   }
   await ending(page).waitFor({ timeout: 60_000 })
   check('it can be won on the 3D table', await ending(page).isVisible())

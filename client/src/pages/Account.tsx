@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input.tsx'
 import { Label } from '@/components/ui/label.tsx'
 import { PasswordInput } from '../components/PasswordInput.tsx'
 import { api } from '../lib/api.ts'
-import { authClient, authError, DEMO, settled } from '../lib/auth.ts'
+import { authClient, authError, DEMO, networkFailureAsError } from '../lib/auth.ts'
 import { useAsync } from '../lib/useAsync.ts'
 import { P03Line } from '../components/p03/P03Line.tsx'
 import { useRise } from '../lib/rise.ts'
@@ -35,13 +35,11 @@ export function Account() {
     () => (user?.username ? api.stats(user.username) : Promise.resolve(null)),
     `account-stats:${user?.username}`,
   )
-  // Only a player who has lost is told P03 remembers it.
   const lost = stats.status === 'ready' && Boolean(stats.data?.losses)
 
   async function rename(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const field = event.currentTarget.elements.namedItem('username') as HTMLInputElement
-    // Focus reads the field's error aloud with its label.
     const refuse = (message: string) => {
       setRenameError(message)
       field.focus()
@@ -49,7 +47,9 @@ export function Account() {
     const username = field.value.trim()
     if (!/^[A-Za-z0-9_]{3,20}$/.test(username)) return refuse('3 to 20 letters, digits or underscores')
     setRenaming(true)
-    const { error } = await settled(authClient.updateUser({ username } as Parameters<typeof authClient.updateUser>[0]))
+    const { error } = await networkFailureAsError(
+      authClient.updateUser({ username } as Parameters<typeof authClient.updateUser>[0]),
+    )
     setRenaming(false)
     if (error) return refuse(authError(error, 'That name did not work'))
     setRenameError(null)
@@ -58,7 +58,7 @@ export function Account() {
   }
 
   async function remove() {
-    const { error } = await settled(authClient.deleteUser({ password }))
+    const { error } = await networkFailureAsError(authClient.deleteUser({ password }))
     if (error) return setDeleteError(authError(error, 'That did not work'))
     toast.success('Your account and its runs are gone')
     navigate({ to: '/', replace: true })
@@ -147,7 +147,6 @@ export function Account() {
   )
 }
 
-/** Replaces the forms, which the server would refuse for the demo account anyway. */
 function DemoNotice() {
   const rise = useRise()
   return (

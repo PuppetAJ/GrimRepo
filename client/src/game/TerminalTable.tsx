@@ -16,9 +16,7 @@ export function TerminalTable({
 }: {
   game: Ready
   seat: Seat
-  /** Absent where the 3D table can't play this yet. */
   on3d?: () => void
-  /** Set in a run, which adds its menu, deck and map. */
   run?: RunControls
   layout?: Layout
 }) {

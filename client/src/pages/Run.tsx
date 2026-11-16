@@ -16,11 +16,9 @@ import { TableFailed, TurnSideways } from '../game/tableNotices.tsx'
 import type { Layout } from '../game/text/useTextTable.ts'
 import { MotionRoot } from '../components/MotionRoot.tsx'
 
-// three.js is most of the 3D table's weight, so it loads only when that table is shown.
 const Run3D = lazy(() => import('../game/run/three/Run3D.tsx'))
 
 export type Mode = '3d' | 'text'
-// The same choice as the tutorial's, so a player picks a table once.
 const MODE_KEY = 'grimrepo:table'
 
 function savedMode(): Mode {
@@ -31,17 +29,7 @@ function savedMode(): Mode {
   }
 }
 
-/** The run, or a mockup of one, at the table the player chose. */
-export function RunTable({
-  mockup = null,
-  forced,
-  table,
-}: {
-  mockup?: Mockup | null
-  forced?: Layout
-  /** Shows this table without changing the player's choice, for mockups. */
-  table?: Mode
-}) {
+export function RunTable({ mockup = null, forced, table }: { mockup?: Mockup | null; forced?: Layout; table?: Mode }) {
   useKeepTableFocus()
   useLeaveFullScreen()
   const run = useRun(mockup)
@@ -55,9 +43,7 @@ export function RunTable({
     setMode(next)
     try {
       localStorage.setItem(MODE_KEY, next)
-    } catch {
-      // Private windows can refuse storage; the choice then lasts until the page closes.
-    }
+    } catch {}
   }
 
   if (run.status === 'loading') return <Loading label="Laying out the run" />
@@ -66,7 +52,6 @@ export function RunTable({
     <>
       <h1 className="sr-only">A run against P03</h1>
       <RunDebug run={run} />
-      {/* Remount on a new run or reload, so no screen keeps the last run's choices. */}
       {mode === 'text' ? (
         <RunText key={run.generation} run={run} layout={layout} seat={seat} on3d={() => choose('3d')} />
       ) : (
@@ -83,7 +68,6 @@ export function RunTable({
               />
             </Suspense>
           </LoadFailed>
-          {/* Over the table, not in its place, so turning the phone back finds it as it was rather than set again. */}
           {upright ? (
             <div className="fixed inset-0 z-[60] bg-background">
               <TurnSideways onText={() => choose('text')} />
@@ -96,7 +80,6 @@ export function RunTable({
 }
 
 export function Run() {
-  // ?layout forces a layout, for comparing them in development and tests.
   const search = useSearch({ from: '/run' })
   return (
     <MotionRoot>

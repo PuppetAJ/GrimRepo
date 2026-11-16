@@ -8,7 +8,6 @@ export function SaveStatus({ className }: { className: string }) {
   const { game } = useTable()
   if (game.tutorial) return null
   return (
-    // Not live: a failed save is announced by its toast, and "saved" after every move would only be noise.
     <span className={className}>{game.saving ? 'saving…' : game.unsaved ? `${game.unsaved} unsaved` : 'saved'}</span>
   )
 }
@@ -28,7 +27,6 @@ export function ExecuteButton() {
       <span
         className={`grid place-items-center rounded-full border-p03-edge bg-[#a3172b] shadow-[0_0_14px_rgb(255_60_60/0.4)] ${phone ? 'size-10 border-4' : compact ? 'size-8 border-2' : 'size-[min(3.5rem,6dvh)] border-4'}`}
       />
-      {/* The full name doesn't fit on an upright 320px phone. */}
       <span className={`tracking-widest ${compact ? 'text-base' : 'text-2xl'}`}>
         {phone && !sideways ? (
           <>
@@ -44,7 +42,6 @@ export function ExecuteButton() {
   )
 }
 
-/** Always rendered, and disabled outside a summon, so the layout doesn't shift. */
 export function CancelButton() {
   const { state, act, layout } = useTable()
   return (
@@ -58,13 +55,11 @@ export function CancelButton() {
       className={`${SIDE_BUTTON} flex w-full items-center justify-center gap-2 disabled:opacity-40 disabled:hover:bg-[#07130b] ${layout === 'mid' ? 'mt-1' : ''}`}
     >
       Cancel
-      {/* A right-click cancels too, after the label as the bell's key is; touch has no right-click to point at. */}
       <MouseRight aria-hidden className="size-5 shrink-0 opacity-70 pointer-coarse:hidden" />
     </button>
   )
 }
 
-/** Wide and mid layouts only; the phone layout puts these in its menu. */
 export function Controls() {
   const { fullScreen, game, on3d, compact, run } = useTable()
   return (
@@ -81,7 +76,7 @@ export function Controls() {
         ) : (
           <Forfeit
             forfeit={game.forfeit}
-            run={Boolean(game.run)}
+            abandonsRun={Boolean(game.run)}
             disabled={game.state.status !== 'playing'}
             className={`${SIDE_BUTTON} h-auto flex-1 justify-center`}
           />

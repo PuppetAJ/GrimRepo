@@ -1,54 +1,43 @@
-# Dependencies
 node_modules/
 .pnpm-store/
 
-# Build output
 dist/
 dist-prerender/
 build/
 *.tsbuildinfo
 
-# Environment - .env.example is the only env file that belongs in git
 .env
 .env.*
 !.env.example
 
-# Logs
 logs/
 *.log
 pnpm-debug.log*
 
-# Test and coverage output
 coverage/
 playwright-report/
 test-results/
 
-# Editor and OS noise
 .DS_Store
 .idea/
 .vscode/*
 !.vscode/extensions.json
 *.swp
 
-# Caches
 .cache/
 .vite/
 
-# Working notes: the audit, the phase plan and what each phase taught. For me, not for anyone using the project.
 docs/
 
-# Agent tooling
 AGENTS.md
 CLAUDE.md
 .agents/
 .claude/
 .worktreeinclude
 
-# A local model viewer and the models dropped in for it; served by `pnpm dev` at /viewer/.
 client/viewer/
 client/public/mockups/
 e2e-failure.png
-# Playwright Test's output: traces, screenshots and the HTML report.
 test-results/
 playwright-report/
 

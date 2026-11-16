@@ -4,7 +4,6 @@ import { pool } from '../config/db.ts'
 import { newPlayer, startApp } from '../test/http.ts'
 import { resetDatabase } from '../test/support.ts'
 
-// Its own file, because the limiters count per process and must start from zero.
 const app = await startApp()
 after(async () => {
   await app.close()
@@ -22,7 +21,6 @@ it('stops a script hammering the run routes, one player at a time', async () => 
     statuses.join(', '),
   )
 
-  // Keyed per player, so another player on the same address is unaffected.
   const other = await app.call('POST', '/api/auth/sign-up/email', { body: newPlayer() })
   assert.equal((await app.call('POST', '/api/runs', { cookie: other.cookie })).status, 201)
 })

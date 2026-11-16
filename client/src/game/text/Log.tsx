@@ -33,8 +33,7 @@ export function ConsolePanel() {
   )
 }
 
-/** `log` is the log's display classes; a short phone shows only the prompt, the log still read out. */
-export function LogBox({ className, log = '' }: { className: string; log?: string }) {
+export function LogBox({ className, logClassName = '' }: { className: string; logClassName?: string }) {
   const { game, promptText } = useTable()
   const [box, onScroll] = useStuckToBottom(`${game.log.length} ${promptText}`)
   return (
@@ -44,7 +43,7 @@ export function LogBox({ className, log = '' }: { className: string; log?: strin
       {...LOG}
       className={`@container flex flex-col gap-1 overflow-y-auto rounded-md border-2 border-[#1f3a26] bg-[#050d07]/70 p-2 ${className}`}
     >
-      <ol className={`mt-auto text-base leading-tight text-p03-dim ${log}`}>
+      <ol className={`mt-auto text-base leading-tight text-p03-dim ${logClassName}`}>
         <LogItems />
       </ol>
       <PromptLine />

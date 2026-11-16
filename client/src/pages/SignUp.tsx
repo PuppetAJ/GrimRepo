@@ -6,11 +6,10 @@ import { Button } from '@/components/ui/button.tsx'
 import { Input } from '@/components/ui/input.tsx'
 import { Label } from '@/components/ui/label.tsx'
 import { PasswordInput } from '../components/PasswordInput.tsx'
-import { authClient, authError, settled } from '../lib/auth.ts'
+import { authClient, authError, networkFailureAsError } from '../lib/auth.ts'
 import { P03Line } from '../components/p03/P03Line.tsx'
 import { useRise } from '../lib/rise.ts'
 
-// The server checks all of this too; this only saves a round trip and explains the rule.
 const schema = z.object({
   username: z.string().regex(/^[A-Za-z0-9_]{3,20}$/, '3 to 20 letters, digits or underscores'),
   email: z.email('That does not look like an email address'),
@@ -35,13 +34,14 @@ export function SignUp() {
     })
     if (!parsed.success) {
       setErrors(Object.fromEntries(parsed.error.issues.map((issue) => [issue.path[0], issue.message])))
-      // Focus reads the field's error aloud with its label.
       document.getElementById(String(parsed.error.issues[0]?.path[0]))?.focus()
       return
     }
     setBusy(true)
     setErrors({})
-    const { error } = await settled(authClient.signUp.email({ ...parsed.data, name: parsed.data.username }))
+    const { error } = await networkFailureAsError(
+      authClient.signUp.email({ ...parsed.data, name: parsed.data.username }),
+    )
     setBusy(false)
     if (error)
       return setErrors({

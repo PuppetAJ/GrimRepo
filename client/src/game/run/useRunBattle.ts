@@ -4,7 +4,6 @@ import type { Ready } from '../ready.ts'
 import type { Blurb } from '../tutorial/TutorialBlurb.tsx'
 import type { RunReady } from './useRun.ts'
 
-/** The run's battle in the shape the tables play, so both play it unchanged; null off the board. */
 export function useRunBattle(run: RunReady, ending: ReactNode | null, note: Blurb | null = null): Ready | null {
   const { act: runAct, subscribe: runSubscribe } = run
   const act = useCallback((action: Action) => runAct({ type: 'play', action }), [runAct])
@@ -30,6 +29,6 @@ export function useRunBattle(run: RunReady, ending: ReactNode | null, note: Blur
     act,
     forfeit: run.abandon,
     subscribe,
-    run: { ending, note: visit.game.status === 'playing' ? note : null },
+    run: { ending, firstTimeNote: visit.game.status === 'playing' ? note : null },
   }
 }

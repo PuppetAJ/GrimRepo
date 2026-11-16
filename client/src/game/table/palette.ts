@@ -1,11 +1,8 @@
-// Bare `r g b` strings are for canvas `rgb()`.
 export const TINT = {
   glow: '#8dffa8',
   play: '#c8f7d6',
-  // Near white, since saturated green lamps turned P03 olive.
   light: '#b8f5cb',
   glowHdr: [1.6, 3.2, 2],
-  // White, since green is P03's color.
   you: '#e8fff0',
   line: '205 240 215',
   gear: '140 185 155',

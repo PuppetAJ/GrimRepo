@@ -35,7 +35,6 @@ export const HELP: [string, string][] = [
   ['whoami', 'Who you are. Nobody, probably'],
 ]
 
-/** A name as typed or shown, lowercased and without spaces or punctuation, so Tech Lead and techlead match. */
 export const bare = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, '')
 
 export const find = (name: string): CardDef | undefined => {
@@ -48,7 +47,6 @@ export const findSigil = (name: string): SigilId | undefined => {
   return (Object.keys(SIGILS) as SigilId[]).find((id) => bare(id) === wanted || bare(SIGILS[id].name) === wanted)
 }
 
-/** Sorts by name, ignoring case, so try/catch sits among the rest. */
 export const byName = (a: { name: string }, b: { name: string }) =>
   a.name.localeCompare(b.name, 'en', { sensitivity: 'base' })
 

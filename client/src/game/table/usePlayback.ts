@@ -7,10 +7,8 @@ type Source = {
   subscribe: (listener: (events: GameEvent[]) => void) => () => void
 }
 
-// Past this many queued events, playback speeds up gradually, at most double, so it never falls far behind the game.
 const BACKLOG = 20
 
-/** Plays events back one at a time; `busy` holds the table during P03's turn. */
 export function usePlayback({ state, subscribe }: Source) {
   const [playback, setPlayback] = useState(() => start(state))
   const [busy, setBusy] = useState(false)
@@ -35,7 +33,6 @@ export function usePlayback({ state, subscribe }: Source) {
       timer.current = null
       setBusy(false)
       setPlayback((current) => settle(current, latest.current, now))
-      // Tidy once the last exit and popup animations have finished.
       setTimeout(() => setPlayback((current) => tidy(current, performance.now())), Math.max(LEAVE_MS, POPUP_MS) + 50)
       return
     }

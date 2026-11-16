@@ -4,7 +4,7 @@ import { use, useEffect, useMemo, useRef } from 'react'
 import { card, type Unit } from 'shared'
 import * as THREE from 'three'
 import { Disk, type DiskHandle } from './Disk.tsx'
-import { backTexture, faceContent, faceLights, faceTexture, holdFaces, loadCardAssets } from './faces.ts'
+import { backTexture, faceContent, faceEmissiveMap, faceTexture, holdFaces, loadCardAssets } from './faces.ts'
 import { FactoryEffects } from './Factory.tsx'
 import { kindOf } from './kind.ts'
 
@@ -47,7 +47,7 @@ function Card({ unit, open, turn }: { unit: Unit; open: boolean; turn: boolean }
     [],
   )
   const words = faceContent(unit, assets)
-  const glow = faceLights(unit, assets)
+  const glow = faceEmissiveMap(unit, assets)
   useEffect(() => holdFaces(words, glow), [words, glow])
   materials.front.map = faceTexture(unit, assets)
   materials.content.map = words
@@ -56,7 +56,6 @@ function Card({ unit, open, turn }: { unit: Unit; open: boolean; turn: boolean }
   useFrame((_, delta) => {
     if (turn && group.current) group.current.rotation.y += delta * 0.6
     if (!turn && group.current) group.current.rotation.y = THREE.MathUtils.damp(group.current.rotation.y, 0, 4, delta)
-    // Matches the easing and fade of a card drawn on the table.
     openness.current = THREE.MathUtils.damp(openness.current, open ? 1 : 0, 6, delta)
     disk.current?.setOpen(openness.current)
     materials.content.emissiveIntensity = 1.1 * openness.current * openness.current
@@ -67,7 +66,7 @@ function Card({ unit, open, turn }: { unit: Unit; open: boolean; turn: boolean }
     <group ref={group}>
       <Disk
         ref={disk}
-        open={open ? 1 : 0}
+        openness={open ? 1 : 0}
         kind={kindOf(unit)}
         front={materials.front}
         content={materials.content}

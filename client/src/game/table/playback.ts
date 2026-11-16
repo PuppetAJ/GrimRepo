@@ -2,7 +2,6 @@ import { ITEMS, type GameEvent, type GameState, type Unit } from 'shared'
 import { locate, project, step, type View } from '../view.ts'
 import { CENTER_X, DECK, P03_HAND, PILE, slot, TABLE_Y, type Row, type Vec3 } from './layout.ts'
 
-/** Where a popup lands on the text table, which has no 3D positions. */
 export type Spot = { row: Row; lane: number } | { face: 'player' | 'opponent' }
 export type Popup = {
   id: number
@@ -13,24 +12,20 @@ export type Popup = {
   at: number
 }
 export type Leaving = { unit: Unit; row: Row; lane: number; at: number; how: 'died' | 'sacrificed' }
-/** `across` is how many lanes aside it strikes, as Fork and Broadcast do; 0 is straight ahead. */
-export type Lunge = { at: number; toward: 1 | -1; across: number }
-/** A card moving along its row, from one lane to another. */
+export type Lunge = { at: number; toward: 1 | -1; lanesAside: number }
 export type Slide = { at: number; from: number; to: number }
 
 export type Playback = {
   view: View
   lunges: Map<number, Lunge>
   slides: Map<number, Slide>
-  /** When each of P03's cards stepped up from its queue into the lane below. */
-  advances: Map<number, number>
+  advancedAt: Map<number, number>
   popups: Popup[]
   leaving: Leaving[]
   spawns: Map<number, Vec3>
 }
 
-// Milliseconds each event holds before the next one plays.
-const PACE: Record<GameEvent['type'], number> = {
+const PACE_MS: Record<GameEvent['type'], number> = {
   drew: 285,
   reshuffled: 225,
   selected: 0,
@@ -68,20 +63,17 @@ const PACE: Record<GameEvent['type'], number> = {
   gameOver: 0,
 }
 
-export const pace = (event: GameEvent): number => PACE[event.type]
+export const pace = (event: GameEvent): number => PACE_MS[event.type]
 
-/** True for events long enough that the player should wait, such as P03's turn. */
 export const holdsTheTable = (events: GameEvent[]): boolean =>
   events.some((event) => event.type === 'attacked' || event.type === 'turnStarted' || event.type === 'gameOver')
 
-// Where popups rise from when a hit lands on a player rather than a card.
-const FACE: Record<'player' | 'opponent', Vec3> = {
+const FACE_POPUP_AT: Record<'player' | 'opponent', Vec3> = {
   player: [CENTER_X, TABLE_Y + 0.35, -8.0],
   opponent: [CENTER_X, TABLE_Y + 0.9, -12.3],
 }
 
 export const LUNGE_MS = 240
-/** How long a card takes to move from one lane to another. */
 export const SLIDE_MS = 380
 export const LEAVE_MS = 550
 export const POPUP_MS = 1000
@@ -91,7 +83,7 @@ export function start(state: GameState): Playback {
     view: project(state),
     lunges: new Map(),
     slides: new Map(),
-    advances: new Map(),
+    advancedAt: new Map(),
     popups: [],
     leaving: [],
     spawns: new Map(),
@@ -111,10 +103,9 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
   const { view } = playback
   const next: Playback = {
     view: step(view, event),
-    // Lunges expire so a card drawn again later doesn't strike twice.
     lunges: new Map([...playback.lunges].filter(([, lunge]) => now - lunge.at < 1000)),
     slides: new Map([...playback.slides].filter(([, slide]) => now - slide.at < 1000)),
-    advances: new Map([...playback.advances].filter(([, at]) => now - at < 1000)),
+    advancedAt: new Map([...playback.advancedAt].filter(([, at]) => now - at < 1000)),
     popups: playback.popups.filter((popup) => now - popup.at < POPUP_MS),
     leaving: playback.leaving.filter((card) => now - card.at < LEAVE_MS),
     spawns: playback.spawns,
@@ -131,25 +122,23 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
   switch (event.type) {
     case 'drew':
       next.spawns = new Map(next.spawns).set(event.unit.uid, event.from === 'deck' ? DECK : PILE)
-      if (event.catchUp) popup('catch-up draw', 'note', FACE.player, { face: 'player' })
+      if (event.catchUp) popup('catch-up draw', 'note', FACE_POPUP_AT.player, { face: 'player' })
       break
     case 'queued':
       next.spawns = new Map(next.spawns).set(event.unit.uid, P03_HAND)
       if (event.desperate) popup('desperate', 'note', slot('back', event.lane, 0.5), { row: 'back', lane: event.lane })
       break
     case 'integrity': {
-      // A lost card has already left the table, so its cost rises from the player's side.
-      popup(`integrity ${event.change}`, 'damage', FACE.player, { face: 'player' })
+      popup(`integrity ${event.change}`, 'damage', FACE_POPUP_AT.player, { face: 'player' })
       break
     }
     case 'advanced':
-      next.advances = new Map(next.advances).set(event.uid, now)
+      next.advancedAt = new Map(next.advancedAt).set(event.uid, now)
       break
     case 'moved':
       next.slides = new Map(next.slides).set(event.uid, { at: now, from: event.from, to: event.to })
       break
     case 'reloaded':
-      // The copy rises from the lane the card left.
       next.spawns = new Map(next.spawns).set(
         event.unit.uid,
         slot(event.side === 'player' ? 'board' : 'front', event.from, 0.4),
@@ -159,13 +148,12 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
       next.spawns = new Map(next.spawns).set(event.unit.uid, PILE)
       break
     case 'skipped':
-      popup('skipped', 'note', FACE.opponent, { face: 'opponent' })
+      popup('skipped', 'note', FACE_POPUP_AT.opponent, { face: 'opponent' })
       break
     case 'used':
-      popup(ITEMS[event.item].name, 'note', FACE.player, { face: 'player' })
+      popup(ITEMS[event.item].name, 'note', FACE_POPUP_AT.player, { face: 'player' })
       break
     case 'leftBehind':
-      // The Boilerplate comes off the pile into the lane the Deprecated card left.
       next.spawns = new Map(next.spawns).set(event.unit.uid, event.side === 'player' ? PILE : P03_HAND)
       break
     case 'shipped': {
@@ -179,7 +167,7 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
         next.lunges = new Map(next.lunges).set(unit.uid, {
           at: now,
           toward: event.side === 'player' ? -1 : 1,
-          across: Math.sign(event.aimed - event.lane),
+          lanesAside: Math.sign(event.aimed - event.lane),
         })
       break
     }
@@ -193,8 +181,7 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
             ? 'rolled back'
             : event.type === 'stayedUp'
               ? 'stayed up'
-              : // The Pliers leave a card with no sigils.
-                event.type === 'buffed' && event.sigils?.length === 0
+              : event.type === 'buffed' && event.sigils?.length === 0
                 ? 'sigils pulled'
                 : 'buffed',
           'note',
@@ -212,7 +199,6 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
       const found = where(view, event.uid)
       if (found) {
         const heal = event.type === 'healed'
-        // Only Hotfix heals, so a heal says so.
         popup(
           heal ? `+${event.amount} hotfix` : `-${event.amount}`,
           heal ? 'heal' : 'damage',
@@ -229,10 +215,10 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
       popup(`overkill ${event.amount}`, 'note', slot('back', event.lane, 0.5), { row: 'back', lane: event.lane })
       break
     case 'hit':
-      popup(`-${event.amount}`, 'damage', FACE[event.side], { face: event.side })
+      popup(`-${event.amount}`, 'damage', FACE_POPUP_AT[event.side], { face: event.side })
       break
     case 'indebted':
-      popup(`debt -${event.amount}`, 'damage', FACE.player, { face: 'player' })
+      popup(`debt -${event.amount}`, 'damage', FACE_POPUP_AT.player, { face: 'player' })
       break
     case 'killed':
     case 'retired':
@@ -253,7 +239,6 @@ export function advance(playback: Playback, event: GameEvent, now: number): Play
   return next
 }
 
-/** Touches only expired popups and exits, so it is safe mid-turn. */
 export function tidy(playback: Playback, now: number): Playback {
   return {
     ...playback,
@@ -262,7 +247,6 @@ export function tidy(playback: Playback, now: number): Playback {
   }
 }
 
-/** Snaps the view to the real state once the queue is empty. */
 export function settle(playback: Playback, state: GameState, now: number): Playback {
   return {
     ...playback,

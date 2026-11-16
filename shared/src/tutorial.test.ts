@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { existsSync } from 'node:fs'
 import { describe, it } from 'node:test'
 import { cardsIn, ENCOUNTERS, TUTORIAL_ENCOUNTER } from './encounters.ts'
 import { apply, legalActions } from './engine/game.ts'
@@ -30,7 +31,6 @@ function follow(): { state: GameState; progress: Progress } {
       continue
     }
     const allowed = tutorialActions(state, progress)
-    // Either of two Boilerplates fits a step that names one, so a step may allow more than one action.
     assert.ok(allowed.length >= 1, `step ${TUTORIAL[progress.step]?.id} allows its move`)
     const result = apply(state, allowed[0] as Action)
     assert.ok(result.ok, `step ${TUTORIAL[progress.step]?.id}: ${result.ok ? '' : result.reason}`)
@@ -74,7 +74,6 @@ describe('the tutorial', () => {
     const draw: Progress = { step: TUTORIAL.findIndex((step) => step.id === 'draw'), move: 0 }
     assert.ok(tutorialAllows(state, draw, { type: 'draw', from: 'deck' }))
     assert.ok(!tutorialAllows(state, draw, { type: 'draw', from: 'boilerplate' }))
-    // A step to read allows nothing until the player presses on.
     assert.deepEqual(tutorialActions(state, { step: 0, move: 0 }), [])
   })
 
@@ -95,7 +94,6 @@ describe('the tutorial', () => {
       assert.ok(result.ok, result.ok ? '' : result.reason)
       state = result.state
     }
-    // Free play starts after this turn's draw, with Phishing across from P03's Copy Paste.
     assert.ok(state.opponent.front[3])
     const bell = apply(state, { type: 'ringBell' })
     assert.ok(bell.ok)
@@ -143,5 +141,14 @@ describe('the tutorial', () => {
     for (let seed = 0; seed < 50; seed++)
       for (const node of generateStage(0, new Rng(seed)).rows.flat())
         assert.notEqual(node.encounter, TUTORIAL_ENCOUNTER.id)
+  })
+})
+
+describe("P03's faces in the tutorial", () => {
+  it('each has its screen image in the client', () => {
+    for (const { id, face } of TUTORIAL) {
+      const image = new URL(`../../client/public/p03/screen/${face}.png`, import.meta.url)
+      assert.ok(existsSync(image), `step ${id} shows ${face}, which has no ${face}.png`)
+    }
   })
 })

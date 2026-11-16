@@ -4,7 +4,8 @@ export type BootStage = 'code' | 'assets' | 'warming' | 'done'
 
 const WIDTH = 28
 
-// A null share sweeps a block back and forth instead of filling.
+const glimpsingOldData = (tick: number): boolean => tick % 24 < 6
+
 function bar(share: number | null, tick: number): string {
   if (share === null) {
     const at = Math.abs((tick % (WIDTH * 2 - 2)) - (WIDTH - 1))
@@ -14,7 +15,6 @@ function bar(share: number | null, tick: number): string {
   return '#'.repeat(filled) + '-'.repeat(WIDTH - filled)
 }
 
-/** Covers the table while it loads, so the room is never seen being put together. */
 export function Boot({ stage, progress = 0, files = [] }: { stage: BootStage; progress?: number; files?: string[] }) {
   const [tick, setTick] = useState(0)
   const [gone, setGone] = useState(false)
@@ -35,8 +35,7 @@ export function Boot({ stage, progress = 0, files = [] }: { stage: BootStage; pr
     step('fetching the table', loaded ? 'ok' : 'run'),
     step('loading models', stage === 'assets' ? 'run' : loaded ? 'ok' : 'wait', `${Math.round(progress)}%`),
     ...(stage === 'assets' ? files.slice(-3).map((file) => `    ${file}`) : []),
-    // A glimpse of OLD_DATA: half a second in every two of loading, then gone.
-    ...(stage === 'assets' && tick % 24 < 6 ? [`> mounting ${'████████'.padEnd(20, '.')} denied`] : []),
+    ...(stage === 'assets' && glimpsingOldData(tick) ? [`> mounting ${'████████'.padEnd(20, '.')} denied`] : []),
     step('warming shaders', stage === 'warming' ? 'run' : stage === 'done' ? 'ok' : 'wait'),
   ]
   const share = stage === 'code' ? null : stage === 'assets' ? progress / 100 : 1

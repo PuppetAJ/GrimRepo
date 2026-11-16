@@ -1,25 +1,23 @@
-// A run at the 3D table, from mockups: the projector's window, clicks through it, the glides to and from a battle,
-// and the floating screens of a stage too small for the window.
 import { BASE, check, freshPage, test } from './lib.mjs'
 
-// Software WebGL is slow, so every wait on the stage is long.
-const SLOW = 90_000
-// A mockup works out its state as the page loads; the screen's own wait covers it, not the load event.
+const SOFTWARE_WEBGL_TIMEOUT = 90_000
 const MOCKUP = { waitUntil: 'domcontentloaded' }
 const ROOT = '[data-run-moves]'
+const GLYPHS_CANVAS = '[data-table="run"] > span > canvas'
+const HEADER_PX = 112
+const WIDEST_ASPECT = { width: 21, height: 9 }
 
 async function open(browser, name, { width = 1440, height = 900 } = {}) {
   const { context, page } = await freshPage(browser, { width, height })
   page.setDefaultTimeout(30_000)
   await page.goto(`${BASE}/mockups/${name}?table=3d`, MOCKUP)
-  await page.locator(ROOT).waitFor({ timeout: SLOW })
+  await page.locator(ROOT).waitFor({ timeout: SOFTWARE_WEBGL_TIMEOUT })
   return { context, page }
 }
 
 const view = (page) => page.locator(ROOT).getAttribute('data-run-view')
-/** The projector's window, once the scene has pinned it open. */
-const lit = (page) => page.locator('.hologram-window').filter({ visible: true })
-const shown = (locator, timeout = SLOW) =>
+const openProjectorWindow = (page) => page.locator('.hologram-window').filter({ visible: true })
+const shown = (locator, timeout = SOFTWARE_WEBGL_TIMEOUT) =>
   locator
     .first()
     .waitFor({ timeout })
@@ -28,16 +26,14 @@ const shown = (locator, timeout = SLOW) =>
 
 test('The map on the projector', async ({ browser }) => {
   const { context, page } = await open(browser, 'map')
-  check('the window opens over the table', await shown(lit(page)))
-  const title = await lit(page).locator('h2').textContent()
+  check('the window opens over the table', await shown(openProjectorWindow(page)))
+  const title = await openProjectorWindow(page).locator('h2').textContent()
   check('with the stage as its title, inside it', (title ?? '').startsWith('Stage 1 of 3'), title)
   check(
     'and the legend and the menu inside it too',
-    // Waited for, since the window shows as soon as it starts to open.
-    (await shown(lit(page).getByRole('list', { name: 'What the icons mean' }), 20_000)) &&
-      (await shown(lit(page).getByRole('button', { name: 'Run menu' }), 20_000)),
+    (await shown(openProjectorWindow(page).getByRole('list', { name: 'What the icons mean' }), 20_000)) &&
+      (await shown(openProjectorWindow(page).getByRole('button', { name: 'Run menu' }), 20_000)),
   )
-  // A node to a screen off the board, clicked through the warped window.
   const node = page.locator('[data-action="go"]:not([aria-label^="Battle"])').first()
   const moves = Number(await page.locator(ROOT).getAttribute('data-run-moves'))
   await node.click()
@@ -47,7 +43,7 @@ test('The map on the projector', async ({ browser }) => {
   check(
     'and the next screen fades into the same window',
     await shown(
-      lit(page)
+      openProjectorWindow(page)
         .locator('h2')
         .filter({ hasNotText: /^Stage/ }),
     ),
@@ -72,18 +68,15 @@ test('A battle and the map', async ({ browser }) => {
 
 test('Into a battle from the map', async ({ browser }) => {
   const { context, page } = await open(browser, 'map')
-  await shown(lit(page))
-  // Walks the mockup's map to a battle, through whatever lies between.
+  await shown(openProjectorWindow(page))
   for (let step = 0; step < 12 && (await view(page)) !== 'battle'; step++) {
     const current = await view(page)
-    // A decided event says what it did until it's closed, which is no move of the run's.
     const onward = page.locator('[data-action="continue"]')
     if (current === 'event' && (await onward.count())) {
       await onward.click()
       await page.locator(`${ROOT}[data-run-view="map"]`).waitFor()
       continue
     }
-    // A card choice's pack is torn open first; its cards are then taken from a dialog.
     const pack = page.locator('[data-action="open-pack"]')
     if ((current === 'card' || current === 'reward') && (await pack.count())) await pack.first().click()
     const battle = page.locator('[data-action="go"][aria-label^="Battle"]')
@@ -117,8 +110,7 @@ test('A stage too small for the window', async ({ browser }) => {
   check(
     "and the terminal's glyphs behind it",
     await page
-      // The glyphs' canvas is the frame's first; the route pen has one of its own.
-      .locator('[data-table="run"] > span > canvas')
+      .locator(GLYPHS_CANVAS)
       .waitFor({ state: 'attached', timeout: 10_000 })
       .then(() => true)
       .catch(() => false),
@@ -128,16 +120,15 @@ test('A stage too small for the window', async ({ browser }) => {
 
 test('A window wider than the site', async ({ browser }) => {
   const { context, page } = await open(browser, 'map', { width: 2560, height: 1080 })
-  await shown(lit(page))
+  await shown(openProjectorWindow(page))
   const width = async () => (await page.locator(`${ROOT} canvas`).first().boundingBox())?.width ?? 0
   const site = await width()
   check('the table keeps to the site width at first', Math.abs(site - 1600) < 2, String(site))
-  await lit(page)
+  await openProjectorWindow(page)
     .getByRole('button', { name: /^Run menu/ })
     .click()
   await page.getByRole('menuitem', { name: 'Widen the table' }).click()
-  // Under the 7rem header, 21:9 of what's left is as wide as it goes.
-  const most = ((1080 - 112) * 21) / 9
+  const most = ((1080 - HEADER_PX) * WIDEST_ASPECT.width) / WIDEST_ASPECT.height
   const widened = await page
     .waitForFunction(
       (least) => (document.querySelector('[data-run-moves] canvas')?.getBoundingClientRect().width ?? 0) > least,
@@ -148,7 +139,7 @@ test('A window wider than the site', async ({ browser }) => {
     .catch(() => false)
   const wide = await width()
   check('and widens from the menu to 21:9 at most', widened && wide <= most + 2, String(wide))
-  await lit(page)
+  await openProjectorWindow(page)
     .getByRole('button', { name: /^Run menu/ })
     .click()
   await page.getByRole('menuitem', { name: 'Inventory' }).click()

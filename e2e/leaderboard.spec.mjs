@@ -1,4 +1,3 @@
-// Needs a seeded database.
 import { BASE, check, test, visibleText } from './lib.mjs'
 
 test('The README', async ({ page }) => {
@@ -17,16 +16,15 @@ test('The README', async ({ page }) => {
     'and the way to start a run',
     (await page.getByRole('link', { name: 'Start a run' }).getAttribute('href')) === '/run',
   )
-  // Only a production build serves the home page prerendered.
   const served = await (await page.request.get(BASE)).text()
-  if (!served.includes('/@vite/client')) {
+  const isProductionBuild = !served.includes('/@vite/client')
+  if (isProductionBuild) {
     check('a production build serves the README already rendered', served.includes('Grim Repo</h1>'))
     const other = await (await page.request.get(`${BASE}/leaderboard`)).text()
     check('and every other page the empty shell', other.includes('<div id="root"></div>'))
   }
   await page.waitForTimeout(500)
   check('React takes the page over without a mismatch', hydration.length === 0, hydration.join(' | '))
-  // Other suites add players, so check against the API rather than fixed names.
   const top = (await (await page.request.get(`${BASE}/api/leaderboard`)).json()).players.slice(0, 3)
   const maintainers = page.getByRole('heading', { name: 'Top maintainers' }).locator('..')
   await maintainers.getByRole('link', { name: top[0].username }).waitFor()
@@ -65,7 +63,6 @@ test('The leaderboard', async ({ page }) => {
     const last = rankOf(await page.locator('tbody > tr > td:first-child').last().innerText())
     await lower.click()
     await page.waitForURL(/page=2/)
-    // The first page's takeover row leaves once the second page arrives.
     await page.getByText('0x01').waitFor({ state: 'detached' })
     const rank = rankOf(await page.locator('tbody > tr > td:first-child').first().innerText())
     check('the next page ranks on from the first, ties included', rank >= last, `${last} then ${rank}`)

@@ -5,7 +5,6 @@ import { drawUnit, makeUnit } from './units.ts'
 
 type Row = (string | null)[]
 
-/** A game past this turn's draw with only the given cards on the table. */
 export function table({
   hand = [],
   board = [],
@@ -20,7 +19,6 @@ export function table({
   front?: Row
   back?: Row
   scale?: number
-  /** What's left of a run's integrity, out of 20. */
   integrity?: number
   encounter?: string
 }): GameState {
@@ -29,7 +27,6 @@ export function table({
     encounter,
     ...(integrity === undefined ? {} : { integrity: { left: integrity, max: 20 } }),
   })
-  // Taken from the library where the card is in it, as a drawn card would be.
   const unit = (id: string) => {
     const source = state.player.library.findIndex((entry) => entry.card === id)
     return source < 0 ? makeUnit(state, id) : drawUnit(state, source)
@@ -44,7 +41,6 @@ export function table({
   return state
 }
 
-/** Asserts every action is legal. */
 export function play(state: GameState, ...actions: Action[]): { state: GameState; events: GameEvent[] } {
   const events: GameEvent[] = []
   let current = state

@@ -3,16 +3,14 @@ import { CanvasTexture, SRGBColorSpace, type Texture } from 'three'
 import { loadArt } from '../art.ts'
 import { loadDisk } from './diskGeometry.ts'
 import { loadPlastic } from './diskMaterials.ts'
-import { drawBack, drawFace, H, W, type Layer } from './faceDrawing.ts'
+import { drawBack, drawFace, FACE_H, FACE_W, type Layer } from './faceDrawing.ts'
 import { kindOf } from './kind.ts'
 
-// A token proving the font, art, plastic and the disk's model have loaded.
-type Assets = { font: 'VT323' }
+type AssetsLoaded = { font: 'VT323' }
 
-let assets: Promise<Assets> | null = null
+let assets: Promise<AssetsLoaded> | null = null
 
-/** Loads once per page; later calls share the promise. */
-export function loadCardAssets(): Promise<Assets> {
+export function loadCardAssets(): Promise<AssetsLoaded> {
   assets ??= Promise.all([document.fonts.load('48px VT323'), loadArt(), loadPlastic(), loadDisk()]).then(() => ({
     font: 'VT323' as const,
   }))
@@ -21,10 +19,9 @@ export function loadCardAssets(): Promise<Assets> {
 
 function canvas(): [HTMLCanvasElement, CanvasRenderingContext2D] {
   const element = document.createElement('canvas')
-  element.width = W
-  element.height = H
+  element.width = FACE_W
+  element.height = FACE_H
   const context = element.getContext('2d') as CanvasRenderingContext2D
-  // Sigils are pixel art and must not blur when scaled.
   context.imageSmoothingEnabled = false
   return [element, context]
 }
@@ -39,13 +36,11 @@ function texture(element: HTMLCanvasElement): Texture {
 
 // Least recently used first. A run draws hundreds as stats change, each on a 300 × 504 canvas, and iOS caps canvas memory.
 const faces = new Map<string, Texture>()
-/** The most faces kept; a few dozen are ever on the table at once. */
 const KEPT = 96
 
 // How many cards on show use each face. A shown face is never dropped: three.js would upload it again, and leak it.
 const held = new Map<Texture, number>()
 
-/** Keeps faces while a card shows them; returns the release, for an effect's cleanup. */
 export function holdFaces(...shown: Texture[]): () => void {
   for (const face of shown) held.set(face, (held.get(face) ?? 0) + 1)
   return () => {
@@ -54,14 +49,12 @@ export function holdFaces(...shown: Texture[]): () => void {
       if (left) held.set(face, left)
       else {
         held.delete(face)
-        // Already dropped from the cache, so nothing else will ever dispose it.
         if (![...faces.values()].includes(face)) face.dispose()
       }
     }
   }
 }
 
-// Pruned a moment after drawing, once the cards that drew in the same render have held their faces.
 let sweep = 0
 function evictSoon(): void {
   sweep ||= window.setTimeout(() => {
@@ -79,8 +72,7 @@ function evict(): void {
   }
 }
 
-function drawn(unit: Shown, loaded: Assets, layer: Layer): Texture {
-  // The base depends only on rarity; the other layers on everything shown.
+function drawn(unit: Shown, loaded: AssetsLoaded, layer: Layer): Texture {
   const key =
     layer === 'base'
       ? `base:${kindOf(unit)}`
@@ -97,13 +89,11 @@ function drawn(unit: Shown, loaded: Assets, layer: Layer): Texture {
   return found
 }
 
-/** Shared by every card of the same rarity. */
-export const faceTexture = (unit: Shown, loaded: Assets): Texture => drawn(unit, loaded, 'base')
+export const faceTexture = (unit: Shown, loaded: AssetsLoaded): Texture => drawn(unit, loaded, 'base')
 
-export const faceContent = (unit: Shown, loaded: Assets): Texture => drawn(unit, loaded, 'content')
+export const faceContent = (unit: Shown, loaded: AssetsLoaded): Texture => drawn(unit, loaded, 'content')
 
-/** The emissive map. */
-export const faceLights = (unit: Shown, loaded: Assets): Texture => drawn(unit, loaded, 'lights')
+export const faceEmissiveMap = (unit: Shown, loaded: AssetsLoaded): Texture => drawn(unit, loaded, 'lights')
 
 export function backTexture(): Texture {
   let found = faces.get('back')
@@ -116,7 +106,6 @@ export function backTexture(): Texture {
   return found
 }
 
-/** How many face textures are drawn and held, for the stats overlay. */
 export const faceCount = (): number => faces.size
 
 export function disposeFaces(): void {

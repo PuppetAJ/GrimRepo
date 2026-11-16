@@ -5,17 +5,14 @@ import arm from './balance-arm.svg'
 import pan from './balance-pan.svg'
 import stand from './balance-stand.svg'
 
-// The SVGs use a 200 by 150 grid, so one SVG unit is 0.5cqw.
 const PANS = [
   { who: 'YOU', side: 'left-[-13cqw]' },
   { who: 'P03', side: 'left-[57cqw]' },
 ]
 
-/** `fit` lets the picture shrink to the height its column leaves it. */
 export function Balance({ scale, fit = false }: { scale: number; fit?: boolean }) {
   const lean = Math.max(-1, Math.min(1, scale / TIP))
   const ticks = [...Array(TIP * 2 + 1).keys()].map((i) => i - TIP)
-  // The pans rotate back by the same angle so they hang straight.
   const tilt = { '--tilt': `${-lean * 16}deg` } as CSSProperties
   return (
     <div
@@ -61,7 +58,6 @@ export function Balance({ scale, fit = false }: { scale: number; fit?: boolean }
           ))}
         <span
           className="absolute -top-3 -translate-x-1/2 text-p03 transition-all duration-300 motion-reduce:transition-none"
-          // Slides toward the leader's pan, matching the 3D table's scale bar.
           style={{ left: `${50 - lean * 50}%` }}
         >
           ▼

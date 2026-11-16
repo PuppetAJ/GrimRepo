@@ -35,7 +35,6 @@ describe('combat', () => {
   })
 
   it('carries overkill into the card queued behind', () => {
-    // Mainframe deals 13 to Cron Job's 2 health, so 11 carries into the Bug behind.
     const { events } = bell(table({ board: ['Mainframe'], front: ['CronJob'], back: ['Bug'] }))
     const overkill = events.find((event) => event.type === 'overkill')
     assert.equal(overkill?.type === 'overkill' && overkill.amount, 11)
@@ -69,7 +68,6 @@ describe('combat', () => {
       [6 - 2, 6, 6 - 2],
     )
     assert.deepEqual([1, 2, 3, 4, 7].map(forkHit), [1, 1, 2, 3, 5])
-    // At the edge there's one lane to fork into, which takes the whole attack.
     const edge = table({ board: ['CopyPaste'], front: [null, 'Bug'] })
     ;(edge.player.board[0] as { sigils: string[] }).sigils.push('fork')
     assert.equal(bell(edge).state.opponent.front[1]?.health, 6 - 3)

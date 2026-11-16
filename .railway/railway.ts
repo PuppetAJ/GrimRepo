@@ -2,7 +2,6 @@ import { defineRailway, github, postgres, preserve, project, service } from 'rai
 
 /** List every service under its dashboard name: an omission reads as a deletion. */
 export default defineRailway(() => {
-  // Deploy only once GitHub's checks have passed.
   const repository = github('PuppetAJ/GrimRepo', { checkSuites: true })
 
   const database = postgres('Postgres')
@@ -10,12 +9,10 @@ export default defineRailway(() => {
   const app = service('GrimRepo', {
     source: repository,
     build: 'pnpm build',
-    // Migrations are idempotent and the seed only fills an empty database, so a fresh environment comes up populated.
     start: 'pnpm db:migrate && pnpm db:seed:empty && pnpm start',
     deploy: {
       healthcheckPath: '/health',
       healthcheckTimeout: 100,
-      // Sleeps after ten idle minutes, so idle hours aren't billed.
       sleepApplication: true,
       numReplicas: 1,
     },
@@ -36,13 +33,11 @@ export default defineRailway(() => {
     start: 'pnpm db:cleanup',
     deploy: {
       cronSchedule: '0 4 * * *',
-      // A failed run waits for the next schedule rather than looping.
       restartPolicyType: 'NEVER',
     },
     env: {
       NODE_ENV: 'production',
       DATABASE_URL: '${{Postgres.DATABASE_URL}}',
-      // The clean-up loads the app's env check, which refuses to start without it.
       BETTER_AUTH_SECRET: '${{GrimRepo.BETTER_AUTH_SECRET}}',
     },
   })

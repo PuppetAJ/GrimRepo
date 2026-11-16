@@ -3,10 +3,9 @@ import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from '
 import * as THREE from 'three'
 import type { Vec3 } from '../layout.ts'
 import { TINT } from '../palette.ts'
-import { holding, startHold, type Screen } from '../reading.ts'
+import { isHoldRelease, startHold, type Screen } from '../reading.ts'
 import { LIT, SCREEN_HDR, STILL } from './constants.ts'
 
-// The text is page HTML over the screen, so it stays sharp when the table renders at a lower resolution.
 const SCREEN = { width: 2.66, height: 1.66, px: 512 }
 // drei's Html draws 40 CSS pixels per unit; this fits 512 across the screen.
 const SCREEN_SCALE = SCREEN.width / (SCREEN.px / 40)
@@ -16,17 +15,14 @@ const SCREEN_TEXT: CSSProperties = {
   padding: '16px 22px',
   font: '30px/33px VT323, monospace',
   color: LIT,
-  // Stands in for the bloom that HTML text doesn't get.
   textShadow: `0 0 6px ${LIT}, 0 0 14px ${LIT}`,
   whiteSpace: 'pre',
   overflow: 'hidden',
 }
 
-/** Characters a second the monitors type at, sped up so a big change never takes longer than MOST_TYPING seconds. */
 const TYPE_RATE = 140
 const MOST_TYPING = 0.9
 
-/** Which new lines were already on screen: in place, or moved up as a log scrolls. */
 function kept(before: string[], after: string[]): boolean[] {
   let best = after.map(() => false)
   let most = -1
@@ -41,7 +37,6 @@ function kept(before: string[], after: string[]): boolean[] {
   return best
 }
 
-/** The lines as typed so far: new and changed lines type in, in order, behind a cursor; the rest stay put. */
 function useTyped(lines: string[]): string[] {
   const [shown, setShown] = useState(lines)
   const last = useRef(lines)
@@ -61,7 +56,6 @@ function useTyped(lines: string[]): string[] {
         const count = Math.floor(Math.min(line.length, Math.max(0, budget)))
         const typing = budget > 0 && count < line.length
         budget -= line.length
-        // A space keeps an untyped line's height, so the lines below don't jump.
         return `${line.slice(0, count)}${typing ? '_' : ''}` || ' '
       })
       setShown(typed)
@@ -111,7 +105,6 @@ export const Monitor = memo(function Monitor({
   useEffect(() => () => texture.dispose(), [texture])
   return (
     <group
-      // HeldReader finds screens by this name.
       name={`screen-${screen}`}
       position={position}
       rotation={[0, turn, 0]}
@@ -128,8 +121,7 @@ export const Monitor = memo(function Monitor({
       }}
       onClick={(event) => {
         event.stopPropagation()
-        // A hold was for reading; a click or tap pins the readout.
-        if (!holding()) onPin?.(screen)
+        if (!isHoldRelease()) onPin?.(screen)
       }}
     >
       <mesh>
@@ -140,7 +132,6 @@ export const Monitor = memo(function Monitor({
         <planeGeometry args={[SCREEN.width, SCREEN.height]} />
         <meshBasicMaterial map={texture} color={SCREEN_HDR} />
       </mesh>
-      {/* Below the page's overlays, and out of the way of the pointer and screen readers. */}
       <Html transform position={[0, 0, 0.12]} scale={SCREEN_SCALE} zIndexRange={[1, 0]} pointerEvents="none">
         <div aria-hidden style={SCREEN_TEXT}>
           {typed.map((line, i) => (

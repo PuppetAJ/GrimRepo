@@ -6,7 +6,6 @@ export type Notes = { seen: RunNote[]; off: boolean }
 export type NotesChange = { seen?: RunNote[]; off?: boolean; reset?: boolean }
 
 const shaped = (row: { notes_seen: string[]; notes_off: boolean } | undefined): Notes => ({
-  // A note dropped from the game since it was seen is left out.
   seen: (row?.notes_seen ?? []).filter(isRunNote),
   off: row?.notes_off ?? false,
 })
@@ -16,7 +15,6 @@ export async function playerNotes(userId: string): Promise<Notes> {
   return shaped(rows[0])
 }
 
-/** A reset clears the notes seen before `seen` adds to them, so both can come in one change. */
 export async function changeNotes(userId: string, change: NotesChange): Promise<Notes> {
   const { rows } = await pool.query(
     `UPDATE users SET

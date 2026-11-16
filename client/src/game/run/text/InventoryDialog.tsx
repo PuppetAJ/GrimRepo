@@ -3,7 +3,6 @@ import type { RunReady } from '../useRun.ts'
 import { DeckTable } from './DeckTable.tsx'
 import { Bytes, HeldTools, RunIntegrity } from './HeldTools.tsx'
 
-/** The run's inventory over the 3D battle: the tools carried and the deck, as the run screens' panel shows them. */
 export function InventoryDialog({
   run,
   open,

@@ -21,7 +21,6 @@ describe('the sigils', () => {
     const { state, events } = bell(table({ board: ['CopyPaste', 'CopyPaste'], front: ['JSONFoorhees'] }))
     assert.ok(events.some((event) => event.type === 'shielded'))
     assert.equal(state.opponent.front[0]?.health, 8, 'the first hit did nothing')
-    // The second Copy Paste, moved opposite it, lands its hit.
     const again = {
       ...state,
       drawn: true,
@@ -99,7 +98,6 @@ describe('the sigils', () => {
       { type: 'place', lane: 0 },
     )
     assert.ok(div !== undefined && state.player.spent?.includes(div))
-    // Empty the deck, so the next draw rebuilds it from what's out of play.
     const emptied = { ...state, drawn: false, player: { ...state.player, deck: [] } }
     const { state: drawn } = play(emptied, { type: 'draw', from: 'deck' })
     const back = [...drawn.player.deck, ...drawn.player.hand.map((unit) => unit.source)]

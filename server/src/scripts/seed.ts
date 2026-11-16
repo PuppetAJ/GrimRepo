@@ -1,14 +1,12 @@
-/** Resets to the demo state; `--if-empty` only seeds an empty database, and production needs SEED_ALLOW_PRODUCTION=1. */
 import { randomUUID } from 'node:crypto'
 import { RULES_VERSION, RUN_RULES_VERSION, scoreRun } from 'shared'
 import { auth } from '../auth/auth.ts'
-import { demoAccount } from '../auth/demo.ts'
+import { publicDemoAccount } from '../auth/demo.ts'
 import { pool } from '../config/db.ts'
 import { isProduction } from '../config/env.ts'
 
 const ifEmpty = process.argv.includes('--if-empty')
 
-// One run each: how far it got, and whether it cleared Production.
 type SeededRun = { cleared: boolean; stage: number; battles: number; bosses: number }
 const cleared = (battles: number): SeededRun => ({ cleared: true, stage: 2, battles, bosses: 3 })
 const lost = (stage: number, battles: number): SeededRun => ({ cleared: false, stage, battles, bosses: stage })
@@ -20,7 +18,6 @@ const histories: Record<string, SeededRun[]> = {
   demo: [lost(0, 3), cleared(9)],
 }
 
-// Seeded runs have no moves to count cards from, so favorites are set here.
 const favorites: Record<string, string> = {
   JohanH: 'RubberDuck',
   PuppetAJ: 'ForkBomb',
@@ -29,8 +26,7 @@ const favorites: Record<string, string> = {
 }
 
 const players = [
-  demoAccount,
-  // Random passwords, so nobody can sign in as these accounts.
+  publicDemoAccount,
   ...['JohanH', 'PuppetAJ', 'kwm0304'].map((name) => ({
     name,
     username: name,
@@ -50,11 +46,10 @@ async function main(): Promise<void> {
   }
 
   for (const player of players) {
-    // Through Better Auth, so the password is hashed as a real sign-up hashes it.
     const { user } = await auth.api.signUpEmail({ body: player })
     const runs = histories[player.username] ?? []
     for (const [index, run] of runs.entries()) {
-      // Spread over recent days so the stats page has history to show.
+      const daysAgo = (runs.length - index) * 2
       const favorite = favorites[player.username]
       await pool.query(
         `INSERT INTO runs (user_id, seed, rules_version, run_version, status, stage, battles, bosses, score,
@@ -71,7 +66,7 @@ async function main(): Promise<void> {
           run.battles,
           run.bosses,
           scoreRun({ battles: run.battles, bosses: run.bosses, overkill: 0 }, run.cleared),
-          (runs.length - index) * 2,
+          daysAgo,
           JSON.stringify(favorite ? { [favorite]: 2, Boilerplate: 3 } : {}),
         ],
       )

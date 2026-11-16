@@ -7,35 +7,37 @@ import { KINDS, type Kind } from './kind.ts'
 
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
 
-// Exceeds what a hand, the board and P03's rows can hold.
-const MOST = 32
+const MAX_BATCHED_PER_KIND = 32
 const HIDDEN = new THREE.Matrix4().makeScale(0, 0, 0)
 const SHADE = new THREE.Color()
 
 type Pieces = Record<'plastic' | 'dark' | 'metal' | 'front' | 'back', THREE.InstancedMesh | null>
 
 export type Batch = {
-  /** Give the slot back when the card leaves or starts animating on its own. */
   take: (kind: Kind) => number
   give: (kind: Kind, slot: number) => void
-  /** shade scales face brightness; unplayable cards are dimmed. */
   place: (kind: Kind, slot: number, matrix: THREE.Matrix4, shade: number) => void
 }
 
 const BatchContext = createContext<Batch | null>(null)
 export const useBatch = () => useContext(BatchContext)
 
-// The shared face depends only on the kind, so any card of it will do; a death card is made up for the purpose.
-const SAMPLE_DEATH = deathCardId({ name: 'sample', cost: 0, attack: 0, health: 1, art: 'HelloWorld', sigils: [] })
-const sample = (kind: Kind): Unit => {
+const REPRESENTATIVE_DEATH = deathCardId({
+  name: 'sample',
+  cost: 0,
+  attack: 0,
+  health: 1,
+  art: 'HelloWorld',
+  sigils: [],
+})
+const representativeUnit = (kind: Kind): Unit => {
   const id =
     kind === 'death'
-      ? SAMPLE_DEATH
+      ? REPRESENTATIVE_DEATH
       : (Object.keys(CARDS).find((key) => (CARDS[key]?.tier === 'S') === (kind === 'rare')) as string)
   return { uid: 0, card: id, attack: 0, health: 1, maxHealth: 1, sigils: [] }
 }
 
-/** Instances resting cards: five draw calls per kind, however many cards are out. */
 export function CardBatch({ assets, children }: { assets: Assets; children: ReactNode }) {
   const empty = (): Pieces => ({ plastic: null, dark: null, metal: null, front: null, back: null })
   const meshes = useRef<Record<Kind, Pieces>>({ common: empty(), rare: empty(), death: empty() })
@@ -46,7 +48,11 @@ export function CardBatch({ assets, children }: { assets: Assets; children: Reac
   }
   const faces = useMemo(() => {
     const face = (kind: Kind) =>
-      new THREE.MeshStandardMaterial({ map: faceTexture(sample(kind), assets), roughness: 0.85, alphaTest: 0.5 })
+      new THREE.MeshStandardMaterial({
+        map: faceTexture(representativeUnit(kind), assets),
+        roughness: 0.85,
+        alphaTest: 0.5,
+      })
     const back = new THREE.MeshStandardMaterial({ map: backTexture(), roughness: 0.85, alphaTest: 0.5 })
     return { common: face('common'), rare: face('rare'), death: face('death'), back }
   }, [assets])
@@ -56,17 +62,16 @@ export function CardBatch({ assets, children }: { assets: Assets; children: Reac
     },
     [faces],
   )
-  // Per-instance color lets one card's face dim without the others.
   useLayoutEffect(() => {
     for (const pieces of Object.values(meshes.current))
       for (const mesh of Object.values(pieces)) {
         if (!mesh) continue
-        for (let i = 0; i < MOST; i++) mesh.setMatrixAt(i, HIDDEN)
+        for (let i = 0; i < MAX_BATCHED_PER_KIND; i++) mesh.setMatrixAt(i, HIDDEN)
         mesh.instanceMatrix.needsUpdate = true
         mesh.count = 0
       }
     for (const pieces of Object.values(meshes.current)) {
-      for (let i = 0; i < MOST; i++) pieces.front?.setColorAt(i, SHADE.setScalar(1))
+      for (let i = 0; i < MAX_BATCHED_PER_KIND; i++) pieces.front?.setColorAt(i, SHADE.setScalar(1))
       if (pieces.front?.instanceColor) pieces.front.instanceColor.needsUpdate = true
     }
   }, [])
@@ -75,8 +80,8 @@ export function CardBatch({ assets, children }: { assets: Assets; children: Reac
       take: (kind) => {
         let slot = 0
         while (used.current[kind].has(slot)) slot++
-        // Two cards sharing a slot would draw one in the wrong place, so running out fails loudly.
-        if (slot >= MOST) throw new Error(`The table batches at most ${MOST} ${kind} cards at once`)
+        if (slot >= MAX_BATCHED_PER_KIND)
+          throw new Error(`The table batches at most ${MAX_BATCHED_PER_KIND} ${kind} cards at once`)
         used.current[kind].add(slot)
         fit(kind)
         return slot
@@ -124,7 +129,7 @@ export function CardBatch({ assets, children }: { assets: Assets; children: Reac
             ref={(mesh) => {
               meshes.current[kind][name] = mesh
             }}
-            args={[geometry, material, MOST]}
+            args={[geometry, material, MAX_BATCHED_PER_KIND]}
             frustumCulled={false}
           />
         ))

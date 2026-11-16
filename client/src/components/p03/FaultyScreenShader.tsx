@@ -4,7 +4,6 @@ import { prefersReducedMotion } from '../../lib/motion.ts'
 const VERTEX = `attribute vec2 corner;
 void main() { gl_Position = vec4(corner, 0.0, 1.0); }`
 
-// Dot-matrix glyphs lit in slow noise patches, with the odd row slipping sideways.
 // High precision where there is any: phones honor mediump, and at their pixel counts the hashes break into blocks.
 const FRAGMENT = `#ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
@@ -43,7 +42,6 @@ void main() {
 
 const FRAME_MS = 1000 / 20
 
-/** Dim glyph noise behind P03's text; static under reduced motion, absent without WebGL. */
 export default function FaultyScreen({ bright = 0.2, className = '' }: { bright?: number; className?: string }) {
   const holderRef = useRef<HTMLSpanElement>(null)
 
@@ -75,7 +73,6 @@ export default function FaultyScreen({ bright = 0.2, className = '' }: { bright?
     const time = gl.getUniformLocation(program, 'time')
     gl.uniform1f(gl.getUniformLocation(program, 'bright'), bright)
 
-    // One canvas pixel per CSS pixel; the dots are two pixels wide, so nothing finer is needed.
     const fit = () => {
       element.width = Math.max(1, element.clientWidth)
       element.height = Math.max(1, element.clientHeight)

@@ -4,7 +4,6 @@ import { ago, number } from '../../lib/format.ts'
 import { ending } from '../../components/charts/chart.ts'
 import type { Cell } from './grid.ts'
 
-/** The current streak of days may end yesterday, if today has no runs yet. */
 function streaks(cells: Cell[]): { longest: number; current: number } {
   let longest = 0
   let spell = 0
@@ -68,7 +67,6 @@ export function Contributions({ stats, cells }: { stats: PlayerStats; cells: Cel
       aria-label="Contribution activity"
       className="@container flex min-w-0 flex-col gap-3 rounded-lg border bg-card p-5"
     >
-      {/* Spread down the card, so a slightly taller grid beside it leaves spacing, not a gap. */}
       <ul className="grid flex-1 content-around gap-x-5 gap-y-3 @[22rem]:grid-cols-2">
         {items.map((item) => (
           <li key={item.title} className="flex items-start gap-3">

@@ -29,7 +29,6 @@ function Streak({ label, count, win }: { label: string; count: number; win: bool
   return (
     <div className="flex items-baseline gap-1.5">
       <dt className="text-muted-foreground">{label}</dt>
-      {/* The color says win or loss; the words stay for screen readers and on hover. */}
       <dd
         title={count ? runOf(count, win) : undefined}
         className={`font-mono ${count ? (win ? 'text-primary' : 'text-death') : 'text-muted-foreground'}`}
@@ -43,7 +42,6 @@ function Streak({ label, count, win }: { label: string; count: number; win: bool
   )
 }
 
-/** Wins on the left, losses on the right, in one bar. */
 function Split({ wins, losses }: { wins: number; losses: number }) {
   const total = wins + losses
   return (
@@ -74,7 +72,6 @@ export function Outcomes({
   wins: number
   losses: number
   recent: Run[]
-  /** The streak chart, loaded apart from the page like the other charts. */
   chart?: ReactNode
 }) {
   const total = wins + losses

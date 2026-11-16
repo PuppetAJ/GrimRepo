@@ -12,7 +12,7 @@ import {
 } from 'shared'
 import { z } from 'zod'
 import { DEMO_IS_READ_ONLY, USERNAME_PATTERN } from '../auth/auth.ts'
-import { demoAccount } from '../auth/demo.ts'
+import { publicDemoAccount } from '../auth/demo.ts'
 import { requireUser, type SignedIn } from '../auth/session.ts'
 import { GameError } from '../db/errors.ts'
 import { changeNotes, playerNotes } from '../db/notes.ts'
@@ -23,7 +23,6 @@ export const api = express.Router()
 
 const lane = z.number().int().min(0).max(3)
 
-// Only the engine's actions; anything else, a score included, is refused before the replay.
 const action = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('draw'), from: z.enum(['deck', 'boilerplate']) }),
   z.strictObject({ type: z.literal('select'), uid: z.number().int().positive() }),
@@ -74,17 +73,17 @@ const runAction = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('leave') }),
 ])
 
-/** Fails to compile when the engine gains a run action the schema above would refuse, as Repair once was. */
 export const parsesEveryRunAction = (runMove: RunAction): z.infer<typeof runAction> => runMove
 
 const runMoves = z.strictObject({ from: z.number().int().min(0), actions: z.array(runAction).max(RUN_SAVE_LIMIT) })
+
+const DEATH_NAME_INPUT_LIMIT = DEATH_NAME_LIMIT * 4
 
 const deathChoice = z.strictObject({
   cost: cardId,
   stats: cardId,
   sigils: cardId,
-  // Room for spaces the builder trims away.
-  name: z.string().max(DEATH_NAME_LIMIT * 4),
+  name: z.string().max(DEATH_NAME_INPUT_LIMIT),
 })
 
 const notesChange = z.strictObject({
@@ -96,7 +95,6 @@ const notesChange = z.strictObject({
   reset: z.boolean().optional(),
 })
 
-// Keyed per player, since only signed-in players reach these routes.
 const perPlayer = (limit: number) =>
   rateLimit({
     windowMs: 60_000,
@@ -107,7 +105,6 @@ const perPlayer = (limit: number) =>
     legacyHeaders: false,
   })
 
-// A game saves at each bell, so a minute of play needs only a handful of saves.
 const startLimiter = perPlayer(20)
 const movesLimiter = perPlayer(120)
 
@@ -139,8 +136,7 @@ api.patch('/notes', requireUser, movesLimiter, async (req, res) => {
     res.status(400).json({ error: 'Invalid notes', issues: parsed.error.issues.map((issue) => issue.message) })
     return
   }
-  // Everyone shares the demo account, so its notes are kept in each browser instead.
-  if (user.username === demoAccount.username) {
+  if (user.username === publicDemoAccount.username) {
     res.status(403).json({ error: DEMO_IS_READ_ONLY })
     return
   }

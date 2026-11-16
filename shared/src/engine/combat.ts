@@ -8,8 +8,7 @@ function remove(row: Slot[], uid: number): number {
   return lane
 }
 
-/** A Hot Reload card that died or was sacrificed sends a fresh copy back: to the player's hand, or P03's queue. */
-export function perish(state: GameState, side: Side, unit: Unit, lane: number, events: GameEvent[]): void {
+export function hotReload(state: GameState, side: Side, unit: Unit, lane: number, events: GameEvent[]): void {
   if (!unit.sigils.includes('hot_reload')) return
   if (side === 'player') {
     if (state.player.hand.length >= HAND_LIMIT) return
@@ -23,10 +22,8 @@ export function perish(state: GameState, side: Side, unit: Unit, lane: number, e
   }
 }
 
-/** A Hot Reload card comes back once: its copy reloads no more. */
 const once = (copy: Unit): Unit => ({ ...copy, sigils: copy.sigils.filter((sigil) => sigil !== 'hot_reload') })
 
-/** Which Failover card covers each empty lane: each moves to the attacked empty lane nearest where it stands. */
 function failoverPlan(row: Slot[], attacked: number[]): Map<number, number> {
   const open = [...new Set(attacked)].filter((lane) => !row[lane]).sort((a, b) => a - b)
   const plan = new Map<number, number>()
@@ -40,7 +37,6 @@ function failoverPlan(row: Slot[], attacked: number[]): Map<number, number> {
   return plan
 }
 
-/** The Failover card planned for an empty lane, which moves in to take the attack. */
 function failover(row: Slot[], lane: number, side: Side, plan: Map<number, number>, events: GameEvent[]): Unit | null {
   const from = plan.get(lane)
   if (from === undefined || !row[from]?.sigils.includes('failover') || row[lane]) return null
@@ -52,14 +48,12 @@ function failover(row: Slot[], lane: number, side: Side, plan: Map<number, numbe
   return unit
 }
 
-/** What a card hits for: its own attack, +1 for each Tech Lead beside it, and the Packet Loss or Pop-up opposite it. */
 export function attackOf(state: GameState, side: Side, lane: number): number {
   const row = side === 'player' ? state.player.board : state.opponent.front
   const facing = side === 'player' ? state.opponent.front : state.player.board
   return attackIn(row, facing, lane)
 }
 
-/** What the card in a lane of an attacking row hits for, facing the other row. */
 export function attackIn(row: Slot[], facing: Slot[], lane: number): number {
   const unit = row[lane]
   if (!unit) return 0
@@ -71,14 +65,12 @@ export function attackIn(row: Slot[], facing: Slot[], lane: number): number {
   return Math.max(0, unit.attack + leads - loss + popup + scale)
 }
 
-/** How many other cards on this row share the card's type. */
 export function kin(row: Slot[], lane: number): number {
   const type = card((row[lane] as Unit).card).type
   if (!type) return 0
   return row.filter((other, index) => index !== lane && other && card(other.card).type === type).length
 }
 
-/** A Redundancy card landing on the table gains 1 health for each card of its type already on its side. */
 export function reinforce(row: Slot[], lane: number, events: GameEvent[]): void {
   const unit = row[lane]
   if (!unit?.sigils.includes('redundancy')) return
@@ -89,15 +81,13 @@ export function reinforce(row: Slot[], lane: number, events: GameEvent[]): void 
   events.push({ type: 'buffed', uid: unit.uid, attack: unit.attack, health: unit.health, sigils: [...unit.sigils] })
 }
 
-/** A run's card destroyed by P03 costs 1 integrity; a Boilerplate costs nothing. */
-function lost(state: GameState, unit: Unit, events: GameEvent[]): void {
+function loseIntegrity(state: GameState, unit: Unit, events: GameEvent[]): void {
   const integrity = state.integrity
   if (!integrity || unit.card === BOILERPLATE || integrity.left <= 0) return
   integrity.left -= 1
   events.push({ type: 'integrity', uid: unit.uid, change: -1, left: integrity.left })
 }
 
-/** An Uptime card's first destruction in a battle leaves it standing at 1 health instead. */
 function stayUp(unit: Unit, events: GameEvent[]): boolean {
   if (!unit.sigils.includes('uptime') || unit.stayedUp) return false
   unit.stayedUp = true
@@ -106,10 +96,8 @@ function stayUp(unit: Unit, events: GameEvent[]): boolean {
   return true
 }
 
-/** Whether the run's integrity has run out, which loses the battle and the run. */
-export const broken = (state: GameState): boolean => state.integrity !== undefined && state.integrity.left <= 0
+export const integrityBroken = (state: GameState): boolean => state.integrity !== undefined && state.integrity.left <= 0
 
-/** Deals damage to a card: a Rollback card shrugs off the first, Fatal Error makes any damage deadly, and Uptime stays up once. */
 function damage(unit: Unit, amount: number, fatal: boolean, events: GameEvent[]): number {
   if (unit.sigils.includes('rollback') && !unit.rolledBack) {
     unit.rolledBack = true
@@ -122,20 +110,16 @@ function damage(unit: Unit, amount: number, fatal: boolean, events: GameEvent[])
   return left <= 0 && stayUp(unit, events) ? unit.health : left
 }
 
-/** What an extra hit does: Broadcast's side lanes and Retry's second strike. Half, never less than 1. */
 export const extraHit = (power: number): number => Math.max(1, Math.floor(power / 2))
 
-/** What Fork deals each of its two lanes: three quarters of its attack, never less than 1. */
 export const forkHit = (power: number): number => Math.max(1, Math.floor((power * 3) / 4))
 
 export function attack(state: GameState, side: Side, events: GameEvent[]): void {
   const attackers = side === 'player' ? state.player.board : state.opponent.front
   const defenders = side === 'player' ? state.opponent.front : state.player.board
-  // A positive scale favors the player.
   const toward = side === 'player' ? 1 : -1
   const within = (lanes: number[]) => lanes.filter((lane) => lane >= 0 && lane < LANES)
 
-  // The lanes this side's cards aim at, so each Failover card can pick the empty one nearest it.
   const aims = attackers.flatMap((unit, lane) =>
     !unit || unit.sigils.includes('bypass')
       ? []
@@ -146,39 +130,31 @@ export function attack(state: GameState, side: Side, events: GameEvent[]): void 
           : [lane],
   )
   const covers = failoverPlan(defenders, aims)
-  // Failover cards that moved to cover a lane this attack, which take half damage, rounded down, for it.
   const covering = new Set<number>()
 
-  // Each card attacks once, in the lane order it began in, even if a Load Balancer moves on into a later lane.
-  for (const attacker of attackers.slice()) {
+  const startingOrder = attackers.slice()
+  for (const attacker of startingOrder) {
     if (!attacker) continue
     const lane = attackers.findIndex((slot) => slot?.uid === attacker.uid)
     if (lane < 0) continue
+    const stillStanding = () => attackers[lane]?.uid === attacker.uid
     const lanes = attacker.sigils.includes('broadcast')
       ? within([lane - 1, lane, lane + 1])
       : attacker.sigils.includes('fork')
         ? within([lane - 1, lane + 1])
         : [lane]
     const strikes = attacker.sigils.includes('retry') ? 2 : 1
-    // A first strike hits the lane opposite in full, and Fork's two lanes for three quarters each, or its one lane at an
-    // edge in full; Broadcast's side lanes and Retry's second strike do half.
     const split = attacker.sigils.includes('fork') && lanes.length > 1
+    const strikePower = (full: number, strike: number, aimed: number) =>
+      strike > 0 ? extraHit(full) : split ? forkHit(full) : aimed === lane || lanes.length === 1 ? full : extraHit(full)
     let struck = false
 
     for (let strike = 0; strike < strikes; strike++) {
       for (const aimed of lanes) {
-        // A Backtrace can kill an attacker partway through its attacks.
-        if (attackers[lane]?.uid !== attacker.uid) break
+        if (!stillStanding()) break
         const full = attackOf(state, side, lane)
         if (full <= 0) break
-        const power =
-          strike > 0
-            ? extraHit(full)
-            : split
-              ? forkHit(full)
-              : aimed === lane || lanes.length === 1
-                ? full
-                : extraHit(full)
+        const power = strikePower(full, strike, aimed)
         if (power <= 0) continue
         struck = true
         const occupant = attacker.sigils.includes('bypass') ? null : defenders[aimed]
@@ -214,32 +190,27 @@ export function attack(state: GameState, side: Side, events: GameEvent[]): void 
             lane: aimed,
             row: 'front',
           })
-          if (side === 'opponent') lost(state, defender, events)
-          perish(state, side === 'player' ? 'opponent' : 'player', defender, aimed, events)
-          // Scope Creep grows with every card it takes down.
-          if (attacker.sigils.includes('scope_creep') && attackers[lane]?.uid === attacker.uid) {
+          if (side === 'opponent') loseIntegrity(state, defender, events)
+          hotReload(state, side === 'player' ? 'opponent' : 'player', defender, aimed, events)
+          if (attacker.sigils.includes('scope_creep') && stillStanding()) {
             attacker.attack += 1
             events.push({ type: 'buffed', uid: attacker.uid, attack: attacker.attack, health: attacker.health })
           }
-          // Overkill carries into the queued card behind, never to a player.
           const behind = side === 'player' ? state.opponent.back[aimed] : null
           if (left < 0 && behind) overkill(state, aimed, behind, -left, events)
         }
       }
     }
 
-    // Deprecated code runs once, then it's gone.
-    if (struck && attacker.sigils.includes('deprecated') && attackers[lane]?.uid === attacker.uid) {
+    if (struck && attacker.sigils.includes('deprecated') && stillStanding()) {
       remove(attackers, attacker.uid)
       events.push({ type: 'killed', uid: attacker.uid, side, lane, row: 'front' })
-      perish(state, side, attacker, lane, events)
-      // It leaves a Boilerplate behind: a blocker, and something to sacrifice.
+      hotReload(state, side, attacker, lane, events)
       const left = makeUnit(state, BOILERPLATE)
       attackers[lane] = left
       events.push({ type: 'leftBehind', side, lane, unit: left })
     }
-    // A Load Balancer moves on after attacking, turning back at the edge or a taken lane.
-    if (struck && attacker.sigils.includes('load_balancer') && attackers[lane]?.uid === attacker.uid) {
+    if (struck && attacker.sigils.includes('load_balancer') && stillStanding()) {
       const ahead = lane + (attacker.heading ?? 1)
       const back = lane - (attacker.heading ?? 1)
       const free = (to: number) => to >= 0 && to < LANES && !attackers[to]
@@ -254,8 +225,7 @@ export function attack(state: GameState, side: Side, events: GameEvent[]): void 
   }
 }
 
-/** What a Backtrace deals back to anything that attacks it. */
-export const BACKTRACE = 2
+export const BACKTRACE_DAMAGE = 2
 
 function strikeBack(state: GameState, side: Side, attacker: Unit, events: GameEvent[]): void {
   if (attacker.sigils.includes('rollback') && !attacker.rolledBack) {
@@ -263,14 +233,14 @@ function strikeBack(state: GameState, side: Side, attacker: Unit, events: GameEv
     events.push({ type: 'shielded', uid: attacker.uid })
     return
   }
-  attacker.health = Math.max(0, attacker.health - BACKTRACE)
-  events.push({ type: 'struckBack', uid: attacker.uid, amount: BACKTRACE })
+  attacker.health = Math.max(0, attacker.health - BACKTRACE_DAMAGE)
+  events.push({ type: 'struckBack', uid: attacker.uid, amount: BACKTRACE_DAMAGE })
   if (attacker.health > 0 || stayUp(attacker, events)) return
   const row = side === 'player' ? state.player.board : state.opponent.front
   const lane = remove(row, attacker.uid)
   events.push({ type: 'killed', uid: attacker.uid, side, lane, row: 'front' })
-  if (side === 'player') lost(state, attacker, events)
-  perish(state, side, attacker, lane, events)
+  if (side === 'player') loseIntegrity(state, attacker, events)
+  hotReload(state, side, attacker, lane, events)
 }
 
 function overkill(state: GameState, lane: number, unit: Unit, amount: number, events: GameEvent[]): void {
@@ -278,5 +248,5 @@ function overkill(state: GameState, lane: number, unit: Unit, amount: number, ev
   if (damage(unit, amount, false, events) > 0) return
   state.opponent.back[lane] = null
   events.push({ type: 'killed', uid: unit.uid, side: 'opponent', lane, row: 'back' })
-  perish(state, 'opponent', unit, lane, events)
+  hotReload(state, 'opponent', unit, lane, events)
 }

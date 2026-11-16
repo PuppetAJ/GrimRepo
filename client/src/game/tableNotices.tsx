@@ -1,9 +1,7 @@
 import { RotateCw } from 'lucide-react'
 import { Button } from '@/components/ui/button.tsx'
 
-/** Shown when a model fails to load or the WebGL context is lost. */
 export function TableFailed({ onText, error }: { onText: () => void; error?: unknown }) {
-  // What went wrong, small, so a player can pass it on; phones can't open a console.
   const detail = error instanceof Error ? error.message : error ? String(error) : null
   return (
     <div role="alert" className="flex h-full flex-col items-center justify-center gap-4 px-6 text-center">

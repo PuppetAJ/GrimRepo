@@ -1,14 +1,11 @@
 import { pool } from '../config/db.ts'
 
-/** Refuses any database not named *_test. */
 export async function resetDatabase(): Promise<void> {
   const { rows } = await pool.query<{ name: string }>('SELECT current_database() AS name')
   if (!rows[0]?.name.endsWith('_test')) throw new Error(`Refusing to wipe ${rows[0]?.name}`)
-  // users cascades to sessions, accounts, games and runs.
   await pool.query('TRUNCATE games, runs, rate_limits, verifications, users RESTART IDENTITY CASCADE')
 }
 
-/** Skips sign-up and its rate limit, for tests that need many players. */
 export async function insertPlayer(username: string): Promise<void> {
   await pool.query(
     `INSERT INTO users (id, name, email, username, display_username) VALUES ($1, $1, $2, lower($1), $1)`,
@@ -16,7 +13,6 @@ export async function insertPlayer(username: string): Promise<void> {
   )
 }
 
-/** A finished run, scored as the server scores one; `cleared` wins it. */
 export async function insertRun(
   username: string,
   {

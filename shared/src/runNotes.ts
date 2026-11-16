@@ -1,6 +1,5 @@
 import type { Face } from './tutorial.ts'
 
-/** P03's first-time notes in a run, each shown once, the first time its screen or moment comes up. */
 export const RUN_NOTES = {
   start: {
     face: 'neutral',

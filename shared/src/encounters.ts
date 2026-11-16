@@ -1,20 +1,15 @@
 import { card } from './cards.ts'
 
-/** A fixed card, or one picked from a few for a little variation; `orRival` gives the place to another player's death card if one was dealt. */
 export type Queued = { lane: number; card: string; orRival?: boolean } | { lane: number; pick: string[] }
 
-/** What P03 queues on each turn of a phase; turn 0 is queued before the first draw. */
 export type Plan = Queued[][]
 
 export type Encounter = {
   id: string
   name: string
-  /** What P03 says as the battle starts. */
   intro: string
-  /** 0 to 2: Localhost, Staging, Production. */
   stage: number
   boss: boolean
-  /** A boss has two; tipping the scale in one starts the next. */
   phases: Plan[]
 }
 
@@ -120,7 +115,6 @@ const list: Encounter[] = [
       [
         [
           { lane: 1, card: 'ForkBomb' },
-          // A stranger's death card, capped near a Firewall's threat, stands in for it, so the fight stays as hard.
           { lane: 3, card: 'Firewall', orRival: true },
         ],
         [{ lane: 2, pick: ['Sandbox', 'Honeypot'] }],
@@ -186,7 +180,6 @@ const list: Encounter[] = [
   },
 ]
 
-/** The cards P03 picks from for its desperate play, by stage; each stage's are stronger. */
 export const DESPERATE_CARDS: string[][] = [
   ['LegacyCode', 'Firewall', 'Crawler'],
   ['JSONFoorhees', 'ForkBomb', 'DestroyEnemyYou'],
@@ -195,7 +188,6 @@ export const DESPERATE_CARDS: string[][] = [
 
 export const ENCOUNTERS: Record<string, Encounter> = Object.fromEntries(list.map((found) => [found.id, found]))
 
-/** Kept out of ENCOUNTERS, so no run picks it. */
 export const TUTORIAL_ENCOUNTER: Encounter = {
   id: 'tutorial',
   name: 'Tutorial',
@@ -220,7 +212,6 @@ export function encounter(id: string): Encounter {
   return found
 }
 
-/** Every card an encounter can queue, to check the data against the card table. */
 export const cardsIn = (found: Encounter): string[] =>
   found.phases
     .flat(2)

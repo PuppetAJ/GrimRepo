@@ -6,7 +6,6 @@ import { Dialog, DialogContent, DialogTitle } from '../../components/ui/dialog.t
 import { useTable } from './context.ts'
 import { Panel } from './Panel.tsx'
 
-/** What the player should do next; nudges when a move is refused. */
 export function PromptLine() {
   const { promptText, refusal, layout } = useTable()
   return (
@@ -21,7 +20,6 @@ export function PromptLine() {
   )
 }
 
-/** Reads the prompt out as it changes, and why a move was refused; the visible prompt line stays silent. */
 export function Announcer() {
   const { promptText, refusal } = useTable()
   const [heard, setHeard] = useState({ prompt: promptText, count: refusal.count, refused: false })
@@ -64,7 +62,6 @@ export function Magnifier() {
   if (!magnified) return null
   const { unit } = magnified
   const type = card(unit.card).type
-  // What its sigils and type do, as the reader and the 3D table's magnifier say, so a held card is as good as read.
   const notes = [
     ...(type
       ? [{ id: `type-${type}` as const, name: `${CARD_TYPES[type].name} type`, text: CARD_TYPES[type].about }]
@@ -73,7 +70,6 @@ export function Magnifier() {
   ]
   const width = notes.length ? 224 : 160
   const left = Math.min(Math.max(8, magnified.x - width / 2), window.innerWidth - width - 8)
-  // Above the finger in the lower half of the screen, below it in the upper half, so it's never under the finger.
   const above = magnified.y > window.innerHeight / 2
   return (
     <div
@@ -86,7 +82,6 @@ export function Magnifier() {
     >
       <div className="relative w-40">
         <PixelCard unit={unit} />
-        {/* Matches the glass on the 3D table's magnified cards. */}
         <span className="crt-glass absolute inset-0 [clip-path:polygon(0_0,86%_0,100%_9%,100%_100%,0_100%)]" />
       </div>
       {notes.length ? (
@@ -135,11 +130,9 @@ function useShrinkWrap(key: unknown) {
   return ref
 }
 
-/** The phone's card reader. */
 export function Inspector() {
   const { reading, setReading, unitAt, gameOver, state, busy, mustDraw, legal } = useTable()
   const unit = unitAt(reading)
-  // Why a hand card can't be picked, when that's why the reader opened.
   const note =
     !reading || !('uid' in reading) || gameOver
       ? null

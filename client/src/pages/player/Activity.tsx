@@ -11,7 +11,6 @@ function Legend() {
       <span className="flex items-center gap-1 @max-[11rem]:gap-[3px]">
         <span className="@max-[14rem]:hidden">Fewer</span>
         <span className="@min-[14rem]:hidden">−</span>
-        {/* At its tightest one middle green goes; four steps still read as fewer to more. */}
         {levels.map((level, index) => (
           <span key={level} className={`size-3 rounded-[3px] ${level} ${index === 2 ? '@max-[11rem]:hidden' : ''}`} />
         ))}
@@ -31,9 +30,8 @@ function Legend() {
 export function Activity({ stats }: { stats: PlayerStats }) {
   const cells = grid(stats.days)
   const played = cells.reduce((sum, cell) => sum + cell.runs, 0)
-  const bad = cells.filter((cell) => cell.bad).length
+  const losingDays = cells.filter((cell) => cell.losingDay).length
   return (
-    // The count sits by the heading so the two cards below come out about the same height.
     <section aria-labelledby="contributions" className="@container flex flex-col gap-3">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4">
         <h2 id="contributions" className="font-semibold">
@@ -51,7 +49,6 @@ export function Activity({ stats }: { stats: PlayerStats }) {
           aria-label="Activity grid"
           className="@container flex min-w-0 flex-col gap-3 rounded-lg border bg-card p-5"
         >
-          {/* Reversed so a scrolling grid starts at the latest weeks without script. */}
           <div
             tabIndex={0}
             role="group"
@@ -60,8 +57,7 @@ export function Activity({ stats }: { stats: PlayerStats }) {
           >
             <div
               role="img"
-              aria-label={`${played} runs over the last 26 weeks, ${bad} days with more losses than wins`}
-              // 12px is the smallest legible square; narrower, the grid scrolls sideways.
+              aria-label={`${played} runs over the last 26 weeks, ${losingDays} days with more losses than wins`}
               className="grid shrink-0 grow grid-flow-col grid-rows-7 gap-[3px] sm:gap-1"
               style={{ gridAutoColumns: 'minmax(12px, 1fr)' }}
             >
@@ -69,7 +65,7 @@ export function Activity({ stats }: { stats: PlayerStats }) {
                 <span
                   key={cell.key}
                   title={`${cell.key}: ${cell.runs} ${cell.runs === 1 ? 'run' : 'runs'}`}
-                  className={`aspect-square w-full rounded-[20%] ${cell.bad ? 'bg-death' : levels[level(cell.runs)]}`}
+                  className={`aspect-square w-full rounded-[20%] ${cell.losingDay ? 'bg-death' : levels[level(cell.runs)]}`}
                 />
               ))}
             </div>

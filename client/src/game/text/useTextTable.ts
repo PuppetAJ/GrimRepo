@@ -24,7 +24,6 @@ const placeOf = (key: string): Place =>
     ? { uid: Number(key.slice(4)) }
     : { row: key.split(':')[0] as BoardRow, lane: Number(key.split(':')[1]) }
 
-/** What a run adds to its battles' table: its menu, and ways to the deck and the map for the phone's menu. */
 export type RunControls = { menu: ReactNode; onInventory: () => void; onMap: () => void }
 
 export function useTextTable({
@@ -43,29 +42,23 @@ export function useTextTable({
   const shape = useTableLayout(layout)
   const { state, act } = game
   const ended = hasEnded(game)
-  // `view` lags `state` during playback; moves come from `state` and wait for playback to finish.
   const { playback, busy } = usePlayback(game)
-  const view = playback.view
+  const playedView = playback.view
   const legal = busy || ended ? [] : legalFor(game)
   const summoning = state.summon ? state.player.hand.find((unit) => unit.uid === state.summon?.uid) : undefined
-  // The turn's own draw; a catch-up draw after it is offered at the deck, never owed.
   const mustDraw = !state.drawn && has(legal, { type: 'draw' })
-  // A turn that starts with a full hand skips its draw, so the piles need to say why.
   const handFull = !busy && !ended && skippedDraw(state)
-  // Stores the place, not the card, so a card played into that lane shows at once.
   const [looking, setLooking] = useState<Place | null>(null)
   const unitAt = (place: Place | null) =>
     !place
       ? null
       : 'uid' in place
-        ? (view.hand.find((unit) => unit.uid === place.uid) ?? placed(place.uid))
-        : shown(view, place.row, place.lane)
-  // A hand card just played is read where it landed, so the reader doesn't go blank under a still pointer.
+        ? (playedView.hand.find((unit) => unit.uid === place.uid) ?? placed(place.uid))
+        : shown(playedView, place.row, place.lane)
   function placed(uid: number) {
-    const lane = view.board.findIndex((unit) => unit?.uid === uid)
-    return lane < 0 ? null : shown(view, 'board', lane)
+    const lane = playedView.board.findIndex((unit) => unit?.uid === uid)
+    return lane < 0 ? null : shown(playedView, 'board', lane)
   }
-  // Keeps the last card pointed at, so a zoom moving the page under a still pointer doesn't empty the reader.
   const inspected = summoning ?? unitAt(looking) ?? null
 
   const {
@@ -80,7 +73,6 @@ export function useTextTable({
     if (place && unit) setLooking(place)
     return unit
   })
-  /** Props that let a lane or hand card be read by pointing, focus or holding. */
   const inspectProps = (place: Place, unit: Slot | Unit = null) => ({
     'data-look': lookKey(place),
     onPointerEnter: () => unit && setLooking(place),
@@ -88,12 +80,10 @@ export function useTextTable({
     ...holdProps(unit, () => setLooking(place)),
   })
 
-  // The item slot being aimed, after picking an item that needs a card to use it on.
   const [aimSlot, setAiming] = useState<number | null>(null)
   const aimUses = legal.filter(
     (action): action is Extract<Action, { type: 'use' }> => action.type === 'use' && action.slot === aimSlot,
   )
-  // Dropped once nothing can be aimed at, as when the turn moves on.
   const aiming = aimSlot !== null && aimUses.length && !busy ? aimSlot : null
   const aimAt = (row: 'board' | 'front' | 'back', lane: number) =>
     aimUses.find((action) => action.row === row && action.lane === lane) ?? null
@@ -108,12 +98,10 @@ export function useTextTable({
   const [menu, setMenu] = useState(false)
   const [logOpen, setLogOpen] = useState(false)
   const [terminalOpen, setTerminalOpen] = useState(false)
-  // Phones have no reader panel, so a tap opens the card in a modal.
   const tapToRead = shape.phone
   const [reading, setReading] = useState<Place | null>(null)
   const user = (authClient.useSession().data?.user as { displayUsername?: string } | undefined)?.displayUsername
 
-  // Cards already on the table at page load don't animate in.
   const [present] = useState(
     () =>
       new Set(
@@ -123,11 +111,9 @@ export function useTextTable({
       ),
   )
   const isNew = (uid: number) => !present.has(uid)
-  // `piles` notes a draw was owed at the time, which shakes the piles too.
-  const [refusal, setRefused] = useState({ what: '', count: 0, reason: '', piles: false })
+  const [refusal, setRefused] = useState({ what: '', count: 0, reason: '', drawOwed: false })
   const showRefusal = (what: string, reason: string) =>
-    setRefused((last) => ({ what, count: last.count + 1, reason, piles: mustDraw }))
-  // What a refusal shakes, by name: the card or lane refused, and the piles if a draw was owed.
+    setRefused((last) => ({ what, count: last.count + 1, reason, drawOwed: mustDraw }))
   const shakeable = useRef(new Map<string, HTMLElement>())
   const shakeRef = (what: string) => (element: HTMLElement | null) => {
     if (element) shakeable.current.set(what, element)
@@ -136,7 +122,7 @@ export function useTextTable({
   useEffect(() => {
     if (!refusal.count) return
     const { keyframes, options } = shake(prefersReducedMotion())
-    const shakes = [refusal.what, ...(refusal.piles ? ['piles'] : [])].flatMap((what) => {
+    const shakes = [refusal.what, ...(refusal.drawOwed ? ['piles'] : [])].flatMap((what) => {
       const element = shakeable.current.get(what)
       return element ? [animate(element, keyframes, options)] : []
     })
@@ -165,10 +151,8 @@ export function useTextTable({
     'data-seed': state.seed,
     'data-moves': game.moves,
     'data-table': 'text',
-    // Focusable, so a click anywhere on the table puts focus here and its shortcuts work.
     tabIndex: -1,
     ...holdFrameProps,
-    // A right-click calls off a card being played, or magnifies the card under it.
     onContextMenu: (event: MouseEvent) => {
       if (cancellable) {
         event.preventDefault()
@@ -199,7 +183,7 @@ export function useTextTable({
     act,
     playback,
     busy,
-    view,
+    playedView,
     legal,
     mustDraw,
     handFull,

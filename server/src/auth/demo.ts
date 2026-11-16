@@ -1,5 +1,4 @@
-// Public on purpose: the sign-in page offers it so visitors can play without registering.
-export const demoAccount = {
+export const publicDemoAccount = {
   name: 'Demo Player',
   username: 'demo',
   email: 'demo@grimrepo.test',

@@ -2,6 +2,10 @@ import { BASE, check, deletePlayer, freshPage, newPlayer, resetRateLimits, test 
 
 test.beforeAll(resetRateLimits)
 
+const WORST_CASE_CARD = 'destroyEverything(everyone)'
+
+const isPrerendered = (served) => served.includes('data-home=')
+
 test('The API', async ({ page }) => {
   const health = await page.request.get(`${BASE}/health`)
   check('the health check answers', health.ok(), String(health.status()))
@@ -18,7 +22,6 @@ test('The home page', async ({ page }) => {
   check('and a title', (await page.title()) === 'Grim Repo')
 
   const maintainers = page.getByRole('heading', { name: 'Top maintainers' }).locator('..')
-  // Player links arrive only from the API; the shortlog link is there from the start.
   const reached = await maintainers
     .locator('a[href^="/players/"]')
     .first()
@@ -83,19 +86,18 @@ test('The home page', async ({ page }) => {
         () => false,
       ),
     )
-    // Only a build prerenders the README; the server picks the version by the visitor's cookies.
     const served = await (await page.request.get(BASE)).text()
-    if (served.includes('data-home=')) {
+    if (isPrerendered(served)) {
       check(
         'and a build sends it that way, with the sign-in buttons, so nothing swaps on load',
         served.includes('data-home="signed-out seen"') &&
           !served.includes('table-720.webp') &&
           served.includes('>Sign in</a>'),
       )
-      // The first terminal on the page is the prerendered one; hydration should adopt it, not rebuild it.
       await page.addInitScript(() => {
         const find = () =>
-          (window.__terminal = document.querySelector('[aria-label="P03\'s terminal"]')) ?? requestAnimationFrame(find)
+          (window.__prerenderedTerminal = document.querySelector('[aria-label="P03\'s terminal"]')) ??
+          requestAnimationFrame(find)
         requestAnimationFrame(find)
       })
       await page.reload()
@@ -104,8 +106,8 @@ test('The home page', async ({ page }) => {
         'and reloading keeps the prerendered terminal instead of rebuilding it',
         await page.evaluate(
           () =>
-            Boolean(window.__terminal) &&
-            document.querySelector('[aria-label="P03\'s terminal"]') === window.__terminal,
+            Boolean(window.__prerenderedTerminal) &&
+            document.querySelector('[aria-label="P03\'s terminal"]') === window.__prerenderedTerminal,
         ),
       )
     }
@@ -120,8 +122,7 @@ test('The compendium', async ({ page }) => {
   await page.goto(`${BASE}/cards`)
   await page.getByRole('heading', { name: 'Compendium' }).waitFor()
   const names = page.locator('main li h2')
-  // Development and test builds append a worst-case card for checking layouts.
-  const listed = (await names.allInnerTexts()).filter((name) => name !== 'destroyEverything(everyone)')
+  const listed = (await names.allInnerTexts()).filter((name) => name !== WORST_CASE_CARD)
   check('every card a player can hold is listed', listed.length === 45, String(listed.length))
   await page.getByLabel('Sort').selectOption('attack')
   await page.getByRole('button', { name: 'Lowest first' }).click()
@@ -129,11 +130,11 @@ test('The compendium', async ({ page }) => {
     'it sorts, highest attack first',
     await page
       .waitForFunction(
-        () =>
+        (worstCaseCard) =>
           [...document.querySelectorAll('main li h2')]
             .map((name) => name.textContent)
-            .find((name) => name !== 'destroyEverything(everyone)') === 'Mainframe',
-        null,
+            .find((name) => name !== worstCaseCard) === 'Mainframe',
+        WORST_CASE_CARD,
         { timeout: 5000 },
       )
       .then(
@@ -174,7 +175,6 @@ test('The compendium', async ({ page }) => {
 })
 
 test('Accounts and scores', async ({ page }) => {
-  // The page's request context shares its cookies, so this signs in the way the client will.
   const made = newPlayer()
   const player = { name: made.username, ...made }
 
@@ -185,7 +185,7 @@ test('Accounts and scores', async ({ page }) => {
   const me = await page.request.get(`${BASE}/api/me`)
   check('and is signed in straight away', me.ok() && (await me.json()).username === player.username)
   const served = await (await page.request.get(BASE)).text()
-  if (served.includes('data-home='))
+  if (isPrerendered(served))
     check('and a build sends them the signed-in README', served.includes('data-home="signed-in'))
 
   const cheat = await page.request.post(`${BASE}/api/runs`, { data: { seed: 1, score: 9_999_999 } })
@@ -206,7 +206,6 @@ test('Accounts and scores', async ({ page }) => {
     )
   check('an unfinished run stays off the leaderboard', !(await ranked()))
 
-  // Abandoning a run at once finishes it, scored on how far it got.
   const run = opened
   const abandoned = await page.request.post(`${BASE}/api/runs/${run.id}/forfeit`)
   check('an abandoned run is finished as lost', (await abandoned.json()).status === 'lost')
@@ -217,14 +216,12 @@ test('Accounts and scores', async ({ page }) => {
   const stats = await (await page.request.get(`${BASE}/api/players/${player.username}/stats`)).json()
   check('and their stats count it', stats.runs === 1, JSON.stringify(stats))
 
-  // A browser always sends Origin on a POST; one without it is how a cross-site forgery looks.
   const forged = await page.request.post(`${BASE}/api/auth/sign-out`, { data: {} })
   check('a sign-out with no Origin is refused', forged.status() === 403, String(forged.status()))
 
   await page.request.post(`${BASE}/api/auth/sign-out`, { data: {}, headers: { origin: BASE } })
   check('signing out ends the session', (await page.request.get(`${BASE}/api/me`)).status() === 401)
 
-  // Sign back in to delete the player, so a live run leaves nothing behind.
   await page.request.post(`${BASE}/api/auth/sign-in/email`, {
     data: { email: player.email, password: player.password },
     headers: { origin: BASE },
@@ -233,12 +230,10 @@ test('Accounts and scores', async ({ page }) => {
 })
 
 test('A page whose code is gone', async ({ browser }) => {
-  // Mimics an open tab asking for a chunk a new deploy removed, in development or a build.
   const { context, page: stale } = await freshPage(browser)
   await stale.route(/\/(pages\/Cards\.tsx|assets\/Cards-[^/]*\.js)/, (route) => route.abort())
   await stale.goto(BASE)
   await stale.getByRole('heading', { name: 'Grim Repo', level: 1 }).waitFor()
-  // The router reloads once to fetch the new deploy's code, then offers a reload if it's still missing.
   await stale.evaluate(() => (window.__beforeReload = true))
   await stale.getByRole('link', { name: 'Cards' }).click()
   const reloaded = await stale

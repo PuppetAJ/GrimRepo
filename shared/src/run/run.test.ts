@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { createHash } from 'node:crypto'
 import { describe, it } from 'node:test'
 import { card, EVENT_ONLY, PLAYER_DECK } from '../cards.ts'
 import { deckCard } from '../engine/units.ts'
@@ -21,13 +22,35 @@ import {
   STARTER_DECKS,
   UNINSTALL_PRICE,
 } from './run.ts'
-import { INTEGRITY, type NodeKind, type RunAction, type RunCard, type RunState, type Visit } from './types.ts'
+import {
+  INTEGRITY,
+  RUN_RULES_VERSION,
+  type NodeKind,
+  type RunAction,
+  type RunCard,
+  type RunState,
+  type Visit,
+} from './types.ts'
 
 const step = (state: RunState, action: RunAction) => {
   const result = applyRun(state, action)
   if (!result.ok) throw new Error(`${JSON.stringify(action)}: ${result.reason}`)
   return result.state
 }
+
+const randomRunAction = (rng: Rng, state: RunState): RunAction => {
+  const legal = legalRunActions(state)
+  assert.ok(legal.length > 0, 'a run still going always has a legal action')
+  const bell = legal.find((action) => action.type === 'play' && action.action.type === 'ringBell')
+  return bell && rng.float() < 0.3 ? bell : rng.pick(legal)
+}
+
+const canonical = (value: unknown) =>
+  JSON.stringify(value, (_, v) =>
+    v && typeof v === 'object' && !Array.isArray(v)
+      ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => (a < b ? -1 : 1)))
+      : v,
+  )
 
 const refused = (state: RunState, action: RunAction) => {
   const result = applyRun(state, action)
@@ -37,15 +60,12 @@ const refused = (state: RunState, action: RunAction) => {
 
 const STARTER = STARTER_DECKS['hello-world']?.core as string[]
 
-/** Takes the first card of each starter pack. */
 const unpacked = (state: RunState): RunState =>
   state.visit?.kind === 'pack' ? unpacked(step(state, { type: 'take', index: 0 })) : state
 
-/** A fresh run past its first choice, on the Hello, World deck, with a card taken from each pack. */
 const started = ({ seed }: { seed: number }) =>
   unpacked(step(createRun({ seed }), { type: 'start', deck: 'hello-world' }))
 
-/** A fresh run standing on a node of the given kind, whatever the map says. */
 function at(kind: NodeKind, visit: Visit, seed = 1): RunState {
   const state = started({ seed })
   const node = state.map.rows.flat()[0] as NonNullable<ReturnType<typeof findNode>>
@@ -109,7 +129,6 @@ describe('a new run', () => {
 })
 
 describe('the starter packs', () => {
-  /** Each pack's offer, taking the card at `index` from each. */
   const packs = (seed: number, deck: string, index = 0) => {
     let state = step(createRun({ seed }), { type: 'start', deck })
     const offers: string[][] = []
@@ -254,7 +273,6 @@ describe('integrity', () => {
     state = step(state, { type: 'go', node: found.id })
     assert.ok(state.visit?.kind === 'battle')
     assert.equal(state.visit.game.integrity?.left, 1)
-    // A Cron Job facing a Sandbox is destroyed on the bell.
     const game = state.visit.game
     game.drawn = true
     game.player.board[0] = { uid: 900, card: 'CronJob', attack: 1, health: 2, maxHealth: 2, sigils: [] }
@@ -465,7 +483,6 @@ describe('a bug hunt', () => {
 })
 
 describe('the code review', () => {
-  // Three cards with 8 health and a sigil each: stability always fails, coverage always passes.
   const review = (option: number) => {
     const state = at('event', { kind: 'event', node: '0-0', event: 'review-trial' })
     state.deck = ['HelloWorld', 'CronJob', 'MergeConflict'].map((id, index) => ({
@@ -696,6 +713,31 @@ describe('a recorded run', () => {
   })
 })
 
+describe('the run rules version', () => {
+  it('changes whenever a recorded run would replay differently', () => {
+    const replays = createHash('sha256')
+    for (let seed = 1; seed <= 30; seed++) {
+      const rng = new Rng(seed * 7919)
+      const actions: RunAction[] = []
+      let state = createRun({ seed })
+      while (state.status === 'playing') {
+        const action = randomRunAction(rng, state)
+        actions.push(action)
+        state = step(state, action)
+      }
+      replays.update(canonical(replayRun(seed, actions)))
+    }
+    for (let seed = 1; seed <= 10; seed++) {
+      replays.update(canonical(replayRun(seed, playRun(createRun({ seed }), step).actions)))
+    }
+    assert.deepEqual(
+      { RUN_RULES_VERSION, replays: replays.digest('hex').slice(0, 16) },
+      { RUN_RULES_VERSION: 24, replays: 'd6a2f3bd111629e4' },
+      'a run rules change bumps RUN_RULES_VERSION and records the new replays hash beside it',
+    )
+  })
+})
+
 describe('two hundred random runs', () => {
   it('all end, take only legal actions, and never lose track of a card', () => {
     for (let seed = 1; seed <= 200; seed++) {
@@ -703,11 +745,7 @@ describe('two hundred random runs', () => {
       let state = createRun({ seed })
       let moves = 0
       while (state.status === 'playing') {
-        const legal = legalRunActions(state)
-        assert.ok(legal.length > 0, `seed ${seed}: stuck`)
-        // Ring often so random play can't wander a battle forever.
-        const bell = legal.find((action) => action.type === 'play' && action.action.type === 'ringBell')
-        state = step(state, bell && rng.float() < 0.3 ? bell : rng.pick(legal))
+        state = step(state, randomRunAction(rng, state))
         moves += 1
         assert.ok(moves < 100_000, `seed ${seed} never ended`)
         const ids = state.deck.map((entry) => entry.id)
@@ -720,7 +758,6 @@ describe('two hundred random runs', () => {
 })
 
 describe('the run’s balance', () => {
-  // Measured at about 48% past the first boss and 6% cleared, over 600 greedy runs, with integrity and the comebacks.
   it('lets a simple bot clear stage one about half the time, and rarely the whole run', () => {
     let firstBoss = 0
     let cleared = 0

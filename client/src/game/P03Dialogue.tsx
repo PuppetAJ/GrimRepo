@@ -6,17 +6,16 @@ import bodyArt from './art/ram/body.svg'
 import chipArt from './art/ram/chip.svg'
 import pinArt from './art/ram/pin.svg'
 
-// The screen's place in the frame art, as fractions of the image.
 const SCREEN = { left: '11%', top: '24.8%', width: '72.8%', height: '60%' }
+const FLIP_STORED_FACE = '-scale-y-100'
 
 export function P03Face({ face, className = '' }: { face: Face; className?: string }) {
   const lit = { maskSize: '100% 100%', maskRepeat: 'no-repeat' } as const
   return (
     <span aria-hidden className={`relative block aspect-136/105 shrink-0 ${className}`}>
       <span className="absolute inset-0 bg-p03" style={{ ...lit, maskImage: `url(${p03Art('frame')})` }} />
-      {/* The pack stores its faces upside down. */}
       <span
-        className="absolute -scale-y-100 bg-p03"
+        className={`absolute ${FLIP_STORED_FACE} bg-p03`}
         style={{ ...SCREEN, ...lit, maskImage: `url(/p03/screen/${face}.png)`, maskMode: 'luminance' }}
       />
     </span>
@@ -24,7 +23,6 @@ export function P03Face({ face, className = '' }: { face: Face; className?: stri
 }
 
 // drop-shadow, not box-shadow, so the glow follows the name tab and the ledge.
-// --glow scales it where something dims the box, as the board's end-of-battle overlay does.
 const GLOW =
   '[filter:drop-shadow(0_0_4px_rgb(125_255_154/calc(0.3*var(--glow,1))))_drop-shadow(0_0_14px_rgb(125_255_154/calc(0.12*var(--glow,1))))]'
 
@@ -46,7 +44,6 @@ export function P03Dialogue({
   const words = cn('leading-snug [text-shadow:0_0_4px_#000]', compact ? 'text-sm' : 'text-xl @max-[28rem]:text-base')
   const boxClass = cn(
     '@container relative flex items-center rounded-md border-2 border-p03-edge bg-p03-ground/85 font-terminal text-p03 backdrop-blur-md',
-    // With a ledge, the wrapper carries the glow so it covers both.
     ledge ? '' : GLOW,
     compact ? 'gap-2 px-2 pt-1.5 pb-2' : 'gap-3 px-3 pt-2 pb-3.5',
     ledge ? 'w-full rounded-br-none bg-p03-ground/95' : className,
@@ -67,7 +64,6 @@ export function P03Dialogue({
         {inner}
       </section>
     )
-  // The label and role go on the wrapper, so the choices are part of what it names.
   return (
     <section {...section} className={cn('@container flex flex-col items-end font-terminal text-p03', GLOW, className)}>
       <div className={boxClass}>{inner}</div>
@@ -76,27 +72,22 @@ export function P03Dialogue({
   )
 }
 
-// Where body.svg is sliced, in its own pixels: top, right, bottom, left.
-const SLICES = [2, 10, 10, 10] as const
+const SLICES = { top: 2, right: 10, bottom: 10, left: 10 } as const
 
-// Whole copies only, so no chip or pin is cut off at the end of its run.
 const tiled = (url: string) => ({ maskImage: `url("${url}")`, maskRepeat: 'space', maskPosition: 'center' }) as const
 
 function Ledge({ children, className }: { children: ReactNode; className: string }) {
-  const [top, right, bottom, left] = SLICES
+  const { top, right, bottom, left } = SLICES
   const half = {
     borderStyle: 'solid',
     borderWidth: `${top}px ${right}px ${bottom}px ${left}px`,
-    borderImage: `url("${bodyArt}") ${SLICES.join(' ')} fill / ${top}px ${right}px ${bottom}px ${left}px stretch`,
+    borderImage: `url("${bodyArt}") ${top} ${right} ${bottom} ${left} fill / ${top}px ${right}px ${bottom}px ${left}px stretch`,
   } as const
   return (
     <div className={cn('relative px-6 pt-4 pb-4', className)}>
-      {/* One half drawn twice, mirrored, so the key notch sits in the middle. */}
       <span aria-hidden className="absolute inset-y-0 left-0 w-[calc(50%+2px)]" style={half} />
       <span aria-hidden className="absolute inset-y-0 right-0 w-[calc(50%+2px)] -scale-x-100" style={half} />
-      {/* Stretched slices leave a sliver of edge color where the halves meet; this covers it, above the key notch. */}
       <span aria-hidden className="absolute top-0.5 bottom-2 left-[calc(50%-3px)] w-1.5 bg-p03-ground" />
-      {/* Up to three chips a side, fewer as the stick narrows. */}
       <span
         aria-hidden
         className="absolute top-1.5 left-3 h-2.5 w-[clamp(24px,calc(50%-30px),72px)] bg-p03-edge"
@@ -122,7 +113,7 @@ function Ledge({ children, className }: { children: ReactNode; className: string
   )
 }
 
-export type Choice = { label: string; onChoose: () => void; /** Its data-action. */ action?: string }
+export type Choice = { label: string; onChoose: () => void; dataAction?: string }
 
 export function Choices({ choices }: { choices: Choice[] }) {
   const [picked, setPicked] = useState(0)
@@ -168,13 +159,12 @@ export function Choices({ choices }: { choices: Choice[] }) {
             buttons.current[index] = button
           }}
           type="button"
-          data-action={choice.action}
+          data-action={choice.dataAction}
           onClick={choice.onChoose}
           onPointerEnter={() => setPicked(index)}
           onFocus={() => setPicked(index)}
           className="flex items-center gap-1.5 font-bold text-[#c9ffd5] outline-none"
         >
-          {/* Hidden, not removed, so picking another choice never shifts the line. */}
           <span aria-hidden className={index === picked ? '' : 'invisible'}>
             ▸
           </span>

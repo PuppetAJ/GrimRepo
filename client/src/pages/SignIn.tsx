@@ -5,9 +5,11 @@ import { Button } from '@/components/ui/button.tsx'
 import { Input } from '@/components/ui/input.tsx'
 import { Label } from '@/components/ui/label.tsx'
 import { PasswordInput } from '../components/PasswordInput.tsx'
-import { authClient, authError, DEMO, settled } from '../lib/auth.ts'
+import { authClient, authError, DEMO, networkFailureAsError } from '../lib/auth.ts'
 import { P03Line } from '../components/p03/P03Line.tsx'
 import { useRise } from '../lib/rise.ts'
+
+const isEmail = (identifier: string) => identifier.includes('@')
 
 export function SignIn() {
   const rise = useRise()
@@ -18,9 +20,8 @@ export function SignIn() {
   async function signIn(identifier: string, password: string) {
     setBusy(true)
     setError(null)
-    // An @ means an email address; usernames cannot contain one.
-    const { error: failed } = await settled(
-      identifier.includes('@')
+    const { error: failed } = await networkFailureAsError(
+      isEmail(identifier)
         ? authClient.signIn.email({ email: identifier, password })
         : authClient.signIn.username({ username: identifier, password }),
     )

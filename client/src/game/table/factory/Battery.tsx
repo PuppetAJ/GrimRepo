@@ -8,17 +8,18 @@ import { TINT } from '../palette.ts'
 import { mergeStill } from './mergeStill.ts'
 
 const RED = '#ff4a3d'
+const ANIMATED_PARTS = /^(Cell-\d|Left-Propeller|Right-Propeller)$/
+
+const cellFromLeader = (i: number, lit: number): number => (lit > 0 ? i : BATTERY_CELLS - 1 - i)
 
 export function Battery({ view }: { view: View }) {
   const { scene } = useGLTF('/models/battery.glb', false, false)
   const drone = useRef<THREE.Group>(null)
   const { cells, propellers } = useMemo(() => {
-    // The static frame merges into one draw; cells and propellers animate, so they stay separate.
-    mergeStill(scene, /^(Cell-\d|Left-Propeller|Right-Propeller)$/)
+    mergeStill(scene, ANIMATED_PARTS)
     return {
       cells: [...Array(BATTERY_CELLS).keys()].map((i) => {
         const cell = scene.getObjectByName(`Cell-${i}`) as THREE.Mesh
-        // Cloned once per cell so each can light alone.
         cell.userData['own'] ??= (cell.material as THREE.MeshStandardMaterial).clone()
         cell.material = cell.userData['own'] as THREE.MeshStandardMaterial
         return { material: cell.material as THREE.MeshStandardMaterial, glow: 0, since: 0, on: false }
@@ -30,8 +31,7 @@ export function Battery({ view }: { view: View }) {
   useFrame(({ clock }, delta) => {
     const t = clock.getElapsedTime()
     cells.forEach((cell, i) => {
-      // Counted from the leader's end; the next cell glows as far as the scale reaches into it.
-      const fill = THREE.MathUtils.clamp(Math.abs(lit) - (lit > 0 ? i : BATTERY_CELLS - 1 - i), 0, 1)
+      const fill = THREE.MathUtils.clamp(Math.abs(lit) - cellFromLeader(i, lit), 0, 1)
       const on = fill > 0
       if (on !== cell.on) {
         cell.on = on

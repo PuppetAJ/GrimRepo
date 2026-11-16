@@ -7,7 +7,6 @@ import { deckCard } from './units.ts'
 
 const deck = ['Watchdog', 'CronJob', 'SpamBot', 'Bug'].map(deckCard)
 
-/** Empties the deck, hand and P03's queue, as late in a battle, then draws so the deck is rebuilt. */
 function rebuild(state: GameState): { state: GameState; events: GameEvent[] } {
   const ready = structuredClone(state)
   Object.assign(ready, { drawn: false, summon: null })

@@ -5,11 +5,9 @@ import { SIGILS, type SigilId } from 'shared'
 import { Sigil } from '../../CardReader.tsx'
 import { Box } from './Box.tsx'
 
-/** Steps left to right with arrows between, stacked and narrower when the frame is; the screen needs `@container`. */
 export const FLOW =
   'mx-auto grid w-full max-w-md items-center gap-3 @4xl:max-w-none @4xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)]'
 
-/** One step of a flow, faded until the step before it is done. */
 export function Step({ title, on = true, children }: { title: ReactNode; on?: boolean; children: ReactNode }) {
   return (
     <Box className={`flex flex-col items-center gap-2 text-center ${on ? '' : 'opacity-50'}`}>
@@ -19,7 +17,6 @@ export function Step({ title, on = true, children }: { title: ReactNode; on?: bo
   )
 }
 
-/** Points from one step to the next: across when side by side, down when stacked. */
 export function Arrow({ on }: { on: boolean }) {
   return (
     <span aria-hidden className={`grid place-items-center self-center ${on ? 'text-p03' : 'text-p03-dim opacity-50'}`}>
@@ -29,7 +26,6 @@ export function Arrow({ on }: { on: boolean }) {
   )
 }
 
-/** What a sigil does, for the note its name or a right-click opens. */
 function SigilNote({ id }: { id: SigilId }) {
   return (
     <PopoverContent className="border-p03-edge bg-p03-ground font-terminal text-lg text-[#b8f5c4]">
@@ -39,7 +35,6 @@ function SigilNote({ id }: { id: SigilId }) {
   )
 }
 
-/** A sigil's name in a step's title, underlined; clicking or right-clicking it says what the sigil does. */
 export function SigilName({ id }: { id: SigilId }) {
   const [open, setOpen] = useState(false)
   return (
@@ -62,7 +57,6 @@ export function SigilName({ id }: { id: SigilId }) {
   )
 }
 
-/** A card's sigils to choose one from, as buttons with their icons; a right-click on one says what it does. */
 export function SigilChoice({
   sigils,
   chosen,
@@ -72,7 +66,6 @@ export function SigilChoice({
   sigils: SigilId[]
   chosen: SigilId | null
   onChoose: (id: SigilId) => void
-  /** For tests to find each choice. */
   action: string
 }) {
   const [reading, setReading] = useState<SigilId | null>(null)
@@ -105,7 +98,6 @@ export function SigilChoice({
   )
 }
 
-/** What a step shows before the one ahead of it is done. */
 export function Waiting({ children }: { children: ReactNode }) {
   return <p className="text-base text-p03-dim">{children}</p>
 }

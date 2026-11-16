@@ -7,8 +7,10 @@ import { BELL } from '../layout.ts'
 import { Nudge } from '../Piles.tsx'
 import { LIT } from './constants.ts'
 
-// The cap's top sits 0.11 above the collar rim at 0.22, and the cap is 0.53 tall at this scale.
-const CAP_Y = 0.33 - 0.53
+const COLLAR_RIM_Y = 0.22
+const CAP_RISE = 0.11
+const CAP_HEIGHT = 0.53
+const CAP_Y = COLLAR_RIM_Y + CAP_RISE - CAP_HEIGHT
 const LOCKED = '#ff4a3d'
 
 export function EndTurnButton({
@@ -22,7 +24,6 @@ export function EndTurnButton({
 }) {
   const cap = useRef<THREE.Group>(null)
   const pressed = useRef(0)
-  // The PUSH cap from lorib2306's sci-fi button (CC BY), seated in the collar so its skirt is hidden.
   const { scene: model } = useGLTF('/models/button.glb', false, false)
   const glow = useMemo(() => {
     const material = (model.getObjectByName('Cap') as THREE.Mesh).material as THREE.MeshStandardMaterial
@@ -43,7 +44,6 @@ export function EndTurnButton({
     map.colorSpace = THREE.SRGBColorSpace
     return map
   }, [canvas])
-  // Red and locked while it can't be pressed, so it reads as bolted down rather than broken.
   useEffect(() => {
     const context = canvas.getContext('2d') as CanvasRenderingContext2D
     context.fillStyle = '#0b0e11'

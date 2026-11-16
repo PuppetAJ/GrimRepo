@@ -10,7 +10,6 @@ export function level(runs: number): number {
   return runs <= 4 ? 3 : 4
 }
 
-/** 26 weeks of days, oldest first; `bad` means more losses than wins. */
 export function grid(days: PlayerStats['days']) {
   const byDate = new Map(days.map((day) => [day.date, day]))
   const today = new Date()
@@ -21,7 +20,7 @@ export function grid(days: PlayerStats['days']) {
     const key = date.toISOString().slice(0, 10)
     const day = byDate.get(key)
     const runs = day?.runs ?? 0
-    return { key, runs, bad: runs > 0 && (day?.losses ?? 0) > runs / 2 }
+    return { key, runs, losingDay: runs > 0 && (day?.losses ?? 0) > runs / 2 }
   })
 }
 

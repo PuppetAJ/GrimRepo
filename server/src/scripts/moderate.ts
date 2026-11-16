@@ -1,11 +1,17 @@
-import { flaggedAccounts, ModerationError, recentAccounts, removeAccount, renameAccount } from '../admin/moderation.ts'
+import {
+  flaggedAccounts,
+  ModerationError,
+  recentAccounts,
+  removeAccount,
+  renameAndLockAccount,
+} from '../admin/moderation.ts'
 import { pool } from '../config/db.ts'
 
 const [command, first, second] = process.argv.slice(2)
 
 try {
   if (command === 'rename' && first) {
-    const { from, to } = await renameAccount(first, second)
+    const { from, to } = await renameAndLockAccount(first, second)
     console.log(`Renamed ${from} to ${to}; the name is now locked.`)
   } else if (command === 'remove' && first) {
     console.log(`Removed ${(await removeAccount(first)).removed} and their games.`)

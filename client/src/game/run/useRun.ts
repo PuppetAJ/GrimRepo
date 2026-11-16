@@ -18,14 +18,9 @@ import { narrateRun } from './narrate.ts'
 
 type Listener = (events: RunEvent[]) => void
 
-/** Screens whose work can end the visit, and then stay up showing what happened until the player leaves. */
 export const NODE_RESULTS = ['campfire', 'stones', 'lint', 'fuse', 'item'] as const
 export type NodeResultView = (typeof NODE_RESULTS)[number]
 
-/**
- * What just happened, kept on screen until the player moves on: an event's choice and what it did, or a node's work,
- * such as a card burned at the campfire, with the events that show it.
- */
 export type Aftermath =
   | { kind: 'event'; event: string; option: number; lines: string[]; events: RunEvent[] }
   | { kind: 'node'; view: NodeResultView; events: RunEvent[]; lines: string[] }
@@ -36,32 +31,22 @@ export type Run =
   | {
       status: 'ready'
       id: number
-      /** Counts every start and reload, so a screen can tell a fresh run from a move. */
       generation: number
-      /** Every action taken, saved or not. */
       moves: number
-      /** What the run was dealt from, and every move since, for a debug log; a mockup has no origin. */
       origin: RunOrigin | null
       history: RunAction[]
       state: RunState
-      /** P03's console for the battle in progress, or the last one. */
       log: string[]
-      /** What the last action did to the deck or the run, in P03's words. */
       news: string[]
-      /** The nodes entered on this stage's map, in order. */
       path: string[]
       aftermath: Aftermath | null
-      /** A mockup's note from P03, shown on its screen whether or not it's been seen. */
       note?: RunNote | null
-      /** Closes the aftermath, back to the map. */
       dismiss: () => void
       unsaved: number
       saving: boolean
-      /** The server's verdict, once the run has ended and been saved. */
       over: RunOver | null
       act: (action: RunAction) => void
       abandon: () => Promise<void>
-      /** Starts the next run once this one is over. */
       again: () => void
       subscribe: (listener: Listener) => () => void
     }
@@ -72,7 +57,6 @@ type Table = {
   id: number
   generation: number
   moves: number
-  /** What the run was dealt from, and every move since; a mockup has no origin. */
   origin: RunOrigin | null
   history: RunAction[]
   state: RunState
@@ -84,11 +68,19 @@ type Table = {
 }
 
 const LOG_LINES = 2_000
+const MAX_RETRY_MS = 30_000
+const RETRY_BASE_MS = 1_000
 const p03 = (lines: string[]) => lines.map((line) => `P03> ${line}`)
 
 let generations = 0
 
-/** The battle console after an action: fresh when a battle starts, else the battle's lines added. */
+const asIfFromServer = (reply: () => void) => void Promise.resolve().then(reply)
+
+const isOutOfStep = (failure: unknown): failure is ApiError => failure instanceof ApiError && failure.status === 409
+
+const savesNow = (action: RunAction) =>
+  action.type !== 'play' || action.action.type === 'draw' || action.action.type === 'ringBell'
+
 function logAfter(log: string[], before: RunState, after: RunState, events: RunEvent[]): string[] {
   const entered = events.find((event) => event.type === 'entered')
   if (entered && after.visit?.kind === 'battle') {
@@ -144,7 +136,6 @@ function open(run: OpenRun): Table {
   }
 }
 
-/** Plays the open run locally and saves it at every step off the board, and at every draw and bell on it; a mockup is never saved. */
 export function useRun(mockup: Mockup | null = null): Run {
   const [table, setTable] = useState<Table | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -152,7 +143,6 @@ export function useRun(mockup: Mockup | null = null): Run {
   const [unsaved, setUnsaved] = useState(0)
   const [saving, setSaving] = useState(false)
   const [over, setOver] = useState<RunOver | null>(null)
-  // Refs, so a queued save reads them when it runs, not when it was queued.
   const saved = useRef(0)
   const pending = useRef<RunAction[]>([])
   const chain = useRef<Promise<void>>(Promise.resolve())
@@ -163,9 +153,8 @@ export function useRun(mockup: Mockup | null = null): Run {
   }, [])
 
   useEffect(() => {
-    // Deferred like a server reply, so a mockup loads the same way a run does.
     if (mockup)
-      return void Promise.resolve().then(() => {
+      return asIfFromServer(() => {
         generations += 1
         setTable({
           id: -1,
@@ -206,12 +195,10 @@ export function useRun(mockup: Mockup | null = null): Run {
   }, [reloads, mockup])
 
   const id = table?.id
-  // Failed saves retry with backoff until they land, since the last action of a run has none after it.
   const retry = useRef<{ timer?: ReturnType<typeof setTimeout>; wait: number }>({ wait: 0 })
   const again = useRef<() => Promise<void>>(() => Promise.resolve())
   useEffect(() => () => clearTimeout(retry.current.timer), [])
 
-  // Saves are chained so they never overlap, and sent in batches the server accepts.
   const save = useCallback((): Promise<void> => {
     chain.current = chain.current.then(async () => {
       clearTimeout(retry.current.timer)
@@ -225,8 +212,7 @@ export function useRun(mockup: Mockup | null = null): Run {
           retry.current.wait = 0
           if (reply.status !== 'playing') setOver(reply)
         } catch (failure) {
-          // Out of step with the server, usually from another tab; the server's copy wins.
-          if (failure instanceof ApiError && failure.status === 409) {
+          if (isOutOfStep(failure)) {
             toast.warning(
               failure.body['rulesChanged']
                 ? "The rules changed since this run began, so it can't continue. Starting a new one."
@@ -238,7 +224,7 @@ export function useRun(mockup: Mockup | null = null): Run {
               toast.error(
                 `Could not save: ${failure instanceof Error ? failure.message : String(failure)}. Trying again.`,
               )
-            retry.current.wait = Math.min(30_000, (retry.current.wait || 1_000) * 2)
+            retry.current.wait = Math.min(MAX_RETRY_MS, (retry.current.wait || RETRY_BASE_MS) * 2)
             retry.current.timer = setTimeout(() => void again.current(), retry.current.wait)
           }
           break
@@ -259,7 +245,6 @@ export function useRun(mockup: Mockup | null = null): Run {
       if (!table) return
       const outcome = applyRun(table.state, action)
       if (!outcome.ok) {
-        // Keyed by the reason, so a move refused again refreshes its notice instead of stacking another.
         toast.error(outcome.reason, { id: outcome.reason })
         return
       }
@@ -270,18 +255,14 @@ export function useRun(mockup: Mockup | null = null): Run {
       const visit = table.state.visit
       const ended = visit && !outcome.state.visit && action.type !== 'leave'
       const aftermath: Aftermath | null =
-        // An event that opens a screen of its own, as the linter does, goes straight there.
         action.type === 'choose' && visit?.kind === 'event' && !outcome.state.visit
           ? { kind: 'event', event: visit.event, option: action.option, lines: story.news, events: outcome.events }
           : ended && (NODE_RESULTS as readonly string[]).includes(visit.kind)
             ? { kind: 'node', view: visit.kind as NodeResultView, events: outcome.events, lines: story.news }
             : null
-      // With debugging on, every move and what it did goes to the console.
       if (debugging()) console.debug('[run]', table.moves + 1, action, outcome.events)
       setTable({ ...table, moves: table.moves + 1, history: [...table.history, action], ...story, aftermath })
-      // On the board, saves wait for a draw or the bell, or a reload could peek at a draw.
-      const quiet = action.type === 'play' && action.action.type !== 'draw' && action.action.type !== 'ringBell'
-      if (!quiet || outcome.state.status !== 'playing') void save()
+      if (savesNow(action) || outcome.state.status !== 'playing') void save()
     },
     [table, save],
   )
@@ -291,7 +272,6 @@ export function useRun(mockup: Mockup | null = null): Run {
     if (id === undefined || !playing) return
     if (id === -1) return setReloads((n) => n + 1)
     try {
-      // Unsaved moves are dropped; the run ends where the server last saw it.
       await chain.current
       setOver(await api.forfeitRun(id))
       setTable((current) => current && { ...current, state: { ...current.state, status: 'lost' } })

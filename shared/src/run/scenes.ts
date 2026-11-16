@@ -1,25 +1,18 @@
 import type { SigilId } from '../cards.ts'
 import type { Trial } from './types.ts'
 
-/** Effects that need a card pick one at random, so an event is a single choice. */
 export type Effect =
   | { type: 'addCard'; card: string }
   | { type: 'removeCard' }
   | { type: 'boost'; attack: number; health: number }
   | { type: 'addSigil'; sigil: SigilId }
   | { type: 'duplicate' }
-  /** Opens the linter, where the player deletes one sigil from one card. */
   | { type: 'lint' }
-  /** Opens the merge request, where two copies of a card become one. */
   | { type: 'fuse' }
-  /** Draws three cards from the deck; a rare if their total meets the trial's bar. */
   | { type: 'trial'; trial: Trial }
-  /** A random item, if there's a slot free. */
   | { type: 'item' }
-  /** Repairs the run's integrity, or wears it down, but never to 0: an event doesn't end a run. */
   | { type: 'integrity'; amount: number }
 
-/** An event node's text and its choices; `code` is a snippet shown under the text, and `says` P03's word on a choice. */
 export type Scene = {
   id: string
   title: string
@@ -28,7 +21,6 @@ export type Scene = {
   options: { label: string; effects: Effect[]; says?: string }[]
 }
 
-/** A bug hunt's choices: the broken line repairs integrity, any other costs some, and blaming the intern does nothing. */
 const hunt = (lines: number, broken: number, fixed: string): Scene['options'] => [
   ...Array.from({ length: lines }, (_, index) =>
     index + 1 === broken
@@ -42,7 +34,6 @@ const hunt = (lines: number, broken: number, fixed: string): Scene['options'] =>
   { label: 'Blame the intern', effects: [], says: 'The intern quit. The bug stayed.' },
 ]
 
-/** The bug hunts, which share one place among the events so they turn up no more often than any other. */
 export const BUG_HUNTS = ['bug-off-by-one', 'bug-assignment', 'bug-await']
 
 const list: Scene[] = [

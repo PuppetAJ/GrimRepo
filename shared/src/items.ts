@@ -1,7 +1,5 @@
-/** Tools the player carries between a run's battles and uses once, on their own turn. */
 export type ItemId = 'hammer' | 'pliers' | 'hourglass' | 'hook' | 'bottle' | 'scissors'
 
-/** What an item is aimed at: one of the player's cards, one of P03's, or nothing. */
 export type ItemTarget = 'own' | 'opponent' | 'none'
 
 export const ITEMS: Record<ItemId, { name: string; text: string; target: ItemTarget }> = {
@@ -21,8 +19,6 @@ export const ITEMS: Record<ItemId, { name: string; text: string; target: ItemTar
   scissors: { name: 'Scissors', text: "Cut one of P03's cards, front or queued.", target: 'opponent' },
 }
 
-/** The most items a run carries at once. */
 export const ITEM_SLOTS = 3
 
-/** Items an item node or event can give; Scissors are sold only at the Package Registry. */
 export const FOUND_ITEMS: ItemId[] = ['hammer', 'pliers', 'hourglass', 'hook', 'bottle']

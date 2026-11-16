@@ -3,8 +3,7 @@ import { readFileSync } from 'node:fs'
 import { describe, it } from 'node:test'
 import { CARD, SECTIONS } from './layout.ts'
 
-// The worn texture's tile, as the disk's UVs were projected from its face before the sections were anchored.
-const TILE = 0.9
+const WORN_TILE = 0.9
 const ANCHORS = { top: CARD.height / 2, middle: (0.5 - SECTIONS.middleTop) * CARD.height, bottom: -CARD.height / 2 }
 
 // The model's own numbers, from its glTF header: every position accessor records its bounds.
@@ -17,7 +16,6 @@ const header = JSON.parse(glb.toString('utf8', 20, 20 + headerLength)) as {
   bufferViews: { byteOffset?: number }[]
 }
 const body = glb.subarray(20 + headerLength + 8)
-/** An accessor's floats, read from the model's binary chunk. */
 const floats = (index: number, size: number) => {
   const accessor = header.accessors[index]
   assert.ok(accessor)
@@ -67,8 +65,8 @@ describe('the disk modeled in Blender', () => {
       const position = floats(attributes.POSITION, 3)
       const uv = floats(attributes.TEXCOORD_0, 2)
       for (let i = 0; i < position.length / 3; i += 7) {
-        close(uv[i * 2] ?? 0, ((position[i * 3] ?? 0) + CARD.width / 2) / TILE, `${section}'s u`)
-        close(uv[i * 2 + 1] ?? 0, ((position[i * 3 + 1] ?? 0) + anchor + CARD.height / 2) / TILE, `${section}'s v`)
+        close(uv[i * 2] ?? 0, ((position[i * 3] ?? 0) + CARD.width / 2) / WORN_TILE, `${section}'s u`)
+        close(uv[i * 2 + 1] ?? 0, ((position[i * 3 + 1] ?? 0) + anchor + CARD.height / 2) / WORN_TILE, `${section}'s v`)
       }
     }
   })

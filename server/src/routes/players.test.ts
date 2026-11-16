@@ -12,7 +12,7 @@ import {
   type RunState,
 } from 'shared'
 import { pool } from '../config/db.ts'
-import { countRunCardsPlayed, HISTORY_PAGE, RECENT_RUNS, runCardsPlayed } from '../db/players.ts'
+import { backfillRunCardCounts, HISTORY_PAGE, RECENT_RUNS, runCardsPlayed } from '../db/players.ts'
 import { BOARD_PAGE } from '../db/runs.ts'
 import { newPlayer, startApp } from '../test/http.ts'
 import { insertPlayer, insertRun, resetDatabase } from '../test/support.ts'
@@ -68,6 +68,27 @@ describe('the leaderboard', () => {
       body.players.map((row: { rank: number }) => row.rank),
       [1, 1],
     )
+  })
+
+  it('ranks each player on their stats page where the board ranks them', async () => {
+    const ace = await signedIn('ace')
+    const tiedOne = await signedIn('tied')
+    const tiedTwo = await signedIn('tied')
+    const mixed = await signedIn('mixed')
+    const playing = await signedIn('playing')
+    await insertRun(ace.username, cleared())
+    await insertRun(tiedOne.username, { battles: 4, bosses: 1, stage: 1 })
+    await insertRun(tiedTwo.username, { battles: 4, bosses: 1, stage: 1 })
+    await insertRun(mixed.username, { battles: 1 })
+    await insertRun(mixed.username, { battles: 2, forfeited: true })
+    await insertRun(playing.username, { battles: 3 })
+    await app.call('POST', '/api/runs', { cookie: playing.cookie })
+    const { body } = await app.call('GET', '/api/leaderboard')
+    assert.equal(body.players.length, 5)
+    for (const row of body.players as { username: string; rank: number }[]) {
+      const stats = await app.call('GET', `/api/players/${row.username}/stats`)
+      assert.equal(stats.body.rank, row.rank, `${row.username} ranks the same on the board and their stats`)
+    }
   })
 
   it('pages twenty at a time, ranking across every page', async () => {
@@ -267,13 +288,13 @@ describe('a player’s stats', () => {
       )
     await finish(RUN_RULES_VERSION)
     await finish(RUN_RULES_VERSION - 1)
-    assert.equal(await countRunCardsPlayed(), 2)
+    assert.equal(await backfillRunCardCounts(), 2)
     const { rows } = await pool.query<{ cards: Record<string, number> }>('SELECT cards FROM runs ORDER BY id')
     assert.deepEqual(
       rows.map((row) => row.cards),
       [runCardsPlayed(replayed.events), {}],
       'an older run may not replay as it was played, so it counts nothing',
     )
-    assert.equal(await countRunCardsPlayed(), 0, 'and not again')
+    assert.equal(await backfillRunCardCounts(), 0, 'and not again')
   })
 })

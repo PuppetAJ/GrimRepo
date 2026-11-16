@@ -4,8 +4,7 @@ import * as THREE from 'three'
 import { STILL } from './factory/constants.ts'
 import type { Vec3 } from './layout.ts'
 
-// The canvas's width for a short popup, such as a number; the sprite widens with it for longer words.
-const WIDTH = 256
+const MIN_CANVAS_WIDTH = 256
 
 export function Popup({
   text,
@@ -19,13 +18,12 @@ export function Popup({
   born: number
 }) {
   const sprite = useRef<THREE.Sprite>(null)
-  // A canvas wide enough for the words, so a long one such as "rolled back" isn't cut off at its ends.
   const { material, wide } = useMemo(() => {
     const element = document.createElement('canvas')
     const font = '72px VT323'
     const measure = element.getContext('2d') as CanvasRenderingContext2D
     measure.font = font
-    element.width = Math.max(WIDTH, Math.ceil(measure.measureText(text).width) + 24)
+    element.width = Math.max(MIN_CANVAS_WIDTH, Math.ceil(measure.measureText(text).width) + 24)
     element.height = 96
     const context = element.getContext('2d') as CanvasRenderingContext2D
     const middle = element.width / 2
@@ -43,7 +41,7 @@ export function Popup({
     const map = new THREE.CanvasTexture(element)
     map.colorSpace = THREE.SRGBColorSpace
     const made = new THREE.SpriteMaterial({ map, transparent: true, depthTest: false, fog: false })
-    return { material: made, wide: element.width / WIDTH }
+    return { material: made, wide: element.width / MIN_CANVAS_WIDTH }
   }, [text, tone])
   useEffect(
     () => () => {

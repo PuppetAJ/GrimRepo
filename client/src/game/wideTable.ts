@@ -18,19 +18,12 @@ function setWide(next: boolean): void {
   wide = next
   try {
     localStorage.setItem(KEY, next ? 'wide' : 'site')
-  } catch {
-    // Storage can be refused in a private window; the choice then lasts until the page closes.
-  }
+  } catch {}
   for (const listener of listeners) listener()
 }
 
-/** Wider than the site's own width, where the 3D table can grow past it. */
 export const ROOM_TO_WIDEN = '(min-width: 100rem)'
 
-/**
- * Whether the 3D table takes the window's width, up to 21:9, rather than the site's; remembered, and offered only
- * when the window is wide enough for it to matter.
- */
 export function useWideTable(): { wide: boolean; offered: boolean; toggle: () => void } {
   const chosen = useSyncExternalStore(
     (listener) => {

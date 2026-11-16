@@ -1,12 +1,7 @@
-# The browser suites against a production build. They build and boot the app, so this is slower than ci.yml and is not a
-# required check: main is gated by ci.yml alone.
-# A pull request runs the suites that cover the seams, on Chromium. Every night, and on demand, main gets the full set on
-# Chromium and Firefox, so a Gecko-only regression still shows within a day without slowing every pull request.
 name: Browser suites
 
 on:
   pull_request:
-    # Art and notes can't break the pages, so a pull request of only those skips the suites; ci.yml still runs.
     paths-ignore:
       - '**/*.png'
       - '**/*.md'
@@ -19,13 +14,11 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # A pull request: Chromium only, without the leaderboard, whose seeded players rarely change.
   PULL_REQUEST: >-
     [{"suite":"smoke","engine":"chromium"},{"suite":"auth","engine":"chromium"},
     {"suite":"run-mode","engine":"chromium"},{"suite":"run-3d","engine":"chromium"},{"suite":"table","engine":"chromium"},
     {"suite":"tutorial","engine":"chromium"},{"suite":"a11y","part":"pages","engine":"chromium"},
     {"suite":"a11y","part":"run","engine":"chromium"},{"suite":"a11y","part":"tables","engine":"chromium"}]
-  # Nightly and on demand: every suite on both engines.
   FULL: >-
     [{"suite":"smoke","engine":"chromium"},{"suite":"auth","engine":"chromium"},
     {"suite":"leaderboard","engine":"chromium"},
@@ -38,8 +31,7 @@ env:
     {"suite":"a11y","part":"run","engine":"firefox"},{"suite":"a11y","part":"tables","engine":"firefox"}]
 
 jobs:
-  # Which suites to run: the matrix can't read env, so a step hands it on. A pull request runs only the suites its
-  # changes can reach (see .github/scripts/browser-plan.mjs); the slowest suites are split over two runners.
+  # The matrix can't read env, so a step hands it on.
   plan:
     runs-on: ubuntu-latest
     outputs:
@@ -47,7 +39,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          # The base branch too, to see what the pull request changed.
           fetch-depth: 0
 
       # Passed through the environment, since the JSON's quotes would end a quoted shell string.
@@ -56,18 +47,14 @@ jobs:
           MATRIX: ${{ github.event_name == 'pull_request' && env.PULL_REQUEST || env.FULL }}
           BASE: ${{ github.base_ref }}
         run: |
-          # If the changes can't be listed, CHANGED stays unset and every suite runs.
           if [ -n "$BASE" ] && changed="$(git diff --name-only "origin/$BASE...HEAD")"; then export CHANGED="$changed"; fi
           echo "matrix=$(node .github/scripts/browser-plan.mjs)" >> "$GITHUB_OUTPUT"
 
   browser:
     needs: plan
     runs-on: ubuntu-latest
-    # Room for a slow 3D test and its retry.
     timeout-minutes: 30
 
-    # One runner per suite and engine, so the wall clock is the slowest suite rather than all of them in a row.
-    # The accessibility suite, much the longest, runs in three parts at once, and its run screens and run-3d in two.
     strategy:
       fail-fast: false
       matrix:
@@ -90,11 +77,8 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://grimrepo:grimrepo@127.0.0.1:5432/grimrepo
-      # Throwaway: nothing here signs a cookie that has to be read back later.
       BETTER_AUTH_SECRET: ci-secret-not-used-for-anything-real-0123456789
       E2E_BASE_URL: http://localhost:3000
-      # The accessibility suite's part, as Playwright's --grep picks it by tag, and this runner's share of a split suite;
-      # each empty when it doesn't apply.
       PART: ${{ matrix.part && format('--grep @{0}', matrix.part) || '' }}
       SHARD: ${{ matrix.shard && format('--shard={0}', matrix.shard) || '' }}
 
@@ -110,7 +94,6 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # The browsers are large and never change between runs of the same Playwright version.
       - uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
@@ -120,10 +103,8 @@ jobs:
 
       - run: pnpm db:migrate
 
-      # The leaderboard suite asserts on the seeded players and the demo account.
       - run: pnpm db:seed
 
-      # A production build, prerendering and all, with the test handles the table suite drives the game through.
       - run: pnpm build
         env:
           VITE_TEST_HANDLE: '1'
@@ -143,7 +124,6 @@ jobs:
         env:
           E2E_HEADED: '1'
 
-      # The report and each failed test's trace, screenshot and context, to step through without rerunning.
       - if: failure()
         uses: actions/upload-artifact@v7
         with:

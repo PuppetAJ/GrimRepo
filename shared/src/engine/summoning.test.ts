@@ -135,7 +135,6 @@ describe('summoning', () => {
   })
 
   it('counts a free card as one and a costly card as its cost', () => {
-    // Firewall costs 1, so it pays 1 of ForkBomb's 2 and a free InfiniteLoop pays the other.
     const state = table({ hand: ['ForkBomb'], board: ['Firewall', 'InfiniteLoop'] })
     const half = play(state, { type: 'select', uid: uidOf(state, 'ForkBomb') }, { type: 'mark', lane: 0 }).state
     assert.equal(refused(half, { type: 'place', lane: 0 }), 'The cost is not paid')
@@ -145,7 +144,6 @@ describe('summoning', () => {
       'ForkBomb',
     )
 
-    // A single card that cost 2 pays for another that costs 2 on its own.
     const trade = table({ hand: ['Documentation'], board: ['ForkBomb'] })
     const { state: after } = play(
       trade,

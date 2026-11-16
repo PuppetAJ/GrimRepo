@@ -4,9 +4,8 @@ import { cardImage, iconImage } from '../art.ts'
 import { CORNER_HOLES, DISK, RECESS, SCREEN_DIVIDER, SECTIONS, SIGIL_BAND } from './layout.ts'
 import { TINT } from './palette.ts'
 
-// The card's own aspect ratio, so the face isn't stretched.
-export const W = 300
-export const H = 504
+export const FACE_W = 300
+export const FACE_H = 504
 
 function fitText(
   context: CanvasRenderingContext2D,
@@ -29,7 +28,6 @@ type Palette = {
   plateInk: string
   cost: string
   hurt: string
-  /** Attack raised by the cards around it. */
   boost: string
 }
 const COMMON: Palette = {
@@ -99,22 +97,21 @@ function pixels(
   context.restore()
 }
 
-// The back is seen mirrored, so its clipped corner is on the left.
 function diskPath(context: CanvasRenderingContext2D, mirrored = false) {
-  const clip = DISK.clip * W
+  const clip = DISK.clipFraction * FACE_W
   context.beginPath()
   if (mirrored) {
     context.moveTo(clip, 0)
-    context.lineTo(W, 0)
-    context.lineTo(W, H)
-    context.lineTo(0, H)
+    context.lineTo(FACE_W, 0)
+    context.lineTo(FACE_W, FACE_H)
+    context.lineTo(0, FACE_H)
     context.lineTo(0, clip)
   } else {
     context.moveTo(0, 0)
-    context.lineTo(W - clip, 0)
-    context.lineTo(W, clip)
-    context.lineTo(W, H)
-    context.lineTo(0, H)
+    context.lineTo(FACE_W - clip, 0)
+    context.lineTo(FACE_W, clip)
+    context.lineTo(FACE_W, FACE_H)
+    context.lineTo(0, FACE_H)
   }
   context.closePath()
 }
@@ -132,13 +129,13 @@ function centered(context: CanvasRenderingContext2D, text: string, x: number, y:
   context.textBaseline = 'middle'
 }
 
-// The holes go through the disk; the material's alphaTest discards the cleared pixels.
 function clearHoles(context: CanvasRenderingContext2D) {
-  for (const [x0, y0, x1, y1] of CORNER_HOLES) context.clearRect(x0 * W, y0 * H, (x1 - x0) * W, (y1 - y0) * H)
+  for (const [x0, y0, x1, y1] of CORNER_HOLES)
+    context.clearRect(x0 * FACE_W, y0 * FACE_H, (x1 - x0) * FACE_W, (y1 - y0) * FACE_H)
 }
 
 const recess = ([x0, y0, x1, y1]: readonly [number, number, number, number]) =>
-  [x0 * W, y0 * H, (x1 - x0) * W, (y1 - y0) * H] as const
+  [x0 * FACE_W, y0 * FACE_H, (x1 - x0) * FACE_W, (y1 - y0) * FACE_H] as const
 
 function screen(context: CanvasRenderingContext2D, area: readonly [number, number, number, number], color: string) {
   const [x, y, w, h] = recess(area)
@@ -190,12 +187,11 @@ function sprite(
 
 export type Layer = 'base' | 'content' | 'lights'
 
-/** base stays when the disk closes, content fades out with it, and lights is content on black for the emissive map. */
 export function drawFace(context: CanvasRenderingContext2D, unit: Shown, layer: Layer): void {
   const def = card(unit.card)
   const dead = isDeathCard(unit.card)
   const palette = dead ? DEATH : def.tier === 'S' ? RARE : COMMON
-  context.clearRect(0, 0, W, H)
+  context.clearRect(0, 0, FACE_W, FACE_H)
   if (layer !== 'content') {
     context.fillStyle = layer === 'lights' ? '#000000' : palette.body
     diskPath(context)
@@ -207,7 +203,6 @@ export function drawFace(context: CanvasRenderingContext2D, unit: Shown, layer: 
   context.textBaseline = 'middle'
 
   const [lx, ly, lw, lh] = recess(RECESS.label)
-  // A death card's skull sits at the plate's left, and its name centers in the room beside it.
   const skull = dead ? lh * 0.9 : 0
   if (layer === 'base') {
     context.fillStyle = palette.plate
@@ -234,14 +229,13 @@ export function drawFace(context: CanvasRenderingContext2D, unit: Shown, layer: 
     return
   }
 
-  const divider = SCREEN_DIVIDER * H
+  const divider = SCREEN_DIVIDER * FACE_H
   sprite(context, cardImage(unit.card), sx + sw * 0.03, sy + sh * 0.08, sw * 0.94, divider - sy - sh * 0.1, palette)
   const cells = 4
   const cell = 13
   context.fillStyle = palette.cost
   for (let i = cells - def.cost; i < cells; i++)
     context.fillRect(sx + sw - 8 - (cells - i) * (cell + 3), sy + 7, cell, 24)
-  // The type in the opposite corner, the same height as the cost.
   if (def.type) pixels(context, iconImage(`type-${def.type}`), sx + 8, sy + 7, 3, palette.line)
   context.fillStyle = '#f4fbff'
   context.fillRect(sx, divider - 2, sw, 3)
@@ -250,7 +244,7 @@ export function drawFace(context: CanvasRenderingContext2D, unit: Shown, layer: 
     const size = 7
     const step = 8 * size + 30
     const start = sx + sw / 2 - (unit.sigils.length * step - 30) / 2
-    const middle = ((top + bottom) / 2) * H
+    const middle = ((top + bottom) / 2) * FACE_H
     unit.sigils.forEach((sigil, i) =>
       pixels(context, iconImage(sigil), start + i * step, middle - 4 * size, size, palette.line),
     )
@@ -260,7 +254,6 @@ export function drawFace(context: CanvasRenderingContext2D, unit: Shown, layer: 
   pixels(context, iconImage('attack'), ax + 6, ay + ah / 2 - 4 * icon, icon, palette.line)
   pixels(context, iconImage('health'), hx + hw - 6 - 8 * icon, hy + hh / 2 - 4 * icon, icon, palette.line)
   context.font = Math.max(unit.attack, unit.health) > 99 ? '40px VT323' : '64px VT323'
-  // Attack the cards around it change shows in its own color: raised in yellow, lowered like hurt health.
   context.fillStyle = !unit.aura ? palette.line : unit.aura > 0 ? palette.boost : palette.hurt
   centered(context, String(unit.attack), ax + aw / 2 + 12, ay + ah / 2)
   context.fillStyle = unit.health < unit.maxHealth ? palette.hurt : palette.line
@@ -268,11 +261,16 @@ export function drawFace(context: CanvasRenderingContext2D, unit: Shown, layer: 
 }
 
 export function drawBack(context: CanvasRenderingContext2D): void {
-  context.clearRect(0, 0, W, H)
+  context.clearRect(0, 0, FACE_W, FACE_H)
   context.fillStyle = COMMON.body
   diskPath(context, true)
   context.fill()
   clearHoles(context)
   context.fillStyle = 'rgb(0 0 0 / 0.35)'
-  context.fillRect(W * 0.045, H * SECTIONS.middleTop, W * 0.91, H * (SECTIONS.middleBottom - SECTIONS.middleTop))
+  context.fillRect(
+    FACE_W * 0.045,
+    FACE_H * SECTIONS.middleTop,
+    FACE_W * 0.91,
+    FACE_H * (SECTIONS.middleBottom - SECTIONS.middleTop),
+  )
 }

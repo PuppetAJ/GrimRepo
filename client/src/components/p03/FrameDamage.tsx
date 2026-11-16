@@ -7,11 +7,9 @@ import tornCorner from './torn-corner.svg'
 type Edge = 'top' | 'bottom' | 'left' | 'right'
 type Corner = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left'
 
-// Each break SVG is drawn for a top edge, its origin 5px in and 10px down on the border line.
 const BREAKS = { long: breakLong, medium: breakMedium, short: breakShort }
 
-// Each break is [edge, percent along it, size].
-const DAMAGE: Record<string, { breaks: [Edge, number, keyof typeof BREAKS][]; corner: Corner }> = {
+const DAMAGE: Record<string, { breaks: [edge: Edge, percent: number, size: keyof typeof BREAKS][]; corner: Corner }> = {
   terminal: {
     breaks: [
       ['top', 38, 'long'],
@@ -48,20 +46,30 @@ const EDGES: Record<Edge, (at: number) => CSSProperties> = {
   right: (at) => ({ left: '100%', top: `${at}%`, transform: 'rotate(90deg)' }),
 }
 
+const TORN_SIZE = { width: 29, height: 32 }
+const TORN_ORIGIN = { x: 22, y: 12 }
+
 function Torn({ corner }: { corner: Corner }) {
-  // Drawn for the top-right; its origin, 22px in and 12px down, sits on the corner.
   const style = {
-    top: corner.startsWith('top') ? -12 : undefined,
-    bottom: corner.startsWith('bottom') ? -20 : undefined,
-    left: corner.endsWith('left') ? -22 : undefined,
-    right: corner.endsWith('right') ? -7 : undefined,
-    transformOrigin: '22px 12px',
+    top: corner.startsWith('top') ? -TORN_ORIGIN.y : undefined,
+    bottom: corner.startsWith('bottom') ? TORN_ORIGIN.y - TORN_SIZE.height : undefined,
+    left: corner.endsWith('left') ? -TORN_ORIGIN.x : undefined,
+    right: corner.endsWith('right') ? TORN_ORIGIN.x - TORN_SIZE.width : undefined,
+    transformOrigin: `${TORN_ORIGIN.x}px ${TORN_ORIGIN.y}px`,
     transform: `scale(${corner.endsWith('left') ? -1 : 1}, ${corner.startsWith('bottom') ? -1 : 1})`,
   }
-  return <img src={tornCorner} alt="" width={29} height={32} className="absolute max-w-none" style={style} />
+  return (
+    <img
+      src={tornCorner}
+      alt=""
+      width={TORN_SIZE.width}
+      height={TORN_SIZE.height}
+      className="absolute max-w-none"
+      style={style}
+    />
+  )
 }
 
-/** For frames with a 1px border, which the break SVGs line up with. */
 export function FrameDamage({ frame }: { frame: keyof typeof DAMAGE }) {
   const damage = DAMAGE[frame]!
   return (
@@ -74,7 +82,6 @@ export function FrameDamage({ frame }: { frame: keyof typeof DAMAGE }) {
           key={`${edge}-${at}`}
           src={BREAKS[size]}
           alt=""
-          // Side breaks would crowd the text on phones.
           className={`absolute -mt-2.5 -ml-1.25 max-w-none origin-[5px_10px] ${edge === 'left' || edge === 'right' ? 'max-sm:hidden' : ''}`}
           style={EDGES[edge](at)}
         />

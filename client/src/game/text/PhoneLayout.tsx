@@ -27,17 +27,14 @@ import { dropIn } from '../moves.ts'
 import { Inspector, Magnifier } from './Reading.tsx'
 
 function Status() {
-  const { menu, setMenu, sideways, view } = useTable()
+  const { menu, setMenu, sideways, playedView } = useTable()
   return (
     <div className="flex items-center gap-2 text-lg">
       <TurnLabel />
-      {/* Just the count, since the line has little room; sideways, it's under the scale instead. */}
-      {view.integrity && !sideways ? (
-        <IntegrityBar left={view.integrity.left} max={view.integrity.max} compact className="gap-1" />
+      {playedView.integrity && !sideways ? (
+        <IntegrityBar left={playedView.integrity.left} max={playedView.integrity.max} compact className="gap-1" />
       ) : null}
-      {/* The save note is in the menu, so the turn and phase keep the line. */}
       <span className="ml-auto" />
-      {/* A full fingertip to hit, though it looks small; negative margins keep the line's height. */}
       <button
         type="button"
         aria-expanded={menu}
@@ -55,7 +52,6 @@ function Menu() {
   const { menu, setMenu, setLogOpen, setTerminalOpen, fullScreen, game, on3d, sideways, run, state } = useTable()
   if (!menu) return null
   const name = encounterName(state)
-  // Close the menu first so it doesn't cover what the choice opens.
   const choose = (then: () => void) => () => {
     setMenu(false)
     then()
@@ -65,18 +61,15 @@ function Menu() {
       {...dropIn}
       className={`absolute top-12 z-40 flex w-72 max-w-[calc(100%-1rem)] flex-col gap-3 rounded-md border-2 border-p03-edge bg-[#07130b] p-2 ${sideways ? 'left-2' : 'right-2'}`}
     >
-      {/* The battle's name and the save note, which the status line leaves out to keep the phase in view. */}
       <p className="flex items-baseline justify-between gap-2 px-1 font-terminal text-base">
         <span className="truncate text-p03">{name}</span>
         <SaveStatus className="shrink-0 text-p03-dim" />
       </p>
-      {/* A phone has no room beside the board for the tools. */}
       <div className="flex flex-col items-center gap-1">
         {state.items?.length ? <span className="font-terminal text-base text-p03-dim">Tools</span> : null}
         <Items className="justify-center" onPick={() => setMenu(false)} />
       </div>
       <div className="grid grid-cols-2 gap-2 [&_svg]:size-4 [&_svg]:shrink-0">
-        {/* A run's own first: its deck and tools, and its map. */}
         {run ? (
           <>
             <button type="button" onClick={choose(run.onInventory)} className={MENU_BUTTON}>
@@ -112,7 +105,7 @@ function Menu() {
         ) : (
           <Forfeit
             forfeit={game.forfeit}
-            run={Boolean(game.run)}
+            abandonsRun={Boolean(game.run)}
             disabled={game.state.status !== 'playing'}
             className={`${MENU_BUTTON} h-auto`}
           >
@@ -136,12 +129,21 @@ function Menu() {
 }
 
 export function PhoneLayout() {
-  const { frameProps, phoneFrame, covering, sideways, scrolling, seat, setArea, setHandSection, view, game, busy } =
-    useTable()
-  // Once the battle ends, its panel over the board may run past the board, so the board rises above the rest.
+  const {
+    frameProps,
+    phoneFrame,
+    covering,
+    sideways,
+    scrolling,
+    seat,
+    setArea,
+    setHandSection,
+    playedView,
+    game,
+    busy,
+  } = useTable()
   const over = hasEnded(game)
-  const blurb = useSettled(game.tutorial?.blurb ?? game.run?.note ?? null, busy)
-  // Too short in the page, the page scrolls; covering the screen, the frame scrolls instead.
+  const blurb = useSettled(game.tutorial?.blurb ?? game.run?.firstTimeNote ?? null, busy)
   const flowing = scrolling && !covering
   const pieces = `z-10 gap-2 pt-[max(0.5rem,env(safe-area-inset-top))] pr-[max(0.5rem,env(safe-area-inset-right))] pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(0.5rem,env(safe-area-inset-left))] ${flowing ? 'relative min-h-svh' : 'absolute inset-0'}`
   const board = (
@@ -160,7 +162,6 @@ export function PhoneLayout() {
       ref={phoneFrame}
       className={`p03-screen crt overflow-hidden font-terminal text-xl ${covering ? 'fixed inset-0 z-50' : `relative border-y border-p03-edge ${flowing ? '' : 'h-svh'}`}`}
     >
-      {/* Outside the pieces, so the screen and glass stay put while the pieces scroll. */}
       <FaultyScreenShader />
       <span aria-hidden className="crt-glass pointer-events-none absolute inset-0 z-30" />
       {sideways ? (
@@ -172,9 +173,14 @@ export function PhoneLayout() {
               <Status />
             </div>
             <Panel className="flex shrink-0 flex-col gap-1 p-2">
-              <Balance scale={view.scale} />
-              {view.integrity ? (
-                <IntegrityBar left={view.integrity.left} max={view.integrity.max} fluid className="gap-1 text-base" />
+              <Balance scale={playedView.scale} />
+              {playedView.integrity ? (
+                <IntegrityBar
+                  left={playedView.integrity.left}
+                  max={playedView.integrity.max}
+                  fluid
+                  className="gap-1 text-base"
+                />
               ) : null}
             </Panel>
             <section ref={setHandSection} aria-label="Your hand" className="flex min-h-0 flex-1 flex-col">
@@ -197,10 +203,10 @@ export function PhoneLayout() {
         <div className={`${pieces} flex flex-col ${flowing ? '' : scrolling ? 'overflow-y-auto' : 'overflow-hidden'}`}>
           <div className="relative z-10 flex shrink-0 flex-col gap-1 rounded-md border-2 border-p03-edge bg-[#07130b] py-1 pr-1 pl-2">
             <Status />
-            <ScaleBar scale={view.scale} fluid className="gap-1 pr-1 text-base" />
+            <ScaleBar scale={playedView.scale} fluid className="gap-1 pr-1 text-base" />
           </div>
           <div className="relative z-10 shrink-0">
-            <LogBox className="h-[3.25rem] tall:h-[4.75rem]" log="sr-only tall:not-sr-only" />
+            <LogBox className="h-[3.25rem] tall:h-[4.75rem]" logClassName="sr-only tall:not-sr-only" />
           </div>
           {board}
           <section ref={setHandSection} aria-label="Your hand" className="relative z-10 flex shrink-0">
@@ -217,13 +223,11 @@ export function PhoneLayout() {
           </div>
         </div>
       )}
-      {/* Below the status row, so the menu button stays reachable. */}
       {seat ? (
         <div className="absolute inset-x-2 top-16 z-40 rounded bg-background font-sans">
           <SeatNote seat={seat} />
         </div>
       ) : null}
-      {/* Fixed, since the phone's table can scroll. */}
       {blurb ? <TutorialBlurb blurb={blurb} busy={busy} compact fixed note={!game.tutorial} /> : null}
       <Menu />
       <LogDialog />

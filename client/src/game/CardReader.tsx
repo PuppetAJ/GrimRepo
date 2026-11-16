@@ -7,7 +7,6 @@ import type { Shown } from './shown.ts'
 
 const INK = '#0b1f12'
 
-/** Masks the PNG so it takes the current text color. */
 export function PixelArt({ src, className = '' }: { src: string; className?: string }) {
   return <span aria-hidden className={`pixel-art block bg-current ${className}`} style={{ maskImage: `url(${src})` }} />
 }
@@ -16,16 +15,7 @@ export function Art({ id }: { id: string }) {
   return <PixelArt src={cardArt(id)} className="h-[92%] w-[92%] text-[#0b1f12]" />
 }
 
-export function Sigil({
-  id,
-  size = 18,
-  color = INK,
-}: {
-  id: IconId
-  /** Pixels, or any CSS length. */
-  size?: number | string
-  color?: string
-}) {
+export function Sigil({ id, size = 18, color = INK }: { id: IconId; size?: number | string; color?: string }) {
   return (
     <span
       aria-hidden
@@ -35,10 +25,8 @@ export function Sigil({
   )
 }
 
-// Height to width, close to a playing card.
-export const CARD_RATIO = 7 / 5
+export const CARD_HEIGHT_TO_WIDTH = 7 / 5
 
-/** A card's cost as orange pips; announced by the reader, hidden on the small card beside its own label. */
 function CostPips({
   cost,
   pip,
@@ -66,10 +54,8 @@ function CostPips({
   )
 }
 
-/** Attack the cards around it raise shows in amber, and lowered in the hurt red. */
 const auraColor = (unit: Shown) => (!unit.aura ? '' : unit.aura > 0 ? 'text-[#8a5a00]' : 'text-[#a3172b]')
 
-/** Attack with its sword and health with its shield; health turns red once hurt. */
 function Stats({ unit, icon, className }: { unit: Shown; icon: number; className: string }) {
   return (
     <p className={`flex shrink-0 justify-between border-t-2 border-[#0b1f12]/40 ${className}`}>
@@ -94,15 +80,12 @@ function Stats({ unit, icon, className }: { unit: Shown; icon: number; className
   )
 }
 
-/** Parts left blank, as on a death card being built: each fills in, with a pop, once it's chosen. */
 type Blank = { cost?: boolean; art?: boolean; stats?: boolean; sigils?: boolean }
 
-/** A part of a card that pops as it fills in, on a card being built; on any other card, a plain span. */
 function Part({ pops, ...props }: { pops: boolean } & ComponentProps<'span'>) {
   return pops ? <m.span {...pop(0.4)} {...(props as HTMLMotionProps<'span'>)} /> : <span {...props} />
 }
 
-/** A card's colors on paper, its body and its screen: green, a rare's red, or a death card's ash. */
 export function cardTones(id: string): { body: string; screen: string } {
   if (isDeathCard(id)) return { body: 'bg-[#b9c3c8]', screen: 'bg-[#a3adb2]' }
   if (card(id).tier === 'S') return { body: 'bg-[#f3c6c0]', screen: 'bg-[#e8aea8]' }
@@ -112,13 +95,10 @@ export function cardTones(id: string): { body: string; screen: string } {
 export function PixelCard({ unit, blank }: { unit: Shown; blank?: Blank }) {
   const def = card(unit.card)
   const tones = cardTones(unit.card)
-  // A death card is ash gray, with a skull by its shutter, so it reads apart from the cards it was made from.
   const dead = isDeathCard(unit.card)
   return (
     <span
-      // The a11y suite finds card faces by this, and checks the control around each one names its card.
       data-face={def.name}
-      // Print is sized from the card's own width, so a small card on a short window stays legible.
       className={`@container relative flex aspect-[5/7] w-full flex-col overflow-hidden text-[#0b1f12] [clip-path:polygon(0_0,86%_0,100%_9%,100%_100%,0_100%)] ${tones.body} bg-[repeating-linear-gradient(0deg,rgb(0_0_0/0.07)_0_1px,transparent_1px_3px)]`}
     >
       {dead ? (
@@ -126,7 +106,6 @@ export function PixelCard({ unit, blank }: { unit: Shown; blank?: Blank }) {
           <Sigil id="death" size="8cqw" />
         </span>
       ) : null}
-      {/* A death card swaps colors with its shutter, so the two never blend. */}
       <span
         aria-hidden
         className={`absolute top-0 left-[22%] z-10 h-[7%] w-[46%] rounded-b-sm ${dead ? 'bg-[#9a948a]' : 'bg-[#b9c3c8]'}`}
@@ -135,7 +114,6 @@ export function PixelCard({ unit, blank }: { unit: Shown; blank?: Blank }) {
       </span>
       <span className="h-[11%] shrink-0" />
       <span className={`mx-[6%] flex h-[50%] shrink-0 flex-col border-2 border-[#0b1f12]/70 ${tones.screen}`}>
-        {/* Its own row, so the type and cost never overlap the art on a small card. */}
         <span className="flex h-[10cqw] shrink-0 items-start justify-between px-[3cqw] pt-[3cqw]">
           {def.type && !blank?.art ? <Sigil id={`type-${def.type}`} size="7cqw" /> : <span />}
           <Part pops={Boolean(blank)} key={blank?.cost ? 'blank' : 'cost'}>
@@ -155,7 +133,6 @@ export function PixelCard({ unit, blank }: { unit: Shown; blank?: Blank }) {
           {blank?.art ? <span className="text-[24cqw] opacity-40">?</span> : <Art id={unit.card} />}
         </Part>
       </span>
-      {/* The band stays even when empty, so every card lays out the same. */}
       <Part
         pops={Boolean(blank)}
         key={blank?.sigils ? 'blank' : 'sigils'}
@@ -165,7 +142,6 @@ export function PixelCard({ unit, blank }: { unit: Shown; blank?: Blank }) {
           <Sigil key={sigil} id={sigil} size={`${Math.min(20, 86 / unit.sigils.length - 2)}cqw`} />
         ))}
       </Part>
-      {/* Long numbers shrink so they don't run off the card. */}
       <span
         className="flex flex-1 items-end justify-between px-[5cqw] pb-[3cqw] leading-none"
         style={{
@@ -219,7 +195,6 @@ function Note({
   )
 }
 
-/** The card's type and what it means, for the sigils that count cards of a type. */
 function TypeLine({ id, className, icon }: { id: string; className: string; icon: number }) {
   const type = card(id).type
   if (!type) return null
@@ -241,13 +216,11 @@ export function ReaderBody({ unit }: { unit: Shown }) {
         <span className="min-w-0 [overflow-wrap:anywhere]">{card(unit.card).name}</span>
         <CostPips cost={card(unit.card).cost} pip="size-4 outline-2" className="gap-1 pt-1" />
       </p>
-      {/* The art shrinks first when the reader is short. */}
       <div
         className={`grid h-[min(13rem,45cqi)] min-h-16 place-items-center overflow-hidden rounded-sm border-2 border-[#0b1f12] ${cardTones(unit.card).screen} bg-[repeating-linear-gradient(0deg,rgb(0_0_0/0.06)_0_1px,transparent_1px_3px)]`}
       >
         <Art id={unit.card} />
       </div>
-      {/* Fixed height, so nothing moves between cards with and without sigils. */}
       {/* Focusable, since the type and three sigils can overflow it and a keyboard must be able to scroll it. */}
       <div
         role="group"

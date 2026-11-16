@@ -1,23 +1,18 @@
 import { HAND_LIMIT, type GameEvent, type GameState, type Slot, type Unit } from 'shared'
 
-/** The game as far as playback has reached, which can trail the real state. */
 export type View = {
   turn: number
   drawn: boolean
   status: GameState['status']
   deck: number
-  /** Damage dealt minus damage taken; the game ends at TIP either way. */
   scale: number
   hand: Unit[]
   board: Slot[]
   front: Slot[]
   back: Slot[]
   summon: { uid: number; marked: number[] } | null
-  /** A boss's phase, counted from 0. */
-  phase: number
-  /** A run's integrity; null outside a run. */
+  phaseIndex: number
   integrity: { left: number; max: number } | null
-  /** P03 has made its one desperate play this battle. */
   desperate: boolean
 }
 
@@ -33,7 +28,7 @@ export function project(state: GameState): View {
     front: state.opponent.front,
     back: state.opponent.back,
     summon: state.summon,
-    phase: state.opponent.phase,
+    phaseIndex: state.opponent.phase,
     integrity: state.integrity ?? null,
     desperate: Boolean(state.opponent.desperate),
   }
@@ -50,7 +45,6 @@ function withUnit(view: View, uid: number, change: (unit: Unit) => Unit): View {
   return { ...view, board: update(view.board), front: update(view.front), back: update(view.back) }
 }
 
-/** Folding a move's events over the view before it gives the view after it. */
 export function step(view: View, event: GameEvent): View {
   switch (event.type) {
     case 'drew':
@@ -89,7 +83,7 @@ export function step(view: View, event: GameEvent): View {
         front: view.front.map(() => null),
         back: view.back.map(() => null),
         scale: 0,
-        phase: event.phase,
+        phaseIndex: event.phase,
       }
     case 'damaged':
       return withUnit(view, event.uid, (unit) => ({ ...unit, health: event.health }))

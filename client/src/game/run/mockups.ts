@@ -26,29 +26,27 @@ import { narrateRun } from './narrate.ts'
 import type { Aftermath } from './useRun.ts'
 import { MOST_SIGILS, withWorstCard, WORST_CARD } from '../fixtures.ts'
 
-/** A run state to look at, played locally and never saved. */
 export type Mockup = {
   state: RunState
   path: string[]
   news?: string[]
   over?: RunOver
   aftermath?: Aftermath
-  /** P03's note to show on the screen, seen or not. */
   note?: RunNote
 }
 
-/** `revision` goes up when the screen changes, so an approval of an older one shows as needing another look. */
 export type MockupGroup = 'worst' | 'reached' | 'notes'
 
 type Entry = { title: string; group: MockupGroup; revision?: number; make: () => Mockup | null }
 
-// The longest names, the most sigils and the biggest numbers the screens may have to hold.
 const LONG_NEWS = [
   'destroyEverything(everyone) gains Technical Debt.',
   'destroyEnemy(you) is 1999 attack, 2000 health now.',
   'Documentation burned. I did warn you.',
 ]
 const WORST_SCENE = 'worst-case'
+const FIXED_EVENT_SCENE = 'stack-overflow'
+const SIGIL_GIVER = 'FourOhFour'
 
 function worstDeck(size = 40): RunCard[] {
   withWorstCard()
@@ -56,13 +54,11 @@ function worstDeck(size = 40): RunCard[] {
   return Array.from({ length: size }, (_, index): RunCard => {
     const id = ids[index % ids.length] as string
     const base = deckCard(id)
-    // Every third card gave nothing yet and carries three sigils; the rest have room for one more.
     const sigils: SigilId[] = index % 3 === 0 ? [...MOST_SIGILS] : index % 3 === 1 ? MOST_SIGILS.slice(0, 2) : []
     return { ...base, id: index + 1, attack: 1999 - index, health: 2000 - index, sigils, added: null }
   })
 }
 
-/** The densest map the generator makes for this stage over many seeds: the most nodes and links it can draw. */
 function worstMap(stage: number): StageMap {
   let densest = generateStage(stage, new Rng(0))
   const weight = (map: StageMap) => map.rows.flat().reduce((sum, node) => sum + 1 + node.next.length, 0)
@@ -73,11 +69,9 @@ function worstMap(stage: number): StageMap {
   return densest
 }
 
-/** A worst-case run on the densest map, partway up a real route, with any changes laid over it. */
 function worstRun(patch: Partial<RunState>): { state: RunState; path: string[] } {
   const base = createRun({ seed: 1 })
   const map = worstMap(2)
-  // Four steps up the first route, so the map shows nodes visited, here, next and ahead.
   const path: string[] = []
   let node = map.rows[0]?.[0]
   while (node && path.length < 4) {
@@ -89,7 +83,6 @@ function worstRun(patch: Partial<RunState>): { state: RunState; path: string[] }
     stage: 2,
     map,
     at: path.at(-1) ?? null,
-    // Past the starter deck choice, which a fresh run opens on.
     visit: null,
     deck: worstDeck(),
     nextCard: 41,
@@ -115,7 +108,6 @@ function withWorstScene(): string {
   return WORST_SCENE
 }
 
-/** A battle in a run carrying these items, its board set so each has something to aim at. */
 function itemBattle(
   items: ItemId[],
   rows: { board?: (string | null)[]; front?: (string | null)[]; back?: (string | null)[] },
@@ -139,7 +131,6 @@ function itemBattle(
   return { ...found, state: { ...found.state, items, visit: { ...found.state.visit, game } } }
 }
 
-/** A death card with the longest name, as the profile pin's mockup had it. */
 const SAMPLE_DEATH = deathCardId({
   name: 'final_FINAL_v2',
   cost: 1,
@@ -149,17 +140,14 @@ const SAMPLE_DEATH = deathCardId({
   sigils: ['try_catch'],
 })
 
-/** Another player's death card, under the cap. */
 const SAMPLE_RIVAL = deathCardId({ name: 'gitBlame', cost: 1, attack: 4, health: 3, art: 'Crawler', sigils: [] })
 
-/** A boss on this stage that has just brought its death card into play. */
 const haunted = (state: RunState, stage: number) =>
   state.stage === stage &&
   state.visit?.kind === 'battle' &&
   Boolean(state.visit.game.opponent.haunt?.played) &&
   state.visit.game.status === 'playing'
 
-/** Stops a seeded bot run at the first state that matches, so these follow the rules. */
 function reached(stop: (state: RunState) => boolean, dealt: RunDealt = {}): Mockup | null {
   for (let seed = 1; seed <= 120; seed++) {
     let state = createRun({ seed, ...dealt })
@@ -176,7 +164,6 @@ function reached(stop: (state: RunState) => boolean, dealt: RunDealt = {}): Mock
   return null
 }
 
-/** A run battle P03 is about to win on integrity: one left, and a Cron Job about to fall to a Sandbox. */
 function lastIntegrity(): { state: RunState; path: string[] } | null {
   const found = itemBattle([], { board: ['CronJob'], front: ['Sandbox'] })
   if (!found || found.state.visit?.kind !== 'battle') return null
@@ -184,7 +171,6 @@ function lastIntegrity(): { state: RunState; path: string[] } | null {
   return { ...found, state: { ...found.state, integrity: 1, visit: { ...found.state.visit, game } } }
 }
 
-/** An event of this scene with this choice made, its result up until the player moves on; `integrity` sets the run's first. */
 function chosen(event: string, option: number, integrity?: number): Mockup | null {
   const found = reached((s) => s.visit?.kind === 'event' && s.deck.length >= 3)
   if (!found || found.state.visit?.kind !== 'event') return null
@@ -235,7 +221,6 @@ export const MOCKUPS: Record<string, Entry> = {
     group: 'worst',
     revision: 8,
     make: () => ({
-      // Worn down, so Repair is offered beside the warming.
       ...worstRun({ visit: { kind: 'campfire', node: '4-0', boost: 'health', card: null, buffs: 0 }, integrity: 3 }),
       news: LONG_NEWS,
     }),
@@ -341,7 +326,6 @@ export const MOCKUPS: Record<string, Entry> = {
       return (
         found && {
           ...found,
-          // Straight to the summary, past the lost battle.
           state: { ...found.state, visit: null },
           over: {
             status: 'lost',
@@ -488,9 +472,8 @@ export const MOCKUPS: Record<string, Entry> = {
     make: () => {
       const found = reached((s) => s.visit?.kind === 'stones')
       if (!found) return null
-      // Only FourOhFour has a sigil to give so far, and bots rarely hold it at the stones.
       const { state } = found
-      const giver: RunCard = { id: state.nextCard, added: null, ...deckCard('FourOhFour') }
+      const giver: RunCard = { id: state.nextCard, added: null, ...deckCard(SIGIL_GIVER) }
       return { ...found, state: { ...state, nextCard: state.nextCard + 1, deck: [...state.deck, giver] } }
     },
   },
@@ -501,7 +484,6 @@ export const MOCKUPS: Record<string, Entry> = {
     make: () => {
       const found = reached((s) => s.visit?.kind === 'stones')
       if (!found) return null
-      // The starter deck carries sigils, so they're taken off to show the stones with nothing to move.
       const deck = found.state.deck.map((entry) => ({ ...entry, sigils: [] }))
       return { ...found, state: { ...found.state, deck } }
     },
@@ -513,8 +495,7 @@ export const MOCKUPS: Record<string, Entry> = {
     make: () => {
       const found = reached((s) => s.visit?.kind === 'event')
       if (!found || found.state.visit?.kind !== 'event') return null
-      // A fixed scene, since which one a seed meets changes whenever events are added.
-      return { ...found, state: { ...found.state, visit: { ...found.state.visit, event: 'stack-overflow' } } }
+      return { ...found, state: { ...found.state, visit: { ...found.state.visit, event: FIXED_EVENT_SCENE } } }
     },
   },
   'review-trial': {
@@ -536,7 +517,6 @@ export const MOCKUPS: Record<string, Entry> = {
       if (!found || found.state.visit?.kind !== 'event') return null
       const { state } = found
       const node = found.state.visit.node
-      // A second copy of the first card, so there is something to merge.
       const copy = { ...(state.deck[0] as RunCard), id: state.nextCard }
       const deck = [...state.deck, copy]
       return {
@@ -590,7 +570,6 @@ export const MOCKUPS: Record<string, Entry> = {
     group: 'reached',
     revision: 5,
     make: () => {
-      // The extra draw needs cards in the deck and room in the hand.
       const found = reached(
         (s) =>
           s.visit?.kind === 'battle' &&
@@ -773,7 +752,6 @@ export const MOCKUPS: Record<string, Entry> = {
     group: 'reached',
     revision: 7,
     make: () => {
-      // An empty table, so nothing lands on the bell and P03's turn finds the scale where it was left.
       const found = itemBattle([], {})
       if (!found || found.state.visit?.kind !== 'battle') return null
       const game: GameState = { ...found.state.visit.game, scale: 20, opponent: { ...found.state.visit.game.opponent } }
@@ -823,7 +801,6 @@ export const MOCKUPS: Record<string, Entry> = {
   won: { title: 'A cleared run', group: 'reached', revision: 7, make: () => reached((s) => s.status === 'won') },
 }
 
-/** Each of P03's run notes, over the mockup of the screen it comes up on. */
 const NOTE_SCREENS: [RunNote, string, string][] = [
   ['start', 'start', 'The starter deck choice'],
   ['map', 'map', 'The map'],
