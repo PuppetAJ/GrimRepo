@@ -11,10 +11,8 @@ import {
   type Unit,
 } from 'shared'
 
-// Fixed states for checking layouts, opened at /mockups/board/<name> in dev and test builds.
 export const FIXTURES_ON = import.meta.env.DEV || import.meta.env.VITE_TEST_HANDLE === '1'
 
-// The three sigils with the longest text, since a card carries three at most.
 export const MOST_SIGILS = (Object.keys(SIGILS) as SigilId[])
   .sort((a, b) => SIGILS[b].text.length - SIGILS[a].text.length)
   .slice(0, 3)
@@ -75,13 +73,11 @@ function worst(): GameState {
       phase: 0,
       step: 0,
     },
-    // Mid-summon, so the prompt, the marks and a lifted card all show.
     summon: { uid: hand[0]!.uid, marked: [1] },
     nextUid: 100,
   }
 }
 
-// Attack changed by the cards around it: Tech Lead beside, and Pop-up and Packet Loss opposite.
 function auras(): GameState {
   uid = 0
   const state = worst()
@@ -105,7 +101,6 @@ function auras(): GameState {
   }
 }
 
-// A normal opening deal, for checking the tables play as a battle does.
 const fresh = () => createGame({ seed: 7 })
 
 const FIXTURES: Record<string, () => GameState> = { worst, auras, fresh }
@@ -123,7 +118,6 @@ export function fixture(name: string): { name: string; state: GameState; log: st
 
 export const WORST_CARD = 'WorstCase'
 
-/** Adds the worst-case card to CARDS in dev and test builds, for the compendium. */
 export function withWorstCard(): boolean {
   if (!FIXTURES_ON) return false
   CARDS[WORST_CARD] ??= {
@@ -133,7 +127,6 @@ export function withWorstCard(): boolean {
     attack: 2000,
     health: 2000,
     cost: 4,
-    // The three with the longest descriptions.
     sigils: ['segfault', 'fork', 'bypass'],
   }
   return true

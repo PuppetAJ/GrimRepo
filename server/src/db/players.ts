@@ -9,7 +9,6 @@ import {
 } from 'shared'
 import { pool } from '../config/db.ts'
 
-/** A finished run as a profile shows it; `stage` is the index of the stage it ended on. */
 export type FinishedRun = {
   outcome: Outcome
   stage: number
@@ -20,7 +19,6 @@ export type FinishedRun = {
   playedAt: string
 }
 
-/** Runs are newest first. */
 export type RunsPage = { runs: FinishedRun[]; page: number; pages: number; total: number }
 
 export type PlayerStats = {
@@ -34,35 +32,24 @@ export type PlayerStats = {
   averageBattles: number | null
   days: { date: string; runs: number; losses: number }[]
   recent: FinishedRun[]
-  // The earliest run to reach the best score.
   best: FinishedRun | null
-  // Null for a guest or before a finished run.
   rank: number | null
-  // Boilerplate is not counted.
   favoriteCard: string | null
-  // Built from a lost run's deck; never kept for a guest or the demo account.
   deathCard: string | null
 }
 
-// Twenty keeps the stats charts a readable width.
 export const RECENT_RUNS = 20
 export const HISTORY_PAGE = 10
 
-/** A finished run's columns as a profile reads them; a forfeited run counts as lost. */
 const FINISHED = `CASE WHEN status = 'won' THEN 'win' ELSE 'loss' END AS outcome,
   stage, battles, bosses, score, forfeited, finished_at AS "playedAt"`
 type FinishedRow = Omit<FinishedRun, 'playedAt'> & { playedAt: Date }
 const finished = (run: FinishedRow): FinishedRun => ({ ...run, playedAt: run.playedAt.toISOString() })
 
-/** Every card the player placed across a run's battles. */
 export function runCardsPlayed(events: readonly RunEvent[]): Record<string, number> {
   return cardsPlayed(events.flatMap((event) => (event.type === 'battle' ? event.events : [])))
 }
 
-/**
- * Backfills run card counts at startup. Only a run under today's rules replays as it was played, so an older one
- * counts no cards.
- */
 export async function countRunCardsPlayed(): Promise<number> {
   const { rows } = await pool.query<{
     id: number
@@ -87,7 +74,6 @@ export async function countRunCardsPlayed(): Promise<number> {
   return rows.length
 }
 
-/** A page past the end returns the last page. */
 export async function playerRuns(username: string, page: number): Promise<RunsPage | null> {
   const { rows } = await pool.query<{ id: string; total: number }>(
     `SELECT u.id, COUNT(r.id)::int AS total
@@ -138,7 +124,6 @@ export async function playerStats(username: string): Promise<PlayerStats | null>
        ORDER BY finished_at DESC, id DESC LIMIT $2`,
       [player.id, RECENT_RUNS],
     ),
-    // 182 days fills the stats page's half-year activity grid.
     pool.query<{ date: string; runs: number; losses: number }>(
       `SELECT to_char(finished_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS date,
               COUNT(*)::int AS runs,
@@ -152,7 +137,6 @@ export async function playerStats(username: string): Promise<PlayerStats | null>
        ORDER BY score DESC, finished_at, id LIMIT 1`,
       [player.id],
     ),
-    // Must rank exactly as runLeaderboard() does.
     pool.query<{ rank: number }>(
       `SELECT rank FROM (
          SELECT u.id, RANK() OVER (ORDER BY MAX(r.score) DESC)::int AS rank
@@ -162,7 +146,6 @@ export async function playerStats(username: string): Promise<PlayerStats | null>
        ) ranked WHERE id = $1`,
       [player.id],
     ),
-    // Boilerplate is free, so it would top almost everyone's count.
     pool.query<{ card: string }>(
       `SELECT played.key AS card
        FROM runs, jsonb_each_text(runs.cards) AS played

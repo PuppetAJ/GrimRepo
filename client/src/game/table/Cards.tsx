@@ -22,12 +22,10 @@ type Assets = Awaited<ReturnType<typeof loadCardAssets>>
 
 export type Place = { at: 'hand'; index: number; count: number; lowered?: boolean } | { at: Row; lane: number }
 
-/** `aimable` is a card the tool in hand can reach, in the tool's amber rather than a sacrifice's red. */
 export type Look = 'plain' | 'selected' | 'marked' | 'markable' | 'aimable' | 'dim'
 
 const FLAT = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0))
 
-// Scratch objects, so the frame loop allocates nothing.
 const position = new THREE.Vector3()
 const rotation = new THREE.Quaternion()
 const roll = new THREE.Quaternion()
@@ -55,22 +53,18 @@ export function Card({
 }: {
   unit: Unit
   summoning?: boolean
-  /** Each increment shakes the card, as when an unplayable card is tried. */
   shake?: number
   place: Place
   spawn?: Vec3
   lunge?: Lunge
-  /** A move along the row, which lifts the card over the lanes between. */
   slide?: Slide
   leavingAt?: number
   leavingHow?: 'died' | 'sacrificed'
   look?: Look
   assets: Assets
-  /** `touch` is true for a finger, since a first tap only lifts a hand card. */
   onClick?: (event: ThreeEvent<MouseEvent>, touch: boolean) => void
   onHover?: (on: boolean) => void
   onHold?: (x: number, y: number, sticky?: boolean) => void
-  /** Shown as hovered, for a hand card tapped once on touch. */
   raised?: boolean
   cursor?: CursorKind
   tutorialMark?: boolean
@@ -96,7 +90,7 @@ export function Card({
   const placed = useRef(false)
   const face = faceTexture(unit, assets)
   const back = useMemo(() => backTexture(), [])
-  // Per-card materials so each can glow or fade alone; alphaTest keeps the clipped corner out of the depth buffer.
+  // alphaTest keeps the clipped corner out of the depth buffer.
   const [front, rear, content] = useMemo(
     () => [
       new THREE.MeshStandardMaterial({ roughness: 0.85, transparent: true, alphaTest: 0.5 }),
@@ -120,10 +114,8 @@ export function Card({
   rear.map = back
   content.map = words
   content.emissiveMap = glow
-  // A spawn at the deck means a draw, which starts closed and opens on the way to the hand.
   const fromDeck = Boolean(spawn && spawn[0] === DECK[0] && spawn[2] === DECK[2])
   const open = useRef(fromDeck ? 0 : 1)
-  // Once open and at rest, the body joins the shared batch and only the face stays the card's own.
   const batch = useBatch()
   const kind = kindOf(unit)
   const [settled, setSettled] = useState(!fromDeck)
@@ -160,7 +152,6 @@ export function Card({
       position.set(...local)
       camera.localToWorld(position)
       const since = (now - shook.current) / 1000
-      // Slow and wide enough to survive the easing below.
       const no = !STILL && since < 0.7 ? 0.28 * Math.sin(since * 30) * Math.exp(-since * 5) : 0
       rotation.copy(camera.quaternion).multiply(roll.setFromAxisAngle(Z, angle + no))
       scale.setScalar(size * (hovered || look === 'selected' ? 1.25 : 1))
@@ -174,27 +165,22 @@ export function Card({
     if (!STILL && lunge && now - lunge.at < LUNGE_MS) {
       const swing = Math.sin((Math.PI * (now - lunge.at)) / LUNGE_MS)
       position.z += lunge.toward * 0.4 * swing
-      // Toward the lane it strikes, half a lane over, when a sigil turns its attack aside.
       position.x += lunge.across * LANE_GAP * 0.45 * swing
     }
     const sliding = !STILL && slide !== undefined && now - slide.at < SLIDE_MS
-    // Lifted off the table in an arc while it crosses, so the move reads as one.
     if (sliding) position.y += Math.sin((Math.PI * (now - slide.at)) / SLIDE_MS) * 0.3
     const leaving = leavingAt === undefined ? 0 : Math.min(1, (now - leavingAt) / LEAVE_MS)
     const fold = THREE.MathUtils.smoothstep(leaving, 0, 0.45)
     const away = THREE.MathUtils.smoothstep(leaving, 0.4, 1)
-    // With reduced motion a leaving card folds shut where it stands instead of flying off.
     if (!STILL && leavingHow === 'sacrificed') {
       position.y += away * 0.9
       rotation.multiply(roll.setFromAxisAngle(Z, away * 1.6))
       scale.multiplyScalar(1 - away * 0.95)
     } else if (!STILL) {
-      // A dead card slides toward its owner's side of the table.
       position.z += away * 1.6 * (place.at === 'board' ? 1 : -1)
       position.y += Math.sin(away * Math.PI) * 0.12
       scale.multiplyScalar(1 - THREE.MathUtils.smoothstep(away, 0.5, 1) * 0.95)
     }
-    // The plastic can't fade, so a gone card is hidden instead.
     card.visible = leaving < 1
 
     open.current = leavingAt === undefined ? THREE.MathUtils.damp(open.current, 1, 9, delta) : 1 - fold
@@ -231,7 +217,6 @@ export function Card({
             : hovered && onClick
               ? rest + 0.15
               : rest
-    // Squared so the glow dies before the content fades as the disk closes.
     content.emissiveIntensity = glow * open.current * open.current
     content.emissive.set(
       look === 'marked' || look === 'markable' ? '#ff4040' : look === 'aimable' ? '#ffb454' : '#ffffff',
@@ -240,19 +225,16 @@ export function Card({
     content.color.setScalar(look === 'dim' ? 0.45 : 1)
     front.opacity = rear.opacity = 1 - away
     content.opacity = (1 - away) * open.current
-    // Raising alphaTest with the fade discards the fading content along with the clear ground.
     content.alphaTest = Math.max(0.001, content.opacity * 0.5)
   })
 
   const handlers = {
     onClick: (event: ThreeEvent<MouseEvent>) => {
       event.stopPropagation()
-      // A hold was for reading, not playing.
       if (holding()) return
       onClick?.(event, touched.current)
     },
     onPointerDown: (event: ThreeEvent<PointerEvent>) => {
-      // A card in front, as one in the hand is, keeps a hold from reading the card behind it.
       event.stopPropagation()
       touched.current = event.pointerType === 'touch'
       if (!onHold || (!touched.current && event.button !== 0)) return
@@ -261,7 +243,6 @@ export function Card({
     },
     onPointerUp: endHold,
     onPointerCancel: endHold,
-    // A right-click magnifies the card as a hold does.
     onContextMenu: (event: ThreeEvent<MouseEvent>) => {
       event.stopPropagation()
       onHold?.(event.nativeEvent.clientX, event.nativeEvent.clientY, true)
@@ -275,14 +256,12 @@ export function Card({
       setPointed(false)
       onHover?.(false)
     },
-    // Stop here too, or whatever lies behind the card is hovered again on the next move.
     onPointerMove: (event: ThreeEvent<PointerEvent>) => event.stopPropagation(),
   }
 
   return (
     <group ref={mesh} name={`card-${unit.uid}`} {...handlers}>
       {batched ? (
-        // Select tags it for the card glow; a moving card stays untagged until it settles.
         <Select enabled>
           <mesh geometry={facePlanes().content} material={content} />
         </Select>

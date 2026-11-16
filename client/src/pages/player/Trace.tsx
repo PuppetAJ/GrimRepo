@@ -14,7 +14,6 @@ export function Trace({ run }: { run: Run }) {
     ? ['at you.abandon()', `at ${stage.toLowerCase()}.map (${run.battles} won)`]
     : ['at integrity.check() -> 0', `at ${stage.toLowerCase()}.battle(${run.battles + 1})`, 'at deck.synergy() -> null']
   return (
-    // The margins leave room for the corruption outside the frame.
     <div className="relative mx-6 mt-4 mb-5">
       <FrameDamage frame="trace" />
       <Corruption dense fast cols={12} rows={2} corner="bottom-right" seed={43} className="right-0 bottom-full" />

@@ -8,9 +8,7 @@ import { defineConfig, type Plugin } from 'vite'
 // The root .env sets both ports, so each worktree's dev servers keep to their own; a variable already set wins.
 try {
   process.loadEnvFile(fileURLToPath(new URL('../.env', import.meta.url)))
-} catch {
-  // No .env, as on CI and Railway.
-}
+} catch {}
 const api = `http://localhost:${process.env['API_PORT'] ?? process.env['PORT'] ?? 3001}`
 const port = Number(new URL(process.env['APP_URL'] ?? 'http://localhost:3000').port || 3000)
 
@@ -25,14 +23,10 @@ const viewerSlash: Plugin = {
   },
 }
 
-// The /art editor saves its art as PNGs into src/game/art; development only.
 const ART_DIR = fileURLToPath(new URL('./src/game/art/', import.meta.url))
 const ART_SIZE = { cards: 24, icons: 8, p03: 136 } as const
-// Art that isn't square, by its height.
 const ART_HEIGHT: Partial<Record<keyof typeof ART_SIZE, number>> = { p03: 105 }
-// Must match the art editor's own sizes, or a save is refused, as the logs' once were.
 const LARGER_ICONS: Record<string, number> = { fire: 16, logs: 16 }
-// An animation's frames sit side by side in one strip, up to this many.
 const ANIMATED = new Set(['fire'])
 const MOST_FRAMES = 16
 const artEditor: Plugin = {
@@ -53,7 +47,6 @@ const artEditor: Plugin = {
         }
         const { kind, id, png } = sent
         if (kind !== 'cards' && kind !== 'icons' && kind !== 'p03') return refuse('no such kind of art')
-        // Hyphens too, for the type icons such as type-bot.
         if (typeof id !== 'string' || !/^[A-Za-z0-9_-]+$/.test(id)) return refuse('no such art')
         if (typeof png !== 'string') return refuse('no image')
         const bytes = Buffer.from(png, 'base64')
@@ -82,19 +75,15 @@ const artEditor: Plugin = {
   },
 }
 
-// Gzipped KB each chunk may reach before the build fails.
 const BUDGET = { entry: 175, three: 400, charts: 120, other: 40 }
 
 const budget: Plugin = {
   name: 'bundle-budget',
-  // Browser bundles only; the prerender's server build never reaches a visitor.
   apply: (_config, { command, isSsrBuild }) => command === 'build' && !isSsrBuild,
   generateBundle(_options, bundle) {
     const over = Object.values(bundle).flatMap((chunk) => {
       if (chunk.type !== 'chunk') return []
-      // The table and the compendium share one three.js chunk, which gets the 3D budget.
       const three = chunk.moduleIds.some((id) => id.includes('/node_modules/three/'))
-      // Recharts loads only on a player's page, below the fold, so it gets its own budget.
       const charts = chunk.moduleIds.some((id) => id.includes('/node_modules/recharts/'))
       const limit = chunk.isEntry ? BUDGET.entry : three ? BUDGET.three : charts ? BUDGET.charts : BUDGET.other
       const size = gzipSync(chunk.code).length / 1024
@@ -107,26 +96,21 @@ const budget: Plugin = {
 export default defineConfig({
   plugins: [react(), tailwindcss(), viewerSlash, artEditor, budget],
 
-  // Must match the "@/*" alias in tsconfig.json, which shadcn/ui's components use.
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
 
-  // 3D models are not on Vite's default asset list.
   assetsInclude: ['**/*.glb', '**/*.gltf'],
 
   server: {
     port,
     // Another worktree's server on the same port would otherwise push this one to the next free port, away from APP_URL.
     strictPort: true,
-    // Same origin in development, so cookies behave as they will in production.
     proxy: { '/api': api, '/health': api },
   },
 
   build: {
-    // The repository is public, so source maps give nothing away and make production traces readable.
     sourcemap: true,
-    // three makes the table's chunk large, but only the table loads it; the budget above guards sizes.
     chunkSizeWarningLimit: 1400,
   },
 })

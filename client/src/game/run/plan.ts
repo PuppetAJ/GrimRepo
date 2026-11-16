@@ -1,6 +1,5 @@
 import { useCallback, useState } from 'react'
 
-/** A pen stroke as x, y pairs in fractions of the map, so it stays put when the map is resized. */
 export type Stroke = number[]
 export type Plan = { strokes: Stroke[]; marks: string[] }
 
@@ -20,11 +19,9 @@ function load(key: string): Plan {
   }
 }
 
-/** A route planned on one stage's map, kept in this browser only; each run and stage has its own. */
 export function usePlan(seed: number, stage: number) {
   const key = keyFor(seed, stage)
   const [state, setState] = useState(() => ({ key, plan: load(key) }))
-  // A new stage starts a new plan.
   const plan = state.key === key ? state.plan : load(key)
   const save = useCallback(
     (next: Plan) => {
@@ -32,7 +29,6 @@ export function usePlan(seed: number, stage: number) {
       try {
         localStorage.setItem(key, JSON.stringify(next))
       } catch {
-        // Storage can be refused in a private window; the plan then lasts until the page closes.
       }
     },
     [key],

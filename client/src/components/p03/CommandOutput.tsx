@@ -24,7 +24,6 @@ export function Art({ id, size = 'size-24' }: { id: string; size?: string }) {
   )
 }
 
-/** A sigil's icon and name, then what it does. */
 export function SigilLine({ id }: { id: SigilId }) {
   return (
     <p>

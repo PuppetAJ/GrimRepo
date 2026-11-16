@@ -13,10 +13,8 @@ import { ReadableCard } from './CardList.tsx'
 import { CardSlot } from './CardSlot.tsx'
 import { LeaveButton, ScreenBar } from './Screen.tsx'
 
-/** The Package Registry: cards for bytes, as many as the player can afford, each once. */
 export function Shop({ run }: { run: RunReady }) {
   const [removing, setRemoving] = useState<number | null>(null)
-  // The card just uninstalled, kept to show it going.
   const [gone, setGone] = useState<Unit | null>(null)
   const visit = run.state.visit
   if (visit?.kind !== 'shop') return null
@@ -32,7 +30,6 @@ export function Shop({ run }: { run: RunReady }) {
           {bytes === 1 ? 'byte' : 'bytes'}.
         </p>
       </ScreenBar>
-      {/* Three sections alike: a box, a heading on the left, and what's for sale centered under it. */}
       <Box className="flex flex-col gap-3">
         <h3 className="text-p03">Packages, for your deck</h3>
         <ul className="flex flex-wrap justify-center gap-6">
@@ -149,7 +146,6 @@ export function Shop({ run }: { run: RunReady }) {
   )
 }
 
-/** The uninstall's slot once used: the card it took shrinks away, then the slot turns over to a crossed-out circle. */
 function UsedSlot({ gone }: { gone: Unit | null }) {
   const face = 'absolute inset-0 grid place-items-center rounded-md border-2 border-dashed border-p03-edge text-p03-dim'
   return (
@@ -159,7 +155,6 @@ function UsedSlot({ gone }: { gone: Unit | null }) {
       data-uninstalled
       className="relative aspect-[5/7] w-24 self-center sm:w-28"
     >
-      {/* Just used, the + turns over to the cross; on a later visit to this screen, the cross is already up. */}
       {gone ? (
         <m.span {...turnAway(0.45)} className={face}>
           <Plus aria-hidden className="size-10" />

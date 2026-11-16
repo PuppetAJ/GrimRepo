@@ -7,13 +7,11 @@ const value = (unit: Unit): number => unit.attack * 2 + unit.health
 
 export type Strategy = 'greedy' | 'lanes'
 
-/** A lane P03 has walled off with a zero-attack card. */
 export const deadLane = (state: GameState, lane: number): boolean => {
   const wall = state.opponent.front[lane]
   return Boolean(wall && wall.attack === 0)
 }
 
-/** 'lanes' plays the wall exploit, leaving walled lanes alone; greedy fills threatened lanes first. */
 function bestLane(state: GameState, allowed: number[], strategy: Strategy): number | undefined {
   if (strategy === 'lanes') {
     const open = allowed.filter((lane) => !deadLane(state, lane))
@@ -24,7 +22,6 @@ function bestLane(state: GameState, allowed: number[], strategy: Strategy): numb
   return threatened[0] ?? allowed[0]
 }
 
-// P03's sigils worth pulling with the Pliers.
 const DANGEROUS: SigilId[] = [
   'fatal_error',
   'rollback',
@@ -36,7 +33,6 @@ const DANGEROUS: SigilId[] = [
   'hot_reload',
 ]
 
-/** An item worth using now, if any: each only when it clearly pays. */
 function itemMove(state: GameState, legal: Action[]): Action | undefined {
   const uses = legal.filter((action): action is Extract<Action, { type: 'use' }> => action.type === 'use')
   const itemOf = (action: Extract<Action, { type: 'use' }>) => state.items?.[action.slot]
@@ -62,15 +58,12 @@ function itemMove(state: GameState, legal: Action[]): Action | undefined {
   )
 }
 
-/** Deterministic, so a seed and strategy always make the same game. */
 export function nextBotAction(state: GameState, strategy: Strategy = 'greedy'): Action {
   const legal = legalActions(state)
   const allowed = (type: Action['type']) => legal.filter((action) => action.type === type)
 
-  // A catch-up draw is always worth taking, once the turn's own draw is done.
   if (state.drawn && allowed('draw').length) return { type: 'draw', from: 'deck' }
   if (allowed('draw').length) {
-    // Boilerplate only when something in hand can't be paid for yet.
     const short = state.player.hand.some((unit) => costOf(unit) > units(state.player.board).length)
     const hasFuel = state.player.hand.some((unit) => unit.card === BOILERPLATE)
     const deck = allowed('draw').some((action) => action.type === 'draw' && action.from === 'deck')
@@ -110,28 +103,24 @@ export function nextBotAction(state: GameState, strategy: Strategy = 'greedy'): 
       if (empty.length) return { type: 'select', uid: unit.uid }
       continue
     }
-    // Only trade up: what is sacrificed must be worth less than what arrives.
     let paid = 0
     let given = 0
     let freed = false
     let debts = 0
     for (const victim of [...board].sort((a, b) => value(a) - value(b))) {
       if (paid >= cost) break
-      // A debt that would lose the game can't be taken on.
       if (indebted(victim) && !canOwe(state, debts + 1)) continue
       if (indebted(victim)) debts += 1
       paid += worthOf(victim)
       given += value(victim)
       freed ||= !victim.sigils.includes('try_catch')
     }
-    // A try/catch card survives its sacrifice, so the new card needs a free lane or another sacrifice to make one.
     if (paid >= cost && given < value(unit) && (empty.length || freed)) return { type: 'select', uid: unit.uid }
   }
 
   return { type: 'ringBell' }
 }
 
-/** Stops at limit in case the bot ever loops. */
 export function playOut(
   state: GameState,
   apply: (s: GameState, a: Action) => GameState,

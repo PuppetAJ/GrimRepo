@@ -3,7 +3,6 @@ import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import type { Target } from '../reading.ts'
 
-/** Follows a held finger or mouse from card to card; a `sticky` one, from a right-click, stays put until the next press. */
 export function HeldReader({
   on,
   sticky,
@@ -40,7 +39,6 @@ export function HeldReader({
       const box = gl.domElement.getBoundingClientRect()
       pointer.set(((x - box.left) / box.width) * 2 - 1, -((y - box.top) / box.height) * 2 + 1)
       raycaster.setFromCamera(pointer, camera)
-      // Relies on cards and screens being groups named card-<uid> and screen-<name>.
       let target: Target | null = null
       for (const hit of raycaster.intersectObjects(scene.children, true)) {
         let object: THREE.Object3D | null = hit.object
@@ -54,7 +52,6 @@ export function HeldReader({
       latest.current.onMove(target, x, y)
     }
     const touchMove = (event: TouchEvent) => {
-      // Keeps the page still under a held finger.
       event.preventDefault()
       const touch = event.touches[0]
       if (touch) at(touch.clientX, touch.clientY)

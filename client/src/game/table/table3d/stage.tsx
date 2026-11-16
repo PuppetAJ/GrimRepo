@@ -7,7 +7,6 @@ import { STILL } from '../factory/constants.ts'
 import { BOARD_CENTER, CAMERA, FOV, type CameraView } from '../layout.ts'
 import { MOOD } from '../mood.ts'
 
-/** A view's field of view, widened if need be so `fit` (a tangent of the half-width) stays in view at this aspect. */
 export const fitFov = (fov: number, fit: number | undefined, aspect: number) =>
   fit ? Math.max(fov, THREE.MathUtils.radToDeg(2 * Math.atan(fit / aspect))) : fov
 
@@ -17,10 +16,6 @@ const easeInOut = (t: number) => (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 /
 
 type Glide = { position: THREE.Vector3; target: THREE.Vector3; fov: number; at: number; length: number }
 
-/**
- * Glides the camera to a view, easing in and out; `from` is where it starts, so it glides in from another view.
- * Arriving from another scene takes `arrive` seconds; switching views within one, `glide`.
- */
 export function CameraRig({
   view,
   from,
@@ -32,7 +27,6 @@ export function CameraRig({
   from?: CameraView
   glide?: number
   arrive?: number
-  /** The tangent of the half-width to keep in view: on a narrow screen the lens widens until it fits. */
   fit?: number
 }) {
   const target = useRef(new THREE.Vector3(...CAMERA[from ?? view].target))
@@ -42,7 +36,6 @@ export function CameraRig({
     const lens = camera as THREE.PerspectiveCamera
     const goal = CAMERA[view]
     const fov = fitFov(goal.fov ?? FOV, fit, lens.aspect)
-    // With nowhere to glide from, a scene starts in its view.
     if (shown.current === null && !from) {
       camera.position.set(...goal.position)
       target.current.set(...goal.target)
@@ -60,11 +53,9 @@ export function CameraRig({
       shown.current = view
     }
     const [x, y, z] = goal.position
-    // The camera leans with the pointer; looking down at the board only a little, so the lanes stay nearly square.
     const sway = view === 'board' || view === 'queue' ? 0.25 : 1
     const now = gliding.current
     const t = now && now.length > 0 ? Math.min(1, (clock.elapsedTime - now.at) / now.length) : 1
-    // With reduced motion the camera jumps between views and doesn't follow the pointer.
     if (STILL) {
       camera.position.set(x, y, z)
       target.current.set(...goal.target)
@@ -91,7 +82,6 @@ export function CameraRig({
   return null
 }
 
-/** Draws everything for the first frames, off-screen too, so no shader compiles mid-turn. */
 export function WarmUp({ onWarm }: { onWarm: () => void }) {
   const [warm, setWarm] = useState(false)
   const frames = useRef(0)
@@ -100,7 +90,6 @@ export function WarmUp({ onWarm }: { onWarm: () => void }) {
     canvas.width = canvas.height = 4
     const map = new THREE.CanvasTexture(canvas)
     map.colorSpace = THREE.SRGBColorSpace
-    // Matches Popup's material so the shader built here is the one it uses.
     return new THREE.SpriteMaterial({ map, transparent: true, depthTest: false, fog: false, opacity: 0 })
   }, [])
   useEffect(
@@ -131,7 +120,6 @@ export function WarmUp({ onWarm }: { onWarm: () => void }) {
   return warm ? null : <sprite material={material} position={BOARD_CENTER} scale={0.01} />
 }
 
-/** Rechecks what's hovered on returning to the tab, since the pointer never moved. */
 export function CursorSync() {
   const { gl, events } = useThree()
   useEffect(() => {
@@ -158,7 +146,6 @@ export function Exposure() {
   return null
 }
 
-/** Mounts once the table's suspended assets load; the room and P03 may still be arriving. */
 export function Loaded({ onLoad }: { onLoad: (loaded: boolean) => void }) {
   useEffect(() => onLoad(true), [onLoad])
   return null

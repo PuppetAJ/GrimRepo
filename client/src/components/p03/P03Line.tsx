@@ -1,7 +1,6 @@
 import type { HTMLAttributes, ReactNode } from 'react'
 import { Glass } from './Glass.tsx'
 
-/** `rest` takes a page's rise in, as the parts around it do. */
 export function P03Line({ children, ...rest }: { children: ReactNode } & HTMLAttributes<HTMLParagraphElement>) {
   return (
     <p

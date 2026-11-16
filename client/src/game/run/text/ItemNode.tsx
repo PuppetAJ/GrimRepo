@@ -5,7 +5,6 @@ import type { RunReady } from '../useRun.ts'
 import { LeaveButton, ScreenBar } from './Screen.tsx'
 import { Sentences } from '../../text/Sentences.tsx'
 
-/** A tool rack: take one of three items, giving one up when all the slots are full. */
 export function ItemNode({ run }: { run: RunReady }) {
   const [drop, setDrop] = useState<number | null>(null)
   const visit = run.state.visit
@@ -31,7 +30,6 @@ export function ItemNode({ run }: { run: RunReady }) {
           <p id="give-up" className="text-p03">
             Give up
           </p>
-          {/* A box to pick, and pick again to put back. */}
           <div className="flex flex-wrap justify-center gap-3">
             {held.map((item, slot) => (
               <button
@@ -50,7 +48,6 @@ export function ItemNode({ run }: { run: RunReady }) {
           </div>
         </div>
       ) : null}
-      {/* Every tool the same size, as tall as the longest description. */}
       <ul className="flex flex-wrap justify-center gap-6">
         {visit.offer.map((item, index) => (
           <li key={item} className="flex w-44 shrink-0">

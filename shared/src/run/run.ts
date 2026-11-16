@@ -24,7 +24,6 @@ import {
 
 export type Rarity = 'common' | 'uncommon' | 'rare'
 
-/** The decks a run can start with, chosen as its first action: a core, and a card taken from each of its packs. */
 export const STARTER_DECKS: Record<
   string,
   { name: string; about: string; core: string[]; pack: Record<Rarity, string[]> }
@@ -61,36 +60,27 @@ export const STARTER_DECKS: Record<
   },
 }
 
-/** How many packs a starter deck opens, one card taken from each. */
 export const PACKS = 2
-/** How many cards each starter pack holds. */
 export const PACK_SIZE = 3
 
-/** A starter pack's cards, at the plain odds, since the pity offset would hold a rare at 0. */
 const openPack = (state: RunState, rng: Rng, deck: string): string[] =>
   offerCards(state, rng, PACK_SIZE, (STARTER_DECKS[deck] as (typeof STARTER_DECKS)[string]).pack, { pity: false })
 
-/** What a card costs at a shop, in bytes, by tier. */
 const PRICE: Record<string, number> = { E: 3, D: 5, C: 6, B: 12, A: 15 }
 
-/** How many different tools a shop sells. */
 const SHOP_TOOLS = 2
 
-/** What removing a card at a shop costs, in bytes; once a visit. */
 export const UNINSTALL_PRICE = 4
 
-/** A code review's bar for each trial, over three cards drawn from the deck. */
 export const TRIALS: Record<Trial, { bar: number; of: (entry: RunCard) => number }> = {
   attack: { bar: 6, of: (entry) => entry.attack },
   health: { bar: 10, of: (entry) => entry.health },
   sigils: { bar: 2, of: (entry) => entry.sigils.length },
 }
 
-/** Cards held twice or more, which a merge request can fold together. */
 const duplicated = (state: RunState, entry: RunCard) =>
   state.deck.some((other) => other.id !== entry.id && other.card === entry.card)
 
-/** The traits a face-down card choice can offer, each the commons that have it. */
 export const PICKS: Record<Pick, { label: string; fits: (id: string) => boolean }> = {
   free: { label: 'Costs nothing', fits: (id) => card(id).cost === 0 },
   costly: { label: 'Costs 1 or more', fits: (id) => card(id).cost >= 1 },
@@ -100,40 +90,31 @@ export const PICKS: Record<Pick, { label: string; fits: (id: string) => boolean 
 }
 const OFFER_SIZE = 3
 const MAX_BUFFS = 2
-/** The chance that a second buff at the same campfire burns the card. */
 const BURN_CHANCE = 0.5
 
-// Tiers A and B are rares, offered after a boss; only B also turns up, rarely, at card choices.
 const isRare = (id: string) => ['A', 'B'].includes(card(id).tier)
 export const COMMONS = PLAYER_DECK.filter((id) => !isRare(id))
 const RARES = PLAYER_DECK.filter(isRare)
 
-/** What a card choice draws from for each rarity. */
 export const CHOICE_POOLS: Record<Rarity, string[]> = {
   common: PLAYER_DECK.filter((id) => ['E', 'D'].includes(card(id).tier)),
   uncommon: PLAYER_DECK.filter((id) => card(id).tier === 'C'),
   rare: PLAYER_DECK.filter((id) => card(id).tier === 'B'),
 }
 
-/** Slay the Spire's odds, in percent, for each card offered: 3 rare and 37 uncommon, the rest common. */
 const RARE_PERCENT = 3
 const UNCOMMON_PERCENT = 37
-/** Each card's odds in a starter pack, which rolls without the pity offset, in percent. */
 export const PACK_ODDS: Record<Rarity, number> = {
   common: 100 - RARE_PERCENT - UNCOMMON_PERCENT,
   uncommon: UNCOMMON_PERCENT,
   rare: RARE_PERCENT,
 }
-/** The pity offset added to the rare odds: it starts below 0, grows with each common and resets with a rare. */
 export const PITY_START = -5
 const PITY_CAP = 40
 
-/** What a campfire's repair restores. */
 export const REPAIR = 5
-/** What beating a stage's boss restores, before the next stage. */
 export const BOSS_REPAIR = 5
 
-/** Rolls one offered card's rarity; with `pity` the offset counts, and moves. */
 function rollRarity(state: RunState, rng: Rng, pity: boolean): Rarity {
   const roll = rng.int(0, 99)
   const rare = Math.max(0, RARE_PERCENT + (pity ? state.pity : 0))
@@ -144,7 +125,6 @@ function rollRarity(state: RunState, rng: Rng, pity: boolean): Rarity {
   return rarity
 }
 
-/** Cards to offer, of rolled rarities, none twice while the pool allows. */
 function offerCards(
   state: RunState,
   rng: Rng,
@@ -175,10 +155,8 @@ const toDeckCard = ({ card: id, attack, health, sigils }: RunCard): DeckCard => 
   sigils: [...sigils],
 })
 
-/** What the server deals a run as it starts: the player's own death card and another player's. */
 export type RunDealt = { death?: string | null; rival?: { card: string; by: string } | null }
 
-/** A malformed death card, or another player's over the cap, is ignored. */
 export function createRun({ seed, death = null, rival = null }: { seed: number } & RunDealt): RunState {
   const rng = new Rng(seed >>> 0)
   const state: RunState = {
@@ -188,7 +166,6 @@ export function createRun({ seed, death = null, rival = null }: { seed: number }
     stage: 0,
     map: generateStage(0, rng),
     at: null,
-    // The run's first action chooses its starter deck.
     visit: { kind: 'start' },
     deck: [],
     nextCard: 1,
@@ -204,11 +181,9 @@ export function createRun({ seed, death = null, rival = null }: { seed: number }
   return state
 }
 
-/** Visits the player may walk out of at any time, by leaving or by heading for the next node. */
 const WALK_OUT: readonly Visit['kind'][] = ['campfire', 'stones', 'lint', 'shop', 'fuse', 'item']
 const canWalkOut = (visit: Visit | null) => visit !== null && WALK_OUT.includes(visit.kind)
 
-/** The node ids the player can move to next; none while a node must still be resolved. */
 export function reachable(state: RunState): string[] {
   if (state.status !== 'playing' || (state.visit && !canWalkOut(state.visit))) return []
   if (state.at === null) return (state.map.rows[0] ?? []).map((node) => node.id)
@@ -238,7 +213,6 @@ function enter(state: RunState, rng: Rng, node: MapNode): Visit {
         const picks = (Object.keys(PICKS) as Pick[]).filter((pick) => COMMONS.some(PICKS[pick].fits))
         return { kind: 'blind', node: node.id, picks: rng.shuffle(picks).slice(0, OFFER_SIZE) }
       }
-      // The death card takes one of the three places at the run's first card choice.
       if (state.death && !state.death.skipped && !state.death.offered) {
         state.death.offered = true
         const offer = [state.death.card, ...offerCards(state, rng, OFFER_SIZE - 1, CHOICE_POOLS)]
@@ -246,11 +220,8 @@ function enter(state: RunState, rng: Rng, node: MapNode): Visit {
       }
       return { kind: 'card', node: node.id, offer: offerCards(state, rng, OFFER_SIZE, CHOICE_POOLS) }
     case 'shop': {
-      // Two commons and a rare, priced by tier.
       const cards = [...rng.shuffle(COMMONS).slice(0, 2), ...rng.shuffle(RARES).slice(0, 1)]
       const offer = cards.map((id) => ({ card: id, price: PRICE[card(id).tier] ?? 10 }))
-      // Now and then a tool too; Scissors are found nowhere else.
-      // Two tools too; Scissors are found nowhere else.
       const tools = rng
         .shuffle<ItemId>(['scissors', ...FOUND_ITEMS])
         .slice(0, SHOP_TOOLS)
@@ -268,7 +239,6 @@ function enter(state: RunState, rng: Rng, node: MapNode): Visit {
   }
 }
 
-/** The Staging boss brings another player's death card; the last boss brings the player's own, left out or not. */
 function haunting(state: RunState): { card: string; by: string | null } | null {
   if (state.stage === 1 && state.rival) return { card: state.rival.card, by: state.rival.by }
   if (state.stage === STAGES.length - 1 && state.death) return { card: state.death.card, by: null }
@@ -280,7 +250,6 @@ function remove(state: RunState, target: RunCard, events: RunEvent[]): void {
   events.push({ type: 'removed', card: target })
 }
 
-/** Sigils a card can't hold together: with Fork's two lanes and Broadcast's three, one would do nothing. */
 const CLASHES: [SigilId, SigilId][] = [['fork', 'broadcast']]
 const clashes = (sigils: SigilId[], sigil: SigilId): boolean =>
   CLASHES.some(([one, other]) => (sigil === one && sigils.includes(other)) || (sigil === other && sigils.includes(one)))
@@ -300,11 +269,8 @@ function resolve(state: RunState, rng: Rng, effect: Effect, events: RunEvent[]):
     state.deck.push(added)
     events.push({ type: 'added', card: added })
   } else if (effect.type === 'removeCard') {
-    // A run never loses its last card.
     if (state.deck.length > 1) remove(state, rng.pick(state.deck), events)
-  } else if (effect.type === 'lint' || effect.type === 'fuse') {
-    // The caller opens the linter or the merge request, since it knows the node.
-  } else if (effect.type === 'item') {
+  } else if (effect.type === 'lint' || effect.type === 'fuse') {} else if (effect.type === 'item') {
     if (state.items.length < ITEM_SLOTS) {
       const found = rng.pick(FOUND_ITEMS)
       state.items.push(found)
@@ -328,7 +294,6 @@ function resolve(state: RunState, rng: Rng, effect: Effect, events: RunEvent[]):
       events.push({ type: 'added', card: added })
     }
   } else if (effect.type === 'duplicate') {
-    // A copy keeps the card's buffs and sigils, as a fork would.
     const source = rng.pick(state.deck)
     const copy = { ...source, id: state.nextCard, sigils: [...source.sigils] }
     state.nextCard += 1
@@ -350,7 +315,6 @@ function end(state: RunState, outcome: 'win' | 'loss', events: RunEvent[], integ
   events.push({ type: 'runOver', outcome, ...(integrity ? { integrity } : {}) })
 }
 
-/** Counts a won battle; beating the last boss wins the run. */
 function won(state: RunState, visit: Extract<Visit, { kind: 'battle' }>, events: RunEvent[]): void {
   state.record.battles += 1
   const overkill = Math.max(0, visit.game.scale - TIP)
@@ -372,7 +336,6 @@ function step(state: RunState, rng: Rng, action: RunAction, events: RunEvent[]):
 
   switch (action.type) {
     case 'go': {
-      // Heading on from a node that can be left leaves it, as its Leave button would.
       if (visit && !canWalkOut(visit)) return 'Finish this node first'
       if (!reachable(state).includes(action.node)) return 'That node is not reachable from here'
       const node = findNode(state.map, action.node) as MapNode
@@ -525,7 +488,6 @@ function step(state: RunState, rng: Rng, action: RunAction, events: RunEvent[]):
             entry.id !== kept.id && entry.card === kept.card && (action.with === undefined || entry.id === action.with),
         )
       if (!kept || !other) return 'That card has no copy to merge with'
-      // Stats add up and sigils join, three at most; the cost stays the card's own.
       kept.attack += other.attack
       kept.health += other.health
       kept.sigils = [...new Set([...kept.sigils, ...other.sigils])].slice(0, MAX_SIGILS)
@@ -541,7 +503,6 @@ function step(state: RunState, rng: Rng, action: RunAction, events: RunEvent[]):
       if (!item) return 'No such item'
       let dropped: ItemId | undefined
       if (state.items.length >= ITEM_SLOTS) {
-        // A full kit gives up one item for the new one.
         dropped = action.drop === undefined ? undefined : state.items[action.drop]
         if (!dropped) return 'Choose an item to give up'
         state.items = state.items.filter((_, index) => index !== action.drop)
@@ -569,7 +530,6 @@ function step(state: RunState, rng: Rng, action: RunAction, events: RunEvent[]):
       if (state.bytes < UNINSTALL_PRICE) return 'Not enough bytes'
       const target = inDeck(action.card)
       if (!target) return 'That card is not in the deck'
-      // A run never loses its last card.
       if (state.deck.length <= 1) return 'The deck needs at least one card'
       state.bytes -= UNINSTALL_PRICE
       visit.uninstalled = true
@@ -582,7 +542,6 @@ function step(state: RunState, rng: Rng, action: RunAction, events: RunEvent[]):
       const target = inDeck(action.card)
       if (!target?.sigils.includes(action.sigil)) return 'That card does not have that sigil'
       target.sigils = target.sigils.filter((sigil) => sigil !== action.sigil)
-      // A card whose added sigil is deleted may gain another.
       if (target.added === action.sigil) target.added = null
       events.push({ type: 'stripped', card: target, sigil: action.sigil })
       state.visit = null
@@ -594,7 +553,6 @@ function step(state: RunState, rng: Rng, action: RunAction, events: RunEvent[]):
         return
       }
       if (visit?.kind !== 'battle' || visit.game.status !== 'won') return 'There is nothing to leave'
-      // The items not used in the battle come back out of it.
       state.items = [...(visit.game.items ?? [])]
       state.visit =
         findNode(state.map, visit.node)?.kind === 'boss'
@@ -606,7 +564,6 @@ function step(state: RunState, rng: Rng, action: RunAction, events: RunEvent[]):
   return 'Unknown action'
 }
 
-/** Never mutates the given state. */
 export function applyRun(current: RunState, action: RunAction): RunResult {
   if (current.status !== 'playing') return fail('The run is over')
   const state = structuredClone(current)
@@ -687,7 +644,6 @@ export function legalRunActions(state: RunState): RunAction[] {
     }
     case 'stones': {
       const actions: RunAction[] = [{ type: 'leave' }]
-      // Any card may give, a gained sigil included: it is sacrificed, so nothing stacks. Only the taker is limited.
       for (const from of state.deck) {
         for (const sigil of from.sigils)
           for (const to of state.deck)
@@ -701,7 +657,6 @@ export function legalRunActions(state: RunState): RunAction[] {
 
 export type RunReplay = { ok: true; state: RunState; events: RunEvent[] } | { ok: false; index: number; reason: string }
 
-/** Any illegal action invalidates the whole record. */
 export function replayRun(seed: number, actions: readonly RunAction[], dealt: RunDealt = {}): RunReplay {
   let state = createRun({ seed, ...dealt })
   const events: RunEvent[] = []

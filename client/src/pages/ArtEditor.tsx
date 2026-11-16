@@ -6,10 +6,8 @@ import { FIRE, LOGS, LOGS_OUTLINE } from '../game/run/text/Fire.tsx'
 import { NotFound } from './NotFound.tsx'
 
 type Kind = 'cards' | 'icons' | 'p03'
-/** `size` and `height` override the kind's; `frames` marks an animation strip. */
 type Item = { kind: Kind; id: string; name: string; size?: number; height?: number; frames?: boolean }
 
-/** The most frames an animation holds. */
 const MOST_FRAMES = 16
 
 const SIZE: Record<Kind, number> = { cards: 24, icons: 8, p03: 136 }
@@ -17,7 +15,6 @@ const CELL: Record<Kind, number> = { cards: 18, icons: 44, p03: 6 }
 const HEIGHT: Partial<Record<Kind, number>> = { p03: 105 }
 
 const ITEMS: Item[] = [
-  // The worst-case card is a layout test with no art of its own.
   ...Object.values(CARDS)
     .filter((card) => card.id !== WORST_CARD)
     .map((card): Item => ({ kind: 'cards', id: card.id, name: card.name })),
@@ -33,11 +30,9 @@ const ITEMS: Item[] = [
   { kind: 'icons', id: 'fire', name: 'Fire (16 × 16, animated)', size: 16, frames: true },
   { kind: 'icons', id: 'logs', name: 'Campfire logs (16 × 16)', size: 16 },
   { kind: 'icons', id: 'death', name: "Death card's skull" },
-  // P03's faces sit on its screen, so keep the screen where it is.
   { kind: 'p03', id: 'frame', name: "P03's head, around his face (136 × 105)" },
 ]
 
-/** Art drafted for Adrian to redraw, or that he flagged for edits; each shows under Needs your look until ticked off. */
 const DRAFTS: string[] = []
 const LOOKED_KEY = 'grimrepo:art-looked'
 
@@ -54,7 +49,6 @@ const heightOf = (item: Item) => item.height ?? HEIGHT[item.kind] ?? sizeOf(item
 const cellOf = (item: Item) =>
   item.size ? Math.round((CELL[item.kind] * SIZE[item.kind]) / item.size) : CELL[item.kind]
 
-/** Every pixel moved one step, wrapping round, so shifting back restores the drawing. */
 function shifted(pixels: boolean[], width: number, height: number, dx: number, dy: number): boolean[] {
   return pixels.map((_, index) => {
     const x = (index % width) - dx
@@ -74,7 +68,6 @@ const keyOf = (item: Item) => `${item.kind}:${item.id}`
 const urlOf = (item: Item) =>
   item.kind === 'cards' ? cardArt(item.id) : item.kind === 'p03' ? (p03Art(item.id) ?? '') : iconArt(item.id as IconId)
 
-/** Reads an image's pixels as on or off, by their alpha. */
 async function pixelsOf(url: string, width: number, height = width): Promise<boolean[]> {
   const blank = () => Array.from({ length: width * height }, () => false)
   if (!url) return blank()
@@ -90,7 +83,6 @@ async function pixelsOf(url: string, width: number, height = width): Promise<boo
   return blank().map((_, index) => (data[index * 4 + 3] as number) > 127)
 }
 
-/** An animation's frames, read from its strip: frames side by side, each as wide as the art is tall. */
 async function framesOf(url: string, size: number): Promise<boolean[][]> {
   const image = new Image()
   image.src = url
@@ -111,7 +103,6 @@ async function framesOf(url: string, size: number): Promise<boolean[][]> {
   )
 }
 
-/** The frames as a black-on-transparent PNG strip, base64; a single frame is just the image. */
 function pngOf(frames: boolean[][], width: number, height = width): string {
   const canvas = document.createElement('canvas')
   canvas.width = width * frames.length
@@ -126,14 +117,12 @@ function pngOf(frames: boolean[][], width: number, height = width): string {
   return canvas.toDataURL('image/png').split(',')[1] as string
 }
 
-/** Draws card art and sigil icons pixel by pixel, and saves them as the PNGs the game loads. Development only. */
 export function ArtEditor() {
   const [selected, setSelected] = useState(
     () => ITEMS.find((item) => keyOf(item) === location.hash.slice(1)) ?? ITEMS[0]!,
   )
   const size = sizeOf(selected)
   const height = heightOf(selected)
-  // Every drawing is frames; most have one.
   const [frames, setFrames] = useState<boolean[][]>([[]])
   const [loaded, setLoaded] = useState<boolean[][]>([[]])
   const [frame, setFrame] = useState(0)
@@ -150,14 +139,11 @@ export function ArtEditor() {
     setLooked(next)
     try {
       localStorage.setItem(LOOKED_KEY, JSON.stringify(next))
-    } catch {
-      // Without storage the tick lasts until the page closes.
-    }
+    } catch {}
   }
   const needsLook = ITEMS.filter(
     (item) => (!hasArt(item.kind, item.id) || DRAFTS.includes(keyOf(item))) && !looked.includes(keyOf(item)),
   )
-  // The fire and its logs are drawn together in the game, so editing either shows both, with the other as saved.
   const campfire = selected.id === 'fire' || selected.id === 'logs'
   const [partner, setPartner] = useState<boolean[][] | null>(null)
   useEffect(() => {
@@ -178,7 +164,6 @@ export function ArtEditor() {
       : pixelsOf(urlOf(selected), sizeOf(selected), heightOf(selected)).then((one) => [one])
     void read.then((read) => {
       if (!live) return
-      // A stand-in starts blank, so the new drawing doesn't begin as a question mark.
       const start = hasArt(selected.kind, selected.id) ? read : read.map((one) => one.map(() => false))
       setFrames(start)
       setLoaded(start)
@@ -214,7 +199,6 @@ export function ArtEditor() {
   const changed =
     frames.length !== loaded.length ||
     frames.some((one, at) => one.some((pixel, index) => pixel !== loaded[at]?.[index]))
-  // The frame before, faint under this one, to draw the next pose against.
   const onion = selected.frames && frames.length > 1 ? frames[(frame + frames.length - 1) % frames.length] : null
   const addFrame = () => {
     if (frames.length >= MOST_FRAMES) return
@@ -425,7 +409,6 @@ export function ArtEditor() {
           <button type="button" className={button} onClick={() => setPixels(pixels.map((on) => !on))}>
             Invert
           </button>
-          {/* Every pixel one step over, wrapping round the edges; the arrow keys do the same over the drawing. */}
           {(
             [
               ['ArrowLeft', '←', 'left'],
@@ -454,7 +437,6 @@ export function ArtEditor() {
   )
 }
 
-/** The frames playing in a loop at size, as the game shows them. */
 function Playing({ frames, size }: { frames: boolean[][]; size: number }) {
   const [at, setAt] = useState(0)
   useEffect(() => {
@@ -479,7 +461,6 @@ function Playing({ frames, size }: { frames: boolean[][]; size: number }) {
   )
 }
 
-/** The fire playing over its logs, which sit three rows lower, in the game's colors, outline and size. */
 function Campfire({ fire, logs }: { fire: boolean[][]; logs: boolean[] }) {
   const [at, setAt] = useState(0)
   useEffect(() => {
@@ -487,7 +468,6 @@ function Campfire({ fire, logs }: { fire: boolean[][]; logs: boolean[] }) {
     return () => clearInterval(tick)
   }, [])
   const flame = fire[at % Math.max(1, fire.length)] ?? []
-  // Each on a canvas of its own, so the logs can take their outline as the game draws it.
   const layer = (pixels: boolean[], color: string, top: number) => (canvas: HTMLCanvasElement | null) => {
     const context = canvas?.getContext('2d')
     if (!canvas || !context) return

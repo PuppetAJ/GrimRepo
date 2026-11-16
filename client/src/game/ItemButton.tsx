@@ -5,13 +5,8 @@ import { ITEMS, type ItemId } from 'shared'
 import { Sigil } from './CardReader.tsx'
 import { fadeIn } from './moves.ts'
 
-/** How long a press must last to read the item instead of using it, in milliseconds. */
 const HOLD_MS = 350
 
-/**
- * An item's button, on either table: a click uses it or picks it up; holding it shows it larger with what it does, and
- * letting go after a hold isn't a click.
- */
 export function ItemButton({
   item,
   slot,
@@ -24,20 +19,16 @@ export function ItemButton({
   item: ItemId
   slot: number
   usable: boolean
-  /** Picked up, to aim at a card. */
   held: boolean
-  /** The button's side, in pixels. */
   size: number
   onUse: () => void
   className?: string
 }) {
   const def = ITEMS[item]
-  // Where the reading shows: above the button, kept on the screen, in a portal so no panel's edge clips it.
   const [reading, setReading] = useState<{ left: number; bottom: number } | null>(null)
   const button = useRef<HTMLButtonElement>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const read = useRef(false)
-  // A right-click's reading outlasts the button's release, until the pointer leaves it.
   const clicked = useRef(false)
   useEffect(() => () => clearTimeout(timer.current), [])
   const stop = () => {
@@ -58,7 +49,6 @@ export function ItemButton({
         type="button"
         data-action="use"
         data-slot={slot}
-        // Readable even when it can't be used, so it stays enabled and says so instead.
         aria-disabled={!usable}
         aria-pressed={def.target === 'none' ? undefined : held}
         aria-label={`${def.name}: ${def.text}`}

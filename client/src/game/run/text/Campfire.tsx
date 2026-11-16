@@ -23,7 +23,6 @@ import { ReadableCard } from './CardList.tsx'
 import { LeaveButton, ScreenBar } from './Screen.tsx'
 import { Sentences } from '../../text/Sentences.tsx'
 
-/** One card gets the campfire's boost, or the run's integrity is repaired instead; a second boost risks burning it. */
 export function Campfire({ run }: { run: RunReady }) {
   const [risking, setRisking] = useState<Unit | null>(null)
   const visit = run.state.visit
@@ -57,15 +56,12 @@ export function Campfire({ run }: { run: RunReady }) {
       <FireOnLogs />
       {warmed ? (
         <div className="w-24 sm:w-28">
-          {/* Pops with what it gained each time it comes out of the fire. */}
           <m.span key={visit.buffs} {...warmPop} className="relative block">
             <ReadableCard unit={warmed} />
-            {/* The rise animation centers the text on this point itself. */}
             <Rising text={boost} tone="note" className="top-1/3 left-1/2 text-2xl" />
           </m.span>
         </div>
       ) : (
-        // The card to warm, and beside it, like a tool, the repair to take instead.
         <div className="flex items-start justify-center gap-4">
           <CardSlot
             label="Choose a card to warm"

@@ -11,7 +11,6 @@ import { Grid } from './cards/Grid.tsx'
 import { Viewer } from './cards/Viewer.tsx'
 import type { CardsSearch } from '../router.tsx'
 
-// One look for every control here: a bordered group of plain buttons, the chosen one filled.
 const GROUP = 'flex divide-x overflow-hidden rounded-md border'
 
 export function Cards() {
@@ -31,7 +30,6 @@ export function Cards() {
   const chosen = cards.find((def) => def.id === search.card) ?? cards[0] ?? DECK[0]!
   const field = useId()
 
-  // An updater, so two quick changes both stick; null removes a key.
   const change = (changes: { [Key in keyof CardsSearch]?: CardsSearch[Key] | null }) =>
     void navigate({
       search: (now) => {
@@ -97,7 +95,6 @@ export function Cards() {
               </Button>
             </div>
           </div>
-          {/* Tighter buttons on phones keep this on one line down to 320px. */}
           <div role="group" aria-label="Filter by cost" className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Cost:</span>
             <div className={GROUP}>

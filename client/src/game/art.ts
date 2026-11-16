@@ -1,12 +1,10 @@
 import { parseDeathCard, type CardType, type ItemId, type SigilId } from 'shared'
 
-// Black-on-transparent PNGs, keyed by file name.
 const byName = (files: Record<string, string>) =>
   Object.fromEntries(Object.entries(files).map(([path, url]) => [path.slice(path.lastIndexOf('/') + 1, -4), url]))
 
 const CARDS = byName(import.meta.glob<string>('./art/cards/*.png', { eager: true, import: 'default' }))
 const ICONS = byName(import.meta.glob<string>('./art/icons/*.png', { eager: true, import: 'default' }))
-// Packs from argametina's Free Card Packs, darkened into the site's greens; files of their own, not inlined, since only pack screens need them.
 const PACKS = byName(
   import.meta.glob<string>('./art/packs/*.png', { eager: true, query: '?no-inline', import: 'default' }),
 )
@@ -15,23 +13,18 @@ const P03 = byName(import.meta.glob<string>('./art/p03/*.png', { eager: true, im
 
 export const p03Art = (id: string): string | undefined => P03[id]
 
-/** A pack's art: a starter deck's, a card choice's, a face-down trait's, or the rare one after a boss. */
 export const packArt = (id: string): string | undefined => PACKS[id]
 
-/** How fast an animated icon, such as the campfire's fire, plays its frames. */
 export const SPRITE_FPS = 8
 
 export type IconId = SigilId | ItemId | 'attack' | 'health' | 'fire' | 'logs' | 'death' | `type-${CardType}`
 
-/** Whether a card or icon has art of its own yet, rather than the stand-in. */
 export const hasArt = (kind: 'cards' | 'icons' | 'p03', id: string): boolean =>
   (kind === 'cards' ? CARDS[artId(id)] : kind === 'p03' ? P03[id] : ICONS[id]) !== undefined
 
-// A death card wears the art of the card its stats came from.
 const artId = (id: string): string => parseDeathCard(id)?.art ?? id
 
 export const cardArt = (id: string): string => CARDS[artId(id)] ?? (CARDS['placeholder'] as string)
-// A sigil without its own icon yet shows the stand-in until one is drawn.
 export const iconArt = (id: IconId): string => ICONS[id] ?? (ICONS['placeholder'] as string)
 
 const images = new Map<string, HTMLImageElement>()

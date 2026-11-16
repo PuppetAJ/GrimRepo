@@ -23,18 +23,14 @@ type Props = {
   game: Ready
   seat: Seat
   onText: () => void
-  /** A run's battle starts from the view the run was in, and settles into the seat. */
   from?: CameraView
-  /** Packs the table away, then calls `onLeft`, as a run moves off the board. */
   leaving?: boolean
   onLeft?: () => void
-  /** In a run, looks back at the map. */
   onMap?: () => void
   onInventory?: () => void
   run?: RunReady
 }
 
-/** A table of its own, for the tutorial and fixed boards: the stage and the battle on it, loaded with the page. */
 export default function Table3D(props: Props) {
   return (
     <TableStage>
@@ -43,13 +39,11 @@ export default function Table3D(props: Props) {
   )
 }
 
-/** A battle on whichever stage it's put on: its cards and controls come and go, the stage stays. */
 export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, onMap, onInventory, run }: Props) {
   const assets = use(loadCardAssets())
   const stage = useStage()
   const { playback, busy, skip } = usePlayback(game)
   const [chosen, setCamera] = useState<CameraView>('table')
-  // The item slot picked up to aim at a card; Escape puts it back.
   const [aiming, setAiming] = useState<number | null>(null)
   useEffect(() => {
     if (aiming === null) return
@@ -57,14 +51,11 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [aiming])
-  // Summoning looks down at the board, unless the player is already looking further back at the queue.
   const camera: CameraView = playback.view.summon && chosen === 'table' ? 'board' : chosen
   const [rung, setRung] = useState(0)
-  // Bumped when a card is tried before drawing, so the piles and prompt can point at the draw.
   const [hint, setHint] = useState(0)
   const [hinted, setHinted] = useState<number | null>(null)
   const fullScreen = useFullScreen()
-  // Refs so the key listener below is added only once.
   const ringKey = useRef(() => {})
   const mapKey = useRef(() => {})
   useEffect(() => {
@@ -77,7 +68,6 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
     const onKey = (event: KeyboardEvent) => {
       if (!forTable(event)) return
       const key = event.key.toLowerCase()
-      // W looks further down the table, a step at a time, as does holding it; S steps back up.
       if (key === 'w') setCamera((now) => (now === 'table' ? 'board' : 'queue'))
       else if (key === 's') setCamera((now) => (now === 'queue' ? 'board' : 'table'))
       else if (key === 'd') setCamera('table')
@@ -97,11 +87,9 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
   const cancel = () => act({ type: 'cancel' })
   useEscapeCancel(cancellable, cancel)
 
-  // Kept by id so a reader shows the card's current stats.
   const [peek, setPeek] = useState<number | null>(null)
   const [pinned, setPinned] = useState<Screen | null>(null)
   const [magnified, setMagnified] = useState<{ target: Target; x: number; y: number; sticky?: boolean } | null>(null)
-  // Sized to the card so every sigil fits, then put on whichever side of the finger has more room.
   const magnifier = useRef<HTMLDivElement>(null)
   useLayoutEffect(() => {
     const box = magnifier.current
@@ -133,7 +121,6 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
   const pin = readout(pinned && { screen: pinned })
   const magnifiedRead = readout(magnified?.target ?? null)
 
-  // The stage's element carries the battle's labels, which the keyboard scope and the tests read.
   useLayoutEffect(() =>
     stage.label({
       'data-game-id': game.id,
@@ -142,7 +129,6 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
       'data-table': '3d',
     }),
   )
-  // A tap on nothing calls off a card being played, or puts down whatever is being read, or sits back from the board.
   useEffect(() =>
     stage.onMissed(() => {
       if (cancellable) cancel()
@@ -150,7 +136,6 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
       else if (chosen !== 'table' && aiming === null) setCamera('table')
     }),
   )
-  // A right-click anywhere calls off a card being played; otherwise it's the room's, which magnifies with it.
   useEffect(() => {
     stage.onContext(() => {
       if (!cancellable) return false
@@ -159,7 +144,6 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
     })
     return () => stage.onContext(() => false)
   })
-  // Settled, so the face never changes ahead of the turn's playback.
   const face = useSettled(game.tutorial?.face, busy)
   useLayoutEffect(() =>
     stage.room({
@@ -193,7 +177,6 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
           skip={skip}
           rung={rung}
           camera={camera}
-          // Clicking the table while a card is being played calls it off, back to the hand.
           onFocusBoard={
             cancellable ? cancel : camera === 'table' && !playback.view.summon ? () => setCamera('board') : undefined
           }
@@ -243,7 +226,6 @@ export function Battle3D({ game, seat, onText, from, leaving = false, onLeft, on
           data-magnifier
           ref={magnifier}
           className="pointer-events-none fixed z-[60] flex max-h-[calc(100dvh-1rem)] w-[min(22rem,calc(100vw-1rem))] flex-col shadow-[0_0_18px_rgb(0_0_0/0.85)]"
-          // The top is set in the layout effect above, once the height is known.
           style={{
             left: Math.min(
               Math.max(8, magnified.x - 176),

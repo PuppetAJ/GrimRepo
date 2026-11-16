@@ -1,6 +1,5 @@
 import { defineConfig, devices } from '@playwright/test'
 
-// The live site's critical path after a deploy, or another production build's with E2E_BASE_URL. It plays as a guest.
 process.env.E2E_BASE_URL ??= 'https://grimrepo.up.railway.app'
 
 export default defineConfig({

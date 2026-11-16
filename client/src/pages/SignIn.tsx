@@ -18,7 +18,6 @@ export function SignIn() {
   async function signIn(identifier: string, password: string) {
     setBusy(true)
     setError(null)
-    // An @ means an email address; usernames cannot contain one.
     const { error: failed } = await settled(
       identifier.includes('@')
         ? authClient.signIn.email({ email: identifier, password })

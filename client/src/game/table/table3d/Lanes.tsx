@@ -8,7 +8,6 @@ import { claimCursor, releaseCursor } from '../cursor.ts'
 import { BOARD_DEPTH, CARD, lanes, slot, TABLE_Y } from '../layout.ts'
 import { TINT } from '../palette.ts'
 
-// Just outside the slot, so it still shows around a card lifted for sacrifice.
 const OUTLINE_W = CARD.width * 1.24
 const OUTLINE_H = CARD.height * 1.16
 
@@ -52,10 +51,8 @@ export function Lanes({
   legal: Action[]
   act: (action: Action) => void
   play: string
-  /** The hovered lane, whether the pointer is on the lane or on the card in it. */
   aimed: number | null
   onAim: (lane: number | null) => void
-  /** A tap on a lane with nothing to do there, which brings the board into view from the seat. */
   onIdle?: () => void
 }) {
   const target = hovered === null ? null : laneAction(legal, hovered)

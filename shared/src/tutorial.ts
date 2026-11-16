@@ -6,10 +6,8 @@ import { deckCard } from './engine/units.ts'
 import { ITEMS as ITEM_DEFS, type ItemId } from './items.ts'
 import { INTEGRITY } from './run/types.ts'
 
-/** As named in client/public/p03/screen. */
 export type Face = 'neutral' | 'happy' | 'impatient' | 'choking' | 'dying' | 'whiteflag'
 
-/** An action, with cards and items named rather than numbered. */
 export type Move =
   | { type: 'draw'; from: 'deck' | 'boilerplate' }
   | { type: 'select'; card: string }
@@ -18,16 +16,13 @@ export type Move =
   | { type: 'ringBell' }
   | { type: 'use'; item: ItemId; row: 'board' | 'front' | 'back'; lane: number }
 
-/** With no moves, the player presses on. */
 export type TutorialStep = { id: string; face: Face; says: string; moves?: Move[]; free?: boolean }
 
 export type Progress = { step: number; move: number }
 
-// Dealt in this order: the first three and a Boilerplate make the opening hand.
 const DECK = ['CopyPaste', 'Phishing', 'HelloWorld', 'Documentation', 'CopyPaste', 'Crawler', 'Sandbox']
 const TOOLS: ItemId[] = ['scissors']
 
-/** Linked as `[Bypass](sigil:bypass)`; the table underlines the word and opens this. */
 export const TERMS = {
   scale: {
     title: 'The scale',
@@ -85,7 +80,6 @@ export function said(line: string): Said[] {
   return parts
 }
 
-/** Throws for a link to nothing. */
 export function gloss(link: Exclude<Said, string>): { title: string; text: string } {
   switch (link.kind) {
     case 'term': {
@@ -297,7 +291,6 @@ export function afterStep(progress: Progress): Progress {
   return { step: Math.min(progress.step + 1, TUTORIAL.length - 1), move: 0 }
 }
 
-/** The battle at a step, with every earlier move made. */
 export function tutorialAt(step: number): { state: GameState; progress: Progress; events: GameEvent[] } {
   let state = createTutorial()
   let progress: Progress = { step: 0, move: 0 }

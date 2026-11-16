@@ -6,13 +6,10 @@ import { CARD, LANE_GAP, lanes, ROW_Z, slot, TABLE_Y } from '../layout.ts'
 import { TINT } from '../palette.ts'
 import { LIT, STILL } from './constants.ts'
 
-// The texture is drawn to match the lanes in layout.ts.
 export const BOARD = '/textures/board.webp'
 
-/** Seconds the board takes to roll out across the table. */
 const UNROLL = 0.45
 
-/** The board, which can roll out from P03's side toward the player `appear` seconds after it mounts, and back as it `leave`s. */
 export function TechBoard({
   appear,
   leave = false,
@@ -20,7 +17,6 @@ export function TechBoard({
 }: {
   appear?: number
   leave?: boolean
-  /** A tap on the board's mat, as when bringing it into view from the seat. */
   onClick?: () => void
 }) {
   const width = (lanes.length - 1) * LANE_GAP + CARD.width + 0.5
@@ -28,7 +24,6 @@ export function TechBoard({
   const left = slot('board', 0)[0] - CARD.width / 2 - 0.25
   const far = ROW_Z.back - CARD.height / 2 - 0.25
   const shared = useTexture(BOARD)
-  // Its own copy, since rolling out crops the texture.
   const texture = useMemo(() => {
     const copy = shared.clone()
     copy.colorSpace = THREE.SRGBColorSpace
@@ -51,7 +46,6 @@ export function TechBoard({
     const back = gone.current < 0 ? 0 : STILL ? 1 : Math.min(1, (now - gone.current) / UNROLL)
     const shown = (1 - (1 - t) ** 3) * (1 - back ** 3)
     mesh.visible = shown > 0
-    // Shows only the far part of the board, uncropped, so it reveals rather than stretches.
     mesh.scale.y = Math.max(shown, 0.0001)
     mesh.position.z = far + (depth * shown) / 2
     texture.repeat.y = shown

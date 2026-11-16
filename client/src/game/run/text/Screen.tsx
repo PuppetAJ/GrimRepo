@@ -22,15 +22,12 @@ import { SlotContext, type Mode } from './slots.ts'
 export const ICON_BUTTON =
   'relative grid size-10 shrink-0 place-items-center rounded-md border-2 border-p03-edge bg-[#07130b] text-p03 hover:bg-[#13261a] focus-visible:outline-2 focus-visible:outline-p03 aria-expanded:bg-[#13261a] aria-pressed:border-p03 aria-pressed:bg-[#13261a]'
 
-/** The map's page size in the projector's window, in the window's proportions. */
 const WINDOW_PX = { width: 840, height: 540 }
 
-/** Fades a scrolling area's last lines, so it ends softly instead of looking cut off. */
 export const FADE = '[mask-image:linear-gradient(to_bottom,black_calc(100%-2.5rem),transparent)] pb-10'
 
 export { useScreenMode } from './slots.ts'
 
-/** A screen in the projector's light: it flickers now and then, faintly and at random, so it stays easy to read. */
 function Hologram({ fading, children }: { fading: boolean; children: ReactNode }) {
   const light = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -41,7 +38,6 @@ function Hologram({ fading, children }: { fading: boolean; children: ReactNode }
       if (!element) return
       const dip = Math.random() < 0.15
       element.style.opacity = String(dip ? 0.82 + Math.random() * 0.08 : 0.96 + Math.random() * 0.04)
-      // A dip lasts a few frames; the steady glow, a random while.
       timer = setTimeout(flicker, dip ? 40 + Math.random() * 80 : 1200 + Math.random() * 4000)
     }
     flicker()
@@ -49,7 +45,6 @@ function Hologram({ fading, children }: { fading: boolean; children: ReactNode }
   }, [])
   return (
     <div ref={light} className="hologram">
-      {/* Fades in as a screen takes the window, and out before the next one does. */}
       <m.div
         inert={fading}
         initial={{ opacity: 0 }}
@@ -63,29 +58,24 @@ function Hologram({ fading, children }: { fading: boolean; children: ReactNode }
   )
 }
 
-/** A screen's own buttons, in the header beside the menu. */
 export function ScreenActions({ children }: { children: ReactNode }) {
   const { actions } = use(SlotContext)
   return actions ? createPortal(children, actions) : null
 }
 
-/** Something of the screen's in the middle of the header, where there's room for it; shown only on wide screens. */
 export function ScreenCenter({ children }: { children: ReactNode }) {
   const { center } = use(SlotContext)
   return center ? createPortal(children, center) : null
 }
 
-/** A screen's own line under the header, above its scrolling content, so it's always in reach. */
 export function ScreenBar({ children }: { children: ReactNode }) {
   const { bar } = use(SlotContext)
   return bar ? createPortal(children, bar) : null
 }
 
-/** A worded button in the header, beside the menu. */
 export const HEADER_BUTTON =
   'flex h-10 shrink-0 items-center rounded-md border-2 border-p03-edge bg-[#07130b] px-3 text-lg text-p03 hover:bg-[#13261a] focus-visible:outline-2 focus-visible:outline-p03'
 
-/** Leaving a screen of cards, in the header beside the menu. */
 export function LeaveButton({ label, onLeave }: { label: string; onLeave: () => void }) {
   return (
     <ScreenActions>
@@ -106,7 +96,6 @@ function dockedAtFirst(): boolean {
   }
 }
 
-/** Opens the inventory: the deck and the tools carried. */
 function InventoryButton({ count, tools, ...props }: { count: number; tools: number } & ComponentProps<'button'>) {
   return (
     <button
@@ -127,7 +116,6 @@ function InventoryButton({ count, tools, ...props }: { count: number; tools: num
   )
 }
 
-/** On a narrower screen, the deck in a drawer that slides out inside the game's frame, opened from the menu. */
 function DeckDrawer({
   run,
   host,
@@ -144,11 +132,9 @@ function DeckDrawer({
   const count = run.state.deck.length
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
-      {/* Mounted in the frame, so the shade and the drawer cover the game, not the whole window. */}
       <DialogPrimitive.Portal container={host}>
         <DialogPrimitive.Overlay className="absolute inset-0 z-40 bg-black/50 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0" />
         <DialogPrimitive.Content
-          // Opened from the menu, which closes first, so focus goes back to the menu button.
           onCloseAutoFocus={(event) => {
             event.preventDefault()
             returnTo.current?.focus()
@@ -177,7 +163,6 @@ function DeckDrawer({
   )
 }
 
-/** The frame every screen off the board shares: one header row, the screen, and the deck. */
 export function Screen({
   run,
   layout,
@@ -193,25 +178,17 @@ export function Screen({
   note,
   children,
 }: {
-  /** P03's first-time note, over the top of the screen's content. */
   note?: ReactNode
-  /** Fades the projected content out, before the next screen takes the window. */
   fading?: boolean
-  /** Over the 3D table, while the projector is still opening: the screen holds back its content, so its entrances play once seen. */
   waiting?: boolean
   run: RunReady
   layout: Layout
   title: string
-  /** A word above the title, such as what kind of screen it is. */
   caption?: string
-  /** On a phone, stacks and centers the header: the title, the screen's line, then its buttons. The map's alone. */
   stack?: boolean
-  /** Off for a screen that shows the deck itself. */
   deck?: boolean
-  /** The text table's terminal; over the 3D table, a floating panel, or the map as a hologram above the board. */
   mode?: Mode
   onSwitch?: Switch
-  /** The hologram's page element, which the 3D scene pins onto the projector's window. */
   pinTo?: React.RefObject<HTMLDivElement | null>
   children: ReactNode
 }) {
@@ -219,17 +196,13 @@ export function Screen({
   const terminal = mode === 'terminal'
   const phone = layout === 'phone'
   const stacked = phone && stack
-  // Room enough for the deck beside the screen, so it docks open instead of covering it.
-  // Over the hologram the deck is a drawer, so the room stays in view.
   const roomy = layout === 'wide' && mode !== 'hologram'
   const [docked, setDocked] = useState(dockedAtFirst)
   const dock = (open: boolean) => {
     setDocked(open)
     try {
       localStorage.setItem(DOCK_KEY, open ? 'open' : 'closed')
-    } catch {
-      // Storage can be refused in a private window; the choice then lasts until the page closes.
-    }
+    } catch {}
   }
   const showDock = deck && roomy && docked
   const still = useReducedMotion()
@@ -237,20 +210,14 @@ export function Screen({
   const widen = useWideTable()
   const centered = useMedia(ROOM_TO_WIDEN)
   const menuButton = useRef<HTMLButtonElement>(null)
-  // One search per screen, cleared when the screen changes.
   const [search, setSearch] = useState({ title, query: '' })
   const query = search.title === title ? search.query : ''
   const fullScreen = useFullScreen({ fallback: phone })
-  // The battle table's own size, so moving between the board and these screens never changes the frame.
   const { frame, size } = useFit(fullScreen.on)
-  // A layer over the frame for the deck drawer, and the places a screen's own controls go.
   const [host, setHost] = useState<HTMLDivElement | null>(null)
   const [actions, setActions] = useState<HTMLDivElement | null>(null)
   const [bar, setBar] = useState<HTMLDivElement | null>(null)
   const [center, setCenter] = useState<HTMLDivElement | null>(null)
-  // Between the title and the buttons, on screens wide enough to keep all three on one line.
-  // Its top level with the title's and the menu's; taller than they are, it hangs down beside the screen's line rather than
-  // making the header taller.
   const centerSlot = (
     <div
       ref={setCenter}
@@ -258,7 +225,6 @@ export function Screen({
       className="absolute top-0 left-1/2 hidden -translate-x-1/2 empty:hidden xl:flex"
     />
   )
-  // The screen's own buttons, the deck and the menu, beside the title or, stacked, under the screen's line.
   const menu = (
     <TableMenu
       run={run}
@@ -270,7 +236,6 @@ export function Screen({
       className={`${ICON_BUTTON} [&>svg]:size-5`}
     />
   )
-  // Stacked, the menu keeps to the top right corner, so it has room, and the screen's own buttons sit centered below.
   const buttonRow = (
     <div className={`flex shrink-0 items-center gap-2 ${stacked ? 'justify-center' : 'ml-auto'}`}>
       <div ref={setActions} className="flex shrink-0 items-center gap-2 empty:hidden" />
@@ -287,7 +252,6 @@ export function Screen({
     </div>
   )
   const drawerHost = <div ref={setHost} className="pointer-events-none absolute inset-0 z-40 *:pointer-events-auto" />
-  // Past the site's width a drawer at the window's edge is a long way off, so the inventory opens in the middle.
   const deckDrawer =
     deck && !roomy ? (
       centered ? (
@@ -297,7 +261,6 @@ export function Screen({
       )
     ) : null
 
-  // Over the 3D table, everything goes in the projector's window, which the scene warps onto it every frame.
   if (mode === 'hologram')
     return (
       <SlotContext value={{ actions, bar, center, mode }}>
@@ -321,7 +284,6 @@ export function Screen({
                   {buttonRow}
                 </header>
                 <div ref={setBar} className="shrink-0 empty:hidden" />
-                {/* Only the content scrolls; a screen marked data-center, such as a card choice, sits in the middle. */}
                 <div className="relative flex min-h-0 flex-1 flex-col">
                   {waiting ? null : note}
                   <div data-scroller className="flex min-h-0 flex-1 flex-col overflow-y-auto px-1">
@@ -336,7 +298,6 @@ export function Screen({
         </SearchContext>
       </SlotContext>
     )
-  // Over the 3D table, the scene behind is the frame, and its page decides full screen.
   const place =
     mode === 'floating'
       ? `absolute z-10 bg-p03-ground/60 backdrop-blur-[3px] ${phone ? 'inset-0 p-3' : 'inset-x-3 inset-y-3 mx-auto max-w-6xl rounded-lg border p-4'}`
@@ -349,27 +310,20 @@ export function Screen({
     <SlotContext value={{ actions, bar, center, mode }}>
       <SearchContext value={{ query, setQuery: (next) => setSearch({ title, query: next }) }}>
         {terminal && fullScreen.on ? <div aria-hidden className="fixed inset-0 z-40 bg-[#030604]" /> : null}
-        {/* Floating over the 3D table, it rises into place as it opens. */}
         <m.div
           ref={phone || !terminal ? undefined : frame}
           style={phone || !terminal ? undefined : size}
           initial={mode === 'floating' ? { opacity: 0, y: 12 } : false}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          // A table to the keyboard, so a screen's number keys work while focus is anywhere inside it.
           data-table="run"
           tabIndex={-1}
           className={`p03-screen crt flex flex-col gap-3 overflow-hidden border-p03-edge font-terminal text-xl sm:text-2xl ${place}`}
         >
-          {/* The terminal's glyphs, also when a screen floats over the 3D table in place of the projector. */}
           <FaultyScreenShader />
           <span aria-hidden className="crt-glass pointer-events-none absolute inset-0 z-30" />
-          {/* Where the deck drawer opens, covering the frame but taking no clicks until it does. */}
           {drawerHost}
-          {/* The title wraps beside the buttons rather than pushing them to a line of their own, down to 320px. */}
           <header className="relative z-10 flex shrink-0 items-center gap-2">
-            {/* Stacked, the title stays clear of the menu in the corner. */}
-            {/* Never squeezed to a letter a line: the buttons beside it keep short on a phone. */}
             <div className={`min-w-[7rem] flex-1 ${stacked ? 'px-12 text-center' : ''}`}>
               {caption ? <p className="text-base text-p03-dim">{caption}</p> : null}
               <h2 className="text-xl leading-tight text-balance [overflow-wrap:anywhere] text-p03 sm:text-3xl">
@@ -380,7 +334,6 @@ export function Screen({
             {stacked ? <div className="absolute top-0 right-0">{menu}</div> : buttonRow}
           </header>
           {deckDrawer}
-          {/* The inventory's column grows from nothing as it opens and shrinks as it closes, so the screen beside it widens and narrows smoothly. */}
           <m.div
             initial={false}
             animate={{
@@ -390,15 +343,11 @@ export function Screen({
             transition={{ duration: still ? 0 : 0.2, ease: 'easeOut' }}
             className="relative z-10 grid min-h-0 flex-1 gap-y-4"
           >
-            {/* Over the screen, as the board's own box sits over the board. */}
             <div className="relative flex min-h-0 min-w-0 flex-col gap-2">
               {note}
               <div ref={setBar} className={`shrink-0 empty:hidden ${stacked ? 'text-center' : ''}`} />
               {stacked ? buttonRow : null}
-              {/* Only the content scrolls, inside a frame that stays the same size; padded so focus rings aren't cut. */}
               <div data-scroller className={`flex min-h-0 flex-1 flex-col overflow-y-auto px-1 ${FADE}`}>
-                {/* A screen marked data-center, such as a card choice or an empty one, sits in the middle. */}
-                {/* Fades in on load and as each screen takes its place, as the projector's screens do. */}
                 <m.div
                   key={title}
                   initial={{ opacity: 0 }}
@@ -410,7 +359,6 @@ export function Screen({
                 </m.div>
               </div>
             </div>
-            {/* Slides in as it opens and away before it goes; already open on load, it's simply there. */}
             <AnimatePresence initial={false}>
               {showDock ? (
                 <m.aside
@@ -422,7 +370,6 @@ export function Screen({
                   transition={{ duration: 0.2 }}
                   className="min-h-0 overflow-hidden"
                 >
-                  {/* Its own width throughout, so nothing reflows while its column grows or shrinks around it. */}
                   <Panel className="flex h-full min-h-0 w-[20rem] flex-col gap-2">
                     <div className="flex items-center justify-between gap-2">
                       <h2 className="text-p03">Inventory</h2>

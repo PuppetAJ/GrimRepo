@@ -3,7 +3,6 @@ import { readFileSync } from 'node:fs'
 import { describe, it } from 'node:test'
 import { CARD, SECTIONS } from './layout.ts'
 
-// The worn texture's tile, as the disk's UVs were projected from its face before the sections were anchored.
 const TILE = 0.9
 const ANCHORS = { top: CARD.height / 2, middle: (0.5 - SECTIONS.middleTop) * CARD.height, bottom: -CARD.height / 2 }
 
@@ -17,7 +16,6 @@ const header = JSON.parse(glb.toString('utf8', 20, 20 + headerLength)) as {
   bufferViews: { byteOffset?: number }[]
 }
 const body = glb.subarray(20 + headerLength + 8)
-/** An accessor's floats, read from the model's binary chunk. */
 const floats = (index: number, size: number) => {
   const accessor = header.accessors[index]
   assert.ok(accessor)

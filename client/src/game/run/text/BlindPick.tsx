@@ -6,10 +6,8 @@ import { choiceRarity, PackReveal, RarityBadge, SealedPack } from './Packs.tsx'
 import { ScreenBar } from './Screen.tsx'
 import { Sentences } from '../../text/Sentences.tsx'
 
-/** Blind packs: three, each labeled with a trait; tearing one open turns over three cards with it, in its place. */
 export function BlindPick({ run }: { run: RunReady }) {
   const visit = run.state.visit
-  // Which pack is tearing, before the run turns its cards over.
   const [tearing, setTearing] = useState<{ node: string; index: number } | null>(null)
   if (visit?.kind !== 'blind') return null
   const revealed = visit.revealed

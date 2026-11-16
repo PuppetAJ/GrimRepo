@@ -4,7 +4,6 @@ import { Failure } from './States.tsx'
 
 type Fallback = ReactNode | ((error: unknown) => ReactNode)
 
-/** Catches a part of the page that fails to load or draw, most often code gone after a deploy; a function fallback is given the error. */
 export class LoadFailed extends Component<
   { fallback: Fallback; children: ReactNode },
   { error: unknown; failed: boolean }

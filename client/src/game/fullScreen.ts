@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 
-/** Leaves full screen when the page that entered it goes, not when one of its screens is swapped for another. */
 export function useLeaveFullScreen() {
   useEffect(
     () => () => {

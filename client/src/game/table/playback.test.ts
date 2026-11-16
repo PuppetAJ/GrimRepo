@@ -58,7 +58,6 @@ describe('playback', () => {
   })
 
   it('brings drawn cards from the deck, P03’s from its side, and lunges the attacker', () => {
-    // A deal whose hand has a free card that can attack, so it can be played and ring the bell at once.
     const free = (unit: { card: string; attack: number }) => card(unit.card).cost === 0 && unit.attack > 0
     let seed = 1
     while (!createGame({ seed }).player.hand.some(free)) seed++

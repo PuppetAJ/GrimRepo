@@ -25,18 +25,15 @@ import { ICON_BUTTON, ScreenActions, ScreenBar, useScreenMode } from './Screen.t
 type Mark = 'here' | 'visited' | 'next' | 'ahead' | 'behind' | 'cut'
 type Link = 'taken' | 'open' | 'lit' | 'quiet'
 
-// Opaque grounds, so the screen's moving text never shows through a node.
 const STYLE: Record<Mark, string> = {
   here: 'border-p03 bg-[#13261a] text-p03',
   visited: 'border-p03-dim bg-[#0d1a10] text-p03-dim',
   next: 'border-p03 bg-p03-ground text-p03 hover:bg-[#13261a] focus-visible:bg-[#13261a]',
   ahead: 'border-p03-edge bg-p03-ground text-p03-dim',
   behind: 'border-p03-edge/50 bg-p03-ground text-p03-dim/60',
-  // Ahead, but off every route from here.
   cut: 'border-p03-edge/40 bg-p03-ground text-p03-dim opacity-30',
 }
 
-/** The choice the pointer or focus is on: the node you'd go to, outlined in dashes. */
 const AIMED = 'outline-2 outline-offset-4 outline-dashed outline-p03'
 
 const LINK: Record<Link, string> = {
@@ -53,13 +50,9 @@ const WORDS: Partial<Record<Mark, string>> = {
   cut: 'out of reach',
 }
 
-// Each row's share of the map's height, and the node's size: 44 pixels, the least a finger needs.
-// A hologram sets --map-row so the whole stage fits its height.
 const ROW_HEIGHT = 'var(--map-row, clamp(3.75rem, 9dvh, 5rem))'
 const NODE = 44
-/** How long a press must last to read a node instead of clicking it, in milliseconds. */
 const HOLD_MS = 350
-/** Stages whose map has already been shown scrolling down, this page load. */
 const SURVEYED = new Set<string>()
 
 const describeNext = (map: StageMap, node: MapNode) =>
@@ -73,7 +66,6 @@ const describeNext = (map: StageMap, node: MapNode) =>
 
 const KINDS = ['battle', 'card', 'campfire', 'stones', 'event', 'shop', 'item', 'boss'] as const
 
-/** What each icon means; pointing at one lights every node of its kind, and choosing one keeps them lit. */
 function Legend({
   shown,
   centered,
@@ -86,7 +78,6 @@ function Legend({
   onPick: (kind: NodeKind) => void
 }) {
   const mode = useScreenMode()
-  // A row of icons named by tooltip and label, so it never wraps or covers the map.
   const hologram = mode === 'hologram'
   return (
     <ul aria-label="What the icons mean" className={`flex gap-1 text-p03-dim ${centered ? 'justify-center' : ''}`}>
@@ -103,7 +94,6 @@ function Legend({
               onPointerEnter={() => onHover(kind)}
               onPointerLeave={() => onHover(null)}
               className={`grid place-items-center rounded-sm hover:text-p03 focus-visible:outline-2 focus-visible:outline-p03 aria-pressed:text-p03 ${
-                // Over the 3D table nothing gets a ground, so the room shows through; the light brightens instead.
                 mode === 'terminal'
                   ? 'hover:bg-[#13261a] aria-pressed:bg-[#13261a]'
                   : 'hover:[filter:drop-shadow(0_0_6px_rgb(125_255_154/0.9))] aria-pressed:outline-1 aria-pressed:outline-p03'
@@ -118,13 +108,10 @@ function Legend({
   )
 }
 
-/** The stage's map: nodes nudged off a grid, the links between them, and a pen for planning a route. */
 export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
   const { state, path } = run
   const [peek, setPeek] = useState<string | null>(null)
-  // Holding a node shows it larger with its name, for touch and for anyone not hovering; the release then isn't a click.
   const [held, setHeld] = useState<string | null>(null)
-  // `clicked` for a right-click, whose node stays shown past the button's release, until the pointer leaves it.
   const hold = useRef<{ timer?: ReturnType<typeof setTimeout>; fired: boolean; clicked?: boolean }>({ fired: false })
   useEffect(() => () => clearTimeout(hold.current.timer), [])
   const holdProps = (id: string) => ({
@@ -174,13 +161,11 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
     observer.observe(element)
     return () => observer.disconnect()
   }, [])
-  // Brings the next choice into view, since a tall map scrolls inside its frame.
   const here = useRef<HTMLElement | null>(null)
   useEffect(() => {
     const node = here.current
     const scroller = node?.closest<HTMLElement>('[data-scroller]')
     if (!node || !scroller) return
-    // Only the frame's own scroller moves, never the page.
     const offset = node.getBoundingClientRect().top - scroller.getBoundingClientRect().top
     const target = scroller.scrollTop + offset - scroller.clientHeight / 2
     const key = `${state.seed}:${state.stage}`
@@ -188,7 +173,6 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
       scroller.scrollTop = target
       return
     }
-    // A stage's map first shows from the top, then travels down as far as it can with the next choice still in view.
     const top = scroller.scrollTop + offset
     scroller.scrollTop = 0
     const distance = Math.min(top - NODE * 1.5, scroller.scrollHeight - scroller.clientHeight)
@@ -202,7 +186,6 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
         onUpdate: (top) => (scroller.scrollTop = top),
       })
     }, 350)
-    // The player's own scroll takes over, as does a press, so a stroke or a click never lands on a moving map.
     const stop = () => {
       clearTimeout(delay)
       glide?.stop()
@@ -218,16 +201,13 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
     }
   }, [state.seed, state.stage])
 
-  // Neighbors never come closer than this many pixels, so the path between them always shows.
   const gap = 22
   const cell = { x: size.width / MAP_COLUMNS, y: size.height / mapRows(state.map) }
-  // Nodes shrink on a short map rather than crowd, down to what still reads.
   const nodeSize = Math.round(Math.max(28, Math.min(NODE, cell.y - gap, cell.x - gap)))
   const room = (span: number) => (span ? Math.max(0, (span - nodeSize - gap) / 2 / span) : 0)
   const placed = spots(state.map, state.seed, { x: room(cell.x), y: room(cell.y) })
   const open = reachable(state)
   const row = state.at === null ? -1 : (findNode(state.map, state.at)?.row ?? -1)
-  // Every node still on a route from here; the rest ahead are out of reach.
   const ahead = new Set<string>()
   const walk = [...open]
   while (walk.length) {
@@ -251,13 +231,11 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
   const linkOf = (from: MapNode, to: string): Link => {
     const step = path.indexOf(from.id)
     if (step >= 0 && path[step + 1] === to) return 'taken'
-    // Pointing at a choice lights only the step to it, not the steps beyond, which would look like the way taken.
     if (from.id === state.at && to === peek && open.includes(to)) return 'lit'
     if (from.id === state.at && open.includes(to)) return 'open'
     return 'quiet'
   }
   const at = (spot: Spot) => ({ x: spot.x * size.width, y: spot.y * size.height })
-  // A stroke that passes through a node marks it as planned.
   const inked = new Set<string>()
   for (const node of state.map.rows.flat()) {
     const center = at(placed.get(node.id) as Spot)
@@ -279,7 +257,6 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
   const legend = (
     <Legend
       shown={shown}
-      // Centered on a phone, upright or on its side.
       centered={layout === 'phone'}
       onHover={setHovered}
       onPick={(kind) => setPicked((now) => (now === kind ? null : kind))}
@@ -287,7 +264,6 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
   )
   return (
     <div className="flex flex-col gap-3">
-      {/* The pen beside the menu, and the legend above the map, so both stay in reach while it scrolls. */}
       <ScreenActions>
         <div className="flex items-center gap-2">
           <button
@@ -323,7 +299,6 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
         </div>
       </ScreenActions>
       <ScreenBar>
-        {/* The tools carried and the bytes banked are in the inventory; only integrity, which ends runs, shows here. */}
         <div className="flex flex-wrap items-center gap-x-6 gap-y-1 pb-1">
           <IntegrityBar left={state.integrity} max={INTEGRITY} compact className="gap-1 text-lg" />
           <span aria-hidden className="text-p03-dim">
@@ -332,10 +307,8 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
           {legend}
         </div>
       </ScreenBar>
-      {/* Padded, so the boss and the first row are never cut off at the top or bottom of the scroll. */}
       <div className={hologram ? 'py-5' : 'py-8'}>
         <div ref={box} className="relative w-full" style={{ height: `calc(${ROW_HEIGHT} * ${mapRows(state.map)})` }}>
-          {/* The links: one image tiled along each, turned to point at the node ahead. */}
           <div aria-hidden className="absolute inset-0">
             {size.width
               ? state.map.rows.flat().flatMap((node) =>
@@ -364,7 +337,6 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
               : null}
           </div>
           <PenLayer active={pen} strokes={plan.strokes} width={size.width} height={size.height} onStroke={addStroke} />
-          {/* In reading order from the start; placed with the boss at the top, as the run climbs toward it. */}
           <ol aria-label="The map, from the start to the boss">
             {state.map.rows.map((nodes, index) => (
               <li key={index}>
@@ -386,9 +358,7 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
                       width: boss ? nodeSize * 1.5 : nodeSize,
                       height: boss ? nodeSize * 1.5 : nodeSize,
                     }
-                    // The icon keeps its share of the node, so a small node keeps its padding.
                     const icon = Math.round(nodeSize * (boss ? 0.8 : 0.55))
-                    // A node already gone to is crossed out, as Inscryption's maps do, its icon dimmed beneath.
                     const gone = mark === 'visited' || mark === 'here'
                     const face = (
                       <>
@@ -409,7 +379,6 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
                           aria-hidden
                           {...fadeIn(0.12)}
                           style={{ left: style.left, top: style.top }}
-                          // Centered on its node, unless that would run it off a side of the frame.
                           className={`pointer-events-none absolute z-40 flex ${spot.x < 0.25 ? '-translate-x-6' : spot.x > 0.75 ? '-translate-x-[calc(100%-1.5rem)]' : '-translate-x-1/2'} ${spot.y < 0.3 ? 'translate-y-9' : '-translate-y-[calc(100%+2.25rem)]'} flex-col items-center gap-1 rounded-md border-2 border-p03 bg-p03-ground px-3 py-2 text-center whitespace-nowrap text-p03 shadow-[0_0_18px_rgb(125_255_154/0.5)]`}
                         >
                           <Icon className="size-10" />
@@ -417,7 +386,6 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
                           {WORDS[mark] ? <span className="text-base text-p03-dim">{WORDS[mark]}</span> : null}
                         </m.span>
                       ) : null
-                    // With the pen on, every node marks the plan; otherwise only the ones in reach are buttons.
                     if (pen || mark === 'next')
                       return (
                         <li key={node.id}>
@@ -428,7 +396,6 @@ export function RunMap({ run, layout }: { run: RunReady; layout: Layout }) {
                             aria-label={label}
                             title={nodeName(node)}
                             onClick={() => {
-                              // A press long enough to read the node isn't a click on it.
                               if (hold.current.fired) return void (hold.current.fired = false)
                               if (pen) toggleMark(node.id)
                               else run.act({ type: 'go', node: node.id })

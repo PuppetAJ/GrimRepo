@@ -1,12 +1,9 @@
 import { useEffect, useRef } from 'react'
 import type { Stroke } from '../plan.ts'
 
-// Amber, so a plan stands out from P03's green.
 export const INK = 'rgb(255 179 71 / 0.9)'
-// Points closer than this many pixels to the last are skipped, which keeps strokes small.
 const STEP = 3
 
-/** The player's own pen strokes over the map; it takes the pointer only while the pen is on. */
 export function PenLayer({
   active,
   strokes,
@@ -43,7 +40,6 @@ export function PenLayer({
   }
   useEffect(paint)
 
-  // Offsets are in the canvas's own space, so they stay right when the map is tilted into a hologram.
   const at = (event: React.PointerEvent<HTMLCanvasElement>) => {
     const element = event.currentTarget
     return [event.nativeEvent.offsetX / element.offsetWidth, event.nativeEvent.offsetY / element.offsetHeight] as const
@@ -57,7 +53,6 @@ export function PenLayer({
       width={Math.round(width * scale)}
       height={Math.round(height * scale)}
       style={{ width, height }}
-      // Above the nodes, so strokes are drawn over them.
       className={`absolute inset-0 z-40 ${active ? 'cursor-crosshair touch-none' : 'pointer-events-none'}`}
       onPointerDown={(event) => {
         if (!active || event.button !== 0) return

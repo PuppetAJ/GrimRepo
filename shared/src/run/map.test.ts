@@ -8,7 +8,6 @@ import type { MapNode, StageMap } from './types.ts'
 const maps = (stage: number) => Array.from({ length: 300 }, (_, seed) => generateStage(stage, new Rng(seed)))
 const UTILITIES = ['campfire', 'stones', 'event']
 
-/** Every route from the first row to the boss, as lists of nodes. */
 function routes(map: StageMap): MapNode[][] {
   const byId = new Map(map.rows.flat().map((node) => [node.id, node]))
   const from = (node: MapNode): MapNode[][] =>

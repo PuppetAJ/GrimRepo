@@ -37,17 +37,14 @@ export function MidLayout() {
         <section aria-label="The table" className="flex flex-none flex-col items-center gap-2">
           <Board />
         </section>
-        {/* Absolutely filled so this column never makes the row taller than the board. */}
         <div className="relative max-w-[32rem] min-w-52 flex-1">
           <div className="absolute inset-0 flex flex-col gap-3 overflow-hidden">
-            {/* Above the board, the note would shrink it. */}
             {seat ? <SeatNote seat={seat} /> : null}
             <ReaderPanel />
             <ConsolePanel />
           </div>
         </div>
       </div>
-      {/* One grid, so the prompt and Cancel line up with the hand and piles below them. */}
       <section
         ref={setHandSection}
         aria-label="Your hand"

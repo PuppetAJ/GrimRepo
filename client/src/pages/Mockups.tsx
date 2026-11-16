@@ -11,7 +11,6 @@ const LAYOUTS = ['wide', 'mid', 'phone'] as const
 
 const APPROVED_KEY = 'grimrepo:mockups-approved'
 
-/** Which revision of each mockup was approved, in this browser only. */
 type Approved = Record<string, number>
 
 function readApproved(): Approved {
@@ -32,9 +31,7 @@ function useApproved() {
       else next[name] = revision
       try {
         localStorage.setItem(APPROVED_KEY, JSON.stringify(next))
-      } catch {
-        // Private windows may refuse; the ticks then last only as long as the page.
-      }
+      } catch {}
       return next
     })
   return [approved, set] as const
@@ -117,7 +114,6 @@ function List({
   )
 }
 
-/** Every run screen to look at and resize, in development and test builds only. */
 export function MockupIndex() {
   const [approved, setApproved] = useApproved()
   const [hideApproved, setHideApproved] = useState(false)

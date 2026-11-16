@@ -5,7 +5,6 @@ import type { Listener, Ready } from './ready.ts'
 
 let generations = 0
 
-/** A battle played here and never saved, from a fixed state, for checking how a table holds it. */
 export function useLocalGame(start: GameState, opening: string[]): Ready {
   const [played, setPlayed] = useState({ state: start, log: opening, moves: 0 })
   const [generation] = useState(() => (generations += 1))

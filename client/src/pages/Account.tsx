@@ -35,13 +35,11 @@ export function Account() {
     () => (user?.username ? api.stats(user.username) : Promise.resolve(null)),
     `account-stats:${user?.username}`,
   )
-  // Only a player who has lost is told P03 remembers it.
   const lost = stats.status === 'ready' && Boolean(stats.data?.losses)
 
   async function rename(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const field = event.currentTarget.elements.namedItem('username') as HTMLInputElement
-    // Focus reads the field's error aloud with its label.
     const refuse = (message: string) => {
       setRenameError(message)
       field.focus()
@@ -147,7 +145,6 @@ export function Account() {
   )
 }
 
-/** Replaces the forms, which the server would refuse for the demo account anyway. */
 function DemoNotice() {
   const rise = useRise()
   return (

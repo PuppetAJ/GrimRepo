@@ -1,6 +1,5 @@
 import { useLayoutEffect, useRef } from 'react'
 
-/** The first line is a fixed heading; the rest follow new lines unless scrolled back. */
 export function ScreenReadout({
   lines,
   className = '',
@@ -41,7 +40,6 @@ export function ScreenReadout({
         }}
         className="flex min-h-0 flex-1 touch-pan-y [scrollbar-width:none] flex-col overflow-y-auto overscroll-contain [mask-image:linear-gradient(to_bottom,transparent,black_1.25rem)]"
       >
-        {/* Pushed to the bottom while the lines don't fill the box. */}
         <div className="mt-auto">
           {rest.map((line, i) => (
             <p key={i} className="whitespace-pre-wrap">

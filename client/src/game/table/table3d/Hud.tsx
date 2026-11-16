@@ -32,17 +32,14 @@ import type { CameraView } from '../layout.ts'
 import { useWideTable } from '../../wideTable.ts'
 import { ScreenReadout } from './ScreenReadout.tsx'
 
-// Past the site's width, as on a widened table, the corners keep to it so the controls never drift apart.
 const LEFT = 'left-[max(0px,calc((100%-100rem)/2))]'
 const RIGHT = 'right-[max(0px,calc((100%-100rem)/2))]'
 
 const HALO = '[text-shadow:0_0_2px_#000,0_0_6px_#000,0_0_12px_#000] [&_svg]:drop-shadow-[0_0_2px_#000]'
 const PLATE = 'rounded-md bg-p03-ground/75 backdrop-blur-sm'
-// P03's face scales with the table's height, so the gap over it is measured in cqh.
 const FACE_GAP =
   '[mask-image:linear-gradient(to_right,black_calc(50%-34cqh),transparent_calc(50%-20cqh),transparent_calc(50%+20cqh),black_calc(50%+34cqh))]'
 
-// Hidden on a sideways phone or a narrow screen, where the icon and its tooltip stand in; screen readers always get it.
 const Label = ({ children }: { children: ReactNode }) => (
   <span className="max-lg:sr-only short:sr-only">{children}</span>
 )
@@ -71,14 +68,10 @@ export function Hud({
   onAim,
 }: {
   run?: RunReady
-  /** The item slot picked up to aim, and how to pick one up or put it back. */
   aiming?: number | null
   onAim?: (slot: number | null) => void
-  /** In a run, glides back to look at the map on the projector. */
   onMap?: () => void
-  /** A run's inventory, the deck and tools carried; the tutorial has none. */
   onInventory?: () => void
-  /** The item picked up to aim at a card, and how to put it back. */
   aimed?: ItemId | null
   onPutBack?: () => void
   lifted: Unit | null
@@ -100,7 +93,6 @@ export function Hud({
   const finished = hasEnded(game)
   const legal = busy || finished ? [] : legalFor(game)
   const blurb = useSettled(game.tutorial?.blurb ?? game.run?.note ?? null, busy)
-  // Not over the loading screen, which takes 450ms to fade once the stage warms.
   const stage = useStage()
   const [loaded, setLoaded] = useState(false)
   useEffect(() => {
@@ -109,10 +101,8 @@ export function Hud({
     return () => clearTimeout(shown)
   }, [stage.warmed])
   const place3d = 'top-14 h-26 w-[min(36rem,calc(100%-1rem))]'
-  // The turn's own draw; a catch-up draw after it gets its own button, never owed.
   const mustDraw = !state.drawn && has(legal, { type: 'draw' })
   const summoning = view.summon ? view.hand.find((unit) => unit.uid === view.summon?.uid) : undefined
-  // An empty deck says what a draw would shuffle back in, and what it costs in a run.
   const reshuffle = view.deck ? null : reshuffleNote(state)
   const last = game.log.slice(-3)
   const ended = finished && !busy
@@ -125,15 +115,12 @@ export function Hud({
         />
         <div className="absolute inset-x-0 bottom-0 h-28 bg-linear-to-t from-black/90 via-black/70 to-transparent" />
       </div>
-      {/* Stops above the prompt so the reader never runs over it. */}
       <div
         className={`pointer-events-none absolute top-0 bottom-24 z-10 flex flex-col items-start p-3 font-terminal sm:p-4 ${LEFT}`}
       >
-        {/* On a dark backing, so the room's lights never wash the numbers out. */}
         <div className={`flex flex-col rounded-md bg-p03-ground/75 px-2 py-1 ${HALO}`}>
           <ScaleBar scale={view.scale} className="text-xl sm:text-2xl" />
           <span className="flex items-center gap-3 text-lg text-p03-dim sm:text-xl">
-            {/* Just where the battle stands; the deck and a reshuffle show on the table itself. */}
             <span>
               Turn {view.turn}
               {phaseText(state, view.phase) ? ` · ${phaseText(state, view.phase)}` : null}
@@ -143,7 +130,6 @@ export function Hud({
             ) : null}
           </span>
         </div>
-        {/* The rack is far off and out of view from the board, so the items are here too. */}
         {state.items?.length ? (
           <div role="group" aria-label="Your items" className={`pointer-events-auto mt-1 flex gap-1.5 p-1 ${PLATE}`}>
             {state.items.map((item, slot) => {
@@ -167,7 +153,6 @@ export function Hud({
           </div>
         ) : null}
         {pinned ? (
-          // Takes the pointer so it can be scrolled.
           <ScreenReadout
             lines={pinned}
             className="pointer-events-auto mt-2 h-52 max-h-full w-80 text-base"
@@ -187,7 +172,6 @@ export function Hud({
       </div>
 
       <div className={`absolute top-0 z-10 flex flex-col items-end gap-1 p-3 sm:p-4 ${RIGHT}`}>
-        {/* Icons only on a sideways phone or a narrow screen, so the row stays off P03's face and the scale. */}
         <div className={`flex flex-wrap justify-end ${PLATE}`}>
           {camera === 'table' ? null : (
             <Button
@@ -209,7 +193,6 @@ export function Hud({
             aria-keyshortcuts={camera === 'table' ? 'W' : 'D'}
             title={camera === 'table' ? 'Look at the board' : 'Sit back'}
           >
-            {/* Down, back toward the seat, once looking at the board. */}
             {camera === 'table' ? <LayoutGrid aria-hidden /> : <MoveDown aria-hidden />}
             <Label>{camera === 'table' ? 'Board' : 'Sit back'}</Label>
           </Button>
@@ -225,7 +208,6 @@ export function Hud({
               <Label>Inventory</Label>
             </Button>
           ) : null}
-          {/* The site header is hidden on a sideways phone and in full screen; a run leaves from its menu. */}
           {run ? null : (
             <Button
               size="sm"
@@ -276,13 +258,11 @@ export function Hud({
           <div
             className={`pointer-events-none absolute bottom-0 flex w-[min(26%,26rem)] flex-col gap-1 p-3 font-terminal sm:p-4 ${LEFT}`}
           >
-            {/* A screen reader copy of the log the monitor beside P03 shows. */}
             <ol aria-live="polite" className="sr-only">
               {last.map((line, index) => (
                 <li key={game.log.length - last.length + index}>{line}</li>
               ))}
             </ol>
-            {/* Keyed on hint so the shake replays. */}
             <p
               key={hint}
               className={`text-lg leading-tight text-p03 sm:text-xl ${HALO} ${hint ? 'animate-[nudge_0.6s_ease-out]' : ''}`}
@@ -341,11 +321,9 @@ export function Hud({
                       title="Cancel, or right-click anywhere"
                     >
                       Cancel
-                      {/* A right-click cancels too, after the label as the bell's key is; touch has no right-click to point at. */}
                       <MouseRight aria-hidden className="opacity-70 pointer-coarse:hidden" />
                     </Button>
                   ) : null}
-                  {/* While P03 leads, a second draw from the deck, framed in the deck's gold. */}
                   {state.catchUp && has(legal, { type: 'draw', from: 'deck' } as Partial<Action>) ? (
                     <Button
                       data-action="draw-extra"

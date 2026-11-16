@@ -1,4 +1,3 @@
-/** Railway runs this nightly; pnpm db:cleanup runs it by hand. */
 import { nightlyCleanup } from '../admin/cleanup.ts'
 import { pool } from '../config/db.ts'
 

@@ -10,11 +10,8 @@ import { ending, type Run } from '../../components/charts/chart.ts'
 import { hashOf } from './runs.ts'
 import { Trace } from './Trace.tsx'
 
-// Must match the server's page size.
 const HISTORY = 10
 
-/** The page lives in the URL, so Back returns to it. */
-// Under the header's own divider, the first row needs none; under a pinned trace it keeps one.
 const FIRST_ROW_OPEN = '[&>li:first-child]:border-t-0'
 
 export function History({ username, lastLoss }: { username: string; lastLoss: Run | undefined }) {
@@ -47,7 +44,6 @@ export function History({ username, lastLoss }: { username: string; lastLoss: Ru
         </p>
       ) : null}
       {pinned ? <Trace run={lastLoss} /> : null}
-      {/* Placeholder rows hold the list's height, so nothing below it jumps. */}
       {history.status === 'loading' ? (
         <div role="status" aria-label="Loading runs">
           <ol aria-hidden className={pinned ? '' : FIRST_ROW_OPEN}>
@@ -67,7 +63,6 @@ export function History({ username, lastLoss }: { username: string; lastLoss: Ru
       {runs.length ? (
         <ol className={pinned ? '' : FIRST_ROW_OPEN}>
           {runs.map((run, index) => (
-            // One after another as each page of the history loads.
             <li key={run.playedAt} {...rise(index)} className="flex items-center gap-4 border-t px-6 py-3.5">
               <span
                 aria-hidden

@@ -2,10 +2,6 @@ import { useEffect, useState } from 'react'
 import { prefersReducedMotion } from '../lib/motion.ts'
 import { iconArt, SPRITE_FPS, type IconId } from './art.ts'
 
-/**
- * An animated icon: its art is a strip of square frames side by side, played in a loop. A single frame still flickers
- * between poses, so a fire drawn once isn't frozen; with reduced motion it holds the first frame.
- */
 export function Sprite({ id, size, color }: { id: IconId; size: number; color: string }) {
   const url = iconArt(id)
   const [frames, setFrames] = useState(1)

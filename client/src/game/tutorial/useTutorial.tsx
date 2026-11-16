@@ -42,7 +42,6 @@ export function useTutorial(start = 0): Ready {
 
   const act = useCallback(
     (action: Action) => {
-      // Other moves are ignored; the dialogue already says what to do.
       if (!tutorialAllows(played.state, played.progress, action)) return
       const outcome = apply(played.state, action)
       if (!outcome.ok) return

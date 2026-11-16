@@ -12,7 +12,6 @@ const queued = (events: GameEvent[]) => events.filter((event) => event.type === 
 
 describe("a run's integrity", () => {
   it('costs 1 for each card P03 destroys', () => {
-    // Sandbox outlasts Cron Job's 1 and destroys it.
     const { state, events } = bell(table({ board: ['CronJob'], front: ['Sandbox'], integrity: 20 }))
     assert.deepEqual(changes(events), [-1])
     assert.equal(state.integrity?.left, 19)
@@ -41,7 +40,6 @@ describe("a run's integrity", () => {
 
 describe('Uptime', () => {
   it('stays up with 1 health the first time it would be destroyed in a battle, and only the first', () => {
-    // Mainframe hits for 13, far past COBOL's 5.
     const first = bell(table({ board: ['COBOL'], front: ['Mainframe'], integrity: 20 }))
     assert.equal(first.state.player.board[0]?.health, 1)
     assert.ok(first.events.some((event) => event.type === 'stayedUp'))

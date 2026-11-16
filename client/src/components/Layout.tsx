@@ -26,23 +26,18 @@ const tabs = [
   { to: '/run', label: 'Play', exact: false },
 ] as const
 
-// One max width so the header, nav, page and footer line up.
 const PAGE = 'mx-auto w-full max-w-[100rem]'
 
 export function Layout() {
   const session = authClient.useSession()
   const { pathname } = useLocation()
-  // The game's tables set their own widths, the site's or wider; a run's mockup is a run's table.
   const playing = ['/run', '/tutorial', '/mockups/'].some((path) => pathname.startsWith(path))
-  // The first page arrives prerendered; the pages moved to after it rise in.
   useEffect(() => markLanded(), [])
-  // While the session loads, a placeholder holds the header's height; what replaces it fades in.
   const holding = session.isPending && homeVariant()?.signedIn !== false
   const [heldAtFirst] = useState(holding)
   const navigate = useNavigate()
   const user = session.data?.user as { displayUsername?: string; username?: string; isAnonymous?: boolean } | undefined
   const name = user?.displayUsername ?? user?.username
-  // The server's guess about the session stands only until the session is known.
   useEffect(() => {
     if (!session.isPending) delete document.documentElement.dataset['home']
   }, [session.isPending])
@@ -64,7 +59,6 @@ export function Layout() {
               Public, unfortunately
             </span>
           </div>
-          {/* Holds the header's height while the session loads, unless the server already knew there was none. */}
           {holding ? (
             <Button variant="outline" aria-hidden tabIndex={-1} className="invisible">
               Sign in
@@ -82,7 +76,6 @@ export function Layout() {
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" className="gap-2">
-                          {/* Said before the name rather than instead of it, so the name holds the words on screen. */}
                           <span className="sr-only">Account menu: </span>
                           <Avatar name={name} size="sm" />
                           <span>{name}</span>
@@ -105,7 +98,6 @@ export function Layout() {
                   </>
                 )}
               </div>
-              {/* Phones get one menu so the header never wraps. */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" aria-label={name ? 'Account menu' : 'Menu'} className="gap-2 sm:hidden">
@@ -159,9 +151,7 @@ export function Layout() {
       </nav>
 
       <main className="flex-1 px-(--gutter) py-8">
-        {/* Capped so a browser zoomed far out stays readable; the game's tables cap themselves. */}
         <div className={playing ? '' : PAGE}>
-          {/* Keyed by the path, so leaving a page that failed clears the failure. */}
           <LoadFailed key={pathname} fallback={<ReloadPage />}>
             <Suspense fallback={<Loading label="Loading" />}>
               <Outlet />

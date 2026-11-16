@@ -9,11 +9,9 @@ import { DeathCardBuilder } from './DeathCardBuilder.tsx'
 import { DeckTable } from './DeckTable.tsx'
 import { HEADER_BUTTON, ScreenActions } from './Screen.tsx'
 
-/** How the run went, once it's over: how far it got, the score, and the deck it ended with. */
 export function Summary({ run }: { run: RunReady }) {
   const { state, over } = run
   const won = state.status === 'won'
-  // The server's score once saved; the same formula locally until then.
   const bonus = state.death?.skipped ? deathSkipBonus(state.death.card) : 1
   const score = over?.score ?? scoreRun(state.record, won, bonus)
   const facts: [string, string][] = [
@@ -25,11 +23,8 @@ export function Summary({ run }: { run: RunReady }) {
     ['Score', number(score)],
   ]
   return (
-    // Kept to a readable width, so a wide screen doesn't leave the facts stranded across it.
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 pb-6">
-      {/* In the header, so they're in reach without scrolling past the deck. */}
       <ScreenActions>
-        {/* Short on a phone, so the title keeps room beside them. */}
         <button
           type="button"
           data-action="again"
@@ -65,7 +60,6 @@ export function Summary({ run }: { run: RunReady }) {
         </dl>
         {run.id !== -1 && !over ? <p className="mt-2 text-lg text-p03-dim">Saving the result…</p> : null}
       </Panel>
-      {/* Each part in a box of its own, like the facts above. */}
       {won ? null : (
         <Box>
           <DeathCardBuilder run={run} />

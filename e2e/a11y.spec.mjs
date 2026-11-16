@@ -1,11 +1,8 @@
 import AxeBuilder from '@axe-core/playwright'
 import { BASE, check, resetRateLimits, signInAsDemo, tableReady, test } from './lib.mjs'
 
-// CI runs the suite in three parts at once, picked with --grep @pages, @run or @tables; a plain run checks them all.
-
 test.beforeAll(resetRateLimits)
 
-// Start with the README taken over, so axe checks the terminal, not the screenshot before it.
 test.beforeEach(async ({ context }) => {
   await context.addCookies([{ name: 'grimrepo_seen', value: '1', url: BASE }])
 })
@@ -21,17 +18,14 @@ const PAGES = [
   ['a page that is not there', '/nowhere'],
 ]
 
-// WCAG 2.2 AA, which adds target size, and axe's best practices, which cover landmarks and headings.
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice']
 
 async function audit(page, name, path, ready = () => page.waitForLoadState('networkidle')) {
   await page.goto(`${BASE}${path}`)
   await ready()
-  // Wait out the corruption's growth and the terminal's typing, so axe checks what stays.
   await page.waitForTimeout(3000)
   const { violations } = await new AxeBuilder({ page })
     .withTags(TAGS)
-    // WebGL is drawn, not read; the canvases carry their own labels.
     .exclude('canvas')
     .analyze()
   const found = []
@@ -50,10 +44,6 @@ async function audit(page, name, path, ready = () => page.waitForLoadState('netw
   check(`${name}: every card's control names its card`, unnamed.length === 0, unnamed.slice(0, 6).join('\n      '))
 }
 
-// A card face prints only its attack and health, while the control around it reads out the name, stats, sigils and
-// cost. axe's label-in-name rule wants the printed numbers as one unbroken run of that label, which only a worse label
-// could give, so it is waived on card faces alone; the check above holds their labels to naming the card instead,
-// which is what someone speaking a command needs.
 const holdsCardFace = (page, selector) =>
   page.evaluate((target) => Boolean(document.querySelector(target)?.querySelector('[data-face]')), selector)
 
@@ -77,7 +67,6 @@ test.describe('The pages', { tag: '@pages' }, () => {
   })
 })
 
-// From mockups, so every screen is checked whatever a real run's seed would deal, and at its worst.
 const MOCKED = [
   ['start', 'start'],
   ['map', 'map'],
@@ -146,7 +135,6 @@ test.describe('A run', { tag: '@run' }, () => {
 
 test.describe('The tables', { tag: '@tables' }, () => {
   test('The game', async ({ page }) => {
-    // A fresh deal on a fixed board: the text table in each layout, then the 3D table's controls.
     await page.goto(BASE)
     const textTable = () => page.locator('[data-table="text"]').waitFor()
     for (const [layout, width, height] of [
@@ -164,7 +152,6 @@ test.describe('The tables', { tag: '@tables' }, () => {
   })
 
   test('A run on the projector', async ({ page }) => {
-    // At the 3D table, each screen in the projector's window, once it has opened.
     await page.setViewportSize({ width: 1440, height: 900 })
     const projected = (view) => async () => {
       await screen(page, view)()
@@ -200,7 +187,6 @@ test.describe('The tables', { tag: '@tables' }, () => {
       return at()
     }
 
-    // Taking a card disables the button that had focus, and focus must not fall out of the table with it.
     const drawn = await draw()
     await page.keyboard.press('e')
     check('E rings the bell after the draw button it was on is disabled', await reaches(drawn + 1))
@@ -214,7 +200,6 @@ test.describe('The tables', { tag: '@tables' }, () => {
       )
     }
 
-    // WCAG 2.1.4: once the visitor clicks elsewhere, single-key shortcuts stop.
     const before = await draw()
     await page.locator('footer').click()
     await page.keyboard.press('e')

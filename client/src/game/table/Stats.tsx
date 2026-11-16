@@ -2,7 +2,6 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useRef, useState } from 'react'
 import { faceCount } from './faces.ts'
 
-/** On with ?stats, off with ?stats=0, and remembered for the browser session in between. */
 export function statsWanted(): boolean {
   const asked = new URLSearchParams(window.location.search).get('stats')
   try {
@@ -24,12 +23,10 @@ type Sample = {
   faces: number
 }
 
-// Written by the probe inside the canvas and read by the panel outside it.
 let latest: Sample | null = null
 
 const WINDOW_S = 0.5
 
-/** Counts each whole frame, post-processing passes included, by resetting the renderer's counters only once a frame. */
 export function StatsProbe() {
   const gl = useThree((state) => state.gl)
   useEffect(() => {
@@ -49,7 +46,6 @@ export function StatsProbe() {
         fps: now.frames / now.time,
         ms: (now.time / now.frames) * 1000,
         dpr: gl.getPixelRatio(),
-        // Last frame's counts: the counters run from one reset to the next.
         calls: gl.info.render.calls,
         triangles: gl.info.render.triangles,
         textures: gl.info.memory.textures,
@@ -64,7 +60,6 @@ export function StatsProbe() {
   return null
 }
 
-/** The numbers, at the top middle where the header and table leave room, refreshed twice a second so drawing them costs nothing noticeable. */
 export function StatsPanel({ quality }: { quality: number }) {
   const [shown, setShown] = useState<Sample | null>(null)
   useEffect(() => {

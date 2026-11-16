@@ -9,7 +9,6 @@ import { useAsync } from '../../lib/useAsync.ts'
 import { Choices, P03Dialogue } from '../P03Dialogue.tsx'
 import { useRunNotes } from '../run/notes.ts'
 
-/** Lanes count from 1, as the table labels them. */
 export function moveText(move: Move): string {
   switch (move.type) {
     case 'draw':
@@ -46,7 +45,6 @@ export function targetSelector(move: Move): string {
     case 'ringBell':
       return '[data-action="ringBell"]'
     case 'use':
-      // Phones keep the tools in the menu.
       return `[data-action="use"][aria-label^="${ITEMS[move.item].name}:"], [data-action="aim"][data-row="${move.row}"][data-lane="${move.lane}"], button[aria-label="Menu"]`
   }
 }
@@ -55,7 +53,6 @@ const GAP_OUT = 4
 
 type Outline = { selector: string; radius?: number }
 
-/** Only what the table doesn't already mark: text-table lanes and targets label themselves. */
 export function outlinesFor(move: Move): Outline[] {
   const text = '[data-table="text"]'
   const hud = '[data-table="3d"]'
@@ -66,7 +63,6 @@ export function outlinesFor(move: Move): Outline[] {
         { selector: `${hud} [data-action="draw-${move.from}"]` },
       ]
     case 'select':
-      // Inside the button, since the scrolling hand clips past its padding.
       return [
         {
           selector: `${text} [data-action="select"][aria-label^="${card(move.card).name},"] > span`,
@@ -101,14 +97,12 @@ function outlineCss(outlines: Outline[]): string {
   ].join('\n')
 }
 
-/** Holds a value until playback ends, so nothing changes ahead of the animation. */
 export function useSettled<T>(value: T, busy: boolean): T {
   const [settled, setSettled] = useState(value)
   if (!busy && settled !== value) setSettled(value)
   return busy ? settled : value
 }
 
-/** P03's words, with each linked word underlined and opening what it means. */
 export function Line({ text }: { text: string }) {
   return (
     <>
@@ -141,14 +135,12 @@ const takesKeys = (target: EventTarget | null) =>
   target instanceof Element && target.closest('button, a, input, select, textarea, [role="button"]') !== null
 
 const GAP = 8
-// The name tab's height above the box.
 const TAB_CLEAR = 16
 type Box = { left: number; right: number; top: number; bottom: number }
 const overlap = (a: Box, b: Box) =>
   Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) *
   Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top))
 
-/** Drops to the bottom when the top would cover what the step points at. */
 export function TutorialBlurb({
   blurb,
   busy,
@@ -161,7 +153,6 @@ export function TutorialBlurb({
   busy: boolean
   compact?: boolean
   fixed?: boolean
-  /** A run's first-time note, not a tutorial step: shown once, so it grows to fit rather than keeping one size. */
   note?: boolean
   className?: string
 }) {
@@ -183,7 +174,6 @@ export function TutorialBlurb({
       event.preventDefault()
       pressOn.current()
     }
-    // Controls the step points at can appear between moves, so changes measure again.
     let frame = 0
     const onResize = () => {
       cancelAnimationFrame(frame)
@@ -226,7 +216,6 @@ export function TutorialBlurb({
     const targets = selector ? [...root.querySelectorAll(selector)].map((found) => found.getBoundingClientRect()) : []
     const covered = (bottom: boolean) => targets.reduce((sum, target) => sum + overlap(at(bottom), target), 0)
     const bottom = covered(false) > 0 && covered(true) < covered(false)
-    // Level with the board's top edge, so that edge never shows above the box.
     const top = board && !fixed ? Math.max(TAB_CLEAR, Math.round(board.top - frame.top - 2)) : null
     setPlace((now) =>
       now.center === center && now.bottom === bottom && now.top === top ? now : { center, top, bottom },
@@ -257,7 +246,6 @@ export function TutorialBlurb({
           fixed ? 'fixed' : 'absolute',
           place.center === null ? 'left-1/2' : '',
           place.bottom ? 'bottom-2' : 'top-5',
-          // One size for every line, so the box never jumps between steps.
           compact ? 'h-21 w-[min(30rem,calc(100vw-1rem))]' : 'h-26 w-[min(36rem,calc(100%-1rem))]',
           onPressOn ? 'cursor-pointer' : '',
           className,
@@ -277,7 +265,6 @@ export function TutorialBlurb({
           ) : null
         }
       >
-        {/* Keyed so a screen reader hears each new line once. */}
         <p key={step.id} aria-live="polite">
           <Line text={step.says} />
         </p>
@@ -294,10 +281,6 @@ export function SkipTutorial({ className = '' }: { className?: string }) {
   )
 }
 
-/**
- * Whether the next run shows P03's notes again, offered to a player with an account: ticked until they've finished a
- * run, so a newcomer gets the walkthrough and a player brushing up on the rules isn't nagged.
- */
 function useShowNotesAgain() {
   const user = authClient.useSession().data?.user as { username?: string } | undefined
   const stats = useAsync(
@@ -336,7 +319,6 @@ export function TutorialEnding() {
                 void navigate({ to: '/run' })
               },
             },
-            // Reload, so the battle deals again from the start.
             { label: 'Play tutorial again', onChoose: () => window.location.reload() },
           ]}
         />

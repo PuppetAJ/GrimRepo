@@ -26,7 +26,6 @@ export type SigilId =
   | 'redundancy'
   | 'uptime'
 
-/** What a card is, for the sigils that count cards of their own type. */
 export type CardType = 'bot' | 'exploit' | 'bug' | 'legacy' | 'dev'
 
 export const CARD_TYPES: Record<CardType, { name: string; about: string }> = {
@@ -45,9 +44,7 @@ export type CardDef = {
   health: number
   cost: number
   sigils: SigilId[]
-  /** The card whose art it wears, for a death card; others wear their own. */
   art?: string
-  /** None for Boilerplate, Out of Memory and the debug card. */
   type?: CardType
 }
 
@@ -96,7 +93,6 @@ export const SIGILS: Record<SigilId, { name: string; text: string }> = {
   },
 }
 
-// Order matters: reordering changes what every seed deals.
 const table: [string, string, Tier, number, number, number, SigilId[]?][] = [
   ['OffCenterDiv', 'OffCenterDiv', 'E', 0, 4, 0, ['refactor']],
   ['HelloWorld', 'Hello World', 'E', 2, 2, 0, ['uptime']],
@@ -123,29 +119,21 @@ const table: [string, string, Tier, number, number, number, SigilId[]?][] = [
   ['FourOhFour', 'FourOhFour', 'A', 4, 0, 4, ['segfault']],
   ['RubberDuck', 'RubberDuck', 'A', 4, 12, 3, ['hotfix']],
   ['Mainframe', 'Mainframe', 'A', 13, 13, 3],
-  // Debug card: it ends any game in one turn, so it is in no deck.
   ['Y2K', 'Y2K', 'S', 2000, 2000, 0],
-  // Free fuel for sacrifices, drawn from a pile that never runs out.
   ['Boilerplate', 'Boilerplate', 'E', 0, 1, 0],
-  // P03's answer to a run's empty deck; it grows each time, so it is in no deck.
   ['OutOfMemory', 'Out of Memory', 'E', 1, 1, 0],
-  // A Beta card's two forms: it ships as the second after a round on the table, so only the first is dealt.
   ['Prototype', 'Prototype', 'D', 1, 2, 0, ['beta']],
   ['ShippedFeature', 'Shipped Feature', 'B', 4, 5, 0],
-  // Found only at events, so they are in no deck and never offered.
   ['Regex', 'Regex', 'C', 1, 1, 1, ['fatal_error']],
   ['SeniorDev', 'Senior Dev', 'B', 3, 4, 2, ['tech_lead']],
   ['Daemon', 'Daemon', 'C', 2, 2, 1, ['hot_reload']],
-  // One for each type, each growing with the cards of its type beside it.
   ['Botnet', 'Botnet', 'C', 1, 2, 1, ['scale_out']],
   ['Heisenbug', 'Heisenbug', 'D', 1, 1, 0, ['scale_out']],
   ['Monolith', 'Monolith', 'C', 2, 4, 1, ['redundancy']],
   ['ExploitChain', 'Exploit Chain', 'C', 2, 1, 1, ['scale_out']],
   ['PairProgramming', 'Pair Programming', 'C', 2, 3, 1, ['redundancy']],
-  // Broadcast's home since Hello World took Uptime, and Legacy's defender.
   ['ReplyAll', 'Reply All', 'C', 1, 2, 1, ['broadcast']],
   ['COBOL', 'COBOL', 'C', 2, 5, 1, ['uptime']],
-  // Walls that make a defensive deck work, and two more that slip past them.
   ['RateLimiter', 'Rate Limiter', 'C', 1, 5, 1, ['packet_loss']],
   ['HealthCheck', 'Health Check', 'C', 2, 4, 1, ['uptime']],
   ['Honeypot', 'Honeypot', 'C', 1, 4, 1, ['backtrace']],
@@ -213,10 +201,8 @@ export const BOILERPLATE = 'Boilerplate'
 export const DEBUG_CARD = 'Y2K'
 export const OUT_OF_MEMORY = 'OutOfMemory'
 
-/** What a Beta card ships as. */
 export const SHIPS_AS: Record<string, string> = { Prototype: 'ShippedFeature' }
 
-/** Cards a run gains only from events. */
 export const EVENT_ONLY = ['Regex', 'SeniorDev', 'Daemon']
 
 export const PLAYER_DECK: string[] = Object.keys(CARDS).filter(
@@ -228,15 +214,12 @@ export const PLAYER_DECK: string[] = Object.keys(CARDS).filter(
     !EVENT_ONLY.includes(id),
 )
 
-/** No board wipe, or P03 could clear the player's side on a whim; no Uptime, so P03's cards always fall to a finishing blow. */
 export const OPPONENT_POOL: string[] = PLAYER_DECK.filter(
   (id) => !CARDS[id]?.sigils.includes('segfault') && !CARDS[id]?.sigils.includes('uptime'),
 )
 
-/** A death card's id carries the whole card, so battles, offers and replays need no catalog entry for it. */
 export const DEATH_PREFIX = 'death:'
 export const isDeathCard = (id: string): boolean => id.startsWith(DEATH_PREFIX)
-/** At most this long, so the name fits on one line on the card and on the profile. */
 export const DEATH_NAME_LIMIT = 16
 export const DEATH_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9 ._'!?-]*$/
 
@@ -254,7 +237,6 @@ export const deathCardId = ({ name, cost, attack, health, art, sigils }: DeathCa
 
 const parsed = new Map<string, CardDef | null>()
 
-/** The card a death card's id describes, or null if it isn't a well-formed one. */
 export function parseDeathCard(id: string): CardDef | null {
   if (!isDeathCard(id)) return null
   if (parsed.has(id)) return parsed.get(id) ?? null
@@ -264,9 +246,7 @@ export function parseDeathCard(id: string): CardDef | null {
   let name = ''
   try {
     name = decodeURIComponent(encoded)
-  } catch {
-    // A malformed name falls through to null below.
-  }
+  } catch {}
   const sigils = sigilList ? (sigilList.split(',') as SigilId[]) : []
   const base = CARDS[art]
   const valid =
@@ -290,7 +270,6 @@ export function parseDeathCard(id: string): CardDef | null {
         cost: cost as number,
         sigils,
         art,
-        // A death card is the type of the card whose stats and art it took.
         ...(base.type ? { type: base.type } : {}),
       }
     : null

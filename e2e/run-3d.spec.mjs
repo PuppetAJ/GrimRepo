@@ -1,10 +1,6 @@
-// A run at the 3D table, from mockups: the projector's window, clicks through it, the glides to and from a battle,
-// and the floating screens of a stage too small for the window.
 import { BASE, check, freshPage, test } from './lib.mjs'
 
-// Software WebGL is slow, so every wait on the stage is long.
 const SLOW = 90_000
-// A mockup works out its state as the page loads; the screen's own wait covers it, not the load event.
 const MOCKUP = { waitUntil: 'domcontentloaded' }
 const ROOT = '[data-run-moves]'
 
@@ -17,7 +13,6 @@ async function open(browser, name, { width = 1440, height = 900 } = {}) {
 }
 
 const view = (page) => page.locator(ROOT).getAttribute('data-run-view')
-/** The projector's window, once the scene has pinned it open. */
 const lit = (page) => page.locator('.hologram-window').filter({ visible: true })
 const shown = (locator, timeout = SLOW) =>
   locator
@@ -33,11 +28,9 @@ test('The map on the projector', async ({ browser }) => {
   check('with the stage as its title, inside it', (title ?? '').startsWith('Stage 1 of 3'), title)
   check(
     'and the legend and the menu inside it too',
-    // Waited for, since the window shows as soon as it starts to open.
     (await shown(lit(page).getByRole('list', { name: 'What the icons mean' }), 20_000)) &&
       (await shown(lit(page).getByRole('button', { name: 'Run menu' }), 20_000)),
   )
-  // A node to a screen off the board, clicked through the warped window.
   const node = page.locator('[data-action="go"]:not([aria-label^="Battle"])').first()
   const moves = Number(await page.locator(ROOT).getAttribute('data-run-moves'))
   await node.click()
@@ -73,17 +66,14 @@ test('A battle and the map', async ({ browser }) => {
 test('Into a battle from the map', async ({ browser }) => {
   const { context, page } = await open(browser, 'map')
   await shown(lit(page))
-  // Walks the mockup's map to a battle, through whatever lies between.
   for (let step = 0; step < 12 && (await view(page)) !== 'battle'; step++) {
     const current = await view(page)
-    // A decided event says what it did until it's closed, which is no move of the run's.
     const onward = page.locator('[data-action="continue"]')
     if (current === 'event' && (await onward.count())) {
       await onward.click()
       await page.locator(`${ROOT}[data-run-view="map"]`).waitFor()
       continue
     }
-    // A card choice's pack is torn open first; its cards are then taken from a dialog.
     const pack = page.locator('[data-action="open-pack"]')
     if ((current === 'card' || current === 'reward') && (await pack.count())) await pack.first().click()
     const battle = page.locator('[data-action="go"][aria-label^="Battle"]')
@@ -117,7 +107,6 @@ test('A stage too small for the window', async ({ browser }) => {
   check(
     "and the terminal's glyphs behind it",
     await page
-      // The glyphs' canvas is the frame's first; the route pen has one of its own.
       .locator('[data-table="run"] > span > canvas')
       .waitFor({ state: 'attached', timeout: 10_000 })
       .then(() => true)
@@ -136,7 +125,6 @@ test('A window wider than the site', async ({ browser }) => {
     .getByRole('button', { name: /^Run menu/ })
     .click()
   await page.getByRole('menuitem', { name: 'Widen the table' }).click()
-  // Under the 7rem header, 21:9 of what's left is as wide as it goes.
   const most = ((1080 - 112) * 21) / 9
   const widened = await page
     .waitForFunction(

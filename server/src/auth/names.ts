@@ -21,12 +21,9 @@ const CHILDISH = [
   'buttcrack',
   'diarrhea',
 ]
-// Harmless in a name, or they fold into common words ('butt' reads as 'but').
 const HARMLESS = new Set(['xx', 'xxx', 'sm', 'scat', 'escort', 'butt', 'dommes', 'domination', 'skeet', 'fingering'])
-// Ordinary words the looser patterns would otherwise catch.
 const WHITELIST = ['shiitake', 'twinkl', 'rapping', 'coonskin', 'glovemaking']
 
-// Shorter words need stricter word edges, or they flag ordinary names.
 const pattern = (word: string) => (word.length >= 8 ? word : word.length >= 5 ? `|${word}` : `|${word}|`)
 
 // The matcher folds doubled letters, so patterns must be folded the same way.
@@ -50,7 +47,6 @@ const matcher = new RegExpMatcher({
   ...englishRecommendedTransformers,
 })
 
-// Names that could pass for the game, the site or its staff.
 const RESERVED = new Set([
   'p03',
   'admin',
@@ -74,7 +70,6 @@ const RESERVED = new Set([
 
 export const NAME_REFUSED = 'That name is not allowed. Pick another.'
 
-/** Also catches words split by underscores or hidden in camelCase or digits. */
 export function isOffensive(name: string): boolean {
   // The matcher counts underscores as letters, so word edges come from spaces.
   const spaced = name
@@ -84,6 +79,5 @@ export function isOffensive(name: string): boolean {
   return [name, name.replaceAll('_', ''), spaced].some((reading) => matcher.hasMatch(reading))
 }
 
-// guest_ names are for guests only, so no player can pass for one.
 export const isReserved = (name: string): boolean =>
   RESERVED.has(name.replaceAll('_', '').toLowerCase()) || /^guest_/i.test(name)

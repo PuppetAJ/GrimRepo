@@ -6,10 +6,6 @@ import { PixelCard } from '../../CardReader.tsx'
 import { CardSearch, SearchContext } from './CardBits.tsx'
 import { CardList } from './CardList.tsx'
 
-/**
- * A place for one card: empty, a dashed box with a + that opens a searchable list of the cards that fit; filled, the
- * card, which opens the list again to change it. It keeps a crowded screen to one card per choice.
- */
 export function CardSlot({
   label,
   units,
@@ -25,7 +21,6 @@ export function CardSlot({
   picked: number | null
   onPick: (unit: Unit) => void
   data?: (unit: Unit) => Record<string, string | number>
-  /** For tests to find the slot itself. */
   slot: string
 }) {
   const [open, setOpen] = useState(false)

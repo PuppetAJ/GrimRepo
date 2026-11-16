@@ -4,9 +4,7 @@ import { countRunCardsPlayed } from './db/players.ts'
 import { env, isProduction } from './config/env.ts'
 
 async function start(): Promise<void> {
-  // Connect first, so an unreachable database fails the boot instead of every request.
   await checkDatabase()
-  // A one-off backfill; later boots find nothing to count.
   const counted = await countRunCardsPlayed()
   if (counted) console.log(`Counted the cards played in ${counted} earlier runs.`)
 

@@ -10,7 +10,6 @@ import { LeaveButton, ScreenBar } from './Screen.tsx'
 
 type Transfer = Extract<RunAction, { type: 'transfer' }>
 
-/** Sacrifice one card to move one of its sigils onto another: pick the giver, the sigil, then the receiver. */
 export function Stones({ run }: { run: RunReady }) {
   const [from, setFrom] = useState<number | null>(null)
   const [sigil, setSigil] = useState<SigilId | null>(null)
@@ -33,7 +32,6 @@ export function Stones({ run }: { run: RunReady }) {
   return (
     <div data-center className="@container flex flex-col gap-4">
       <LeaveButton label="Leave the stones" onLeave={() => run.act({ type: 'leave' })} />
-      {/* Above the cards, so the final choice is always in reach. */}
       <ScreenBar>
         <div className="flex flex-col gap-2 pb-1">
           <p className="text-lg">
@@ -44,7 +42,6 @@ export function Stones({ run }: { run: RunReady }) {
         </div>
       </ScreenBar>
       {moves.length ? (
-        // Left to right: the card given up, the sigil it gives, and the card that gains it.
         <div className={FLOW}>
           <Step title="The card to sacrifice">
             <CardSlot
@@ -66,7 +63,6 @@ export function Stones({ run }: { run: RunReady }) {
                 action="stone-sigil"
                 onChoose={(id) => {
                   setSigil(id)
-                  // The card picked to gain it stays, if it can take this sigil too.
                   setTo((now) =>
                     now !== null && moves.some((move) => move.from === from && move.sigil === id && move.to === now)
                       ? now
@@ -106,7 +102,6 @@ export function Stones({ run }: { run: RunReady }) {
           </Step>
         </div>
       ) : null}
-      {/* Below the three, grayed out until each is picked. */}
       {moves.length ? (
         <button
           type="button"

@@ -4,7 +4,6 @@ import * as THREE from 'three'
 import { STILL } from './factory/constants.ts'
 import type { Vec3 } from './layout.ts'
 
-// The canvas's width for a short popup, such as a number; the sprite widens with it for longer words.
 const WIDTH = 256
 
 export function Popup({
@@ -19,7 +18,6 @@ export function Popup({
   born: number
 }) {
   const sprite = useRef<THREE.Sprite>(null)
-  // A canvas wide enough for the words, so a long one such as "rolled back" isn't cut off at its ends.
   const { material, wide } = useMemo(() => {
     const element = document.createElement('canvas')
     const font = '72px VT323'

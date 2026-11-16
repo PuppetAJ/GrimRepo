@@ -2,7 +2,6 @@ import { INTEGRITY, ITEM_SLOTS, ITEMS, type ItemId } from 'shared'
 import { Sigil } from '../../CardReader.tsx'
 import { IntegrityBar } from '../../controls.tsx'
 
-/** The run's integrity, at the top of the inventory: just the count, which a bar on the projector's green would lose. */
 export function RunIntegrity({ left }: { left: number }) {
   return (
     <div className="flex items-center justify-between gap-2">
@@ -12,10 +11,8 @@ export function RunIntegrity({ left }: { left: number }) {
   )
 }
 
-/** The tools carried, one place for each slot, empty ones dashed; each names itself and what it does on hover. */
 export function HeldTools({ items, label = 'Your tools' }: { items: ItemId[]; label?: string }) {
   return (
-    // The slots to the right, as a row of its own in the inventory and beside a heading in the shop.
     <div className="flex items-center justify-between gap-2">
       <span className="text-p03">
         {label} ({items.length}/{ITEM_SLOTS})
@@ -39,7 +36,6 @@ export function HeldTools({ items, label = 'Your tools' }: { items: ItemId[]; la
   )
 }
 
-/** The overkill banked for the Package Registry, in the inventory beside the tools. */
 export function Bytes({ count }: { count: number }) {
   return (
     <p className="text-p03-dim">

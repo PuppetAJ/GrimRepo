@@ -37,9 +37,7 @@ export function Factory({
   onPin?: (screen: Screen) => void
   onHold?: (screen: Screen, x: number, y: number, sticky?: boolean) => void
 }) {
-  // Wrapped to the screen's width, so a long line never runs off its edge.
   const plain = useMemo(() => logLines(log, MONITOR_ROWS - 1, MONITOR_COLUMNS), [log])
-  // Every 17th line, a corrupted glimpse of OLD_DATA, wiped a beat later.
   const [glitch, setGlitch] = useState(false)
   useEffect(() => {
     if (log.length === 0 || log.length % GLITCH_EVERY) return
@@ -100,9 +98,7 @@ export function Factory({
 const LOG_AT: Vec3 = [CENTER_X - 4.3, 9.5, -14.2]
 const STATUS_AT: Vec3 = [CENTER_X + 4.3, 9.5, -14.2]
 
-// Memoized so a move doesn't re-render the static room.
 const Fixtures = memo(function Fixtures() {
-  // Pin the dust to 1x so its size holds when the resolution adapts.
   const dust = useRef<THREE.Points>(null)
   useFrame(() => {
     const material = dust.current?.material as { pixelRatio?: number } | undefined
@@ -131,7 +127,6 @@ const Fixtures = memo(function Fixtures() {
   )
 })
 
-// Preload on import so the models arrive with the card art, not on first render.
 for (const url of ['/models/p03.glb', '/models/battery.glb', '/models/light.glb', '/models/button.glb'])
   useGLTF.preload(url, false, false)
 for (const name of ['table', 'floor', 'wall']) useTexture.preload(Object.values(surfaces(name)))

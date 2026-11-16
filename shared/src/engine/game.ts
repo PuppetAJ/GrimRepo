@@ -21,23 +21,14 @@ import { canOwe, costOf, DEBT, deckCard, drawUnit, indebted, makeUnit, units, wo
 
 export type GameOptions = {
   seed: number
-  /** Deals the debug card, which ends a game in one turn; development and tests only. */
   debug?: boolean
-  /** A run's deck; a quick battle uses the whole card table. */
   deck?: DeckCard[]
-  /** P03 follows this encounter's plan instead of picking freely. */
   encounter?: string | null
-  /** Deals a card costing 1 or less into the opening hand when the deck has one. */
   fairHand?: boolean
-  /** Each rebuild of an empty deck after the first gives P03 an Out of Memory card, one bigger every time. */
   outOfMemory?: boolean
-  /** A run's items, to use in this battle. */
   items?: ItemId[]
-  /** A death card a boss adds to its last phase, on top of its plan; `by` is its maker, or null for the player's own. */
   haunt?: { card: string; by: string | null } | null
-  /** A run's integrity, which the cards P03 destroys wear down. */
   integrity?: { left: number; max: number }
-  /** An unshuffled deck, and P03 plays its plan exactly, then nothing. */
   scripted?: boolean
 }
 
@@ -81,7 +72,6 @@ export function createGame({
   if (fairHand) dealFairly(state.player)
   const opening = state.player.deck.splice(0, 3)
   for (const source of opening) state.player.hand.push(drawUnit(state, source))
-  // The Boilerplate guarantees the first turn has something to play.
   state.player.hand.push(makeUnit(state, BOILERPLATE))
   if (debug) state.player.hand.push(makeUnit(state, DEBUG_CARD))
 
@@ -100,12 +90,10 @@ function dealFairly(player: GameState['player']): void {
   player.deck.splice(Math.min(2, player.deck.length), 0, source as number)
 }
 
-/** What a Beta card other than Prototype gains when it ships, as Prototype gains on becoming Shipped Feature. */
 const BETA_BOOST = 3
 
 const fail = (reason: string): Result => ({ ok: false, reason })
 
-// A full hand at turn start skips the draw for the whole turn, even after a card is played.
 const mustDraw = (state: GameState): boolean => !state.drawn
 
 const paid = (state: GameState): number =>
@@ -116,29 +104,24 @@ const onBoard = (state: GameState): number =>
     .filter((unit) => !indebted(unit) || canOwe(state, 1))
     .reduce((sum, unit) => sum + worthOf(unit), 0)
 
-/** Whether the card in a lane can be sacrificed alongside those marked, without its debt losing the game. */
 const affordable = (state: GameState, lane: number): boolean => {
   if (!indebted(state.player.board[lane])) return true
   const debts = (state.summon?.marked ?? []).filter((marked) => indebted(state.player.board[marked])).length
   return canOwe(state, debts + 1)
 }
 
-/** Library cards not in hand or on the table, which an empty deck is rebuilt from. */
 const outOfPlay = (state: GameState): number[] => {
   const inPlay = new Set([...state.player.hand, ...units(state.player.board)].map((unit) => unit.source))
   const spent = new Set(state.player.spent)
   return [...state.player.library.keys()].filter((source) => !inPlay.has(source) && !spent.has(source))
 }
 
-/** How many cards a draw from the empty deck would shuffle back in; 0 while the deck still has cards. */
 export const reshuffleSize = (state: GameState): number => (state.player.deck.length ? 0 : outOfPlay(state).length)
 
-/** Whether the next reshuffle gives P03 an Out of Memory card, as every one after a run battle's first does. */
 export const reshuffleCostsMemory = (state: GameState): boolean => (state.rebuilds ?? -1) >= 1
 
 const validLane = (lane: number): boolean => Number.isInteger(lane) && lane >= 0 && lane < LANES
 
-/** Never mutates the given state. */
 export function apply(current: GameState, action: Action): Result {
   if (current.status !== 'playing') return fail('The game is over')
   const state = structuredClone(current)
@@ -146,7 +129,6 @@ export function apply(current: GameState, action: Action): Result {
   const events: GameEvent[] = []
 
   if (action.type === 'draw' && !mustDraw(state)) {
-    // The turn's draw is done; only a catch-up draw from the deck is left, and it never reshuffles.
     if (state.player.hand.length >= HAND_LIMIT) return fail('The hand is full')
     if (!state.catchUp || action.from !== 'deck') return fail('No more draws this turn')
     if (!state.player.deck.length) return fail('The deck is empty')
@@ -157,11 +139,9 @@ export function apply(current: GameState, action: Action): Result {
   } else if (action.type === 'draw') {
     if (action.from === 'deck') {
       if (state.player.deck.length === 0) {
-        // Rebuilt without cards in hand or on the table, so no card is ever in two places.
         state.player.deck = rng.shuffle(outOfPlay(state))
         if (state.player.deck.length === 0) return fail('The deck is empty')
         events.push({ type: 'reshuffled', cards: state.player.deck.length })
-        // In a run, every rebuild after the first costs a growing Out of Memory card on P03's side.
         if (state.rebuilds !== undefined) {
           state.rebuilds += 1
           if (state.rebuilds >= 2) outOfMemory(state, state.rebuilds - 1, rng, events)
@@ -217,18 +197,15 @@ export function apply(current: GameState, action: Action): Result {
       const survived = victim.sigils.includes('try_catch')
       if (!survived) state.player.board[lane] = null
       events.push({ type: 'sacrificed', lane, uid: victim.uid, survived })
-      // A Technical Debt card pays 3, and the scale tips against its owner for it.
       if (indebted(victim)) {
         state.scale -= DEBT
         events.push({ type: 'indebted', uid: victim.uid, amount: DEBT, scale: state.scale })
       }
       if (!survived) perish(state, 'player', victim, lane, events)
     }
-    // A Refactor card hands its stats, but not Refactor itself, to the card it pays for, so no chain of them stacks.
     const refactored = summon.marked
       .map((lane) => victims.get(lane) as Unit)
       .filter((victim) => victim.sigils.includes('refactor'))
-    // A card refactored away is gone for the battle, so its stats can't come round again on a reshuffle.
     for (const victim of refactored)
       if (victim.source !== undefined && !victim.sigils.includes('try_catch'))
         state.player.spent = [...(state.player.spent ?? []), victim.source]
@@ -268,20 +245,17 @@ export function apply(current: GameState, action: Action): Result {
   return { ok: true, state, events }
 }
 
-/** The card an item is aimed at, if the aim fits what the item needs. */
 function itemTarget(state: GameState, action: Extract<Action, { type: 'use' }>): Unit | null {
   const item = state.items?.[action.slot]
   if (!item || action.lane === undefined || !validLane(action.lane)) return null
   const target = ITEMS[item].target
   if (target === 'own') return action.row === 'board' ? (state.player.board[action.lane] ?? null) : null
   if (target !== 'opponent') return null
-  // The Hook and the Pliers reach P03's front row; the Scissors reach its queue too.
   if (action.row === 'front') return state.opponent.front[action.lane] ?? null
   if (action.row === 'back' && item === 'scissors') return state.opponent.back[action.lane] ?? null
   return null
 }
 
-/** Uses an item; a reason when it can't be. */
 function useItem(state: GameState, action: Extract<Action, { type: 'use' }>, events: GameEvent[]): string | null {
   if (mustDraw(state)) return 'Draw first'
   const item = state.items?.[action.slot]
@@ -333,7 +307,6 @@ function useItem(state: GameState, action: Extract<Action, { type: 'use' }>, eve
 
 function playTurn(state: GameState, rng: Rng, events: GameEvent[]): void {
   attack(state, 'player', events)
-  // A Backtrace striking back can wear the last of the run's integrity away, even as the player's attack lands.
   if (broken(state)) return finish(state, 'loss', events)
   if (state.scale >= TIP) {
     if (!nextPhase(state, rng, events)) return finish(state, 'win', events)
@@ -350,7 +323,6 @@ function playTurn(state: GameState, rng: Rng, events: GameEvent[]): void {
     }
 
     if (state.skipOpponent) {
-      // The Hourglass: P03 neither attacks nor queues this turn.
       state.skipOpponent = false
       events.push({ type: 'skipped' })
     } else {
@@ -362,12 +334,10 @@ function playTurn(state: GameState, rng: Rng, events: GameEvent[]): void {
     }
   }
 
-  // A Beta card that has been through a round on the table ships: as its stronger form, or else with +3/+3.
   for (const unit of [...units(state.player.board), ...units(state.opponent.front)]) {
     if (!unit.sigils.includes('beta')) continue
     const shipped = SHIPS_AS[unit.card]
     if (shipped) {
-      // It keeps what the run gave it: its buffs over its own card's stats, and any sigil it gained.
       const base = card(unit.card)
       const into = card(shipped)
       const health = into.health + (unit.maxHealth - base.health)
@@ -400,16 +370,13 @@ function playTurn(state: GameState, rng: Rng, events: GameEvent[]): void {
   state.turn += 1
   delete state.placed
   events.push({ type: 'turnStarted', turn: state.turn })
-  // While P03 leads a run's battle, the player may draw a second card from the deck this turn, after the first.
   state.catchUp =
     Boolean(state.opponent.encounter) && !state.scripted && state.scale < 0 && state.player.deck.length > 0
   state.drawn = state.player.hand.length >= HAND_LIMIT
 }
 
-// From this Out of Memory card on, each one attacks the player over any card in the way.
 const OOM_BYPASS_FROM = 5
 
-/** P03 queues an Out of Memory card of this size in a free lane, if it has one. */
 function outOfMemory(state: GameState, size: number, rng: Rng, events: GameEvent[]): void {
   const aim = rng.int(0, LANES - 1)
   const lane = [...Array(LANES).keys()]
@@ -427,7 +394,6 @@ function outOfMemory(state: GameState, size: number, rng: Rng, events: GameEvent
   events.push({ type: 'queued', lane, unit })
 }
 
-/** A boss with a phase left clears its side and levels the scale instead of losing. */
 function nextPhase(state: GameState, rng: Rng, events: GameEvent[]): boolean {
   const id = state.opponent.encounter
   if (!id || state.opponent.phase + 1 >= encounter(id).phases.length) return false
@@ -476,7 +442,6 @@ export function legalActions(state: GameState): Action[] {
       }
     }
   }
-  // Each item, aimed at every card it can reach.
   ;(state.items ?? []).forEach((item, slot) => {
     const needs = ITEMS[item].target
     if (needs === 'none') {
@@ -496,7 +461,6 @@ export function legalActions(state: GameState): Action[] {
 
 export type Replay = { ok: true; state: GameState; events: GameEvent[] } | { ok: false; index: number; reason: string }
 
-/** Any illegal action invalidates the whole record. */
 export function replay(seed: number, actions: readonly Action[], options: Omit<GameOptions, 'seed'> = {}): Replay {
   let state = createGame({ seed, ...options })
   const events: GameEvent[] = []

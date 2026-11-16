@@ -30,7 +30,6 @@ function follow(): { state: GameState; progress: Progress } {
       continue
     }
     const allowed = tutorialActions(state, progress)
-    // Either of two Boilerplates fits a step that names one, so a step may allow more than one action.
     assert.ok(allowed.length >= 1, `step ${TUTORIAL[progress.step]?.id} allows its move`)
     const result = apply(state, allowed[0] as Action)
     assert.ok(result.ok, `step ${TUTORIAL[progress.step]?.id}: ${result.ok ? '' : result.reason}`)
@@ -74,7 +73,6 @@ describe('the tutorial', () => {
     const draw: Progress = { step: TUTORIAL.findIndex((step) => step.id === 'draw'), move: 0 }
     assert.ok(tutorialAllows(state, draw, { type: 'draw', from: 'deck' }))
     assert.ok(!tutorialAllows(state, draw, { type: 'draw', from: 'boilerplate' }))
-    // A step to read allows nothing until the player presses on.
     assert.deepEqual(tutorialActions(state, { step: 0, move: 0 }), [])
   })
 
@@ -95,7 +93,6 @@ describe('the tutorial', () => {
       assert.ok(result.ok, result.ok ? '' : result.reason)
       state = result.state
     }
-    // Free play starts after this turn's draw, with Phishing across from P03's Copy Paste.
     assert.ok(state.opponent.front[3])
     const bell = apply(state, { type: 'ringBell' })
     assert.ok(bell.ok)

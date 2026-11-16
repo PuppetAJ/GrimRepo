@@ -15,40 +15,32 @@ import { FrameDamage } from './FrameDamage.tsx'
 
 type TerminalProps = { lines: readonly string[]; user: string | undefined }
 
-// Once loaded, the terminal renders directly, so hydration never waits on it and no update can force it to remount.
 let loadedTerminal: ComponentType<TerminalProps> | null = null
 const loadTerminal = () =>
   import('./Terminal.tsx').then((module) => {
     loadedTerminal = module.default
     return module
   })
-// A chunk that fails to load, such as after a deploy renames it, leaves the frame empty instead of throwing.
 const LazyTerminal = lazy<ComponentType<TerminalProps>>(() => loadTerminal().catch(() => ({ default: () => null })))
 
-/** Loads the terminal before a page prerendered with it hydrates. */
 export const preloadTerminal = () => loadTerminal().catch(() => {})
-// Stable, so a re-render doesn't hand the terminal new props.
 const NO_LINES = ['...']
 
 type Phase = 'clean' | 'glitch' | 'broken'
 
-// Dev only: the home page's replay button dispatches this.
 export const REPLAY_EVENT = 'grimrepo:replay'
 const CLEAN_MS = 1100
 const GLITCH_MS = 900
 const TICK_MS = 140
 const SLICES = 7
 const BEFORE = '![gameplay demo](docs/table.webp)'
-// Phones take the smaller copy; it is the home page's LCP image, so its bytes compete with the scripts.
 const SHOT_SRCSET = '/readme/table-720.webp 720w, /readme/table.webp 960w'
 const SHOT_SIZES = '(max-width: 767px) 92vw, 960px'
 const AFTER = '![P03 was here](/dev/null)'.padEnd(BEFORE.length)
 const NOISE = '#$%&*+=/<>?{}[]█▓▒'
 
-// Plays once per browser session, or never with reduced motion.
 const firstPhase = (): Phase => (prefersReducedMotion() || takeoverSeen() ? 'broken' : 'clean')
 
-// What the prerendered page shows, which the server chose by the same cookie.
 const prerenderedPhase = (): Phase => (homeVariant()?.seen ? 'broken' : 'clean')
 
 function corrupt(progress: number): string {
@@ -62,12 +54,10 @@ function corrupt(progress: number): string {
     .join('')
 }
 
-// Hydration happens once, so there is nothing to subscribe to.
 const unchanging = () => () => {}
 const taken = () => true
 const notYet = () => false
 
-/** The README screenshot that P03 corrupts into a terminal. */
 const SPILLS: Omit<ComponentProps<typeof Corruption>, 'dense'>[] = [
   { cols: 26, rows: 3, corner: 'top-right', seed: 53, className: 'top-px right-px z-30 max-sm:hidden' },
   { cols: 12, rows: 3, corner: 'top-right', seed: 53, className: 'top-px right-px z-30 sm:hidden' },
@@ -80,7 +70,6 @@ const SPILLS: Omit<ComponentProps<typeof Corruption>, 'dense'>[] = [
 
 export function Infected({ lines, user }: { lines: readonly string[] | null; user: string | undefined }) {
   const Terminal = loadedTerminal ?? LazyTerminal
-  // Matches the prerendered HTML until hydrated, before reading matchMedia or the cookie.
   const hydrated = useSyncExternalStore(unchanging, taken, notYet)
   const [chosen, setPhase] = useState<Phase | null>(null)
   const phase = chosen ?? (hydrated ? firstPhase() : prerenderedPhase())
@@ -101,10 +90,8 @@ export function Infected({ lines, user }: { lines: readonly string[] | null; use
     return () => window.removeEventListener(REPLAY_EVENT, replay)
   }, [])
 
-  // A slow connection gets longer to show the screenshot first.
   useEffect(() => {
     if (phase !== 'clean') return
-    // Prefetch only; the lazy Terminal loads it again when shown.
     loadTerminal().catch(() => {})
     const timer = window.setTimeout(() => setPhase('glitch'), loaded ? CLEAN_MS : CLEAN_MS * 2.5)
     return () => window.clearTimeout(timer)
@@ -141,7 +128,6 @@ export function Infected({ lines, user }: { lines: readonly string[] | null; use
               </Suspense>
             </div>
             <FrameDamage frame="terminal" />
-            {/* Phones get only the title bar's corner, where the corruption covers no text. */}
             {SPILLS.map((spill, i) => (
               <Corruption key={i} dense {...spill} />
             ))}
@@ -156,7 +142,6 @@ export function Infected({ lines, user }: { lines: readonly string[] | null; use
               alt="The 3D table: P03 behind a board of floppy-disk cards"
               width={960}
               height={540}
-              // The home page's LCP element.
               fetchPriority="high"
               onLoad={() => setLoaded(true)}
               className="size-full object-cover object-top"

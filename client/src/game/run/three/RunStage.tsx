@@ -10,7 +10,6 @@ import { CameraRig, fitFov, WarmUp } from '../../table/table3d/stage.tsx'
 import { useStage } from '../../table/TableStage.tsx'
 import type { View } from '../../view.ts'
 
-/** The table between battles: nothing on the board, P03 idle, and the deck the run has built. */
 function restView(state: RunState): View {
   const empty = Array(LANES).fill(null)
   return {
@@ -30,18 +29,12 @@ function restView(state: RunState): View {
   }
 }
 
-// The projector sits on the table half as far from the map's camera as P03, and throws the window up just above it.
 const PROJECTOR: Vec3 = [CENTER_X, TABLE_Y, -7.3]
-/** How wide the projector stands on the table, in world units. */
 const PROJECTOR_WIDTH = 1.4
-// Square to the camera's line of sight, so the window draws as a true rectangle rather than a keystone.
 const FACING = new THREE.Vector3(...CAMERA.map.position).sub(new THREE.Vector3(...CAMERA.map.target)).normalize()
-/** Where the window's bottom edge floats, just above the lens. */
 const WINDOW_BOTTOM = new THREE.Vector3(CENTER_X, TABLE_Y + 0.6, PROJECTOR[2] - 0.15)
-/** The window's size in world units, in the proportions of the page element drawn into it. */
 export const WINDOW = { width: (4.3 * 840) / 540, height: 4.3 }
 
-/** The window's corners, top left first and clockwise, turned to face the map's camera. */
 function windowCorners(): THREE.Vector3[] {
   const right = new THREE.Vector3(0, 1, 0).cross(FACING).normalize()
   const up = FACING.clone().cross(right).normalize()
@@ -51,7 +44,6 @@ function windowCorners(): THREE.Vector3[] {
   return [at(-1, 1), at(1, 1), at(1, 0), at(-1, 0)]
 }
 
-/** The tangent of the window's half-width from the map's camera, with a margin, which the lens must keep in view. */
 const FIT = (() => {
   const camera = new THREE.PerspectiveCamera()
   camera.position.set(...CAMERA.map.position)
@@ -61,7 +53,6 @@ const FIT = (() => {
   return Math.max(...local.map((corner) => Math.abs(corner.x / corner.z))) * 1.06
 })()
 
-/** How tall the open window draws on a stage of this size, in CSS pixels. */
 export function windowHeight(width: number, height: number): number {
   if (!width || !height) return 0
   const camera = new THREE.PerspectiveCamera(fitFov(CAMERA.map.fov ?? FOV, FIT, width / height), width / height)
@@ -72,7 +63,6 @@ export function windowHeight(width: number, height: number): number {
   return ((top! - bottom!) / 2) * height
 }
 
-// A 3x3 projective transform from four points to four points, as CSS matrix3d warps a page element.
 type M = number[]
 const adj = (m: M): M => [
   m[4]! * m[8]! - m[5]! * m[7]!,
@@ -101,14 +91,12 @@ function basis(p: number[]): M {
   ]
   return mul(m, [v[0]!, 0, 0, 0, v[1]!, 0, 0, 0, v[2]!])
 }
-/** The CSS transform that lays a page element of this size onto four points on screen. */
 export function warp(width: number, height: number, to: number[]): string {
   const t = mul(basis(to), adj(basis([0, 0, width, 0, width, height, 0, height])))
   const n = t.map((value) => value / t[8]!)
   return `matrix3d(${n[0]},${n[3]},0,${n[6]},${n[1]},${n[4]},0,${n[7]},0,0,1,0,${n[2]},${n[5]},0,1)`
 }
 
-// Bright at the lens, fading toward the window.
 const LIGHT_VERTEX = `attribute float glow;
 varying float vGlow;
 void main() { vGlow = glow; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`
@@ -121,28 +109,22 @@ const easeOut = (t: number) => 1 - (1 - t) ** 2.2
 const phase = (t: number, from: number, to: number) => easeOut(Math.min(1, Math.max(0, (t - from) / (to - from))))
 
 const MODEL = '/models/projector.glb'
-// Seconds from the projector's turn: it lands, powers on with a stutter, then opens the window.
 const LAND = 0.32
-/** Seconds it takes to lift away, tipping up and off to the right. */
 const LIFT = 0.55
 const POWER = 0.32
 const PROJECT = 0.55
 const OPEN = 0.6
-/** The share of the opening spent drawing the line across, before it rises. */
 const ACROSS = 0.35
-// Seconds into its closing: the window drops to a line, the line shrinks away, it powers off, then lifts off the table.
 const DROP = 0.25
 const SHRINK = 0.42
 const OFF = 0.52
 const CLOSED = OFF + LIFT
 useGLTF.preload(MODEL, false, false)
 
-/** The projector model, scaled to stand on the table, with its lens where the light leaves it. */
 function useProjector() {
   const { scene } = useGLTF(MODEL, false, false)
   return useMemo(() => {
     const model = scene.clone()
-    // Its own materials, so powering on lights only this one.
     model.traverse((part) => {
       if (part instanceof THREE.Mesh) part.material = (part.material as THREE.Material).clone()
     })
@@ -160,7 +142,6 @@ const middle = new THREE.Vector3()
 const rise = new THREE.Vector3()
 const point = new THREE.Vector3()
 
-/** The window part-open: a line spreading `across` from the middle of its bottom edge, then rising `up`. */
 function opened(full: THREE.Vector3[], across: number, up: number, into: THREE.Vector3[]) {
   middle.lerpVectors(full[3]!, full[2]!, 0.5)
   rise.subVectors(full[0]!, full[3]!)
@@ -170,10 +151,6 @@ function opened(full: THREE.Vector3[], across: number, up: number, into: THREE.V
   into[1]!.copy(into[2]!).addScaledVector(rise, up)
 }
 
-/**
- * Set down on the table, powered on, then switched on: a line of light spreads across, then rises into the window.
- * It waits until `ready`, a performance.now() time, so it plays in view once the camera has arrived.
- */
 function Projector({
   corners,
   ready,
@@ -184,7 +161,6 @@ function Projector({
 }: {
   corners: THREE.Vector3[]
   ready: RefObject<number>
-  /** Shuts the window and lifts the projector away, then calls `onClosed`. */
   closing: boolean
   onClosed: () => void
   onPin: (points: number[] | null) => void
@@ -232,7 +208,6 @@ function Projector({
       onClosed()
     }
 
-    // Lands from just above, slowing as it nears the table; leaves rising, tipping up and away to the right.
     if (body.current) {
       const landed = Math.min(1, Math.max(0, since / LAND))
       const lifted = Math.min(1, Math.max(0, (shut - OFF) / LIFT))
@@ -246,7 +221,6 @@ function Projector({
       body.current.rotation.set(-away * 0.5, 0, -away * 0.6)
       body.current.scale.setScalar(1 - THREE.MathUtils.smoothstep(lifted, 0.55, 1))
     }
-    // Stutters on, like a tube catching, and off again.
     const stutter = (since > POWER && since < PROJECT) || (shut > SHRINK && shut < OFF)
     if (shut >= OFF) state.power = 0
     else if (stutter) {
@@ -260,7 +234,6 @@ function Projector({
     })
 
     const opening = (since - PROJECT) / OPEN
-    // Closing starts from however far it had opened.
     if (shut < 0) {
       state.across = phase(opening, 0, ACROSS)
       state.up = phase(opening, ACROSS, 1)
@@ -268,17 +241,14 @@ function Projector({
     const across = shut < 0 ? state.across : state.across * (1 - phase(shut, DROP, SHRINK))
     const up = shut < 0 ? state.up : state.up * (1 - phase(shut, 0, DROP))
     const lit = opening > 0 && (shut < 0 || shut < SHRINK)
-    // Told once the window has opened all the way, and again as it starts to shut.
     const open = opening >= 1 && shut < 0
     if (open !== state.open) {
       state.open = open
       onOpen?.(open)
     }
-    // Never quite flat, so the page element's warp stays solvable.
     opened(corners, Math.max(0.01, across), Math.max(0.01, up), now.current)
     const window = now.current
 
-    // The light, flickering at random rather than in a rhythm.
     if (beam.current && material.current) {
       const points = beam.current.geometry.attributes['position'] as THREE.BufferAttribute
       for (let side = 0; side < 4; side++) {
@@ -297,7 +267,6 @@ function Projector({
       material.current.uniforms['strength']!.value = lit ? 0.3 * (STILL ? 1 : state.flicker) : 0
     }
 
-    // Where the page element goes on screen, so the map moves with the room as the camera does.
     onPin(
       lit
         ? window.flatMap((corner) => {
@@ -328,12 +297,9 @@ function Projector({
   )
 }
 
-/** Seconds into the camera's glide back from the seat when the projector starts: near its end, so the window opens still. */
 const AFTER_GLIDE = 0.8
-/** Seconds the loading screen takes to fade, in Boot.tsx. */
 const BOOT_FADE = 0.4
 
-/** The room between battles: the factory and P03 at rest, and on the map, the projector and its window. */
 export function BetweenBattles({
   state,
   lines,
@@ -344,36 +310,27 @@ export function BetweenBattles({
   onPin,
   onOpen,
 }: {
-  /** Shuts the projector and lifts it away, then calls `onClosed`. */
   closing?: boolean
   onClosed: () => void
   state: RunState
-  /** P03's latest words, for the monitor beside it. */
   lines: string[]
   projecting: boolean
-  /** The view the camera glides back from, after a battle. */
   from?: CameraView
-  /** Given where the window's page element goes on screen every frame, or null while it's dark. */
   onPin: (points: number[] | null) => void
-  /** Told when the window has opened all the way, and when it starts to shut. */
   onOpen?: (open: boolean) => void
 }) {
   const stage = useStage()
   const view = useMemo(() => restView(state), [state])
   const corners = useMemo(() => windowCorners(), [])
-  // P03 gloats over a lost run and gives up over a cleared one.
   const outcome = state.status === 'won' ? 'win' : state.status === 'lost' ? 'loss' : undefined
   useLayoutEffect(() => stage.room({ view, log: lines, outcome }))
-  // Between battles the button is locked and the run's items hang out of reach.
   useLayoutEffect(() => stage.bench({ items: state.items, usable: [], aiming: null, active: false, rung: 0 }))
-  // When the projector may start: once the loading screen has faded, or the camera has nearly glided back.
   const ready = useRef(Infinity)
   useEffect(() => {
     ready.current = stage.warmed ? performance.now() + (from && !STILL ? AFTER_GLIDE : BOOT_FADE) * 1000 : Infinity
   }, [from, stage.warmed])
   return (
     <stage.Scene>
-      {/* Across the table at the window, gliding back from the seat after a battle. */}
       <CameraRig view="map" from={from} fit={FIT} />
       {projecting ? (
         <Projector

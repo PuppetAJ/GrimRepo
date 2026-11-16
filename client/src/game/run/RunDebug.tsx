@@ -3,7 +3,6 @@ import { DropdownMenuCheckboxItem } from '@/components/ui/dropdown-menu.tsx'
 import { downloadRunLog, setDebugging, useDebugging } from './debug.ts'
 import type { RunReady } from './useRun.ts'
 
-/** With debugging on, a button over either table that saves the run so far, to replay it exactly. */
 export function RunDebug({ run }: { run: RunReady }) {
   const wanted = useDebugging()
   if (!wanted || !run.origin) return null
@@ -19,7 +18,6 @@ export function RunDebug({ run }: { run: RunReady }) {
   )
 }
 
-/** The run menus' switch for debugging, for testers until the beta settles. */
 export function DebugItem() {
   const on = useDebugging()
   return (

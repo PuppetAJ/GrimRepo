@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { forTable } from '../shortcuts.ts'
 
-/** E rings the bell. */
 export function useBellKey(canPress: boolean, ring: () => void) {
   const latest = useRef(ring)
   useEffect(() => {

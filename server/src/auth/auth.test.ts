@@ -211,7 +211,6 @@ describe('the demo account', () => {
   const demo = { name: 'Demo Player', username: 'demo', email: 'demo@grimrepo.test', password: 'demo-password' }
 
   it('cannot be renamed, deleted or given a new password by the visitor using it', async () => {
-    // Created as the seed does, since "demo" is reserved for HTTP sign-ups.
     await auth.api.signUpEmail({ body: demo })
     const { cookie } = await app.call('POST', '/api/auth/sign-in/username', {
       body: { username: demo.username, password: demo.password },

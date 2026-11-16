@@ -12,7 +12,6 @@ export const unitOf = (def: CardDef): Unit => ({
 
 const squash = (text: string) => text.toLowerCase().replace(/[^a-z0-9]/g, '')
 
-/** Matches a card's name, its sigils' names, "sigils", "free" or "cost N". */
 export function matches(def: CardDef, query: string): boolean {
   const wanted = squash(query)
   if (!wanted) return true
@@ -30,7 +29,6 @@ export const SORTS = { deck: 'Deck order', name: 'Name', cost: 'Cost', attack: '
 export type Sort = keyof typeof SORTS
 export const COSTS = [...new Set(DECK.map((def) => def.cost))].sort((a, b) => a - b)
 
-/** The sort is stable, so ties keep deck order. */
 export function sorted(cards: CardDef[], sort: Sort, descending: boolean): CardDef[] {
   if (sort === 'deck') return descending ? [...cards].reverse() : cards
   const value = (def: CardDef) => (sort === 'name' ? def.name.toLowerCase() : def[sort])

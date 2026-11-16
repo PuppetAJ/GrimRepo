@@ -33,7 +33,6 @@ export function ConsolePanel() {
   )
 }
 
-/** `log` is the log's display classes; a short phone shows only the prompt, the log still read out. */
 export function LogBox({ className, log = '' }: { className: string; log?: string }) {
   const { game, promptText } = useTable()
   const [box, onScroll] = useStuckToBottom(`${game.log.length} ${promptText}`)

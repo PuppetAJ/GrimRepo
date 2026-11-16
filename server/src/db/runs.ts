@@ -22,7 +22,6 @@ export type LeaderboardRow = { rank: number; username: string; bestScore: number
 
 export const BOARD_PAGE = 20
 
-/** top is first place's score, for scale. */
 export type BoardPage = { players: LeaderboardRow[]; page: number; pages: number; total: number; top: number }
 
 export type OpenRun = {
@@ -31,9 +30,7 @@ export type OpenRun = {
   actions: RunAction[]
   resumed: boolean
   rulesChanged: boolean
-  /** The player's death card as it was when the run began. */
   death: string | null
-  /** Another player's death card for the Staging boss, and its maker. */
   rival: { card: string; by: string } | null
 }
 
@@ -41,7 +38,6 @@ export type RunMovesResult =
   | { status: 'playing'; saved: number }
   | { status: 'won' | 'lost'; score: number; stage: number; bosses: number; forfeited: boolean }
 
-// A full run is a few hundred actions, and every save replays the whole record, so this stays low.
 const MAX_ACTIONS = 6_000
 
 type Row = {
@@ -60,12 +56,10 @@ const rivalOf = (row: Pick<Row, 'rival_card' | 'rival_by'>) =>
 const dealtOf = (row: Row) => ({ death: row.death_card, rival: rivalOf(row) })
 const current = (row: Row) => row.rules_version === RULES_VERSION && row.run_version === RUN_RULES_VERSION
 
-/** Resumes the open run or starts a new one on a seed the server picks. */
 export async function startRun(userId: string, rulesChanged = false): Promise<OpenRun> {
   const open = await pool.query<Row>(`SELECT ${COLUMNS} FROM runs WHERE user_id = $1 AND status = 'playing'`, [userId])
   const existing = open.rows[0]
   if (existing && !current(existing)) {
-    // A run from other rules may not replay, so it is dropped unscored.
     await pool.query(`DELETE FROM runs WHERE id = $1 AND status = 'playing'`, [existing.id])
     return startRun(userId, true)
   }
@@ -82,23 +76,19 @@ export async function startRun(userId: string, rulesChanged = false): Promise<Op
 
   const seed = randomInt(0, 2 ** 32)
   const rival = await pickRival(userId)
-  // The run keeps the cards it was dealt, so it replays the same after anyone builds a new one.
   const created = await pool.query<{ id: number; death_card: string | null }>(
     `INSERT INTO runs (user_id, seed, rules_version, run_version, death_card, rival_card, rival_by)
      SELECT $1, $2, $3, $4, death_card, $5, $6 FROM users WHERE id = $1
      ON CONFLICT (user_id) WHERE status = 'playing' DO NOTHING RETURNING id, death_card`,
     [userId, seed, RULES_VERSION, RUN_RULES_VERSION, rival?.card ?? null, rival?.by ?? null],
   )
-  // The one-open-run index rejected a concurrent start, so resume that run.
   const row = created.rows[0]
   if (!row) return startRun(userId, rulesChanged)
   return { id: row.id, seed, actions: [], resumed: false, rulesChanged, death: row.death_card, rival }
 }
 
-// Enough to find one under the cap, since most death cards are.
 const RIVAL_SAMPLE = 25
 
-/** Another signed-up player's death card, under the cap, at random; never the player's own. */
 async function pickRival(userId: string): Promise<{ card: string; by: string } | null> {
   const { rows } = await pool.query<{ card: string; by: string }>(
     `SELECT death_card AS card, display_username AS by FROM users
@@ -135,7 +125,6 @@ async function withOpenRun<T>(
   }
 }
 
-/** Replays the whole record before saving, so only legal moves are ever stored. */
 export async function recordRunMoves(
   userId: string,
   runId: number,
@@ -144,7 +133,6 @@ export async function recordRunMoves(
 ): Promise<RunMovesResult> {
   return withOpenRun(userId, runId, async (client, run) => {
     if (!current(run)) throw new GameError(409, { error: 'The rules changed', rulesChanged: true })
-    // Moves only append, so a retried or stale request can't rewrite earlier play.
     if (from !== run.actions.length) throw new GameError(409, { error: 'Out of step', expected: run.actions.length })
     const all = [...run.actions, ...moves]
     if (all.length > MAX_ACTIONS) throw new GameError(400, { error: 'Too many moves' })
@@ -165,7 +153,6 @@ export async function recordRunMoves(
   })
 }
 
-/** Ends the run as lost, scored on how far it got. */
 export async function forfeitRun(userId: string, runId: number): Promise<RunMovesResult> {
   return withOpenRun(userId, runId, async (client, run) => {
     const replayed = replayRun(Number(run.seed), run.actions, dealtOf(run))
@@ -211,13 +198,8 @@ async function finish(
   return { status, score, stage: state.stage, bosses: state.record.bosses, forfeited }
 }
 
-/** `guest` marks a card kept on a guest account, which moves to the account the guest signs up for. */
 export type BuiltDeathCard = { card: string; saved: boolean; guest: boolean }
 
-/**
- * Builds a death card from the deck a lost run ended with: the player's latest run, once.
- * The shared demo account sees its card but doesn't keep it; a guest keeps it until signing up, which carries it over.
- */
 export async function buildRunDeathCard(userId: string, runId: number, choice: DeathChoice): Promise<BuiltDeathCard> {
   const client = await pool.connect()
   try {
@@ -255,7 +237,6 @@ export async function buildRunDeathCard(userId: string, runId: number, choice: D
   }
 }
 
-/** Ranks players by their best run across all pages; ties share a rank, `wins` counts runs cleared, and guests are left off. */
 export async function runLeaderboard(page = 1): Promise<BoardPage> {
   const { rows: sizes } = await pool.query<{ total: number; top: number }>(
     `SELECT COUNT(DISTINCT r.user_id)::int AS total, COALESCE(MAX(r.score), 0)::int AS top

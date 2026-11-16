@@ -5,18 +5,14 @@ import { apply, createGame, nextBotAction } from '../shared/src/index.ts'
 
 export const BASE = process.env.E2E_BASE_URL ?? process.env.APP_URL ?? 'http://localhost:3000'
 
-// Collected from every page a test opens, so an error on any of them fails the test.
 const pageErrors = []
 const listen = (page) => {
   page.on('pageerror', (error) => pageErrors.push(error.message))
-  // E2E_DEBUG=1 names each request that fails, since Firefox's NetworkError says nothing of which one.
   if (process.env.E2E_DEBUG) page.on('requestfailed', (request) => console.log(`  [request failed] ${request.url()}`))
 }
 
-// Firefox on CI now and then stalls a page load outright, even in a fresh context, so a stalled load is tried once more.
 const NAVIGATION = 30_000
 
-/** Sets a page's timeouts, and retries a page load that stalls, saying so in the output. */
 function steady(page) {
   page.setDefaultTimeout(20_000)
   page.setDefaultNavigationTimeout(NAVIGATION)
@@ -32,10 +28,6 @@ function steady(page) {
   }
 }
 
-/**
- * Playwright Test's `test`, with every page a test opens watched for uncaught errors, which fail it, and given the same
- * timeouts and stalled-load retry as the pages `freshPage` and `newTab` open.
- */
 export const test = base.extend({
   page: async ({ page }, use) => {
     steady(page)
@@ -56,18 +48,15 @@ export const test = base.extend({
 
 export { expect }
 
-/** One check among many: a failure is recorded and the test carries on, so a run shows every failure, not the first. */
 export function check(name, ok, detail = '') {
   expect.soft(ok, detail ? `${name}   (${String(detail).slice(0, 300)})` : name).toBeTruthy()
 }
 
-/** Waits for the table's controls and for P03's boot screen to go. */
 export async function tableReady(page, timeout = 60_000) {
   await page.getByRole('button', { name: /^(Board|Sit back)$/ }).waitFor({ timeout })
   await page.getByRole('status', { name: /^Setting the table/ }).waitFor({ state: 'detached', timeout })
 }
 
-/** Local or CI databases only; live runs must fit the real limits. */
 export async function resetRateLimits() {
   const local = /^http:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(BASE)
   if (!local || !process.env.DATABASE_URL) return
@@ -77,7 +66,6 @@ export async function resetRateLimits() {
   await client.end()
 }
 
-/** Shares the context's cookies, so it is the same player. */
 export async function newTab(context) {
   const page = await context.newPage()
   steady(page)
@@ -85,7 +73,6 @@ export async function newTab(context) {
   return page
 }
 
-/** A fresh context keeps cookies from leaking between checks; `table` picks text or 3D up front. */
 export async function freshPage(browser, { width = 1280, height = 900, table } = {}) {
   const context = await browser.newContext({ viewport: { width, height } })
   if (table) await context.addInitScript((mode) => localStorage.setItem('grimrepo:table', mode), table)
@@ -95,10 +82,8 @@ export async function freshPage(browser, { width = 1280, height = 900, table } =
   return { context, page }
 }
 
-// Consonants only, and no digits the name filter reads as letters, so stamps rarely spell blocked words.
 const STAMP_LETTERS = 'bcdfghjkmnpqrtvwz'
 
-/** Clock-based, so a rerun never collides with the last run's players. */
 export function stamp() {
   let left = Date.now() * 1000 + Math.floor(Math.random() * 1000)
   let text = ''
@@ -111,7 +96,6 @@ export function stamp() {
 
 export function newPlayer(prefix = 'e2e') {
   let username = `${prefix}_${stamp()}`.slice(0, 20)
-  // Consonants can still spell a blocked word ('fck'), so check with the site's own filter.
   while (isOffensive(username)) username = `${prefix}_${stamp()}`.slice(0, 20)
   return { username, email: `${username}@grimrepo.test`, password: 'a-long-enough-password' }
 }
@@ -128,34 +112,28 @@ export async function signUp(page, player) {
 
 export async function signInAsDemo(page) {
   await page.goto(`${BASE}/login`)
-  // The sign-in's own response: a guest from an earlier check shows the account menu before it lands.
   const signedIn = page.waitForResponse((response) => response.url().includes('/api/auth/sign-in/') && response.ok())
   await page.getByRole('button', { name: 'Play as the demo account' }).click()
   await signedIn
   await page.getByRole('button', { name: 'Account menu' }).waitFor()
 }
 
-/** A new guest, as Quick battle makes, with its own game and its own rate-limit count. */
 export async function signInAsGuest(page) {
-  // Guests may sign in 10 times a minute, so the counter is cleared locally.
   await resetRateLimits()
   await page.context().clearCookies()
   const response = await page.request.post(`${BASE}/api/auth/sign-in/anonymous`, { headers: { origin: BASE } })
   if (!response.ok()) throw new Error(`a guest could not sign in: ${response.status()}`)
 }
 
-/** innerText, so only what a person would actually read. */
 export const visibleText = (page) => page.locator('body').innerText()
 
 export const selectorFor = (action) => {
   if (action.type === 'draw') return `[data-action="draw-${action.from}"]`
-  // Hand cards are only marked disabled, and clicks during playback are refused, so wait for an enabled one.
   if (action.type === 'select') return `[data-action="select"][data-uid="${action.uid}"]:not([aria-disabled="true"])`
   if ('lane' in action) return `[data-action="${action.type}"][data-lane="${action.lane}"]`
   return `[data-action="${action.type}"]`
 }
 
-/** Clicks until the counter at `scope` reads `expected`; a click in the frame before playback starts is refused, so it tries again. */
 export async function clickMove(page, target, { scope, attribute, expected }) {
   const count = async () => Number(await page.locator(scope).getAttribute(attribute))
   const landed = page.locator(`${scope}[${attribute}="${expected}"]`)
@@ -164,7 +142,6 @@ export async function clickMove(page, target, { scope, attribute, expected }) {
       .locator(target)
       .first()
       .click()
-      // Playwright can miss a click whose button vanishes as it's pressed; the page's move count shows it landed.
       .catch(async (error) => {
         if ((await count()) !== expected) throw error
       })
@@ -173,7 +150,6 @@ export async function clickMove(page, target, { scope, attribute, expected }) {
   await landed.waitFor()
 }
 
-/** An engine copy picks each click; `beforeMove` sees each move and its resulting state first. */
 export async function playWithBot(page, { stopAfterTurn = Infinity, beforeMove } = {}) {
   const root = page.locator('[data-seed]')
   await root.waitFor()
@@ -190,7 +166,6 @@ export async function playWithBot(page, { stopAfterTurn = Infinity, beforeMove }
       const expected = start + actions.length + 1
       await clickMove(page, selectorFor(action), { scope: '[data-seed]', attribute: 'data-moves', expected })
     } catch (error) {
-      // Logs what the bot wanted and what the table showed, for CI failures no one can watch.
       console.log(`  The bot wanted ${JSON.stringify(action)} on turn ${state.turn}, as move ${actions.length + 1};`)
       console.log(`  the page had made ${await moves()}, and the table said:`)
       console.log(`  ${(await page.locator('[data-table]').innerText()).replace(/\s+/g, ' ').slice(0, 600)}`)
@@ -198,7 +173,6 @@ export async function playWithBot(page, { stopAfterTurn = Infinity, beforeMove }
     }
     state = result.state
     actions.push(action)
-    // The page must agree on the turn before the next click, or the mirror has drifted.
     if (action.type === 'ringBell' && state.status === 'playing') {
       await page.getByText(`Turn ${state.turn}`, { exact: true }).waitFor()
     }
@@ -206,7 +180,6 @@ export async function playWithBot(page, { stopAfterTurn = Infinity, beforeMove }
   return { state, actions }
 }
 
-/** So live runs leave nothing on the leaderboard. */
 export async function deletePlayer(page, player) {
   const response = await page.request.post(`${BASE}/api/auth/delete-user`, {
     data: { password: player.password },

@@ -8,7 +8,6 @@ import { describe } from '../../controls.tsx'
 
 const LIGHT = '#b8f5c4'
 
-/** A card's type as an icon that says what the type means, as the sigils beside it do. */
 export function TypeIcon({ type, size = 18 }: { type: CardType; size?: number }) {
   return (
     <Popover>
@@ -29,7 +28,6 @@ export function TypeIcon({ type, size = 18 }: { type: CardType; size?: number })
   )
 }
 
-/** A card's sigils as icons; each opens a note on what it does, so the names needn't take the room. */
 export function SigilIcons({ sigils, size = 18 }: { sigils: SigilId[]; size?: number }) {
   if (!sigils.length) return null
   return (
@@ -55,7 +53,6 @@ export function SigilIcons({ sigils, size = 18 }: { sigils: SigilId[]; size?: nu
   )
 }
 
-/** The whole card, as the battle's reader shows it, for a name cut short. */
 export function CardReader({ unit, onClose }: { unit: Unit | null; onClose: () => void }) {
   return (
     <Dialog open={unit !== null} onOpenChange={(open) => !open && onClose()}>
@@ -70,10 +67,8 @@ export function CardReader({ unit, onClose }: { unit: Unit | null; onClose: () =
   )
 }
 
-/** One search for a screen, so the deck's box also filters the cards the screen offers. */
 export const SearchContext = createContext<{ query: string; setQuery: (query: string) => void } | null>(null)
 
-/** Matches a card by its name or a sigil's, ignoring case; the screen's shared search where there is one. */
 export function useCardSearch() {
   const shared = use(SearchContext)
   const [own, setOwn] = useState('')
@@ -87,10 +82,8 @@ export function useCardSearch() {
   return { query, setQuery, matches }
 }
 
-// Fewer cards than this are easy to scan without a search.
 export const SEARCH_FROM = 9
 
-/** In place of a screen's cards when there's nothing to do with them, centered in the projector's window. */
 export function NothingHere({ children }: { children: ReactNode }) {
   return (
     <div data-center className="flex flex-col items-center gap-3 py-10 text-center text-p03-dim">

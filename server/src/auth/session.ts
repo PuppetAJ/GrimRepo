@@ -4,7 +4,6 @@ import { auth } from './auth.ts'
 
 export type SignedIn = { id: string; username: string; displayUsername: string }
 
-/** Trusts only the session, never the request body. */
 export async function currentUser(req: Request): Promise<SignedIn | null> {
   const session = await auth.api.getSession({ headers: fromNodeHeaders(req.headers) })
   if (!session) return null
@@ -12,7 +11,6 @@ export async function currentUser(req: Request): Promise<SignedIn | null> {
   return { id: user.id, username: user.username, displayUsername: user.displayUsername ?? user.username }
 }
 
-/** Puts the player on res.locals.user, or answers 401. */
 export async function requireUser(req: Request, res: Response, next: NextFunction): Promise<void> {
   const user = await currentUser(req)
   if (!user) {

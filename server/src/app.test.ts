@@ -42,7 +42,6 @@ describe('the built home page', () => {
   let close = () => {}
 
   before(async () => {
-    // Each file names its version, so a response shows which one the server chose.
     const dir = mkdtempSync(path.join(tmpdir(), 'grimrepo-client-'))
     for (const name of [
       'index',

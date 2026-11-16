@@ -10,17 +10,14 @@ const value = (entry: { attack: number; health: number }) => entry.attack * 2 + 
 const cardValue = (id: string) => value(card(id)) / (card(id).cost + 1)
 const best = (deck: RunCard[]) => [...deck].sort((a, b) => value(b) - value(a))[0]
 
-// The order the bot prefers tools in.
 const TOOLS: ItemId[] = ['hourglass', 'scissors', 'hook', 'pliers', 'bottle', 'hammer']
 
-// Sigils with a drawback, which the linter is worth visiting to delete.
 const DRAWBACKS: SigilId[] = ['technical_debt', 'deprecated']
 const drawback = (deck: RunCard[]) =>
   deck.flatMap((entry) =>
     DRAWBACKS.filter((sigil) => entry.sigils.includes(sigil)).map((sigil) => ({ entry, sigil })),
   )[0]
 
-/** The chance three cards drawn from the deck pass a code review's trial, counted over every draw. */
 function passChance(deck: RunCard[], trial: Trial): number {
   const { bar, of } = TRIALS[trial]
   if (deck.length <= 3) return deck.reduce((sum, entry) => sum + of(entry), 0) >= bar ? 1 : 0
@@ -38,7 +35,6 @@ function passChance(deck: RunCard[], trial: Trial): number {
 const twins = (deck: RunCard[]) =>
   deck.filter((entry) => deck.some((other) => other.id !== entry.id && other.card === entry.card))
 
-/** Roughly what an event's effect is worth, against the deck's average card. */
 function effectWorth(state: RunState, effect: Effect): number {
   const average =
     state.deck.reduce((sum, entry) => sum + value(entry) / (card(entry.card).cost + 1), 0) /
@@ -63,15 +59,12 @@ function effectWorth(state: RunState, effect: Effect): number {
     case 'integrity':
       return effect.amount
     case 'trial':
-      // A rare is worth about two average cards.
       return passChance(state.deck, effect.trial) * 6
   }
 }
 
-// Nodes the bot heads for first, since they only ever strengthen the deck.
 const PREFERRED = ['card', 'shop', 'campfire', 'event', 'stones', 'battle', 'boss']
 
-/** Deterministic: takes the best-value card, buffs its strongest card once, weighs event choices, moves a sigil up, and plays battles greedily. */
 export function nextRunAction(state: RunState, strategy: Strategy = 'greedy', deck?: string): RunAction {
   const legal = legalRunActions(state)
   const visit = state.visit
@@ -83,7 +76,6 @@ export function nextRunAction(state: RunState, strategy: Strategy = 'greedy', de
   const average = state.deck.reduce((sum, entry) => sum + cardValue(entry.card), 0) / Math.max(1, state.deck.length)
   switch (visit.kind) {
     case 'start': {
-      // Each starter deck in turn by seed, unless one is asked for.
       const ids = Object.keys(STARTER_DECKS)
       return { type: 'start', deck: deck ?? (ids[state.seed % ids.length] as string) }
     }
@@ -92,7 +84,6 @@ export function nextRunAction(state: RunState, strategy: Strategy = 'greedy', de
         const values = visit.revealed.offer.map(cardValue)
         return { type: 'take', index: values.indexOf(Math.max(...values)) }
       }
-      // The trait whose cards are worth most on average.
       const worth = visit.picks.map((pick) => {
         const pool = COMMONS.filter(PICKS[pick].fits)
         return pool.reduce((sum, id) => sum + cardValue(id), 0) / Math.max(1, pool.length)
@@ -100,7 +91,6 @@ export function nextRunAction(state: RunState, strategy: Strategy = 'greedy', de
       return { type: 'take', index: worth.indexOf(Math.max(...worth)) }
     }
     case 'shop': {
-      // The best card it can afford, if it beats the deck's average.
       const buys = legal.filter((action): action is Extract<RunAction, { type: 'buy' }> => action.type === 'buy')
       const best = [...buys].sort(
         (a, b) => cardValue(visit.offer[b.index]?.card as string) - cardValue(visit.offer[a.index]?.card as string),
@@ -108,7 +98,6 @@ export function nextRunAction(state: RunState, strategy: Strategy = 'greedy', de
       if (best && cardValue(visit.offer[best.index]?.card as string) > average) return best
       const tool = legal.find((action) => action.type === 'buyItem')
       if (tool) return tool
-      // With bytes left, a big deck sheds its weakest card, by value for its cost.
       const worth = (entry: RunCard) => value(entry) / (card(entry.card).cost + 1)
       const weakest = [...state.deck].sort((x, y) => worth(x) - worth(y))[0]
       const shed = weakest && legal.some((action) => action.type === 'uninstall' && action.card === weakest.id)
@@ -117,7 +106,6 @@ export function nextRunAction(state: RunState, strategy: Strategy = 'greedy', de
         : { type: 'leave' }
     }
     case 'item': {
-      // The tools it gets most from, first; a full kit keeps what it has.
       const best = [...visit.offer].sort((a, b) => TOOLS.indexOf(a) - TOOLS.indexOf(b))[0]
       const index = best ? visit.offer.indexOf(best) : -1
       return index >= 0 && state.items.length < ITEM_SLOTS ? { type: 'pickItem', index } : { type: 'leave' }
@@ -137,13 +125,11 @@ export function nextRunAction(state: RunState, strategy: Strategy = 'greedy', de
       return { type: 'take', index: scores.indexOf(Math.max(...scores)) }
     }
     case 'campfire': {
-      // Repairs when well worn, else warms its strongest card once.
       if (visit.buffs === 0 && state.integrity <= INTEGRITY / 2) return { type: 'repair' }
       const target = best(state.deck)
       return visit.buffs === 0 && target ? { type: 'buff', card: target.id } : { type: 'leave' }
     }
     case 'event': {
-      // Picks the choice worth most, the first on a tie.
       const scores = scene(visit.event).options.map((option) =>
         option.effects.reduce((sum, effect) => sum + effectWorth(state, effect), 0),
       )
@@ -154,7 +140,6 @@ export function nextRunAction(state: RunState, strategy: Strategy = 'greedy', de
       return found ? { type: 'strip', card: found.entry.id, sigil: found.sigil } : { type: 'leave' }
     }
     case 'stones': {
-      // Moves a sigil from its weakest card onto its strongest, when that's a step up.
       const worth = (id: number) => value(state.deck.find((entry) => entry.id === id) as RunCard)
       const moves = legal.filter((action) => action.type === 'transfer')
       const bestMove = [...moves].sort((a, b) => worth(b.to) - worth(b.from) - (worth(a.to) - worth(a.from)))[0]
@@ -163,7 +148,6 @@ export function nextRunAction(state: RunState, strategy: Strategy = 'greedy', de
   }
 }
 
-/** Stops at limit in case the bot ever loops. */
 export function playRun(
   state: RunState,
   apply: (s: RunState, a: RunAction) => RunState,

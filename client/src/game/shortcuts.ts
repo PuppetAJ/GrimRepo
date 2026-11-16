@@ -8,7 +8,6 @@ export const forTable = (event: KeyboardEvent) =>
   event.target instanceof Element &&
   event.target.closest('[data-table]') !== null
 
-/** When the control holding focus in the table is disabled or removed, focus returns to the table, so its shortcuts keep working. */
 export function useKeepTableFocus() {
   useEffect(() => {
     let held: HTMLElement | null = null
@@ -31,7 +30,6 @@ export function useKeepTableFocus() {
       frame = table
       observer.observe(frame, { subtree: true, childList: true, attributes: true, attributeFilter: ['disabled'] })
     }
-    // Choosing somewhere else on the page lets focus go.
     const onPointerDown = (event: PointerEvent) => {
       if (!(event.target instanceof Element && event.target.closest('[data-table]'))) held = null
     }

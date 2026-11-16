@@ -56,7 +56,6 @@ function Card({ unit, open, turn }: { unit: Unit; open: boolean; turn: boolean }
   useFrame((_, delta) => {
     if (turn && group.current) group.current.rotation.y += delta * 0.6
     if (!turn && group.current) group.current.rotation.y = THREE.MathUtils.damp(group.current.rotation.y, 0, 4, delta)
-    // Matches the easing and fade of a card drawn on the table.
     openness.current = THREE.MathUtils.damp(openness.current, open ? 1 : 0, 6, delta)
     disk.current?.setOpen(openness.current)
     materials.content.emissiveIntensity = 1.1 * openness.current * openness.current

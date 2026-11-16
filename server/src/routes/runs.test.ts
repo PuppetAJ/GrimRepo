@@ -57,7 +57,6 @@ async function start(cookie: string) {
   }
 }
 
-/** Sends a bot's whole run in saves as large as the server takes. */
 async function submit(cookie: string, id: number, actions: RunAction[]) {
   let last
   for (let from = 0; from < actions.length; from += RUN_SAVE_LIMIT) {
@@ -139,7 +138,6 @@ describe('a run', () => {
         cookie: player.cookie,
         body: { from: 0, actions: Array(count).fill(largest) },
       })
-    // Reaching the replay, which refuses them, shows the body was read.
     assert.equal((await save(RUN_SAVE_LIMIT)).body.error, 'Illegal move')
     assert.equal((await save(RUN_SAVE_LIMIT + 1)).body.error, 'Invalid moves')
   })
@@ -197,7 +195,6 @@ describe('the run actions the server takes', () => {
   it('include every kind the engine has, so a legal move is never refused as unknown', async () => {
     const player = await signedIn()
     const run = await start(player.cookie)
-    // One of each; most are illegal here, which the replay says, but none may be refused before it.
     const kinds: RunAction[] = [
       { type: 'start', deck: 'hello-world' },
       { type: 'start', deck: 'hello-world', skipDeath: true },
@@ -227,7 +224,6 @@ describe('the run actions the server takes', () => {
   })
 })
 
-/** Plays a few moves of a new run and forfeits it, returning the run and the state it ended in. */
 async function lose(cookie: string, opening: RunAction = { type: 'start', deck: 'hello-world' }) {
   const run = await start(cookie)
   const dealt = { death: run.death, rival: run.rival }
@@ -241,7 +237,6 @@ async function lose(cookie: string, opening: RunAction = { type: 'start', deck: 
   return { run, score: forfeit.body.score as number, state: replayed.state }
 }
 
-/** The first card of each hand the lost run deals. */
 function firstOfEach(state: RunState, name: string) {
   const cost = deathCostHand(state)[0]?.id ?? -1
   const stats = deathStatsHand(state, cost)[0]?.id ?? -1

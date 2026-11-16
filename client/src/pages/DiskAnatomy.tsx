@@ -10,7 +10,6 @@ import { backTexture, faceContent, faceLights, faceTexture, loadCardAssets } fro
 import { kindOf } from '../game/table/kind.ts'
 import { NotFound } from './NotFound.tsx'
 
-/** Every piece of a disk that can be shown or hidden on its own. */
 type Part = 'plastic' | 'dark' | 'metal' | 'base' | 'content' | 'lights' | 'back'
 
 const PARTS: { id: Part; name: string; about: string }[] = [
@@ -23,7 +22,6 @@ const PARTS: { id: Part; name: string; about: string }[] = [
   { id: 'back', name: 'Back sticker', about: 'The label on the disk’s back, the same for every card.' },
 ]
 
-/** How far each piece moves toward the camera at full explosion, so the layers come apart in order. */
 const SPREAD: Record<Part, number> = {
   plastic: 0,
   dark: 0.08,
@@ -34,7 +32,6 @@ const SPREAD: Record<Part, number> = {
   back: -0.28,
 }
 
-// The three sections in colors of their own, so the squash shows which one gives.
 const SECTION_TINTS = ['#e86a5f', '#e8c95f', '#5fb6e8'] as const
 
 type View = {
@@ -54,7 +51,6 @@ function AnatomyDisk({ view }: { view: View }) {
   const sheets = sheetGeometries()
   const kind = kindOf(unit)
   const spinner = useRef<THREE.Group>(null)
-  // Copies of the table's materials, so wireframe here never reaches the game's disks.
   const solid = useMemo(() => {
     const base = diskMaterials(kind)
     const copy = (material: THREE.MeshStandardMaterial) => Object.assign(material.clone(), { wireframe: wire })
@@ -78,7 +74,6 @@ function AnatomyDisk({ view }: { view: View }) {
         transparent: true,
         alphaTest: 0.5,
       }),
-      // Its own layer here, added on top as light, where the table folds it into the content as its glow.
       lights: new THREE.MeshBasicMaterial({
         map: faceLights(unit, assets),
         transparent: true,
@@ -144,7 +139,6 @@ function AnatomyDisk({ view }: { view: View }) {
   )
 }
 
-/** A canvas the game draws a sticker on, shown flat, on a checkerboard so its cut-out holes show. */
 function Sheet({ texture, title, children }: { texture: THREE.Texture; title: string; children: ReactNode }) {
   const url = useMemo(() => (texture.image as HTMLCanvasElement).toDataURL(), [texture])
   return (
@@ -162,7 +156,6 @@ function Sheet({ texture, title, children }: { texture: THREE.Texture; title: st
   )
 }
 
-/** A file the stickers are drawn from, at its own pixels, scaled up without blurring. */
 function Source({ src, title, children }: { src: string; title: string; children: ReactNode }) {
   return (
     <figure className="flex w-32 flex-col gap-2">
@@ -260,7 +253,6 @@ const unitOf = (id: string, damaged: boolean): Unit => {
 
 const CHOICES = Object.values(CARDS).filter((def) => def.id !== DEBUG_CARD && def.id !== OUT_OF_MEMORY)
 
-/** A disk taken apart: each piece of its shape and each sticker on its own, then how they come together. Development only. */
 export function DiskAnatomy() {
   const [id, setId] = useState('NullPointer')
   const [damaged, setDamaged] = useState(false)

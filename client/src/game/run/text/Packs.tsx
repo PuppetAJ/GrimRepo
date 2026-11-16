@@ -8,10 +8,8 @@ import { fadeIn, flipIn, tearBody, tearTop } from '../../moves.ts'
 import { CardList } from './CardList.tsx'
 import { useScreenMode } from './Screen.tsx'
 
-/** A sealed pack's size: its art, 84 by 154, at one and a half times on a phone and twice beside it. */
 export const PACK_SIZE_CLASS = 'h-[231px] w-[126px] sm:h-[308px] sm:w-[168px]'
 
-/** A sealed pack to tear open: a press tugs the crimped top off and drops the rest, then `onTorn` runs. */
 export function SealedPack({
   art,
   label,
@@ -27,7 +25,6 @@ export function SealedPack({
   art: string
   label: string
   note?: ReactNode
-  /** A holographic sheen drifting over it, for the boss's rare pack. */
   holo?: boolean
   tearing: boolean
   disabled?: boolean
@@ -39,7 +36,6 @@ export function SealedPack({
   const still = useReducedMotion() ?? false
   const src = packArt(art)
   const tilt = useTilt(holo && !still && !tearing)
-  // On the terminal's near-black screen a shadow alone doesn't show, so the foil also spills a little light around it.
   const spill = useScreenMode() === 'terminal' && tilt.on
   return (
     <button
@@ -51,9 +47,7 @@ export function SealedPack({
       onPointerLeave={tilt.rest}
       className="group flex flex-col items-center gap-2 rounded-md p-2 text-p03 transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-p03 enabled:hover:-translate-y-1 disabled:opacity-60 motion-reduce:transition-none"
     >
-      {/* Read before the label and note rather than in place of them, so the name holds the words on screen. */}
       <span className="sr-only">{aria}: </span>
-      {/* Room below a tilting pack, so its lifted edge and shadow stay clear of the label. */}
       <span className={`relative block ${PACK_SIZE_CLASS} ${holo ? 'mb-4' : ''}`}>
         {spill ? (
           <m.span
@@ -69,7 +63,6 @@ export function SealedPack({
           </m.span>
         ) : null}
         <m.span className="absolute inset-0 block [transform-style:preserve-3d]" style={tilt.style}>
-          {/* The body's side walls, hinged at its edges and folded back, so a tilt shows the pack's thickness. */}
           {tilt.on ? (
             <>
               <span
@@ -82,7 +75,6 @@ export function SealedPack({
               />
             </>
           ) : null}
-          {/* The pack in two layers, cut along the crimp, so tearing it open pulls the top away from the rest. */}
           <m.img
             src={src}
             alt=""
@@ -100,19 +92,16 @@ export function SealedPack({
           />
           {tilt.on ? (
             <>
-              {/* The body darkens toward whichever edge turns away, so its face reads as rounded. */}
               <m.span
                 aria-hidden
                 className="pointer-events-none absolute inset-x-[2.4%] inset-y-[11%]"
                 style={{ background: tilt.shade, z: 1 }}
               />
-              {/* The sheen is masked to the pack's own shape, and stays behind once it starts to tear. */}
               <span
                 aria-hidden
                 className="holo-sheen pointer-events-none absolute inset-0"
                 style={{ maskImage: `url("${src}")`, maskSize: '100% 100%', transform: 'translateZ(2px)' }}
               />
-              {/* The foil's colors slide against the tilt, and a glare sits where the pointer is. */}
               <m.span
                 aria-hidden
                 className="holo-foil pointer-events-none absolute inset-0"
@@ -134,12 +123,9 @@ export function SealedPack({
   )
 }
 
-/** A side wall: as tall as the body between the crimps, and folded a quarter turn back from its edge. */
 const WALL = 'top-[11%] bottom-[11%] w-4 [backface-visibility:hidden] [transform:rotateY(var(--wall-turn,90deg))]'
 
-/** Tilts a pack toward the pointer and lifts it, with where it points as a light for the foil; flat when `on` is false. */
 function useTilt(on: boolean) {
-  // Where the pointer is across the pack, 0 to 1 each way; the middle at rest.
   const x = useMotionValue(0.5)
   const y = useMotionValue(0.5)
   const near = useMotionValue(0)
@@ -154,7 +140,6 @@ function useTilt(on: boolean) {
   const background = useMotionTemplate`radial-gradient(circle at ${glareX} ${glareY}, rgb(220 255 230 / 0.3), transparent 35%), linear-gradient(115deg, transparent 20%, rgb(110 210 220 / 0.22) 40%, rgb(210 180 90 / 0.2) 55%, transparent 75%)`
   const backgroundPosition = useMotionTemplate`0 0, ${foilX} ${foilY}`
   const away = useMotionTemplate`linear-gradient(90deg, rgb(0 0 0 / ${useTransform(rotateY, [-22, 22], [0.45, 0])}), transparent 14%, transparent 86%, rgb(0 0 0 / ${useTransform(rotateY, [-22, 22], [0, 0.45])}))`
-  // The shadow falls away from the pointer, and darkens and spreads as the pack lifts.
   const shadowX = useSpring(useTransform(x, [0, 1], [16, -16]), spring)
   const shadowY = useSpring(useTransform(y, [0, 1], [18, 6]), spring)
   const shadowOpacity = useTransform(lift, [0, 24], [0.5, 0.95])
@@ -184,7 +169,6 @@ function useTilt(on: boolean) {
   }
 }
 
-/** A torn pack's cards, in a box where the pack was, turning over one by one to take one; `badge` captions each. */
 export function PackReveal({
   title,
   description,
@@ -226,11 +210,9 @@ export const RARITY_TONE: Record<Rarity, string> = {
   rare: 'text-[#ffb347]',
 }
 
-/** How rare a card is in the starter packs; each card is the same rarity in every pack that holds it. */
 export const packRarity = (id: string): Rarity =>
   RARITIES.find((rarity) => Object.values(STARTER_DECKS).some((deck) => deck.pack[rarity].includes(id))) ?? 'common'
 
-/** How rare a card is at a card choice: by its tier, as the run deals them. */
 export function choiceRarity(id: string): Rarity | 'death' {
   if (isDeathCard(id)) return 'death'
   const tier = card(id).tier
@@ -243,7 +225,6 @@ const RARITY_MARKS: Record<Rarity, { count: number; tone: string }> = {
   rare: { count: 3, tone: 'text-[#ffb347]' },
 }
 
-/** A card's rarity as stars beside its sigils: one for common, two for uncommon, three in amber for rare. */
 export function RarityBadge({ rarity }: { rarity: Rarity | 'death' }) {
   if (rarity === 'death')
     return (

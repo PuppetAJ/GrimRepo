@@ -5,11 +5,9 @@ import { useFit, useFlatReader, useLaneSize } from './sizing.ts'
 
 export type Layout = 'wide' | 'mid' | 'phone'
 
-/** Everything about the text table's size and shape: which layout, full screen, and how big a lane can be. */
 export function useTableLayout(layout: Layout) {
   const compact = layout !== 'wide'
   const phone = layout === 'phone'
-  // Under 680px tall, the upright phone stack scrolls instead of squeezing the board.
   const upright = useMedia('(orientation: portrait)')
   const slim = useMedia('(max-width: 40rem)')
   const cramped = useMedia('(max-height: 42.5rem)')
@@ -30,16 +28,13 @@ export function useTableLayout(layout: Layout) {
       root.style.overflow = ''
     }
   }, [covering])
-  // Scroll the phone table to fill the screen, and again after rotating.
   useEffect(() => {
     if (phone && !covering) phoneFrame.current?.scrollIntoView({ block: 'start' })
   }, [phone, covering, sideways])
 
   const [handSection, setHandSection] = useState<HTMLElement | null>(null)
-  // Pixels beside the board: the mid layout's 13rem reader and its gap, or the sideways phone's 21rem column.
   const aside = layout === 'mid' ? 13 * 16 + 12 : sideways ? 21 * 16 + 32 : phone ? 16 : 0
   const smallestLane = layout === 'mid' ? 76 : 40
-  // A scrolling phone is limited by width only.
   const { setArea, lane: laneSize } = useLaneSize(
     compact,
     handSection,

@@ -12,21 +12,17 @@ import { ScreenBar, ScreenCenter, useScreenMode } from './Screen.tsx'
 
 const RARITIES: Rarity[] = ['common', 'uncommon', 'rare']
 
-/** A run's first choice: one of the starter decks, each in its own box; side by side with room. */
 export function StarterDeck({ run }: { run: RunReady }) {
   const [include, setInclude] = useState(true)
-  // The deck whose packs were last opened to read, kept through the dialog's close so focus can go back to them.
   const [reading, setReading] = useState<{ id: string; open: boolean } | null>(null)
   if (run.state.visit?.kind !== 'start') return null
   const death = run.state.death
-  // The projector's header is short of room, so there it's a box above the decks.
   const inHeader = useScreenMode() !== 'hologram'
   return (
     <div data-center className="@container flex flex-col items-center gap-4">
       <ScreenBar>
         <p className="pb-1 text-lg">P03&gt; Pick the deck you&apos;ll lose with.</p>
       </ScreenBar>
-      {/* In the header where it has room, beside the title; above the decks otherwise. */}
       {death ? (
         <>
           {inHeader ? (
@@ -42,12 +38,9 @@ export function StarterDeck({ run }: { run: RunReady }) {
       <ol className="grid w-full max-w-3xl gap-4 @6xl:max-w-none @6xl:grid-cols-3">
         {Object.entries(STARTER_DECKS).map(([id, deck]) => (
           <li key={id}>
-            {/* More below than the padding alone, to match the room the heading's line height leaves above it. */}
             <Box className="flex h-full flex-col gap-3 pb-5 sm:pb-6">
-              {/* Centered while the decks stack, and left-aligned side by side. */}
               <h3 className="text-center text-2xl text-p03 @6xl:text-left">{deck.name}</h3>
               <p className="text-center font-sans text-base text-[#b8f5c4] @6xl:text-left">{deck.about}</p>
-              {/* The core's two cards, plus a stack of the packs a card is taken from each of, midway between words and button. */}
               <div className="flex flex-1 items-center justify-center gap-3 py-2">
                 {deck.core.map((core, index) => (
                   <div key={`${core}-${index}`} className="w-16 shrink-0 sm:w-20">
@@ -58,7 +51,6 @@ export function StarterDeck({ run }: { run: RunReady }) {
                   +
                 </span>
                 <span className="sr-only">and a card from each of {PACKS} packs, opened next</span>
-                {/* The packs open a dialog of what they can hold, and the odds. */}
                 <button
                   type="button"
                   data-action="read-packs"
@@ -103,7 +95,6 @@ export function StarterDeck({ run }: { run: RunReady }) {
   )
 }
 
-/** A starter deck's packs laid open in a dialog, like a pack torn open: each rarity's cards, and the odds. */
 function PackDialog({ id, open, onClose }: { id: string; open: boolean; onClose: () => void }) {
   const deck = STARTER_DECKS[id]
   return (
@@ -144,15 +135,12 @@ function PackDialog({ id, open, onClose }: { id: string; open: boolean; onClose:
   )
 }
 
-/** The starter deck's packs side by side, each torn open on three cards in its place to take one; what they hold below. */
 export function PackOpening({ run }: { run: RunReady }) {
   const visit = run.state.visit
-  // Which place's pack is torn for the pack the run is on, and whether its cards are out yet.
   const [torn, setTorn] = useState<{ pack: number; place: number; open: boolean } | null>(null)
   if (visit?.kind !== 'pack') return null
   const deck = STARTER_DECKS[visit.deck]
   const current = torn?.pack === visit.opened ? torn : null
-  // The cards taken so far are the deck's last, one for each pack already opened.
   const taken = run.state.deck.slice(run.state.deck.length - (visit.opened - 1))
   return (
     <div data-center className="flex flex-col items-center gap-6 text-center">
@@ -216,7 +204,6 @@ export function PackOpening({ run }: { run: RunReady }) {
   )
 }
 
-/** What a starter deck's packs can hold, and the odds for each card in them. */
 function PackOdds({ id }: { id: string }) {
   const deck = STARTER_DECKS[id]
   if (!deck) return null
@@ -229,7 +216,6 @@ function PackOdds({ id }: { id: string }) {
       <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 font-sans text-sm text-[#b8f5c4]">
         {RARITIES.map((rarity) => (
           <div key={rarity} className="contents">
-            {/* The marks each card in a pack shows for its rarity, named here so they can be read anywhere. */}
             <dt className={`flex items-center gap-2 font-terminal text-base capitalize ${RARITY_TONE[rarity]}`}>
               <RarityBadge rarity={rarity} />
               {rarity}
@@ -242,7 +228,6 @@ function PackOdds({ id }: { id: string }) {
   )
 }
 
-/** The death card, and a switch to bring it into the run or leave it out for more score. */
 function DeathOption({
   id,
   include,
@@ -252,7 +237,6 @@ function DeathOption({
   id: string
   include: boolean
   onChange: (include: boolean) => void
-  /** In the header, no taller than the title. */
   compact?: boolean
 }) {
   return (

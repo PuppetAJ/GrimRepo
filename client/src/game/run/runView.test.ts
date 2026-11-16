@@ -3,7 +3,6 @@ import { describe, it } from 'node:test'
 import type { RunState } from 'shared'
 import { runView } from './runView.ts'
 
-// Only what the view reads: the run's status and the visit, with the battle's own status.
 const run = (status: RunState['status'], battle?: 'playing' | 'won' | 'lost') =>
   ({
     status,

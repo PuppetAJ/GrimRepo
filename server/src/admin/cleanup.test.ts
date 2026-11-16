@@ -14,7 +14,6 @@ after(async () => {
 })
 beforeEach(resetDatabase)
 
-// Quick battles can no longer be started, so the open ones cleanup still clears are made directly.
 async function openGame(cookie: string): Promise<number> {
   const user = (await app.call('GET', '/api/auth/get-session', { cookie })).body.user.id as string
   const { rows } = await pool.query<{ id: number }>(

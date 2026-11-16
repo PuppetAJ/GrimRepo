@@ -8,7 +8,6 @@ import { makeRouter } from './router.tsx'
 
 export { HOME_VARIANTS, variantName } from './lib/homeVariant.ts'
 
-/** One version of the home page's HTML, and the router state main.tsx hydrates it with; the tree must match main.tsx's. */
 export async function renderHome(variant: HomeVariant): Promise<{ html: string; state: string }> {
   renderingHome(variant)
   const router = makeRouter(createMemoryHistory({ initialEntries: ['/'] }), 'http://localhost')
@@ -27,7 +26,6 @@ export async function renderHome(variant: HomeVariant): Promise<{ html: string; 
   const html = await new Response(prelude).text()
   if (/<script|<!--\$[?!]-->/.test(html))
     throw new Error('The prerendered home page needs an inline script, which the CSP blocks')
-  // Served as a file rather than inline, since the CSP allows scripts from the site only.
   const tags = ssr.takeInitialHydrationScriptTags()
   if (!tags) throw new Error('The router produced no hydration state')
   const state = [...tags.before, tags.boundary].map((tag) => tag.children ?? '').join(';\n')

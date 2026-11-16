@@ -14,7 +14,6 @@ import { CARD_COUNT } from './cardCount.ts'
 
 const badges = [
   { label: 'build', value: 'haunted', color: 'bg-primary' },
-  // The license badge went so P03's fits beside these on a phone.
   { label: 'cards', value: String(CARD_COUNT), color: 'bg-[#c4b5fd]' },
 ]
 
@@ -27,7 +26,6 @@ const turn = [
 const TOP_KEY = 'grimrepo:top'
 let remembered: LeaderboardRow[] | null | undefined
 
-/** The list from the last visit, read once and checked, since storage can hold anything. */
 function rememberedTop(): LeaderboardRow[] | null {
   if (remembered !== undefined) return remembered
   try {
@@ -43,29 +41,24 @@ function rememberedTop(): LeaderboardRow[] | null {
   return remembered
 }
 
-// Storage is read only after hydration, so the prerendered page, which has no list, matches.
 const unchanging = () => () => {}
 const noList = () => null
 
 export function Home() {
   const rise = useRise()
   const fresh = useAsync(() => api.leaderboard().then((board) => board.players.slice(0, 3)), 'top')
-  // The last visit's list shows at once while the current one loads.
   const stale = useSyncExternalStore(unchanging, rememberedTop, noList)
   useEffect(() => {
     if (fresh.status !== 'ready') return
     try {
       localStorage.setItem(TOP_KEY, JSON.stringify(fresh.data))
-    } catch {
-      // Storage can be refused in a private window; the list just loads each time.
-    }
+    } catch {}
   }, [fresh])
   const top: Async<LeaderboardRow[]> = fresh.status === 'loading' && stale ? { status: 'ready', data: stale } : fresh
   const first = top.status === 'ready' ? top.data[0] : undefined
   const session = authClient.useSession()
   const account = session.data?.user as { displayUsername?: string; username?: string } | undefined
   const user = account?.displayUsername
-  // Anyone without a finished run sees the tutorial first; until that's known, a run stays first.
   const finished = useAsync(
     () => (account?.username ? api.runs(account.username, 1).then((page) => page.total) : Promise.resolve(0)),
     session.isPending ? 'pending' : (account?.username ?? 'signed out'),
@@ -84,7 +77,6 @@ export function Home() {
 
   return (
     <div className="flex flex-col gap-10 lg:flex-row lg:items-start">
-      {/* Edge to edge on phones, so the text gets the room. */}
       <article
         {...rise(0)}
         className="relative -mx-(--gutter) -mt-8 min-w-0 flex-1 border-b bg-card sm:mx-0 sm:mt-0 sm:rounded-lg sm:border"
@@ -137,7 +129,6 @@ export function Home() {
 
           <h2 className="mt-4 border-b pb-2 text-2xl font-semibold">Installation</h2>
           <p className="text-foreground/85">There is no installation. There is only the table. Each turn:</p>
-          {/* Focusable so keyboard users can scroll it sideways on phones. */}
           <pre
             tabIndex={0}
             aria-label="Each turn, as commands"
@@ -156,7 +147,6 @@ export function Home() {
             <li>The dealer does not lose on purpose.</li>
             <li>FourOhFour removes everything on the other side of the table. Working as intended.</li>
             <li>
-              {/* The redaction wraps to the next line whole instead of breaking. */}
               <s>Y2K is not in the deck.</s>{' '}
               <span className="p03-text-glow relative inline-block bg-p03-ground px-1.5 font-terminal text-lg whitespace-nowrap text-p03 sm:text-xl">
                 <Glass flat />
@@ -180,7 +170,6 @@ export function Home() {
           {top.status === 'ready' && top.data.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nobody yet. Be the first.</p>
           ) : null}
-          {/* Held open while the list loads, so it fades in without moving the release below it. */}
           {top.status === 'loading' ? (
             <div role="status" aria-label="Loading the top maintainers" className="flex flex-col gap-3">
               {[0, 1, 2].map((row) => (

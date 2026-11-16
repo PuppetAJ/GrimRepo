@@ -1,7 +1,6 @@
 import { bossPhase } from '../controls.tsx'
 import { useTable } from './context.ts'
 
-/** The turn, with a boss's phase beside it, or under it with `stack`; the battle's name is in the menu. */
 export function TurnLabel({ stack = false }: { stack?: boolean }) {
   const { view, state } = useTable()
   const phase = bossPhase(state, view.phase)

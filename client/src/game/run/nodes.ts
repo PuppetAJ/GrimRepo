@@ -12,7 +12,6 @@ import {
 } from 'lucide-react'
 import { card, encounter, type MapNode, type NodeKind, type RunCard, type Unit } from 'shared'
 
-// Placeholders until Adrian's pixel icons replace them.
 export const NODE_ICONS: Record<NodeKind, LucideIcon> = {
   battle: Swords,
   card: Layers,
@@ -24,7 +23,6 @@ export const NODE_ICONS: Record<NodeKind, LucideIcon> = {
   boss: Skull,
 }
 
-/** A node's icon: a face-down card choice shows a question mark. */
 export const nodeIcon = (node: Pick<MapNode, 'kind'> & Partial<Pick<MapNode, 'blind'>>): LucideIcon =>
   node.kind === 'card' && node.blind ? CircleHelp : NODE_ICONS[node.kind]
 
@@ -53,7 +51,6 @@ export function nodeName(
   return NAMES[node.kind]
 }
 
-/** A deck card, or a card on offer, in the shape the card components draw. */
 export function asUnit(entry: RunCard | string, uid = 0): Unit {
   if (typeof entry === 'string') {
     const def = card(entry)

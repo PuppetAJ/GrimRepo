@@ -18,13 +18,10 @@ import { BetweenBattles, warp, windowHeight } from './RunStage.tsx'
 import { preloadItems } from '../../table/table3d/ItemRack.tsx'
 import { InventoryDialog } from '../text/InventoryDialog.tsx'
 
-/** How long a projected screen takes to fade out before the next one comes in, in milliseconds. */
 const FADE_MS = 160
 
-/** How tall, in CSS pixels, the projector's window must draw to be read; on a smaller stage the screens float instead. */
 const READABLE = 320
 
-/** Everything off the board: the room in 3D, with the map in the projector's window and other screens over it. */
 function Between({
   run,
   view,
@@ -40,31 +37,22 @@ function Between({
   run: RunReady
   view: RunView
   layout: Layout
-  /** Whether the camera glides back from a battle. */
   glide: boolean
   leaving: boolean
   onLeft: () => void
-  /** Set while looking at the map from a battle or a node's screen, to go back to it. */
   onBack?: () => void
-  /** Where `onBack` returns to, as its button says. */
   back?: string
-  /** Set on a node's screen, to look at the map without leaving it. */
   onMap?: () => void
   onText: () => void
 }) {
   const stage = useStage()
   const screen = useRunScreen(run)
-  // Loaded while the map is up, so a battle starts with its cards and items ready instead of a blank table.
   useEffect(() => void loadCardAssets(), [])
   useEffect(() => preloadItems(run.state.items), [run.state.items])
   const pin = useRef<HTMLDivElement>(null)
-  // Whether the projector's window has opened all the way, so a screen's entrances play where they can be seen.
   const [open, setOpen] = useState(false)
-  // Every screen goes on the projector, unless the stage is too small to read its window; then they float.
   const readable = windowHeight(stage.size.width, stage.size.height) >= READABLE
   const projects = (screen: RunView) => screen !== 'battle' && readable
-  // Going from a projected screen to a floating one, the projector shuts and lifts away first, showing the map.
-  // Between projected screens, the old one fades out, drawn from the run as it last saw it, before the next fades in.
   const [shown, setShown] = useState(view)
   const live = { run, title: view === 'map' ? mapTitle(run.state) : screen.title, caption: screen.caption }
   const [seen, setSeen] = useState(live)
@@ -82,7 +70,6 @@ function Between({
   const body: RunView = toFloat ? 'map' : shown
   const title = fading ? seen.title : body === 'map' ? mapTitle(run.state) : screen.title
   const note = useRunNote(run, body)
-  // With no projector to shut, it leaves at once.
   useEffect(() => {
     if (leaving && !projecting) onLeft()
   }, [leaving, projecting, onLeft])
@@ -105,7 +92,6 @@ function Between({
       />
       {stage.ready ? (
         <Screen
-          // Keyed by screen, so each one plays its entrance.
           key={body}
           run={screenRun}
           fading={fading}
@@ -120,7 +106,6 @@ function Between({
           onSwitch={{ label: 'Text table', go: onText }}
           note={note && !fading ? <RunNote note={note} compact={layout === 'phone'} /> : null}
         >
-          {/* In the hologram's own button style; the site's gray buttons wash out under its glow. */}
           {onBack ? (
             <ScreenActions>
               <button
@@ -156,7 +141,6 @@ function Between({
   )
 }
 
-/** For mockups: replays the glides between a battle and the map, by looking at the map from the battle and back. */
 function Replay({
   looking,
   inBattle,
@@ -182,7 +166,6 @@ function Replay({
 
 type Scene = 'battle' | 'between'
 
-/** The run at the 3D table, on one stage loaded once: battles and the screens between them swap in and out. */
 export default function Run3D({
   run,
   layout,
@@ -194,20 +177,16 @@ export default function Run3D({
   layout: Layout
   seat: Seat
   onText: () => void
-  /** Offers buttons that replay the glides between a battle and the map, for mockups. */
   replay?: boolean
 }) {
   const { view, battle } = useRunScreen(run)
   const [inventory, setInventory] = useState(false)
-  // Looking at the map from a battle or a node's screen shows the room's map, with the battle packed away until the
-  // player returns; the look belongs to that screen, so the next one starts on itself.
   const key = `${run.generation}:${run.state.stage}:${run.state.at}`
   const here = `${key}:${view}`
   const [lookingFrom, setLookingFrom] = useState<string | null>(null)
   const canLook = view in BACK_TO
   const looking = canLook && lookingFrom === here
   const setLook = (on: boolean) => setLookingFrom(on ? here : null)
-  // M looks at the map from a node's screen and back; a battle's own M is the table's.
   const toggle = useRef(() => {})
   useEffect(() => {
     toggle.current = () => canLook && (view !== 'battle' || looking) && setLook(!looking)
@@ -221,10 +200,8 @@ export default function Run3D({
   }, [])
   const wanted: Scene = view === 'battle' && !looking ? 'battle' : 'between'
   const roomView: RunView = looking ? 'map' : view
-  // The last battle, so its table can be packed away after the run has moved on.
   const [kept, setKept] = useState(battle && { game: battle, key })
   if (battle && (kept?.game.state !== battle.state || kept.key !== key)) setKept({ game: battle, key })
-  // A scene leaves before the next one comes in; the camera glides only after one has shown the other.
   const [shown, setShown] = useState({ scene: wanted, view: roomView, after: false, leaving: false, count: 0 })
   if (shown.scene !== wanted && !shown.leaving) setShown({ ...shown, leaving: true })
   else if (!shown.leaving && shown.view !== roomView) setShown({ ...shown, view: roomView })
@@ -249,7 +226,6 @@ export default function Run3D({
       <TableStage>
         {shown.scene === 'battle' ? (
           kept ? (
-            // Remounted for each battle, so its playback never starts from the last one; the stage stays.
             <Battle3D
               key={`${kept.key}:${shown.count}`}
               game={battle ?? kept.game}

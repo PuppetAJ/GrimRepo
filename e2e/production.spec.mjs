@@ -1,5 +1,3 @@
-// The live site's critical path, after a deploy: `pnpm test:prod`, or another production build's with E2E_BASE_URL.
-// It plays only as a guest, whom the nightly clean-up removes, so the live board stays clean.
 import { BASE, check, resetRateLimits, stamp, test } from './lib.mjs'
 
 test('The live site', async ({ page, browser }) => {
@@ -67,7 +65,6 @@ test('The live site', async ({ page, browser }) => {
     check('the demo account signs in', true)
   })
   await test.step('A whole run', async () => {
-    // The guest dealt in above starts a run, and a bot plays it to the end in saves the size the browser sends.
     const { applyRun, createRun, deathSkipBonus, playRun, RUN_SAVE_LIMIT, scoreRun } =
       await import('../shared/src/index.ts')
     await page.goto(`${BASE}/run`, { waitUntil: 'networkidle' })
@@ -97,7 +94,6 @@ test('The live site', async ({ page, browser }) => {
     )
   })
   await test.step('Guessing', async () => {
-    // Last, since it locks this address out of sign-in for a minute; a made-up name touches no real account.
     const statuses = []
     for (let attempt = 0; attempt < 6; attempt++) {
       const response = await page.request.post(`${BASE}/api/auth/sign-in/username`, {
@@ -106,7 +102,6 @@ test('The live site', async ({ page, browser }) => {
       })
       statuses.push(response.status())
     }
-    // The demo's sign-in above counts too, so the refusal may come one attempt early.
     check('a sixth sign-in in a minute is refused', statuses[0] === 401 && statuses.at(-1) === 429, statuses.join(', '))
     await resetRateLimits()
   })

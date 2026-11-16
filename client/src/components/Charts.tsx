@@ -18,7 +18,6 @@ import { AsTable, Frame, Legend, Tip, useTip } from './charts/parts.tsx'
 const MARGIN = { top: 12, right: 4, bottom: 8, left: 0 }
 const TICK = { fill: 'var(--muted-foreground)', fontSize: 11, fontFamily: 'var(--font-mono)' }
 
-/** The left axis: three ticks, and no wider than its longest label needs, so narrow charts keep their room. */
 function Scale({ top, bottom = 0, format }: { top: number; bottom?: number; format: (value: number) => string }) {
   const ticks = bottom ? [bottom, 0, top] : [0, Math.round(top / 2), top]
   return (
@@ -76,12 +75,10 @@ export function ScoreChart({ runs }: { runs: Run[] }) {
   )
 }
 
-/** The fewest slots the battles chart is split into, so one run takes at most a quarter of it, from the left. */
 const BATTLE_SLOTS = 4
 
 export function BattlesChart({ runs }: { runs: Run[] }) {
   const top = Math.max(1, ...runs.map((run) => run.battles))
-  // Empty slots after the runs keep a few bars from spreading across the chart.
   const slots: Partial<Run>[] = [...runs, ...Array.from({ length: BATTLE_SLOTS - runs.length }, () => ({}))]
   const tipBox = useTip()
   return (
@@ -111,7 +108,6 @@ export function BattlesChart({ runs }: { runs: Run[] }) {
   )
 }
 
-/** Each run with its streak so far: wins in a row counting up from 1, losses in a row down from -1. */
 function streaksOf(runs: Run[]): (Run & { streak: number })[] {
   const points: (Run & { streak: number })[] = []
   for (const run of runs) {
@@ -121,13 +117,11 @@ function streaksOf(runs: Run[]): (Run & { streak: number })[] {
   return points
 }
 
-/** Each run's streak so far, oldest first: a spell of wins climbs above the middle line and one of losses sinks below it. */
 export function StreakChart({ runs }: { runs: Run[] }) {
   const tipBox = useTip()
   const split = useId()
   const points = streaksOf(runs)
   const top = Math.max(1, ...points.map((point) => Math.abs(point.streak)))
-  // Where zero falls in the line's own height, so it turns from the win color to the loss color there.
   const high = Math.max(...points.map((point) => point.streak))
   const low = Math.min(...points.map((point) => point.streak))
   const zero = high <= 0 ? 0 : low >= 0 ? 1 : high / (high - low)

@@ -1,10 +1,6 @@
 import type { HTMLAttributes, ReactNode } from 'react'
 import { useWideTable } from './wideTable.ts'
 
-/**
- * The 3D table's box: the window's height under the header, and the site's width unless the player widens it to the
- * window's, at most 21:9. On a sideways phone it takes the whole screen.
- */
 export function TableBox({ children, ...rest }: HTMLAttributes<HTMLDivElement> & { children: ReactNode }) {
   const { wide } = useWideTable()
   return (

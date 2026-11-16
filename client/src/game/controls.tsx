@@ -55,13 +55,11 @@ export function describe(unit: Shown): string {
   return `${card(unit.card).name}, ${unit.attack} attack${aura}, ${unit.health} health${sigils ? `, ${sigils}` : ''}`
 }
 
-/** What a summon still costs after the cards marked so far. */
 export function owed(summoning: Unit, board: Slot[], marked: number[]): number {
   const paid = marked.reduce((sum, lane) => sum + (board[lane] ? worthOf(board[lane]) : 0), 0)
   return Math.max(0, costOf(summoning) - paid)
 }
 
-/** What a draw does once the deck is empty: how many cards it shuffles back, and whether P03 gains an Out of Memory. */
 export function reshuffleNote(state: GameState): { cards: number; text: string } | null {
   const cards = reshuffleSize(state)
   if (!cards) return null
@@ -69,10 +67,8 @@ export function reshuffleNote(state: GameState): { cards: number; text: string }
   return { cards, text: `The deck is empty: a draw shuffles ${cards} ${cards === 1 ? 'card' : 'cards'} back in${cost}` }
 }
 
-/** The turn began with a full hand, so its draw was skipped. */
 export const skippedDraw = (state: GameState) => state.drawn && state.player.hand.length >= HAND_LIMIT
 
-/** Why a click on a card or a lane did nothing, to finish "Can't do that because …". */
 export function whyNot(state: GameState, target: { card: Unit } | { lane: number }): string {
   if (!state.drawn) return 'you need to draw a card first'
   if ('card' in target) {
@@ -91,7 +87,6 @@ export function whyNot(state: GameState, target: { card: Unit } | { lane: number
   return 'that lane is taken'
 }
 
-/** What the player can do next, for the prompt line; `over` can be a string to say instead of saving. */
 export function prompt(
   mustDraw: boolean,
   summoning: Unit | undefined,
@@ -110,14 +105,12 @@ export function prompt(
   return `Summoning ${name}: pick a lane.`
 }
 
-/** A boss's phase, "Phase 2 of 2"; null in a battle of one phase. */
 export function bossPhase(state: GameState, phase: number): string | null {
   const id = state.opponent.encounter
   const phases = id ? encounter(id).phases.length : 1
   return phases > 1 ? `Phase ${phase + 1} of ${phases}` : null
 }
 
-/** A run battle's name. */
 export const encounterName = (state: GameState): string | null =>
   state.opponent.encounter ? encounter(state.opponent.encounter).name : null
 
@@ -141,7 +134,6 @@ export const outcomeOf = (game: Ready): Outcome | undefined =>
 
 export const overText = (game: Ready) => game.state.status !== 'playing' && 'The battle is over.'
 
-/** In the tutorial, only the move the current step waits for. */
 export const legalFor = (game: Ready): Action[] => game.tutorial?.legal(game.state) ?? legalActions(game.state)
 
 export function Forfeit({
@@ -154,7 +146,6 @@ export function Forfeit({
 }: {
   title?: string
   forfeit: () => Promise<void>
-  /** Forfeiting a battle in a run abandons the whole run. */
   run?: boolean
   disabled?: boolean
   className?: string
@@ -172,7 +163,6 @@ export function Forfeit({
   )
 }
 
-/** The question a forfeit asks first; inside an AlertDialog, opened by its trigger or by a menu. */
 export function ForfeitConfirm({ forfeit, run = false }: { forfeit: () => Promise<void>; run?: boolean }) {
   return (
     <AlertDialogContent>
@@ -194,7 +184,6 @@ export function ForfeitConfirm({ forfeit, run = false }: { forfeit: () => Promis
   )
 }
 
-/** Seats that get a note at the table; null gets none. */
 export type Seat = 'demo' | 'guest' | null
 
 export function useSeat(): Seat {
@@ -217,9 +206,7 @@ export function SeatNote({ seat }: { seat: Exclude<Seat, null> }) {
     setOpen(false)
     try {
       localStorage.setItem(NOTE_KEY[seat], 'closed')
-    } catch {
-      // Storage can be refused in a private window; it stays closed until the page reloads.
-    }
+    } catch {}
   }
   return (
     <div
@@ -268,7 +255,6 @@ export function ScaleBar({
   const [shown, setShown] = useState({ scale, change: 0, key: 0 })
   if (shown.scale !== scale) setShown({ scale, change: scale - shown.scale, key: shown.key + 1 })
   const reach = (Math.min(TIP, Math.abs(scale)) / TIP) * 50
-  // The player's side is on the left, P03's on the right.
   const knot = 50 - Math.sign(scale) * reach
   const tone = scale > 0 ? 'text-foreground' : scale < 0 ? 'text-death' : 'text-p03-dim'
   const margin = (
@@ -297,7 +283,6 @@ export function ScaleBar({
       className={`flex items-center gap-2 font-terminal ${className}`}
     >
       <span className="text-foreground">You</span>
-      {/* The margin sits by whoever leads, in a slot each side keeps, so the bar never jumps. */}
       <span className={`relative w-8 shrink-0 text-right tabular-nums ${tone}`}>{scale > 0 ? margin : null}</span>
       <span
         className={`relative h-3 rounded-sm border border-p03-dim/60 ${fluid ? 'min-w-12 flex-1' : 'w-32 sm:w-44'}`}
@@ -320,10 +305,8 @@ export function ScaleBar({
   )
 }
 
-/** Integrity this low shows in the death color. */
 const lowIntegrity = (left: number, max: number) => left <= max / 4
 
-/** A run's integrity: a bar, or a shield and the count with `compact`; each change drifts off the count. */
 export function IntegrityBar({
   left,
   max,

@@ -2,7 +2,6 @@ import { ITEM_SLOTS, ITEMS } from 'shared'
 import { ItemButton } from '../ItemButton.tsx'
 import { useTable } from './context.ts'
 
-/** The run's items and the rack's empty slots; a pick uses or aims one, then calls `onPick`, as a menu does to close. */
 export function Items({
   className = '',
   onPick,

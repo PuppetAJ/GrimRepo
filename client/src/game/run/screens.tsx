@@ -38,7 +38,6 @@ const TITLES: Record<Exclude<RunView, 'battle' | 'map'>, string> = {
   summary: 'The run is over',
 }
 
-/** Where looking at the map returns to, for its Back button, from every screen it can be looked at from. */
 export const BACK_TO: Partial<Record<RunView, string>> = {
   battle: 'the battle',
   card: 'the card choice',
@@ -53,18 +52,14 @@ export const BACK_TO: Partial<Record<RunView, string>> = {
   item: 'the tool rack',
 }
 
-/** The map's title: the stage itself. */
 export const mapTitle = (state: RunReady['state']) =>
   `Stage ${state.stage + 1} of ${STAGES.length}: ${STAGES[state.stage]}`
 
-/** Which screen the run is on, its battle in the tables' shape, and the screen's title; both tables share it. */
 export function useRunScreen(run: RunReady) {
-  // A run that ends on the board stays there until the player asks for the summary.
   const [reviewing, setReviewing] = useState(false)
   const visit = run.state.visit
   const decided = visit?.kind === 'battle' && visit.game.status !== 'playing'
   const shown = useRunNote(run, 'battle', visit?.kind === 'battle' ? visit.game : null)
-  // In the tutorial's shape, so the tables show it in the same box; reading it never waits on a move.
   const note = useMemo(
     () => (shown ? { step: { id: shown.id, ...RUN_NOTES[shown.id] }, move: null, onPressOn: shown.close } : null),
     [shown],
@@ -73,7 +68,6 @@ export function useRunScreen(run: RunReady) {
   const after = run.state.status === 'playing' ? run.aftermath : null
   const view = runView(run.state, run.aftermath, reviewing)
   const eventId = after?.kind === 'event' ? after.event : visit?.kind === 'event' ? visit.event : null
-  // The map's title is the stage itself; an event's is its scene's, under a caption saying what it is.
   const title =
     view === 'map'
       ? mapTitle(run.state)
@@ -87,10 +81,8 @@ export function useRunScreen(run: RunReady) {
   return { view, battle, title, caption: view === 'event' ? 'Event' : undefined }
 }
 
-/** The screen off the board for the run's current view. */
 export function ScreenBody({ run, view, layout }: { run: RunReady; view: RunView; layout: Layout }) {
   if (view === 'summary') return <Summary run={run} />
-  // A node that has done its work shows what happened until the player leaves.
   if (run.aftermath?.kind === 'node' && run.state.status === 'playing') return <NodeResult run={run} />
   if (view === 'card' || view === 'reward') return <Offer run={run} />
   if (view === 'campfire') return <Campfire run={run} />

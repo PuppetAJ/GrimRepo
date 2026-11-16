@@ -4,14 +4,11 @@ import { api, type Notes, type NotesChange } from '../../lib/api.ts'
 import { authClient, DEMO } from '../../lib/auth.ts'
 import type { RunView } from './runView.ts'
 
-// Everyone shares the demo account, so its notes are kept in the browser, as is a visitor's before they have an account.
 const LOCAL_KEY = 'grimrepo:run-notes'
 
 type Store = {
-  /** Whose notes are loaded: a player's id, or 'local'. */
   owner: string | null
   notes: Notes | null
-  /** The note each place on screen has taken, so it stays put once seen; null once closed. */
   held: Map<string, RunNote | null>
 }
 
@@ -36,7 +33,6 @@ function writeLocal(notes: Notes) {
   try {
     localStorage.setItem(LOCAL_KEY, JSON.stringify(notes))
   } catch {
-    // A private window can refuse storage; the notes then come back next visit.
   }
 }
 
@@ -44,7 +40,6 @@ function load(owner: string) {
   if (store.owner === owner) return
   set({ owner, notes: null, held: new Map() })
   if (owner === 'local') return set({ notes: readLocal() })
-  // A player whose notes can't be read sees none, rather than every one again.
   api
     .notes()
     .then((notes) => store.owner === owner && set({ notes }))
@@ -56,7 +51,6 @@ function applied(notes: Notes, change: NotesChange): Notes {
   return { seen: [...new Set([...kept, ...(change.seen ?? [])])], off: change.off ?? notes.off }
 }
 
-/** Changes the notes at once; the server's answer replaces them when it comes. */
 function change(owner: string, update: NotesChange) {
   if (store.owner !== owner || !store.notes) return
   const notes = applied(store.notes, update)
@@ -73,7 +67,6 @@ function subscribe(listener: () => void) {
   return () => listeners.delete(listener)
 }
 
-/** The player's notes, null while they load, and a way to change them. */
 export function useRunNotes() {
   const user = authClient.useSession().data?.user as { id: string; username?: string } | undefined
   const owner = !user || user.username === DEMO.username ? 'local' : user.id
@@ -83,7 +76,6 @@ export function useRunNotes() {
   return { notes: current.owner === owner ? current.notes : null, change: update }
 }
 
-/** The notes a screen could show, first to last; a battle's depend on where it is and how it's going. */
 function wanted(view: RunView, state: RunState, game: GameState | null, every = false): RunNote[] {
   if (view === 'battle') {
     if (!game) return []
@@ -99,10 +91,6 @@ function wanted(view: RunView, state: RunState, game: GameState | null, every = 
 
 export type ShownNote = { id: RunNote; close: () => void }
 
-/**
- * The note for the screen on show, if the player hasn't seen it. It's counted as seen as soon as it shows, and stays
- * until closed or the screen changes; a battle's place changes each turn, so the next note waits for the next turn.
- */
 export function useRunNote(
   run: { generation: number; origin: unknown; state: RunState; note?: RunNote | null },
   view: RunView,
@@ -111,7 +99,6 @@ export function useRunNote(
   const { notes, change: update } = useRunNotes()
   const { state } = run
   const place = `${run.generation}:${state.stage}:${state.at}:${view}${game ? `:${game.turn}` : ''}`
-  // A mockup has no origin, and shows no notes.
   const next =
     run.origin && notes && !notes.off && state.status === 'playing'
       ? (wanted(view, state, game).find((id) => !notes.seen.includes(id)) ?? null)
@@ -122,7 +109,6 @@ export function useRunNote(
     update({ seen: [next] })
   }, [next, place, update])
   const stored = useSyncExternalStore(subscribe, () => store.held.get(place) ?? null)
-  // A mockup's own note shows on its screen until closed, and is never stored.
   const [closed, setClosed] = useState<string | null>(null)
   const mocked =
     run.note && wanted(view, state, game, true).includes(run.note) && closed !== `${place}:${run.note}`

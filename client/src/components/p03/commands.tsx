@@ -17,11 +17,9 @@ export type Commands = typeof import('./commands.tsx')
 
 let step = 0
 
-// The text table's process list, as `ps` shows it, with a zombie of the last Scrybe.
 const ALPHABETICAL = [...DECK].sort(byName)
 const SIGIL_IDS = (Object.keys(SIGILS) as SigilId[]).sort((a, b) => byName(SIGILS[a], SIGILS[b]))
 
-// A process P03 won't name, and a file P03 won't open: glimpses of OLD_DATA, never more.
 const REDACTED_PID = 7
 const OLD_DATA_FILE = /^\.?old_data$/i
 
@@ -202,7 +200,6 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
           <img
             src="/p03/happy.png"
             alt="P03's face, smug"
-            // The face textures are stored upside down.
             className="h-20 -scale-y-100 [filter:sepia(1)_hue-rotate(70deg)_saturate(3)] [image-rendering:pixelated]"
           />
           <p>
@@ -336,10 +333,8 @@ export async function run(input: string, context: Context): Promise<ReactNode> {
   }
 }
 
-// What help lists, plus help itself and the tutorial's own steps; the jokes stay hidden.
 const NAMES = ['help', ...HELP.map(([command]) => command.split(' ')[0] as string), 'next', 'back']
 
-/** The longest start every name shares, ignoring case, in the first name's own case. */
 function shared(names: string[]): string {
   const [first = ''] = names
   let length = first.length
@@ -348,7 +343,6 @@ function shared(names: string[]): string {
   return first.slice(0, length)
 }
 
-/** What Tab does: completes as far as every match agrees, and gives the matches when more than one is left. */
 export function complete(input: string): { text: string; options: string[] } {
   const [name = '', ...rest] = input.split(' ')
   if (rest.length === 0) {

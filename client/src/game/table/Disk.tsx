@@ -12,7 +12,6 @@ export { diskMaterials } from './diskMaterials.ts'
 const { width: w, height: h } = CARD
 const { middleTop: MT, middleBottom: MB } = SECTIONS
 
-// UVs map to the matching strip of the drawn face.
 function sheetGeometry(from: number, to: number, anchor: 'top' | 'bottom', mirrored: boolean) {
   const height = (to - from) * h
   const geometry = new THREE.PlaneGeometry(w, height).translate(0, anchor === 'top' ? -height / 2 : height / 2, 0)
@@ -38,7 +37,6 @@ export type DiskHandle = { setOpen: (open: number) => void }
 
 let planes: Record<'front' | 'content' | 'back', THREE.BufferGeometry> | null = null
 
-/** Single planes are enough for an open disk, whose three sheets line up. */
 export const facePlanes = () =>
   (planes ??= {
     front: new THREE.PlaneGeometry(w, h).translate(0, 0, FACE_Z),
@@ -46,7 +44,6 @@ export const facePlanes = () =>
     back: new THREE.PlaneGeometry(w, h).rotateY(Math.PI).translate(0, 0, BACK_Z),
   })
 
-// open runs from 0 (closed) to 1; only the middle section compresses.
 export function poseAt(open: number) {
   const height = h * (DISK.compact + (1 - DISK.compact) * open)
   const spare = height - h * (1 - MB + MT)
@@ -65,7 +62,6 @@ export function poseAt(open: number) {
 type Baked = Record<'plastic' | 'dark' | 'metal', THREE.BufferGeometry>
 const baked = new Map<number, Baked>()
 
-/** One merged geometry per material, for instanced stacks. */
 export function bakedDisk(open: 0 | 1): Baked {
   let found = baked.get(open)
   if (found) return found
@@ -90,7 +86,6 @@ export function bakedDisk(open: 0 | 1): Baked {
   return found
 }
 
-/** open runs from 0 (closed) to 1; the `setOpen` handle animates it without a render. */
 export const Disk = forwardRef<
   DiskHandle,
   {

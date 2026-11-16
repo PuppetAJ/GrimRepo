@@ -23,13 +23,10 @@ import { useStage } from '../TableStage.tsx'
 
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
 
-/** Seconds into a battle reached from another view when each piece is set on the table, then between dealt cards. */
 const SET = { board: 0.2, lanes: 0.65, deck: 0.5, pile: 0.6, cards: 0.9, deal: 0.13 }
 const MOST_DEALT = 8
-/** Seconds the table takes to pack away. */
 const PACK_AWAY = 0.6
 
-/** How many cards of the opening hand are dealt so far, one at a time once the table is set. */
 function useDeal(setting: boolean): number {
   const [dealt, setDealt] = useState(setting ? 0 : Infinity)
   useEffect(() => {
@@ -63,10 +60,8 @@ export function Scene({
   aiming = null,
   onAim,
 }: {
-  /** The item slot picked up to aim; a card it can reach takes the click. */
   aiming?: number | null
   onAim?: (slot: number | null) => void
-  /** Packs the table away: cards slide off to their owners, the piles lift, the board rolls back; then `onLeft`. */
   leaving?: boolean
   onLeft?: () => void
   reader: Reader
@@ -78,22 +73,16 @@ export function Scene({
   skip: () => void
   rung: number
   camera: CameraView
-  /** Where the camera starts, when it glides in from another view. */
   from?: CameraView
   hint: number
-  /** uid of the card last tried before drawing; it shakes. */
   hinted: number | null
   onHint: (uid: number) => void
-  /** Set while seated, so a tap on the board brings it into view. */
   onFocusBoard?: () => void
-  /** Fires once everything has loaded and every shader is compiled. */
   onWarm: () => void
 }) {
   const { state, act } = game
-  // Legal moves come from the real state, not the view being played back.
   const legal = busy || hasEnded(game) ? [] : legalFor(game)
   const can = (match: Partial<Action>) => has(legal, match)
-  // The turn's own draw is owed; a catch-up draw after it is only offered.
   const owesDraw = !state.drawn && can({ type: 'draw' })
   const count = view.hand.length
   const asked = busy ? null : (game.tutorial?.blurb?.move ?? null)
@@ -102,21 +91,18 @@ export function Scene({
       ? state.player.hand.find((unit) => unit.card === asked.card)?.uid
       : asked?.type === 'mark'
         ? state.player.board[asked.lane]?.uid
-        : // An aimed item already lights its target.
-          asked?.type === 'use' && aiming === null
+        : asked?.type === 'use' && aiming === null
           ? (asked.row === 'board'
               ? state.player.board
               : asked.row === 'front'
                 ? state.opponent.front
                 : state.opponent.back)[asked.lane]?.uid
           : undefined
-  // What an empty deck's draw would shuffle back, held while a turn plays out, so it never shows ahead of the table.
   const reshuffleNow = view.deck ? 0 : reshuffleSize(state)
   const [reshuffle, setReshuffle] = useState(reshuffleNow)
   if (!busy && reshuffle !== reshuffleNow) setReshuffle(reshuffleNow)
 
   const [aimed, setAimed] = useState<number | null>(null)
-  // The item in hand, used on whichever card the player clicks that it can reach.
   const aimAt = (row: 'board' | 'front' | 'back', lane: number) =>
     aiming === null
       ? null
@@ -134,12 +120,10 @@ export function Scene({
     view.summon?.uid === uid ? 'selected' : can({ type: 'select', uid } as Partial<Action>) ? 'plain' : 'dim'
 
   const handFull = !busy && !hasEnded(game) && skippedDraw(state)
-  // Gliding in from another view, the table is set piece by piece; a table opened on its own is set behind the loading screen.
   const setting = Boolean(from) && !STILL
   const at = (seconds: number) => (setting ? seconds : undefined)
   const dealt = useDeal(setting)
   const dealing = dealt !== Infinity
-  // The button and the rack are the stage's, so they stay put as the table swaps in; the battle unlocks them.
   const stage = useStage()
   useLayoutEffect(() =>
     stage.bench({
@@ -166,7 +150,6 @@ export function Scene({
     <CardBatch assets={assets}>
       <>
         <CameraRig view={camera} from={from} />
-        {/* The room and P03 are the stage's; it draws them once every light and the fog are in place. */}
         <WarmUp onWarm={onWarm} />
         <TechBoard appear={at(SET.board)} leave={leaving} onClick={onFocusBoard} />
         <Arrive delay={at(SET.lanes)} leave={leaving}>
@@ -224,7 +207,6 @@ export function Scene({
               place={{ at: 'hand', index, count, lowered: camera !== 'table' }}
               spawn={playback.spawns.get(unit.uid) ?? (dealing ? DECK : undefined)}
               look={handLook(unit.uid)}
-              // Stowed below the view as the table is packed away.
               summoning={Boolean(view.summon) || leaving}
               assets={assets}
               shake={hinted === unit.uid ? hint : 0}
@@ -232,10 +214,8 @@ export function Scene({
               tutorialMark={askedUid === unit.uid}
               onHold={(x, y, sticky) => reader.hold({ card: unit.uid }, x, y, sticky)}
               onClick={
-                // On touch every card is tappable, to read it; with a mouse, only one that can act.
                 selected || selectable || owesDraw || COARSE
                   ? (_event, touch) => {
-                      // On touch a tap only plays; reading is the magnifier's, by holding, so no panel covers the table.
                       if (touch && !selected && !selectable && !owesDraw) return
                       reader.lift(null)
                       if (selected) act({ type: 'cancel' })
@@ -250,7 +230,6 @@ export function Scene({
         {(['board', 'front', 'back'] as const).flatMap((row) =>
           view[row].map((_, lane) => {
             const unit = shown(view, row, lane)
-            // P03's opening cards come down with the first card dealt.
             if (!unit || dealt === 0) return null
             const aim = aimAt(row, lane)
             const action = aim ?? (row === 'board' ? laneAction(legal, lane) : null)
@@ -277,7 +256,6 @@ export function Scene({
                 cursor={action?.type === 'mark' || action?.type === 'unmark' ? 'mark' : 'point'}
                 tutorialMark={askedUid === unit.uid}
                 leavingAt={leftAt}
-                // A board card covers its lane, so it passes the hover on to it.
                 onHover={row === 'board' ? (on) => setAimed(on ? lane : null) : undefined}
                 onHold={(x, y, sticky) => reader.hold({ card: unit.uid }, x, y, sticky)}
               />
@@ -297,7 +275,6 @@ export function Scene({
         {playback.popups.map((popup) => (
           <Popup key={popup.id} text={popup.text} tone={popup.tone} position={popup.position} born={popup.at} />
         ))}
-        {/* VITE_TEST_HANDLE=1 exposes it in a production build too, for measuring. */}
         {import.meta.env.DEV || import.meta.env.VITE_TEST_HANDLE === '1' ? (
           <TestHandle game={game} view={view} busy={busy} skip={skip} />
         ) : null}

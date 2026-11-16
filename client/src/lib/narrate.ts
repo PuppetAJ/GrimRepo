@@ -27,7 +27,6 @@ const lead = (scale: number) =>
 
 const lane = (index: number) => `lane ${index + 1}`
 
-// Picked by a number from the game, not at random, so a reload replays the same lines.
 const pick = (lines: string[], key: number) => lines[Math.abs(key) % lines.length] as string
 const BIG_HIT = 5
 const TAUNTS = [
@@ -46,7 +45,6 @@ const PATIENCE = [
   'Still here? Fine.',
 ]
 
-// Includes the events' units, so an event can name a card that has since died.
 function names(before: GameState, events: GameEvent[]): Map<number, string> {
   const known = new Map<number, string>()
   const add = (unit: Unit | null | undefined) => unit && known.set(unit.uid, card(unit.card).name)
@@ -68,8 +66,7 @@ export function narrate(before: GameState, events: GameEvent[]): string[] {
       case 'drew':
         return [
           event.from === 'boilerplate'
-            ? // Every second Boilerplate in hand, so it never fires twice running.
-              before.player.hand.filter((unit) => unit.card === 'Boilerplate').length % 2 === 1
+            ? before.player.hand.filter((unit) => unit.card === 'Boilerplate').length % 2 === 1
               ? 'Boilerplate again. Bold strategy, choosing nothing.'
               : `You took a Boilerplate from the side pile. Filler.`
             : event.catchUp
@@ -83,12 +80,10 @@ export function narrate(before: GameState, events: GameEvent[]): string[] {
           event.survived
             ? `${name(event.uid)} was offered and survived. try/catch. Cheap.`
             : `${name(event.uid)} was sacrificed. Deprecated.`,
-          // Once per summon, however many cards pay for it.
           ...(index === firstSacrifice ? ['Delete your own cards for me. Saves me the trouble.'] : []),
         ]
       case 'placed': {
         const played = card(event.unit.card)
-        // Boilerplates are fodder, so only a real card with no attack counts as a weak play.
         const weak = event.unit.attack === 0 && event.unit.card !== 'Boilerplate'
         const aside = weak ? " That's your play? Cute." : played.cost >= 2 ? ` ${pick(PLAYS, event.unit.uid)}` : ''
         return [`You played ${played.name} in ${lane(event.lane)}.${aside}`]
@@ -196,7 +191,6 @@ export function narrate(before: GameState, events: GameEvent[]): string[] {
   })
 }
 
-/** Console lines for the table before the first move. */
 export function opening(state: GameState): string[] {
   const queued = state.opponent.back.flatMap((unit, index) =>
     unit ? [`I queued ${card(unit.card).name} behind ${lane(index)}.`] : [],
@@ -204,7 +198,6 @@ export function opening(state: GameState): string[] {
   return ['New game. You done gawking? Good. Draw.', ...queued]
 }
 
-/** Rebuilds a saved game's state and console lines; null if a move fails to apply. */
 export function history(seed: number, actions: readonly Action[]): { state: GameState; lines: string[] } | null {
   let state = createGame({ seed })
   const lines = opening(state)

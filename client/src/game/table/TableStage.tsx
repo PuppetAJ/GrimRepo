@@ -27,46 +27,31 @@ import { ItemRack } from './table3d/ItemRack.tsx'
 import { COARSE } from './table3d/reader.ts'
 import { CursorSync, Exposure, Loaded } from './table3d/stage.tsx'
 
-/** The sharpest the table draws at each quality step, as a pixel ratio; unlisted steps draw as sharp as the screen allows. */
 const SHARPNESS: Record<number, number> = { 3: 1.5, 4: 1.5, 5: 1.25, 6: 1 }
 const LOWEST = 6
 
 type Attributes = Record<string, string | number>
 
-/** What the room shows: the factory's battery and monitors, and P03's mood. */
-/** `face` is the tutorial's, and overrides P03's mood. */
 type RoomState = { view: View; log: string[]; outcome?: 'win' | 'loss'; face?: Face }
 type RoomHandlers = {
   onHold?: (screen: Screen, x: number, y: number, sticky?: boolean) => void
   onPin?: (screen: Screen) => void
 }
 
-/** What's bolted to the table: the end-turn button and the tool rack, each locked unless a battle unlocks it. */
 type BenchState = { items: ItemId[]; usable: boolean[]; aiming: number | null; active: boolean; rung: number }
 type BenchHandlers = { onRing?: () => void; onPick?: (slot: number) => void }
 
 type Stage = {
-  /** Where a scene puts its 3D content; the canvas drawing it stays mounted as scenes come and go. */
   Scene: Tunnel['In']
-  /** 1 drops card glow, 2 makes the other effects cheaper, 3 drops them and lowers the resolution. */
   quality: number
-  /** True once the first scene has loaded. */
   ready: boolean
-  /** True once the loading screen has started to fade. */
   warmed: boolean
-  /** The stage's size in CSS pixels. */
   size: { width: number; height: number }
-  /** Called once a scene's shaders are compiled, which ends the loading screen for good. */
   warm: () => void
-  /** The scene's data attributes on the table's element, for the keyboard scope and tests. */
   label: (attributes: Attributes) => void
-  /** What a click on nothing does, such as putting a lifted card down. */
   onMissed: (handler: () => void) => void
-  /** Offered every right-click first; returning true takes it, so nothing in the room sees it. */
   onContext: (handler: () => boolean) => void
-  /** Sets what the room shows; the room itself stays, so its dust, P03 and monitors carry on between scenes. */
   room: (room: RoomState & RoomHandlers) => void
-  /** Sets the button's and the rack's state; they stay too, so neither blinks out as scenes swap. */
   bench: (bench: BenchState & BenchHandlers) => void
 }
 
@@ -94,7 +79,6 @@ const sameBench = (a: BenchState, b: BenchState) =>
   sameList(a.items, b.items) &&
   sameList(a.usable, b.usable)
 
-/** The 3D table's canvas, loaded once: battles and the run's screens between them swap in and out of it. */
 export function TableStage({ children }: { children: ReactNode }) {
   const [tunnel] = useState(createTunnel)
   const { active, progress, item } = useProgress()
@@ -113,10 +97,7 @@ export function TableStage({ children }: { children: ReactNode }) {
     return () => clearTimeout(wait)
   }, [warmed])
   const [ready, setReady] = useState(false)
-  // Capped at 1.5 on touch screens, whose GPUs are weakest and pixels finest.
   const sharpest = Math.min(window.matchMedia('(pointer: coarse)').matches ? 1.5 : 2, window.devicePixelRatio || 1)
-  // Effects get cheaper before sharpness goes, so cards stay readable: 1 and 2 shrink the bloom, 3 drops the effects,
-  // then 4 to 6 step the resolution down to the screen's own pixels and no further.
   const [quality, setQuality] = useState(0)
   const [stats] = useState(statsWanted)
   const dpr = Math.min(sharpest, SHARPNESS[quality] ?? Infinity)
@@ -125,7 +106,6 @@ export function TableStage({ children }: { children: ReactNode }) {
   const context = useRef<() => boolean>(() => false)
   const [room, setRoom] = useState<RoomState | null>(null)
   const handlers = useRef<RoomHandlers>({})
-  // Stable, so the monitors never re-render for a new handler.
   const onHold = useCallback(
     (screen: Screen, x: number, y: number, sticky?: boolean) => handlers.current.onHold?.(screen, x, y, sticky),
     [],
@@ -139,7 +119,6 @@ export function TableStage({ children }: { children: ReactNode }) {
   const fullScreen = useFullScreen()
   const element = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ width: 0, height: 0 })
-  // Measured before the first paint, so a scene that depends on it never shows the wrong layout first.
   useLayoutEffect(() => {
     const box = element.current
     if (!box) return
@@ -185,13 +164,10 @@ export function TableStage({ children }: { children: ReactNode }) {
       <div
         ref={element}
         {...attributes}
-        // How far the effects have been cut to keep up, for tests and for seeing why the room looks flatter.
         data-quality={quality}
-        // Focusable, so a click anywhere on the table puts focus here and its shortcuts work.
         tabIndex={-1}
         // A long press is the table's magnifier, so iOS mustn't select text, show its loupe or offer a menu.
         onContextMenu={(event) => event.preventDefault()}
-        // Before the room's own handlers, which a scene can stop, as a right-click cancelling a card does.
         onContextMenuCapture={(event) => {
           if (!context.current()) return
           event.preventDefault()
@@ -206,7 +182,6 @@ export function TableStage({ children }: { children: ReactNode }) {
           camera={{ fov: FOV, near: 0.05, far: 200, position: CAMERA.table.position }}
           onCreated={({ gl }) => (gl.toneMapping = THREE.ACESFilmicToneMapping)}
           aria-hidden
-          // Its own layer, so the monitors' text never rises above what's drawn over the room.
           className="isolate z-0"
           onPointerMissed={() => missed.current()}
           // The long-press menu would block holding a finger on a card to read it.
@@ -216,7 +191,6 @@ export function TableStage({ children }: { children: ReactNode }) {
           <Exposure />
           <CursorSync />
           {stats ? <StatsProbe /> : null}
-          {/* Wait until settled: the slow first frames would lower the resolution for good. */}
           {settled ? (
             // No flip-flop limit: drei counts each check at full quality as a flip, so a steady 60 fps fell back to lowest.
             <PerformanceMonitor
@@ -224,7 +198,6 @@ export function TableStage({ children }: { children: ReactNode }) {
               onChange={({ factor }) => setQuality(Math.min(LOWEST, Math.round((1 - factor) * 10)))}
             />
           ) : null}
-          {/* One selection and one set of effects for the whole stage, so they never drop out as scenes swap. */}
           <Selection>
             <FactoryEffects quality={quality} />
             <Suspense fallback={null}>

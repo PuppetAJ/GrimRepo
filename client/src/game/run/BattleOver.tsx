@@ -2,7 +2,6 @@ import { Choices, P03Dialogue } from '../P03Dialogue.tsx'
 import { findNode, STAGES, TIP } from 'shared'
 import type { RunReady } from './useRun.ts'
 
-/** The panel over the board when a run's battle ends; both tables show it. */
 export function BattleOver({ run, onSummary }: { run: RunReady; onSummary: () => void }) {
   const { state } = run
   const visit = state.visit
@@ -29,7 +28,6 @@ export function BattleOver({ run, onSummary }: { run: RunReady; onSummary: () =>
         />
       }
     >
-      {/* The sentences run on together, so the second shares the first's line where it fits; a turn never parts from its number. */}
       <p>
         {!won
           ? visit.game.integrity?.left === 0

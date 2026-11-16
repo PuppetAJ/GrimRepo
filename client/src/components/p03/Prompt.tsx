@@ -10,5 +10,4 @@ export function Prompt({ who, path }: { who: string; path: string }) {
   )
 }
 
-/** "~" for the home page, "~/leaderboard" for the rest. */
 export const pathOf = (pathname: string) => `~${pathname === '/' ? '' : pathname.replace(/\/$/, '')}`

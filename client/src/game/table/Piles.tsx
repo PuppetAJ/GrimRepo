@@ -12,7 +12,6 @@ import { TINT } from './palette.ts'
 type Assets = Awaited<ReturnType<typeof loadCardAssets>>
 type Click = (event: ThreeEvent<MouseEvent>) => void
 
-/** Lifts and wobbles its children on hover, but only when a click would do something. */
 export function Nudge({
   active,
   onClick,
@@ -31,14 +30,10 @@ export function Nudge({
   size: Vec3
   label: string
   lift?: number
-  /** Each increment makes it jump to draw the player's eye. */
   hint?: number
-  /** No hover lift, for fixed props. */
   still?: boolean
   cursor?: 'draw' | 'boilerplate' | 'press'
-  /** Cursor shown while inactive for a reason worth showing, such as a full hand. */
   blocked?: 'full'
-  /** Told when the pointer arrives and leaves, for whatever lies flat beside the lifted part. */
   onHover?: (hovered: boolean) => void
   children: ReactNode
 }) {
@@ -46,7 +41,6 @@ export function Nudge({
   const [hovered, setHovered] = useState(false)
   const since = useRef(0)
   const pointed = useRef(-Infinity)
-  // The cursor updates when clickability changes mid-hover, not only on arrival.
   const self = useRef({})
   useEffect(() => {
     if (hovered && active) claimCursor(self.current, cursor ?? 'point')
@@ -71,7 +65,6 @@ export function Nudge({
       event.stopPropagation()
       if (active) onClick(event)
     },
-    // Stop propagation: the pile and deck overlap from the player's seat.
     onPointerOver: (event: ThreeEvent<PointerEvent>) => {
       event.stopPropagation()
       setHovered(true)
@@ -102,17 +95,14 @@ const turn = new THREE.Quaternion()
 const tilt = new THREE.Euler()
 const ONE = new THREE.Vector3(1, 1, 1)
 
-// Padded just past the hover lift so the top edge doesn't flicker; any taller and, seen from above, the deck's box covers the pile's.
 const stackHeight = (layers: number) => Math.min(MOST, Math.max(1, layers)) * pitch + 0.08
 
-// Small per-disk offsets so the stack looks hand-piled.
 function place(i: number, faceUp: boolean, into: THREE.Matrix4): THREE.Matrix4 {
   turn.setFromEuler(tilt.set(faceUp ? -Math.PI / 2 : Math.PI / 2, 0, ((i * 5) % 7) * 0.006 - 0.018))
   const at = new THREE.Vector3(((i * 7) % 5) * 0.004 - 0.008, pitch * (i + 0.5), ((i * 3) % 4) * 0.004 - 0.006)
   return into.compose(at, turn, ONE)
 }
 
-// Instanced: one draw call per material for the whole stack instead of ten per disk.
 function Stack({
   layers,
   top,
@@ -187,14 +177,11 @@ export function Deck({
 }: {
   count: number
   total: number
-  /** With the deck empty, how many cards a draw shuffles back in. */
   reshuffle?: number
   onClick: Click
   active: boolean
   hint?: number
-  /** The hand is full, so drawing is skipped. */
   full?: boolean
-  /** P03 leads, so a second card can be drawn this turn: the deck gets a gold dotted outline. */
   extra?: boolean
 }) {
   const layers = count === 0 ? 0 : Math.max(1, Math.round((count / total) * 12))
@@ -202,7 +189,6 @@ export function Deck({
   return (
     <group position={DECK}>
       {extra ? <ExtraDraw /> : null}
-      {/* Flat on the table, outside the part that lifts on hover, so it never floats off it. */}
       {!layers && reshuffle ? <EmptyDeck cards={reshuffle} active={active} hovered={hovered} /> : null}
       <Nudge
         active={active}
@@ -220,10 +206,8 @@ export function Deck({
   )
 }
 
-// Gold, apart from the board's green, and pushed past 1 so it clears the bloom threshold and glows.
 const GOLD = new THREE.Color('#ffd24a').multiplyScalar(2.2)
 
-/** A gold dotted outline around the deck, pulsing while a catch-up draw is waiting. */
 function ExtraDraw() {
   const depth = CARD.height * DISK.compact
   const material = useMemo(() => {
@@ -257,11 +241,9 @@ function ExtraDraw() {
   )
 }
 
-// The empty deck's outline at rest, a little under the board's glow, and brighter under the pointer.
 const DIM_OUTLINE = new THREE.Color(...TINT.glowHdr).multiplyScalar(0.65)
 const LIT_OUTLINE = new THREE.Color(...TINT.glowHdr)
 
-/** Where the empty deck was: an outline that says a draw reshuffles, pulsing while drawing is the player's move and lit solid under the pointer. */
 function EmptyDeck({ cards, active, hovered }: { cards: number; active: boolean; hovered: boolean }) {
   const depth = CARD.height * DISK.compact
   const material = useMemo(() => {
@@ -270,14 +252,12 @@ function EmptyDeck({ cards, active, hovered }: { cards: number; active: boolean;
     element.height = Math.round((300 * depth) / CARD.width)
     const context = element.getContext('2d') as CanvasRenderingContext2D
     const { width, height } = element
-    // Drawn white and tinted by the material's bright green, so it glows as the board's lit parts do.
     context.strokeStyle = '#ffffff'
     context.fillStyle = '#ffffff'
     context.lineWidth = 8
     context.setLineDash([22, 14])
     context.strokeRect(10, 10, width - 20, height - 20)
     context.setLineDash([])
-    // A circling arrow, for the cards going back in.
     const middle = { x: width / 2, y: height * 0.36 }
     context.lineWidth = 12
     context.beginPath()
@@ -298,7 +278,6 @@ function EmptyDeck({ cards, active, hovered }: { cards: number; active: boolean;
     context.fillText(`${cards} ${cards === 1 ? 'card' : 'cards'}`, middle.x, height * 0.84)
     const map = new THREE.CanvasTexture(element)
     map.colorSpace = THREE.SRGBColorSpace
-    // A little under the board's glow, so the words stay readable through the bloom.
     const color = new THREE.Color(...TINT.glowHdr).multiplyScalar(0.65)
     return new THREE.MeshBasicMaterial({ map, color, transparent: true, depthWrite: false, toneMapped: false })
   }, [cards, depth])

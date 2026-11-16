@@ -10,8 +10,6 @@ import { useTable } from './context.ts'
 import { Panel } from './Panel.tsx'
 import type { BoardRow } from './useTextTable.ts'
 
-// Matches the 3D table's lunge.
-
 function Occupant({
   row,
   lane,
@@ -27,20 +25,17 @@ function Occupant({
   playback: Playback
   empty?: ReactNode
   tilted?: boolean
-  /** True for cards dealt since the page loaded; only those animate in. */
   isNew: (uid: number) => boolean
 }) {
   const lunge = unit ? playback.lunges.get(unit.uid) : undefined
   const slide = unit ? playback.slides.get(unit.uid) : undefined
   const stepped = unit && row === 'front' ? playback.advances.get(unit.uid) : undefined
-  // Keyed by start time below, so each lunge plays its animation once.
   const striking = lunge
   const leaving = playback.leaving.filter((gone) => gone.row === row && gone.lane === lane)
   const popups = playback.popups.filter(
     (popup) => 'row' in popup.spot && popup.spot.row === row && popup.spot.lane === lane,
   )
   const still = useReducedMotion() ?? false
-  // A card that changes lanes slides from the one it left, an arc over the lanes between; reduced, it fades in place.
   const sliding = useRef<HTMLSpanElement>(null)
   useLayoutEffect(() => {
     const element = sliding.current
@@ -49,7 +44,6 @@ function Occupant({
       const fade = animate(element, { opacity: [0.4, 1] }, { duration: SLIDE_MS / 1000 })
       return () => fade.stop()
     }
-    // A lane over is the card's own width and the gap between lanes.
     const gap = parseFloat(getComputedStyle(document.documentElement).fontSize) * 0.5
     const from = (slide.from - slide.to) * (element.offsetWidth + gap)
     const move = animate(
@@ -62,7 +56,6 @@ function Occupant({
       element.style.transform = ''
     }
   }, [slide, still])
-  // One of P03's cards stepping up from its queue glides down from the row above, as it does on the 3D table.
   useLayoutEffect(() => {
     const element = sliding.current
     const front = element?.closest('[role="group"]')
@@ -82,12 +75,10 @@ function Occupant({
       {unit ? (
         <m.span
           ref={sliding}
-          // Keyed by its move too, so a card that changes lanes slides in from the one it left.
           key={`${unit.uid}:${slide?.at ?? 0}:${stepped ?? 0}`}
           {...(!slide && stepped === undefined && isNew(unit.uid) ? arrive(row) : {})}
           className="block size-full"
         >
-          {/* Tilted while marked for sacrifice; a plain CSS transition, as hovers are. */}
           <span
             className={`block size-full transition-transform duration-200 motion-reduce:transition-none ${tilted ? '-translate-y-1 rotate-6' : ''}`}
           >
@@ -157,7 +148,6 @@ export function Board() {
     shakeRef,
   } = useTable()
   const { laneSize, setReading, aiming, setAiming, aimAt } = useTable()
-  // Over each card the item in hand can reach, a button that uses it there.
   const aim = (row: 'board' | 'front' | 'back', i: number) => {
     const use = aiming === null ? null : aimAt(row, i)
     if (!use) return null
@@ -169,7 +159,6 @@ export function Board() {
         data-lane={i}
         aria-label={`Use it on ${row === 'board' ? 'your' : "P03's"} card in lane ${i + 1}`}
         onClick={(event) => {
-          // The lane under it would otherwise take the click too, and refuse it.
           event.stopPropagation()
           act(use)
           setAiming(null)
@@ -183,7 +172,6 @@ export function Board() {
     )
   }
   const faces = playback.popups.filter((popup) => 'face' in popup.spot)
-  // A lane is a picture of its card, focusable so a keyboard can read it; on a phone, where a tap opens the card, a button.
   const lane = (label: string, unit: Slot, open: () => void) => {
     const opens = tapToRead && Boolean(unit)
     return {
@@ -259,7 +247,6 @@ export function Board() {
           .map((unit, i) => {
             const action = laneAction(legal, i)
             const marked = state.summon?.marked.includes(i) ?? false
-            // Once the cost is paid, the marked lane is where the new card goes.
             const paid = marked && action?.type === 'place'
             const verb =
               action?.type === 'mark'
@@ -270,7 +257,6 @@ export function Board() {
                     ? 'Play here'
                     : null
             const label = `Lane ${i + 1}: ${unit ? describe(unit) : 'empty'}${verb ? `. ${verb}` : ''}${marked ? ', marked for sacrifice' : ''}`
-            // Red marks a card that would be sacrificed.
             const frame = paid
               ? 'border-dashed border-p03'
               : marked
@@ -280,7 +266,6 @@ export function Board() {
                   : action
                     ? 'border-dashed border-p03/60 hover:border-p03'
                     : 'border-p03-lane'
-            // The button overlays the lane, so the card underneath never remounts and replays its entrance.
             return (
               <div
                 key={i}
@@ -293,7 +278,6 @@ export function Board() {
                       ? () => setReading({ row: 'board', lane: i })
                       : () => !busy && showRefusal(`lane-${i}`, whyNot(state, { lane: i }))
                 }
-                // A container, so the lane's badge sizes to it.
                 className={`${CELL} @container relative ${frame}`}
                 ref={shakeRef(`lane-${i}`)}
                 style={laneSize}
@@ -319,7 +303,6 @@ export function Board() {
                     ↓ play here
                   </span>
                 ) : marked || action?.type === 'mark' ? (
-                  // Said in words too, so the state doesn't rest on red alone.
                   <span
                     aria-hidden
                     className="absolute inset-x-1 top-1 z-10 rounded-sm bg-[#07130b]/90 py-0.5 text-center text-[min(1rem,17cqw)] leading-none whitespace-nowrap text-death"
