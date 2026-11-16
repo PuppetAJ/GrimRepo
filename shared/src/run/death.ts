@@ -13,7 +13,9 @@ export const deathParts = (deck: RunCard[]): RunCard[] => deck.filter((entry) =>
 
 export const deathCost = (costCard: RunCard, statsCard: RunCard): number => {
   const statsCost = card(statsCard.card).cost
-  return Math.max(card(costCard.card).cost, statsCost - 1, Math.min(statsCost, 1))
+  const floorBelowStats = statsCost - 1
+  const notFreeUnlessStatsFree = Math.min(statsCost, 1)
+  return Math.max(card(costCard.card).cost, floorBelowStats, notFreeUnlessStatsFree)
 }
 
 export const OLD_DATA_REFUSED = 'That name is reserved. For nothing. Pick another.'
@@ -96,11 +98,11 @@ export function deathThreat(id: string): number {
   return def.attack * 2 + def.health + def.sigils.length * 2
 }
 
-const HARMLESS = 6
-const DANGEROUS = 20
+const NO_BONUS_THREAT = 6
+const FULL_BONUS_THREAT = 20
 
 export function deathSkipBonus(id: string): number {
-  const share = Math.min(1, Math.max(0, (deathThreat(id) - HARMLESS) / (DANGEROUS - HARMLESS)))
+  const share = Math.min(1, Math.max(0, (deathThreat(id) - NO_BONUS_THREAT) / (FULL_BONUS_THREAT - NO_BONUS_THREAT)))
   return Math.round((1 + (DEATH_SKIP_BONUS - 1) * share) * 100) / 100
 }
 

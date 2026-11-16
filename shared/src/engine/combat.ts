@@ -8,7 +8,7 @@ function remove(row: Slot[], uid: number): number {
   return lane
 }
 
-export function perish(state: GameState, side: Side, unit: Unit, lane: number, events: GameEvent[]): void {
+export function hotReload(state: GameState, side: Side, unit: Unit, lane: number, events: GameEvent[]): void {
   if (!unit.sigils.includes('hot_reload')) return
   if (side === 'player') {
     if (state.player.hand.length >= HAND_LIMIT) return
@@ -81,7 +81,7 @@ export function reinforce(row: Slot[], lane: number, events: GameEvent[]): void 
   events.push({ type: 'buffed', uid: unit.uid, attack: unit.attack, health: unit.health, sigils: [...unit.sigils] })
 }
 
-function lost(state: GameState, unit: Unit, events: GameEvent[]): void {
+function loseIntegrity(state: GameState, unit: Unit, events: GameEvent[]): void {
   const integrity = state.integrity
   if (!integrity || unit.card === BOILERPLATE || integrity.left <= 0) return
   integrity.left -= 1
@@ -96,7 +96,7 @@ function stayUp(unit: Unit, events: GameEvent[]): boolean {
   return true
 }
 
-export const broken = (state: GameState): boolean => state.integrity !== undefined && state.integrity.left <= 0
+export const integrityBroken = (state: GameState): boolean => state.integrity !== undefined && state.integrity.left <= 0
 
 function damage(unit: Unit, amount: number, fatal: boolean, events: GameEvent[]): number {
   if (unit.sigils.includes('rollback') && !unit.rolledBack) {
@@ -132,10 +132,12 @@ export function attack(state: GameState, side: Side, events: GameEvent[]): void 
   const covers = failoverPlan(defenders, aims)
   const covering = new Set<number>()
 
-  for (const attacker of attackers.slice()) {
+  const startingOrder = attackers.slice()
+  for (const attacker of startingOrder) {
     if (!attacker) continue
     const lane = attackers.findIndex((slot) => slot?.uid === attacker.uid)
     if (lane < 0) continue
+    const stillStanding = () => attackers[lane]?.uid === attacker.uid
     const lanes = attacker.sigils.includes('broadcast')
       ? within([lane - 1, lane, lane + 1])
       : attacker.sigils.includes('fork')
@@ -143,21 +145,16 @@ export function attack(state: GameState, side: Side, events: GameEvent[]): void 
         : [lane]
     const strikes = attacker.sigils.includes('retry') ? 2 : 1
     const split = attacker.sigils.includes('fork') && lanes.length > 1
+    const strikePower = (full: number, strike: number, aimed: number) =>
+      strike > 0 ? extraHit(full) : split ? forkHit(full) : aimed === lane || lanes.length === 1 ? full : extraHit(full)
     let struck = false
 
     for (let strike = 0; strike < strikes; strike++) {
       for (const aimed of lanes) {
-        if (attackers[lane]?.uid !== attacker.uid) break
+        if (!stillStanding()) break
         const full = attackOf(state, side, lane)
         if (full <= 0) break
-        const power =
-          strike > 0
-            ? extraHit(full)
-            : split
-              ? forkHit(full)
-              : aimed === lane || lanes.length === 1
-                ? full
-                : extraHit(full)
+        const power = strikePower(full, strike, aimed)
         if (power <= 0) continue
         struck = true
         const occupant = attacker.sigils.includes('bypass') ? null : defenders[aimed]
@@ -193,9 +190,9 @@ export function attack(state: GameState, side: Side, events: GameEvent[]): void 
             lane: aimed,
             row: 'front',
           })
-          if (side === 'opponent') lost(state, defender, events)
-          perish(state, side === 'player' ? 'opponent' : 'player', defender, aimed, events)
-          if (attacker.sigils.includes('scope_creep') && attackers[lane]?.uid === attacker.uid) {
+          if (side === 'opponent') loseIntegrity(state, defender, events)
+          hotReload(state, side === 'player' ? 'opponent' : 'player', defender, aimed, events)
+          if (attacker.sigils.includes('scope_creep') && stillStanding()) {
             attacker.attack += 1
             events.push({ type: 'buffed', uid: attacker.uid, attack: attacker.attack, health: attacker.health })
           }
@@ -205,15 +202,15 @@ export function attack(state: GameState, side: Side, events: GameEvent[]): void 
       }
     }
 
-    if (struck && attacker.sigils.includes('deprecated') && attackers[lane]?.uid === attacker.uid) {
+    if (struck && attacker.sigils.includes('deprecated') && stillStanding()) {
       remove(attackers, attacker.uid)
       events.push({ type: 'killed', uid: attacker.uid, side, lane, row: 'front' })
-      perish(state, side, attacker, lane, events)
+      hotReload(state, side, attacker, lane, events)
       const left = makeUnit(state, BOILERPLATE)
       attackers[lane] = left
       events.push({ type: 'leftBehind', side, lane, unit: left })
     }
-    if (struck && attacker.sigils.includes('load_balancer') && attackers[lane]?.uid === attacker.uid) {
+    if (struck && attacker.sigils.includes('load_balancer') && stillStanding()) {
       const ahead = lane + (attacker.heading ?? 1)
       const back = lane - (attacker.heading ?? 1)
       const free = (to: number) => to >= 0 && to < LANES && !attackers[to]
@@ -228,7 +225,7 @@ export function attack(state: GameState, side: Side, events: GameEvent[]): void 
   }
 }
 
-export const BACKTRACE = 2
+export const BACKTRACE_DAMAGE = 2
 
 function strikeBack(state: GameState, side: Side, attacker: Unit, events: GameEvent[]): void {
   if (attacker.sigils.includes('rollback') && !attacker.rolledBack) {
@@ -236,14 +233,14 @@ function strikeBack(state: GameState, side: Side, attacker: Unit, events: GameEv
     events.push({ type: 'shielded', uid: attacker.uid })
     return
   }
-  attacker.health = Math.max(0, attacker.health - BACKTRACE)
-  events.push({ type: 'struckBack', uid: attacker.uid, amount: BACKTRACE })
+  attacker.health = Math.max(0, attacker.health - BACKTRACE_DAMAGE)
+  events.push({ type: 'struckBack', uid: attacker.uid, amount: BACKTRACE_DAMAGE })
   if (attacker.health > 0 || stayUp(attacker, events)) return
   const row = side === 'player' ? state.player.board : state.opponent.front
   const lane = remove(row, attacker.uid)
   events.push({ type: 'killed', uid: attacker.uid, side, lane, row: 'front' })
-  if (side === 'player') lost(state, attacker, events)
-  perish(state, side, attacker, lane, events)
+  if (side === 'player') loseIntegrity(state, attacker, events)
+  hotReload(state, side, attacker, lane, events)
 }
 
 function overkill(state: GameState, lane: number, unit: Unit, amount: number, events: GameEvent[]): void {
@@ -251,5 +248,5 @@ function overkill(state: GameState, lane: number, unit: Unit, amount: number, ev
   if (damage(unit, amount, false, events) > 0) return
   state.opponent.back[lane] = null
   events.push({ type: 'killed', uid: unit.uid, side: 'opponent', lane, row: 'back' })
-  perish(state, 'opponent', unit, lane, events)
+  hotReload(state, 'opponent', unit, lane, events)
 }

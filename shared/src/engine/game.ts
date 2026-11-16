@@ -1,7 +1,7 @@
 import { BOILERPLATE, card, DEBUG_CARD, OUT_OF_MEMORY, PLAYER_DECK, SHIPS_AS } from '../cards.ts'
 import { encounter } from '../encounters.ts'
 import { Rng } from '../rng.ts'
-import { attack, broken, perish, reinforce } from './combat.ts'
+import { attack, hotReload, integrityBroken, reinforce } from './combat.ts'
 import { ITEMS, type ItemId } from '../items.ts'
 import { queue, queueCountFor, queuePlan, retireDeadCode } from './opponent.ts'
 import {
@@ -92,9 +92,35 @@ function dealFairly(player: GameState['player']): void {
 
 const BETA_BOOST = 3
 
+function shipBeta(unit: Unit): void {
+  const shipped = SHIPS_AS[unit.card]
+  if (shipped) {
+    const base = card(unit.card)
+    const into = card(shipped)
+    const health = into.health + (unit.maxHealth - base.health)
+    const gained = unit.sigils.filter((sigil) => sigil !== 'beta' && !base.sigils.includes(sigil))
+    Object.assign(unit, {
+      ...deckCard(shipped),
+      attack: into.attack + (unit.attack - base.attack),
+      health,
+      maxHealth: health,
+      sigils: [...new Set([...into.sigils, ...gained])].slice(0, MAX_SIGILS),
+    })
+  } else
+    Object.assign(unit, {
+      attack: unit.attack + BETA_BOOST,
+      health: unit.health + BETA_BOOST,
+      maxHealth: unit.maxHealth + BETA_BOOST,
+      sigils: unit.sigils.filter((sigil) => sigil !== 'beta'),
+    })
+}
+
 const fail = (reason: string): Result => ({ ok: false, reason })
 
 const mustDraw = (state: GameState): boolean => !state.drawn
+
+const opponentLeadsRunBattle = (state: GameState): boolean =>
+  Boolean(state.opponent.encounter) && !state.scripted && state.scale < 0
 
 const paid = (state: GameState): number =>
   (state.summon?.marked ?? []).reduce((sum, lane) => sum + worthOf(state.player.board[lane] as Unit), 0)
@@ -201,7 +227,7 @@ export function apply(current: GameState, action: Action): Result {
         state.scale -= DEBT
         events.push({ type: 'indebted', uid: victim.uid, amount: DEBT, scale: state.scale })
       }
-      if (!survived) perish(state, 'player', victim, lane, events)
+      if (!survived) hotReload(state, 'player', victim, lane, events)
     }
     const refactored = summon.marked
       .map((lane) => victims.get(lane) as Unit)
@@ -275,7 +301,7 @@ function useItem(state: GameState, action: Extract<Action, { type: 'use' }>, eve
   if (item === 'hammer' && target) {
     state.player.board[lane] = null
     events.push({ type: 'killed', uid: target.uid, side: 'player', lane, row: 'front' })
-    perish(state, 'player', target, lane, events)
+    hotReload(state, 'player', target, lane, events)
   } else if (item === 'scissors' && target) {
     const row = action.row === 'back' ? state.opponent.back : state.opponent.front
     row[lane] = null
@@ -307,7 +333,7 @@ function useItem(state: GameState, action: Extract<Action, { type: 'use' }>, eve
 
 function playTurn(state: GameState, rng: Rng, events: GameEvent[]): void {
   attack(state, 'player', events)
-  if (broken(state)) return finish(state, 'loss', events)
+  if (integrityBroken(state)) return finish(state, 'loss', events)
   if (state.scale >= TIP) {
     if (!nextPhase(state, rng, events)) return finish(state, 'win', events)
   } else {
@@ -327,7 +353,7 @@ function playTurn(state: GameState, rng: Rng, events: GameEvent[]): void {
       events.push({ type: 'skipped' })
     } else {
       attack(state, 'opponent', events)
-      if (state.scale <= -TIP || broken(state)) return finish(state, 'loss', events)
+      if (state.scale <= -TIP || integrityBroken(state)) return finish(state, 'loss', events)
 
       if (state.opponent.encounter) queuePlan(state, rng, events)
       else queue(state, rng, queueCountFor(state.turn, rng), state.turn, events)
@@ -336,26 +362,7 @@ function playTurn(state: GameState, rng: Rng, events: GameEvent[]): void {
 
   for (const unit of [...units(state.player.board), ...units(state.opponent.front)]) {
     if (!unit.sigils.includes('beta')) continue
-    const shipped = SHIPS_AS[unit.card]
-    if (shipped) {
-      const base = card(unit.card)
-      const into = card(shipped)
-      const health = into.health + (unit.maxHealth - base.health)
-      const gained = unit.sigils.filter((sigil) => sigil !== 'beta' && !base.sigils.includes(sigil))
-      Object.assign(unit, {
-        ...deckCard(shipped),
-        attack: into.attack + (unit.attack - base.attack),
-        health,
-        maxHealth: health,
-        sigils: [...new Set([...into.sigils, ...gained])].slice(0, MAX_SIGILS),
-      })
-    } else
-      Object.assign(unit, {
-        attack: unit.attack + BETA_BOOST,
-        health: unit.health + BETA_BOOST,
-        maxHealth: unit.maxHealth + BETA_BOOST,
-        sigils: unit.sigils.filter((sigil) => sigil !== 'beta'),
-      })
+    shipBeta(unit)
     events.push({ type: 'shipped', uid: unit.uid, unit: { ...unit } })
   }
 
@@ -370,8 +377,7 @@ function playTurn(state: GameState, rng: Rng, events: GameEvent[]): void {
   state.turn += 1
   delete state.placed
   events.push({ type: 'turnStarted', turn: state.turn })
-  state.catchUp =
-    Boolean(state.opponent.encounter) && !state.scripted && state.scale < 0 && state.player.deck.length > 0
+  state.catchUp = opponentLeadsRunBattle(state) && state.player.deck.length > 0
   state.drawn = state.player.hand.length >= HAND_LIMIT
 }
 

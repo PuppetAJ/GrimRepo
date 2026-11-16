@@ -22,7 +22,7 @@ function bestLane(state: GameState, allowed: number[], strategy: Strategy): numb
   return threatened[0] ?? allowed[0]
 }
 
-const DANGEROUS: SigilId[] = [
+const PLIERS_TARGETS: SigilId[] = [
   'fatal_error',
   'rollback',
   'backtrace',
@@ -47,7 +47,7 @@ function itemMove(state: GameState, legal: Action[]): Action | undefined {
   return (
     uses.find((action) => itemOf(action) === 'hourglass' && threat >= 5) ??
     best('scissors', (unit) => value(unit) >= 10) ??
-    best('pliers', (unit) => unit.sigils.some((sigil) => DANGEROUS.includes(sigil))) ??
+    best('pliers', (unit) => unit.sigils.some((sigil) => PLIERS_TARGETS.includes(sigil))) ??
     best('hook', (unit) => value(unit) >= 8) ??
     uses.find(
       (action) =>
@@ -62,7 +62,8 @@ export function nextBotAction(state: GameState, strategy: Strategy = 'greedy'): 
   const legal = legalActions(state)
   const allowed = (type: Action['type']) => legal.filter((action) => action.type === type)
 
-  if (state.drawn && allowed('draw').length) return { type: 'draw', from: 'deck' }
+  const catchUpDraw = state.drawn && allowed('draw').length > 0
+  if (catchUpDraw) return { type: 'draw', from: 'deck' }
   if (allowed('draw').length) {
     const short = state.player.hand.some((unit) => costOf(unit) > units(state.player.board).length)
     const hasFuel = state.player.hand.some((unit) => unit.card === BOILERPLATE)
@@ -105,7 +106,7 @@ export function nextBotAction(state: GameState, strategy: Strategy = 'greedy'): 
     }
     let paid = 0
     let given = 0
-    let freed = false
+    let freesLane = false
     let debts = 0
     for (const victim of [...board].sort((a, b) => value(a) - value(b))) {
       if (paid >= cost) break
@@ -113,9 +114,10 @@ export function nextBotAction(state: GameState, strategy: Strategy = 'greedy'): 
       if (indebted(victim)) debts += 1
       paid += worthOf(victim)
       given += value(victim)
-      freed ||= !victim.sigils.includes('try_catch')
+      freesLane ||= !victim.sigils.includes('try_catch')
     }
-    if (paid >= cost && given < value(unit) && (empty.length || freed)) return { type: 'select', uid: unit.uid }
+    const tradesUp = given < value(unit)
+    if (paid >= cost && tradesUp && (empty.length || freesLane)) return { type: 'select', uid: unit.uid }
   }
 
   return { type: 'ringBell' }

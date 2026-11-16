@@ -10,7 +10,7 @@ const value = (entry: { attack: number; health: number }) => entry.attack * 2 + 
 const cardValue = (id: string) => value(card(id)) / (card(id).cost + 1)
 const best = (deck: RunCard[]) => [...deck].sort((a, b) => value(b) - value(a))[0]
 
-const TOOLS: ItemId[] = ['hourglass', 'scissors', 'hook', 'pliers', 'bottle', 'hammer']
+const TOOL_PREFERENCE: ItemId[] = ['hourglass', 'scissors', 'hook', 'pliers', 'bottle', 'hammer']
 
 const DRAWBACKS: SigilId[] = ['technical_debt', 'deprecated']
 const drawback = (deck: RunCard[]) =>
@@ -31,6 +31,8 @@ function passChance(deck: RunCard[], trial: Trial): number {
       }
   return passed / draws
 }
+
+const RARE_WORTH = 6
 
 const twins = (deck: RunCard[]) =>
   deck.filter((entry) => deck.some((other) => other.id !== entry.id && other.card === entry.card))
@@ -59,7 +61,7 @@ function effectWorth(state: RunState, effect: Effect): number {
     case 'integrity':
       return effect.amount
     case 'trial':
-      return passChance(state.deck, effect.trial) * 6
+      return passChance(state.deck, effect.trial) * RARE_WORTH
   }
 }
 
@@ -106,7 +108,7 @@ export function nextRunAction(state: RunState, strategy: Strategy = 'greedy', de
         : { type: 'leave' }
     }
     case 'item': {
-      const best = [...visit.offer].sort((a, b) => TOOLS.indexOf(a) - TOOLS.indexOf(b))[0]
+      const best = [...visit.offer].sort((a, b) => TOOL_PREFERENCE.indexOf(a) - TOOL_PREFERENCE.indexOf(b))[0]
       const index = best ? visit.offer.indexOf(best) : -1
       return index >= 0 && state.items.length < ITEM_SLOTS ? { type: 'pickItem', index } : { type: 'leave' }
     }

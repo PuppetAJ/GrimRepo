@@ -93,7 +93,7 @@ export const SIGILS: Record<SigilId, { name: string; text: string }> = {
   },
 }
 
-const table: [string, string, Tier, number, number, number, SigilId[]?][] = [
+const SEED_ORDERED_CARDS: [string, string, Tier, number, number, number, SigilId[]?][] = [
   ['OffCenterDiv', 'OffCenterDiv', 'E', 0, 4, 0, ['refactor']],
   ['HelloWorld', 'Hello World', 'E', 2, 2, 0, ['uptime']],
   ['CronJob', 'Cron Job', 'E', 1, 2, 0, ['try_catch']],
@@ -191,7 +191,7 @@ const TYPE_OF: Record<string, CardType> = {
 }
 
 export const CARDS: Record<string, CardDef> = Object.fromEntries(
-  table.map(([id, name, tier, attack, health, cost, sigils = []]) => [
+  SEED_ORDERED_CARDS.map(([id, name, tier, attack, health, cost, sigils = []]) => [
     id,
     { id, name, tier, attack, health, cost, sigils, ...(TYPE_OF[id] ? { type: TYPE_OF[id] } : {}) },
   ]),
@@ -214,8 +214,10 @@ export const PLAYER_DECK: string[] = Object.keys(CARDS).filter(
     !EVENT_ONLY.includes(id),
 )
 
+const OPPONENT_BANNED_SIGILS: SigilId[] = ['segfault', 'uptime']
+
 export const OPPONENT_POOL: string[] = PLAYER_DECK.filter(
-  (id) => !CARDS[id]?.sigils.includes('segfault') && !CARDS[id]?.sigils.includes('uptime'),
+  (id) => !CARDS[id]?.sigils.some((sigil) => OPPONENT_BANNED_SIGILS.includes(sigil)),
 )
 
 export const DEATH_PREFIX = 'death:'
@@ -237,16 +239,21 @@ export const deathCardId = ({ name, cost, attack, health, art, sigils }: DeathCa
 
 const parsed = new Map<string, CardDef | null>()
 
+const decodeName = (encoded: string): string => {
+  try {
+    return decodeURIComponent(encoded)
+  } catch {
+    return ''
+  }
+}
+
 export function parseDeathCard(id: string): CardDef | null {
   if (!isDeathCard(id)) return null
   if (parsed.has(id)) return parsed.get(id) ?? null
   const parts = id.slice(DEATH_PREFIX.length).split(':')
   const [cost, attack, health] = parts.slice(0, 3).map((part) => (/^\d{1,3}$/.test(part ?? '') ? Number(part) : NaN))
   const [, , , art = '', sigilList = '', encoded = ''] = parts
-  let name = ''
-  try {
-    name = decodeURIComponent(encoded)
-  } catch {}
+  const name = decodeName(encoded)
   const sigils = sigilList ? (sigilList.split(',') as SigilId[]) : []
   const base = CARDS[art]
   const valid =

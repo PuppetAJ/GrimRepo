@@ -1,4 +1,4 @@
-export function next(state: number): [value: number, state: number] {
+export function mulberry32(state: number): [value: number, state: number] {
   const advanced = (state + 0x6d2b79f5) | 0
   let t = advanced
   t = Math.imul(t ^ (t >>> 15), t | 1)
@@ -14,7 +14,7 @@ export class Rng {
   }
 
   float(): number {
-    const [value, state] = next(this.state)
+    const [value, state] = mulberry32(this.state)
     this.state = state
     return value
   }

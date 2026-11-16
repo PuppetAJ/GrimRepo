@@ -1,7 +1,7 @@
 import { PLAYER_DECK, card, parseDeathCard, type SigilId } from '../cards.ts'
 import { STAGES } from '../encounters.ts'
 import { apply, createGame, legalActions } from '../engine/game.ts'
-import { broken } from '../engine/combat.ts'
+import { integrityBroken } from '../engine/combat.ts'
 import { MAX_SIGILS, TIP, type DeckCard } from '../engine/types.ts'
 import { deckCard } from '../engine/units.ts'
 import { Rng } from '../rng.ts'
@@ -67,6 +67,8 @@ const openPack = (state: RunState, rng: Rng, deck: string): string[] =>
   offerCards(state, rng, PACK_SIZE, (STARTER_DECKS[deck] as (typeof STARTER_DECKS)[string]).pack, { pity: false })
 
 const PRICE: Record<string, number> = { E: 3, D: 5, C: 6, B: 12, A: 15 }
+const TOOL_PRICE = 6
+const SCISSORS_PRICE = 10
 
 const SHOP_TOOLS = 2
 
@@ -225,7 +227,7 @@ function enter(state: RunState, rng: Rng, node: MapNode): Visit {
       const tools = rng
         .shuffle<ItemId>(['scissors', ...FOUND_ITEMS])
         .slice(0, SHOP_TOOLS)
-        .map((tool) => ({ id: tool, price: tool === 'scissors' ? 10 : 6 }))
+        .map((tool) => ({ id: tool, price: tool === 'scissors' ? SCISSORS_PRICE : TOOL_PRICE }))
       return { kind: 'shop', node: node.id, offer, sold: [], tools, toolsSold: [] }
     }
     case 'item':
@@ -352,7 +354,7 @@ function step(state: RunState, rng: Rng, action: RunAction, events: RunEvent[]):
       visit.game = result.state
       state.integrity = result.state.integrity?.left ?? state.integrity
       events.push({ type: 'battle', events: result.events })
-      if (result.state.status === 'lost') end(state, 'loss', events, broken(result.state))
+      if (result.state.status === 'lost') end(state, 'loss', events, integrityBroken(result.state))
       if (result.state.status === 'won') won(state, visit, events)
       return
     }

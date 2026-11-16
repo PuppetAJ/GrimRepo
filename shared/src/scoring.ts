@@ -13,8 +13,8 @@ export const DEATH_SKIP_BONUS = 1.25
 export function scoreRun(
   record: { battles: number; bosses: number; overkill: number },
   cleared: boolean,
-  bonus = 1,
+  deathSkipBonus = 1,
 ): number {
   const base = record.battles * 100 + record.bosses * 1500 + (cleared ? 2000 : 0) + record.overkill * 20
-  return Math.round(base * bonus)
+  return Math.round(base * deathSkipBonus)
 }
