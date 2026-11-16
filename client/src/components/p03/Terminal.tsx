@@ -1,4 +1,13 @@
-import { Suspense, useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react'
+import {
+  Suspense,
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+  type ReactNode,
+} from 'react'
 import { useLocation, useNavigate } from '@tanstack/react-router'
 import { prefersReducedMotion } from '../../lib/motion.ts'
 import type { Commands } from './commands.tsx'
@@ -6,7 +15,6 @@ import { Glass } from './Glass.tsx'
 import { pathOf, Prompt } from './Prompt.tsx'
 import { FaultyScreen } from './FaultyScreen.ts'
 
-// Loaded on demand so the terminal renders without waiting for the commands.
 const loadCommands = () => import('./commands.tsx')
 
 type Entry =
@@ -26,13 +34,11 @@ export default function Terminal({ lines, user }: { lines: readonly string[]; us
   const [entries, setEntries] = useState<Entry[]>([])
   const [typing, setTyping] = useState<{ id: number; count: number; total: number } | null>(null)
   const [text, setText] = useState('')
-  // Drive the drawn cursor; the real caret is hidden.
   const [caret, setCaret] = useState(0)
   const [focused, setFocused] = useState(false)
   const mirror = useRef<HTMLParagraphElement>(null)
   const history = useRef<string[]>([])
   const recall = useRef(0)
-  // The text whose matches Tab just listed, until it changes, so a second Tab moves focus instead of listing again.
   const listed = useRef<string | null>(null)
   const commands = useRef<Commands | null>(null)
   const scroller = useRef<HTMLDivElement>(null)
@@ -41,16 +47,18 @@ export default function Terminal({ lines, user }: { lines: readonly string[]; us
 
   const add = (...added: Entry[]) => setEntries((list) => [...list, ...added].slice(-KEEP))
 
-  useEffect(() => {
+  const showMotd = useEffectEvent((motd: string) => {
     const id = nextId++
     setEntries([
-      { id, kind: 'motd', path: pathOf(pathname), lines: key.split('\n') },
+      { id, kind: 'motd', path: pathOf(pathname), lines: motd.split('\n') },
       { id: nextId++, kind: 'hint' },
     ])
-    if (!prefersReducedMotion()) setTyping({ id, count: 0, total: key.length })
-    // Only new lines replay; navigating away unmounts the terminal anyway.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key])
+    if (!prefersReducedMotion()) setTyping({ id, count: 0, total: motd.length })
+  })
+
+  // Filled in once hydrated: the prerendered terminal is empty, and reduced motion is known only in the browser.
+  // oxlint-disable-next-line react/set-state-in-effect
+  useEffect(() => showMotd(key), [key])
 
   const typingId = typing?.id
   useEffect(() => {
@@ -82,7 +90,6 @@ export default function Terminal({ lines, user }: { lines: readonly string[]; us
       const node = await loaded.run(command, {
         user,
         history: history.current,
-        // Already there, as with cd .. on the README, so nothing happens and the terminal keeps its scroll.
         navigate: (to) => void (to !== pathname && navigate({ to })),
         clear: () => setEntries([]),
       })
@@ -92,14 +99,12 @@ export default function Terminal({ lines, user }: { lines: readonly string[]; us
     }
   }
 
-  // Puts the caret at the end, as the browser does for set text.
   function type(next: string) {
     listed.current = null
     setText(next)
     setCaret(next.length)
   }
 
-  // Keeps the drawn text scrolled with the input on long commands.
   function follow(field: HTMLInputElement) {
     setCaret(field.selectionStart ?? field.value.length)
     if (mirror.current) mirror.current.scrollLeft = field.scrollLeft
@@ -131,7 +136,6 @@ export default function Terminal({ lines, user }: { lines: readonly string[]; us
       event.preventDefault()
       setEntries([])
     } else if (event.key === 'Tab' && text.trim()) {
-      // As a shell does: complete what the matches share, then list them; after that, Tab moves focus as usual.
       const found = commands.current?.complete(text)
       if (!found) return
       if (found.text !== text) {
@@ -172,12 +176,10 @@ export default function Terminal({ lines, user }: { lines: readonly string[]; us
       </div>
       <div
         ref={scroller}
-        // Refocus the prompt, except when selecting text or clicking a control.
         onClick={(event) => {
           const target = event.target as HTMLElement
           if (!window.getSelection()?.toString() && !target.closest('button, a, input')) input.current?.focus()
         }}
-        // Deeper at the bottom, so the prompt clears the frame and its cracks once the output scrolls.
         className="relative z-10 min-h-0 flex-1 overflow-y-auto px-3 pt-2 pb-6 text-lg leading-snug sm:px-6 sm:pb-8 sm:text-xl"
       >
         <div role="log" aria-label="P03's terminal output" className="flex flex-col gap-1">
@@ -190,14 +192,12 @@ export default function Terminal({ lines, user }: { lines: readonly string[]; us
             <Prompt who={who} path={pathOf(pathname)} />
             <span className="sr-only">Command for P03</span>
           </label>
-          {/* The real input is invisible; its text and a block cursor are drawn over it. */}
           <div className="relative min-w-0 flex-1">
             <p ref={mirror} aria-hidden className="overflow-hidden whitespace-pre text-[#e6ffe9]">
               <span className="relative">
                 {text || ' '}
                 {focused ? (
                   <span
-                    // Remounting on each keystroke restarts the blink, so the cursor stays lit while typing.
                     key={`${text}:${caret}`}
                     className="absolute top-[0.21em] h-[0.64em] w-[0.55ch] animate-[blink_1.06s_steps(1)_infinite] bg-p03 motion-reduce:animate-none"
                     style={{ left: `${caret}ch` }}
@@ -250,7 +250,6 @@ function Line({ entry, typed, run }: { entry: Entry; typed: number | null; run: 
     return (
       <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1 pb-1 text-p03-dim">
         <span>// type help, or try:</span>
-        {/* One span so the buttons wrap together. */}
         <span className="flex gap-2">
           {['tutorial', 'cards', 'top'].map((command) => (
             <button
@@ -265,7 +264,6 @@ function Line({ entry, typed, run }: { entry: Entry; typed: number | null; run: 
         </span>
       </p>
     )
-  // Offset of each line within the typed text.
   const before = entry.lines.map((_, index) =>
     entry.lines.slice(0, index).reduce((sum, line) => sum + line.length + 1, 0),
   )
