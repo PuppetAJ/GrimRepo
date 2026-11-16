@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: grimrepo
       POSTGRES_DB: grimrepo
     ports:
-      # Loopback only so the dev database is not published; 5433 so it runs beside Wicken's on 5432.
+      # Loopback only so the dev database is not published.
       - '127.0.0.1:5433:5432'
     volumes:
       # Postgres 18 wants the whole directory mounted, not the data subdirectory.
